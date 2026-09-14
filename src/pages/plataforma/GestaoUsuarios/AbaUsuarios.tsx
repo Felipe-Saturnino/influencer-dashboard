@@ -1,16 +1,19 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { KeyRound, Loader2, Pencil, UserCheck, UserX } from "lucide-react";
+import { History, KeyRound, Loader2, Pencil, UserCheck, UserX } from "lucide-react";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { textoContemBuscaEmAlgum } from "../../../lib/searchText";
 import { useApp } from "../../../context/AppContext";
 import { supabase } from "../../../lib/supabase";
+import { fetchAllPages } from "../../../lib/supabasePaginate";
 import { callSupabaseEdgeFunction, isAbortError } from "../../../lib/supabaseEdgeFetch";
 import { FONT } from "../../../constants/theme";
 import type { UsuarioCompleto, UserScope, Operadora } from "../../../types";
 import type { Role } from "../../../types";
 import { BRAND, roleLabel, roleBadgeColor, PRESTADOR_TIPOS, ROLES, type FiltroStatusUsuarios } from "./constants";
+import { MSG_ERRO_CARREGAR_GESTAO } from "./gestaoUsuariosHelpers";
 import { ModalUsuario } from "./ModalUsuario";
+import { ModalHistoricoUsuario } from "./ModalHistoricoUsuario";
 import { ModalConfirmDelete } from "../../../components/OperacoesModal";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
@@ -146,10 +149,12 @@ export function AbaUsuarios({
   const [pagina, setPagina] = useState(0);
   const [operadoras, setOperadoras] = useState<Operadora[]>([]);
   const [loading, setLoading] = useState(true);
+  const [erroCarregar, setErroCarregar] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [editando, setEditando] = useState<UsuarioCompleto | null>(null);
   const [modalDesativar, setModalDesativar] = useState<UsuarioCompleto | null>(null);
   const [modalResetSenha, setModalResetSenha] = useState<UsuarioCompleto | null>(null);
+  const [modalHistorico, setModalHistorico] = useState<UsuarioCompleto | null>(null);
   const [feedbackAcao, setFeedbackAcao] = useState<{ tipo: "erro" | "ok"; msg: string } | null>(null);
   /** `${userId}:${action}` enquanto a Edge Function processa */
   const [acaoEmAndamento, setAcaoEmAndamento] = useState<string | null>(null);
@@ -159,21 +164,68 @@ export function AbaUsuarios({
 
   const carregar = useCallback(async () => {
     setLoading(true);
-    const [{ data: profiles }, { data: scopes }, { data: ops }] = await Promise.all([
-      supabase
-        .from("profiles")
-        .select("id, name, email, role, ativo, created_at, last_sign_in_at")
-        .order("created_at", { ascending: true }),
-      supabase.from("user_scopes").select("*"),
-      supabase.from("operadoras").select("*").order("nome"),
-    ]);
-    const lista: UsuarioCompleto[] = (profiles ?? []).map((p) => ({
-      ...p,
-      scopes: (scopes ?? []).filter((s) => s.user_id === p.id),
-    }));
-    setUsuarios(lista);
-    setOperadoras(ops ?? []);
-    setLoading(false);
+    setErroCarregar(null);
+    try {
+      type ProfileRow = {
+        id: string;
+        name: string;
+        email: string;
+        role: Role;
+        ativo: boolean | null;
+        created_at: string;
+        last_sign_in_at: string | null;
+      };
+      type ScopeRow = Pick<UserScope, "id" | "user_id" | "scope_type" | "scope_ref">;
+      type OpRow = Pick<Operadora, "slug" | "nome" | "ativo">;
+
+      const [profiles, scopes, ops] = await Promise.all([
+        fetchAllPages<ProfileRow>(async (from, to) => {
+          const { data, error } = await supabase
+            .from("profiles")
+            .select("id, name, email, role, ativo, created_at, last_sign_in_at")
+            .order("created_at", { ascending: true })
+            .range(from, to);
+          return { data, error };
+        }),
+        fetchAllPages<ScopeRow>(async (from, to) => {
+          const { data, error } = await supabase
+            .from("user_scopes")
+            .select("id, user_id, scope_type, scope_ref")
+            .range(from, to);
+          return { data, error };
+        }),
+        fetchAllPages<OpRow>(async (from, to) => {
+          const { data, error } = await supabase
+            .from("operadoras")
+            .select("slug, nome, ativo")
+            .order("nome")
+            .range(from, to);
+          return { data, error };
+        }),
+      ]);
+
+      const scopesByUser = new Map<string, UserScope[]>();
+      for (const s of scopes) {
+        const list = scopesByUser.get(s.user_id) ?? [];
+        list.push(s as UserScope);
+        scopesByUser.set(s.user_id, list);
+      }
+
+      const lista: UsuarioCompleto[] = profiles.map((p) => ({
+        ...p,
+        ativo: p.ativo ?? true,
+        scopes: scopesByUser.get(p.id) ?? [],
+      }));
+      setUsuarios(lista);
+      setOperadoras(ops as Operadora[]);
+    } catch (err) {
+      console.error("[GestaoUsuarios] carregar usuários:", err);
+      setErroCarregar(MSG_ERRO_CARREGAR_GESTAO);
+      setUsuarios([]);
+      setOperadoras([]);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   const executarAcaoAdmin = useCallback(
@@ -194,8 +246,7 @@ export function AbaUsuarios({
             setFeedbackAcao({
               tipo: "erro",
               msg:
-                res.emailErro ??
-                "Senha redefinida, mas não foi possível enviar o e-mail ao usuário. Verifique a configuração de e-mail no Supabase.",
+                "Senha redefinida, mas não foi possível enviar o e-mail ao usuário. Se o problema persistir, entre em contato com o suporte.",
             });
           } else {
             setFeedbackAcao({
@@ -203,19 +254,31 @@ export function AbaUsuarios({
               msg: "Senha redefinida para a padrão e e-mail enviado ao usuário. No próximo login será obrigatório definir uma nova senha.",
             });
           }
+        } else if (action === "ativar") {
+          if (res && typeof res === "object" && "emailEnviado" in res && res.emailEnviado === false) {
+            setFeedbackAcao({
+              tipo: "erro",
+              msg:
+                "Usuário reativado e senha redefinida, mas não foi possível enviar o e-mail. Se o problema persistir, entre em contato com o suporte.",
+            });
+          } else {
+            setFeedbackAcao({
+              tipo: "ok",
+              msg: "Usuário reativado. Senha redefinida para a padrão e e-mail de boas-vindas enviado. No próximo login será obrigatório definir uma nova senha.",
+            });
+          }
         } else {
-          const okMsg =
-            action === "desativar"
-              ? "Usuário desativado. O acesso à plataforma foi bloqueado."
-              : "Usuário ativado novamente.";
-          setFeedbackAcao({ tipo: "ok", msg: okMsg });
+          setFeedbackAcao({
+            tipo: "ok",
+            msg: "Usuário desativado. O acesso à plataforma foi bloqueado.",
+          });
         }
         await carregar();
       } catch (e) {
         console.error("[GestaoUsuarios] admin-usuario-acao:", e);
         const msg = isAbortError(e)
-          ? "Tempo esgotado ou rede indisponível. Confira se a função admin-usuario-acao está deployada no Supabase."
-          : "Não foi possível concluir a operação. Tente novamente.";
+          ? "Tempo esgotado ou rede indisponível. Se o problema persistir, entre em contato com o suporte."
+          : "Não foi possível concluir a operação. Se o problema persistir, entre em contato com o suporte.";
         setFeedbackAcao({ tipo: "erro", msg });
       } finally {
         setAcaoEmAndamento(null);
@@ -339,6 +402,45 @@ export function AbaUsuarios({
         </div>
       )}
 
+      {erroCarregar ? (
+        <div
+          role="alert"
+          style={{
+            padding: "12px 16px",
+            borderRadius: 10,
+            fontSize: 13,
+            fontFamily: FONT.body,
+            border: `1px solid ${BRAND.vermelho}`,
+            background: `${BRAND.vermelho}14`,
+            color: BRAND.vermelho,
+            display: "flex",
+            flexWrap: "wrap",
+            gap: 12,
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <span>{erroCarregar}</span>
+          <button
+            type="button"
+            onClick={() => void carregar()}
+            style={{
+              border: `1px solid ${BRAND.vermelho}55`,
+              background: "transparent",
+              color: BRAND.vermelho,
+              borderRadius: 8,
+              padding: "6px 12px",
+              cursor: "pointer",
+              fontFamily: FONT.body,
+              fontSize: 12,
+              fontWeight: 600,
+            }}
+          >
+            Tentar novamente
+          </button>
+        </div>
+      ) : null}
+
       <div>
         <div className="app-table-wrap" style={getDataTableWrapStyle()}>
           <table style={getDataTableStyle({ minWidth: 900 })}>
@@ -411,7 +513,9 @@ export function AbaUsuarios({
                     style={{ ...dataTable.tdCenter, padding: "40px 16px", color: t.textMuted }}
                   >
                     {usuarios.length === 0
-                      ? "Nenhum usuário cadastrado."
+                      ? erroCarregar
+                        ? "Não foi possível carregar os usuários."
+                        : "Nenhum usuário cadastrado."
                       : "Nenhum usuário corresponde aos filtros ou à busca."}
                   </td>
                 </tr>
@@ -498,6 +602,13 @@ export function AbaUsuarios({
                       {mostrarAcoes ? (
                         <td style={dataTable.tdCenter}>
                           <div style={{ display: "flex", gap: 6, justifyContent: "center", flexWrap: "wrap" }}>
+                            <BtnIconeAcaoLinha
+                              label={tooltipAcao("Histórico do Usuário")}
+                              disabled={linhaBusy}
+                              onClick={() => setModalHistorico(u)}
+                            >
+                              <History size={14} aria-hidden />
+                            </BtnIconeAcaoLinha>
                             {podeEditarUsuario ? (
                               <BtnIconeAcaoLinha
                                 label={tooltipAcao("Editar Usuário")}
@@ -507,7 +618,7 @@ export function AbaUsuarios({
                                 <Pencil size={14} aria-hidden />
                               </BtnIconeAcaoLinha>
                             ) : null}
-                            {podeEditarUsuario ? (
+                            {linha.ativo && podeEditarUsuario ? (
                               <BtnIconeAcaoLinha
                                 label={tooltipAcao("Redefinir Senha")}
                                 disabled={linhaBusy}
@@ -615,6 +726,10 @@ export function AbaUsuarios({
           }}
         />
       )}
+
+      {modoAdmin && modalHistorico ? (
+        <ModalHistoricoUsuario usuario={modalHistorico} onClose={() => setModalHistorico(null)} />
+      ) : null}
     </div>
   );
 }

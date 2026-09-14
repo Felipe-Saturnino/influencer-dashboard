@@ -115,6 +115,60 @@ describe("gerarAlertasAlteracoesJanela", () => {
     expect(alertas[0].texto).toContain("Mesa (SC-BACC-01)");
     expect(alertas[0].texto).not.toContain("Outros");
   });
+
+  it("várias alterações da mesma mesa — mantém só a mais recente", () => {
+    const execucoes = [
+      exec("e1", "2026-08-01T12:00:00.000Z"),
+      exec("e2", "2026-08-02T12:00:00.000Z"),
+      exec("e3", "2026-08-03T12:00:00.000Z"),
+      exec("e4", "2026-08-04T12:00:00.000Z"),
+    ];
+    const posByExec = new Map<string, LobbyPosicaoRow[]>([
+      ["e1", [pos("e1", "bj1", 20)]],
+      ["e2", [pos("e2", "bj1", 15)]],
+      ["e3", [pos("e3", "bj1", 10)]],
+      ["e4", [pos("e4", "bj1", 3)]],
+    ]);
+
+    const alertas = gerarAlertasAlteracoesJanela(
+      execucoes,
+      posByExec,
+      "2026-08-01",
+      "2026-08-04",
+    );
+
+    expect(alertas).toHaveLength(1);
+    expect(alertas[0].texto).toContain("04/08");
+    expect(alertas[0].texto).toContain("P10 → P3");
+    expect(alertas[0].texto).not.toContain("P20");
+    expect(alertas[0].texto).not.toContain("P15");
+  });
+
+  it("mesas distintas na mesma janela — uma linha por mesa (a mais recente de cada)", () => {
+    const execucoes = [
+      exec("e1", "2026-08-01T12:00:00.000Z"),
+      exec("e2", "2026-08-02T12:00:00.000Z"),
+      exec("e3", "2026-08-03T12:00:00.000Z"),
+    ];
+    const posByExec = new Map<string, LobbyPosicaoRow[]>([
+      ["e1", [pos("e1", "bj1", 10), pos("e1", "rl1", 5, { tipoJogo: "roleta" })]],
+      ["e2", [pos("e2", "bj1", 8), pos("e2", "rl1", 12, { tipoJogo: "roleta" })]],
+      ["e3", [pos("e3", "bj1", 2), pos("e3", "rl1", 12, { tipoJogo: "roleta" })]],
+    ]);
+
+    const alertas = gerarAlertasAlteracoesJanela(
+      execucoes,
+      posByExec,
+      "2026-08-01",
+      "2026-08-03",
+    );
+
+    expect(alertas).toHaveLength(2);
+    expect(alertas[0].texto).toContain("Blackjack");
+    expect(alertas[0].texto).toContain("P8 → P2");
+    expect(alertas[1].texto).toContain("Roleta");
+    expect(alertas[1].texto).toContain("P5 → P12");
+  });
 });
 
 describe("labelMesaAlertaPeriodoPosicionamento", () => {

@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mockup — Home Gestor de Aquisição (proposta · padrão da família Gestores)</title>
+  <style>
+    :root {
+      --brand-primary: #7c3aed;
+      --brand-secondary: #1e36f8;
+      --brand-accent: #7c3aed;
+      --brand-roxo: #4a2082;
+      --brand-azul: #1e36f8;
+      --vermelho: #e84025;
+      --amarelo: #f59e0b;
+      --verde: #22c55e;
+
+      --page-bg: #f4f4f8;
+      --card-bg: #ffffff;
+      --card-border: #e8e8f0;
+      --input-bg: #f8f8fc;
+      --text: #1a1a2e;
+      --text-muted: #666688;
+      --section-title: #1a1a2e;
+      --box-radius: 14px;
+      --box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+
+      --font: "Segoe UI", system-ui, -apple-system, sans-serif;
+      --font-title: "Segoe UI Semibold", "Segoe UI", system-ui, sans-serif;
+    }
+
+    body.dark {
+      --page-bg: #0f0f1a;
+      --card-bg: #1a1a2e;
+      --card-border: #2a2a4e;
+      --input-bg: rgba(255,255,255,0.07);
+      --text: #ffffff;
+      --text-muted: #e5dce1;
+      --section-title: #ffffff;
+      --box-radius: 18px;
+      --box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font);
+      background: var(--page-bg);
+      color: var(--text);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .mock-banner {
+      background: linear-gradient(135deg, #4a2082, #1e36f8);
+      color: #fff; padding: 10px 16px; font-size: 12px; font-weight: 600;
+      display: flex; align-items: center; justify-content: center; gap: 16px; flex-wrap: wrap;
+    }
+    .mock-banner button {
+      border: 1px solid rgba(255,255,255,.5); background: rgba(255,255,255,.12); color: #fff;
+      padding: 5px 12px; border-radius: 999px; font-size: 11px; font-weight: 700; cursor: pointer;
+      font-family: var(--font);
+    }
+
+    .page-shell {
+      max-width: 1100px; margin: 0 auto; padding: 24px 20px 40px;
+      display: flex; flex-direction: column; gap: 14px;
+    }
+
+    .block-tag {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+      color: var(--brand-primary); background: rgba(124, 58, 237, 0.12);
+      border: 1px dashed rgba(124, 58, 237, 0.45);
+      padding: 3px 8px; border-radius: 999px; margin-bottom: -6px; width: max-content;
+    }
+    body.dark .block-tag { color: #70cae4; }
+
+    .welcome-card {
+      position: relative; overflow: hidden;
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: 20px; padding: 28px; box-shadow: var(--box-shadow);
+    }
+    .welcome-card .topbar {
+      position: absolute; top: 0; left: 0; right: 0; height: 4px;
+      background: linear-gradient(90deg, var(--brand-primary), var(--brand-azul));
+    }
+    .welcome-row { display: flex; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+    .avatar {
+      width: 56px; height: 56px; border-radius: 50%; flex-shrink: 0;
+      background: linear-gradient(135deg, var(--brand-roxo), var(--brand-azul));
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-weight: 800; font-size: 20px;
+      border: 2px solid rgba(124, 58, 237, 0.45);
+    }
+    .welcome-card h1 {
+      font-family: var(--font-title); font-size: 22px; font-weight: 800;
+      letter-spacing: .02em; margin: 0 0 6px;
+    }
+    .role-label { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; }
+    .welcome-sub { font-size: 14px; color: var(--text-muted); line-height: 1.55; white-space: pre-line; }
+
+    .alert-box {
+      display: flex; gap: 14px; padding: 16px 18px; border-radius: 14px;
+      background: rgba(232,64,37,0.05); border: 1px solid rgba(232,64,37,0.28);
+      border-left: 4px solid var(--vermelho);
+    }
+    body.dark .alert-box { background: rgba(232,64,37,0.08); }
+    .alert-box.warn {
+      background: rgba(245,158,11,0.08); border-color: rgba(245,158,11,0.35);
+      border-left-color: var(--amarelo);
+    }
+    .alert-box .alert-icon { flex-shrink: 0; margin-top: 2px; color: var(--vermelho); }
+    .alert-box.warn .alert-icon { color: var(--amarelo); }
+    .alert-title {
+      font-size: 12px; font-weight: 800; letter-spacing: .06em;
+      color: #b02a14; margin-bottom: 8px; font-family: var(--font-title);
+    }
+    body.dark .alert-title { color: #ff9980; }
+    .alert-box.warn .alert-title { color: #a16207; }
+    body.dark .alert-box.warn .alert-title { color: var(--amarelo); }
+    .alert-body { font-size: 13px; line-height: 1.65; margin-bottom: 12px; }
+    .alert-cta {
+      display: inline-block; padding: 8px 16px; border-radius: 10px;
+      border: 1px solid var(--vermelho); background: rgba(232,64,37,0.09);
+      color: var(--vermelho); font-size: 12px; font-weight: 700; text-decoration: none;
+    }
+    .alert-box.warn .alert-cta {
+      border-color: var(--amarelo); background: rgba(245,158,11,0.12); color: #a16207;
+    }
+    body.dark .alert-box.warn .alert-cta { color: var(--amarelo); }
+
+    .content-box {
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: var(--box-radius); box-shadow: var(--box-shadow); padding: 20px;
+    }
+    .section-title {
+      font-family: var(--font-title); font-size: 13px; font-weight: 800;
+      letter-spacing: .08em; text-transform: uppercase; color: var(--section-title);
+      margin: 0 0 14px;
+    }
+    .hint { font-size: 13px; line-height: 1.5; color: var(--text-muted); margin: 0 0 16px; }
+    .mes-sub {
+      margin: -6px 0 14px; font-size: 12px; font-weight: 600;
+      letter-spacing: .02em; color: var(--text-muted);
+    }
+
+    .grid-kpi-3 {
+      display: grid; gap: 12px;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .grid-kpi-4 {
+      display: grid; gap: 12px;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+    @media (max-width: 900px) {
+      .grid-kpi-3, .grid-kpi-4 { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 520px) {
+      .grid-kpi-3, .grid-kpi-4 { grid-template-columns: 1fr; }
+    }
+    .kpi-card {
+      border-radius: 14px; border: 1px solid var(--card-border);
+      background: var(--card-bg); overflow: hidden;
+    }
+    .kpi-card .kpi-bar {
+      height: 3px;
+      background: linear-gradient(90deg, var(--brand-primary), transparent);
+    }
+    .kpi-card .kpi-bar.sec { background: linear-gradient(90deg, var(--brand-azul), transparent); }
+    .kpi-card .kpi-bar.warn { background: linear-gradient(90deg, var(--amarelo), transparent); }
+    .kpi-card .kpi-bar.ok { background: linear-gradient(90deg, var(--verde), transparent); }
+    .kpi-card .kpi-body { padding: 14px 16px; }
+    .kpi-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+    .kpi-ic {
+      width: 30px; height: 30px; border-radius: 8px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(124,58,237,.1); border: 1px solid rgba(124,58,237,.22);
+      color: var(--brand-primary);
+    }
+    .kpi-ic.sec { background: rgba(30,54,248,.1); border-color: rgba(30,54,248,.22); color: var(--brand-azul); }
+    .kpi-ic.warn { background: rgba(245,158,11,.12); border-color: rgba(245,158,11,.35); color: #b45309; }
+    .kpi-ic.ok { background: rgba(34,197,94,.12); border-color: rgba(34,197,94,.3); color: #15803d; }
+    .kpi-label {
+      font-size: 10px; font-weight: 600; letter-spacing: .07em;
+      text-transform: uppercase; color: var(--text-muted);
+    }
+    .kpi-value {
+      font-size: 22px; font-weight: 800; line-height: 1.1; color: var(--text);
+      font-variant-numeric: tabular-nums;
+    }
+    .kpi-mom {
+      margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--card-border);
+      font-size: 11px;
+    }
+    .kpi-mom .row { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+    .kpi-mom .up { color: var(--verde); font-weight: 700; font-size: 12px; }
+    .footer-hint {
+      margin: 14px 0 0; font-size: 12px; color: var(--text-muted); line-height: 1.5;
+    }
+    .footer-hint a { font-weight: 700; color: var(--brand-accent); text-decoration: underline; }
+
+    .feed-list { list-style: none; display: flex; flex-direction: column; gap: 12px; }
+    .feed-card {
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: 14px; padding: 16px 18px; box-shadow: var(--box-shadow);
+    }
+    .feed-card h3 { font-size: 15px; font-weight: 800; margin: 0; color: var(--text); }
+    .feed-body { margin-top: 12px; font-size: 13px; line-height: 1.55; color: var(--text); }
+    .feed-body a { font-weight: 700; color: var(--brand-accent); text-decoration: underline; }
+    .feed-footer { font-size: 12px; color: var(--text-muted); margin: 14px 0 0; }
+    .btn-li-ocultar {
+      display: inline-flex; align-items: center; margin-top: 14px;
+      padding: 8px 14px; border-radius: 10px;
+      border: 1px solid var(--card-border);
+      background: rgba(124, 58, 237, 0.12);
+      color: var(--brand-accent); font-size: 12px; font-weight: 700; cursor: pointer;
+      font-family: var(--font);
+    }
+
+    .grid-atalhos {
+      display: grid; gap: 12px;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+    }
+    .atalho {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 16px 18px; border-radius: 12px;
+      border: 1px solid var(--card-border); background: var(--input-bg);
+      color: var(--text); text-decoration: none;
+    }
+    .atalho:hover { border-color: var(--brand-primary); background: rgba(124, 58, 237, 0.08); }
+    .atalho .ic {
+      width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
+      background: rgba(74,32,130,0.2); color: var(--brand-accent);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .atalho .tit { display: flex; align-items: flex-start; gap: 8px; }
+    .atalho .tit span { flex: 1; font-size: 14px; font-weight: 700; line-height: 1.35; }
+    .atalho .tit svg { color: var(--text-muted); flex-shrink: 0; margin-top: 2px; }
+    .atalho p { margin: 8px 0 0; font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+
+    .nota-mock {
+      display: flex; align-items: flex-start; gap: 6px; margin-top: 12px;
+      font-size: 11px; font-weight: 700; padding: 6px 10px; border-radius: 8px;
+      background: rgba(245,158,11,.12); color: #a16207; border: 1px dashed rgba(245,158,11,.55);
+    }
+    body.dark .nota-mock { color: var(--amarelo); }
+
+    .legenda {
+      max-width: 1100px; margin: 0 auto; padding: 0 20px 48px;
+    }
+    .legenda .content-box { font-size: 12px; color: var(--text-muted); }
+    .legenda ul { padding-left: 18px; margin-top: 10px; }
+    .legenda li { margin-bottom: 6px; }
+    .legenda strong { color: var(--text); }
+    .removed { text-decoration: line-through; opacity: .7; }
+  </style>
+</head>
+<body>
+  <div class="mock-banner">
+    <span>Mockup 5/N — Home · perfil <strong>Gestor de Aquisição</strong> · padrão da família Gestores</span>
+    <button type="button" id="btn-tema">Alternar tema claro / escuro</button>
+  </div>
+
+  <div class="page-shell">
+
+    <!-- 1 — Boas-vindas -->
+    <span class="block-tag">Bloco 1 · Boas-vindas</span>
+    <div class="welcome-card">
+      <div class="topbar"></div>
+      <div class="welcome-row">
+        <div class="avatar" aria-hidden="true">C</div>
+        <div style="flex:1;min-width:200px">
+          <h1>Olá, Camila Ferreira!</h1>
+          <p class="role-label">Gestor de Aquisição</p>
+          <p class="welcome-sub">Canal de aquisição sob controle.
+Lives, financeiro, bancas e scout — o que precisa de ação, primeiro.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2 — Horas pendentes (portfólio) -->
+    <span class="block-tag">Bloco 2 · Horas pendentes sem live agendada (só quando houver)</span>
+    <div class="alert-box">
+      <svg class="alert-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>
+      </svg>
+      <div style="flex:1;min-width:0">
+        <div class="alert-title">AÇÃO NECESSÁRIA</div>
+        <p class="alert-body">
+          Há <strong>4 influencers</strong> com horas pendentes da cota e sem live futura agendada (total de <strong>22 horas</strong>). Realize o agendamento na página de Agenda.
+        </p>
+        <a class="alert-cta" href="#">Ir para Agenda</a>
+        <p class="nota-mock">Mesma regra da Home Influencer/Agência: cota com saldo e nenhuma live futura. Visão de gestão (todos os influencers visíveis ao gestor).</p>
+      </div>
+    </div>
+
+    <!-- 2b — Resultados > 48h -->
+    <span class="block-tag">Bloco 2b · Resultados pendentes há mais de 48h (só quando houver)</span>
+    <div class="alert-box">
+      <svg class="alert-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>
+      </svg>
+      <div style="flex:1;min-width:0">
+        <div class="alert-title">AÇÃO NECESSÁRIA</div>
+        <p class="alert-body">
+          Há <strong>7 lives</strong> com resultado pendente de validação há mais de <strong>48 horas</strong>. Valide na página Resultados.
+        </p>
+        <a class="alert-cta" href="#">Ir para Resultados</a>
+        <p class="nota-mock">Lives <code>realizada</code> ainda na fila de Resultados; contagem só se a data/hora da live (ou entrada na fila) passou de 48h. Ocultar se zero.</p>
+      </div>
+    </div>
+
+    <!-- 2c — Financeiro: >7 dias no mesmo status -->
+    <span class="block-tag">Bloco 2c · Ciclos financeiros parados &gt; 7 dias (Em análise ou Aguard. pagamento)</span>
+    <div class="alert-box">
+      <svg class="alert-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>
+      </svg>
+      <div style="flex:1;min-width:0">
+        <div class="alert-title">AÇÃO NECESSÁRIA</div>
+        <p class="alert-body">
+          Há <strong>3 pagamentos</strong> há mais de <strong>7 dias</strong> no mesmo status (<strong>Em análise</strong> ou <strong>Aguard. pagamento</strong>), totalizando <strong>R$ 18.750,00</strong>. Revise na página Financeiro.
+        </p>
+        <a class="alert-cta" href="#">Ir para Financeiro</a>
+        <p class="nota-mock"><strong>Regra:</strong> só dispara se o registro estiver em <code>em_analise</code> ou <code>a_pagar</code> <strong>e</strong> o status atual tiver mais de 7 dias (desde a última mudança de status / <code>updated_at</code> do status). <strong>Não</strong> alertar só porque existe R$ pendente recente.</p>
+      </div>
+    </div>
+
+    <!-- 2d — Banca -->
+    <span class="block-tag">Bloco 2d · Bancas aguardando aprovação (só quando houver)</span>
+    <div class="alert-box warn">
+      <svg class="alert-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>
+      </svg>
+      <div style="flex:1;min-width:0">
+        <div class="alert-title">ATENÇÃO</div>
+        <p class="alert-body">
+          Há <strong>5 solicitações</strong> de Banca de Jogo aguardando aprovação. Acesse Banca de Jogo para revisar.
+        </p>
+        <a class="alert-cta" href="#">Ir para Banca de Jogo</a>
+        <p class="nota-mock">Amarelo = fila de aprovação (não bloqueio crítico). Contagem de solicitações em aberto no filtro «Aguardando».</p>
+      </div>
+    </div>
+
+    <!-- 3 — KPIs -->
+    <span class="block-tag">Bloco 3 · Principais KPIs — Financeiro + canal (mês)</span>
+    <div class="content-box">
+      <h2 class="section-title">Principais KPIs</h2>
+      <p class="mes-sub">Setembro 2026</p>
+      <div class="grid-kpi-3" style="margin-bottom:12px">
+        <article class="kpi-card">
+          <div class="kpi-bar ok"></div>
+          <div class="kpi-body">
+            <div class="kpi-head">
+              <span class="kpi-ic ok" aria-hidden="true">$</span>
+              <span class="kpi-label">R$ Pago</span>
+            </div>
+            <div class="kpi-value">R$ 126.400,00</div>
+            <div class="kpi-mom">
+              <div class="row"><span style="color:var(--text-muted)">Mês anterior</span><span style="font-weight:600">R$ 118.200,00</span></div>
+              <div><span class="up">↑ +6,9%</span> <span style="color:var(--text-muted);font-size:10px">vs mês anterior</span></div>
+            </div>
+          </div>
+        </article>
+        <article class="kpi-card">
+          <div class="kpi-bar warn"></div>
+          <div class="kpi-body">
+            <div class="kpi-head">
+              <span class="kpi-ic warn" aria-hidden="true">!</span>
+              <span class="kpi-label">R$ Pendente</span>
+            </div>
+            <div class="kpi-value">R$ 48.320,00</div>
+            <div class="kpi-mom">
+              <div class="row"><span style="color:var(--text-muted)">Mês anterior</span><span style="font-weight:600">R$ 52.100,00</span></div>
+              <div><span class="up">↓ −7,3%</span> <span style="color:var(--text-muted);font-size:10px">vs mês anterior · menos pendente = melhor</span></div>
+            </div>
+          </div>
+        </article>
+        <article class="kpi-card">
+          <div class="kpi-bar sec"></div>
+          <div class="kpi-body">
+            <div class="kpi-head">
+              <span class="kpi-ic sec" aria-hidden="true">⏱</span>
+              <span class="kpi-label">Horas realizadas</span>
+            </div>
+            <div class="kpi-value">312:45</div>
+            <div class="kpi-mom">
+              <div class="row"><span style="color:var(--text-muted)">Mês anterior</span><span style="font-weight:600">298:20</span></div>
+              <div><span class="up">↑ +4,8%</span> <span style="color:var(--text-muted);font-size:10px">vs mês anterior</span></div>
+            </div>
+          </div>
+        </article>
+      </div>
+      <div class="grid-kpi-4">
+        <article class="kpi-card">
+          <div class="kpi-bar"></div>
+          <div class="kpi-body">
+            <div class="kpi-head">
+              <span class="kpi-ic" aria-hidden="true">▶</span>
+              <span class="kpi-label">Lives</span>
+            </div>
+            <div class="kpi-value">84</div>
+          </div>
+        </article>
+        <article class="kpi-card">
+          <div class="kpi-bar"></div>
+          <div class="kpi-body">
+            <div class="kpi-head">
+              <span class="kpi-ic" aria-hidden="true">↑</span>
+              <span class="kpi-label">GGR canal</span>
+            </div>
+            <div class="kpi-value">R$ 892 mil</div>
+          </div>
+        </article>
+        <article class="kpi-card">
+          <div class="kpi-bar sec"></div>
+          <div class="kpi-body">
+            <div class="kpi-head">
+              <span class="kpi-ic sec" aria-hidden="true">★</span>
+              <span class="kpi-label">FTDs</span>
+            </div>
+            <div class="kpi-value">312</div>
+          </div>
+        </article>
+        <article class="kpi-card">
+          <div class="kpi-bar"></div>
+          <div class="kpi-body">
+            <div class="kpi-head">
+              <span class="kpi-ic" aria-hidden="true">◎</span>
+              <span class="kpi-label">Bancas abertas</span>
+            </div>
+            <div class="kpi-value">5</div>
+          </div>
+        </article>
+      </div>
+      <p class="footer-hint">Quer saber mais? <a href="#">Financeiro</a> · <a href="#">Streamers</a> · <a href="#">Overview Influencer</a></p>
+      <p class="nota-mock">Fileira 1 = KPIs do <strong>Financeiro</strong> (já na página). Fileira 2 = snapshot do canal (Streamers / Overview). Ajustar métricas se produto quiser só Financeiro.</p>
+    </div>
+
+    <!-- 4 — Informações -->
+    <span class="block-tag">Bloco 4 · Informações — Informativos (perfil gestor_aquisicao · 10 dias)</span>
+    <div class="content-box">
+      <h2 class="section-title">Informações</h2>
+      <ul class="feed-list">
+        <li>
+          <article class="feed-card">
+            <h3>Fechamento de ciclos — lembrete</h3>
+            <div class="feed-body">
+              <p>Priorize a liberação dos ciclos em <a href="#">Financeiro</a> até sexta-feira. Em dúvida, consulte a Ajuda da seção Aquisição.</p>
+            </div>
+            <p class="feed-footer">Equipe Aquisição · 11/09/26 - 11:00</p>
+            <button type="button" class="btn-li-ocultar">Li e Ocultar</button>
+          </article>
+        </li>
+        <li>
+          <article class="feed-card">
+            <h3>Novos prospects no Scout</h3>
+            <div class="feed-body">
+              <p>Há leads recentes aguardando qualificação. Abra o <a href="#">Scout</a> para revisar status e avançar no funil.</p>
+            </div>
+            <p class="feed-footer">Equipe Aquisição · 08/09/26 - 16:40</p>
+            <button type="button" class="btn-li-ocultar">Li e Ocultar</button>
+          </article>
+        </li>
+      </ul>
+      <p class="nota-mock">Perfil <code>gestor_aquisicao</code>, janela 10 dias + «Li e Ocultar» (padrão canal/staff). Sem Portal RH / Academy.</p>
+    </div>
+
+    <!-- 5 — Acesso rápido -->
+    <span class="block-tag">Bloco 5 · Acesso rápido (curado · padrão para demais gestores)</span>
+    <div class="content-box">
+      <h2 class="section-title">Acesso rápido</h2>
+      <p class="hint">Clique em um atalho abaixo para ir diretamente à página desejada.</p>
+      <div class="grid-atalhos">
+        <a class="atalho" href="#">
+          <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg></span>
+          <div style="flex:1;min-width:0">
+            <div class="tit"><span>Overview Influencer</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
+            <p>Resumo executivo de financeiro, operação e conversão do canal de influencers.</p>
+          </div>
+        </a>
+        <a class="atalho" href="#">
+          <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect width="20" height="15" x="2" y="7" rx="2"/><polyline points="17 2 12 7 7 2"/></svg></span>
+          <div style="flex:1;min-width:0">
+            <div class="tit"><span>Streamers</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
+            <p>Acompanhe performance, conversão e financeiro do canal de influencers.</p>
+          </div>
+        </a>
+        <a class="atalho" href="#">
+          <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg></span>
+          <div style="flex:1;min-width:0">
+            <div class="tit"><span>Agenda</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
+            <p>Visualize, agende e acompanhe as lives dos influencers.</p>
+          </div>
+        </a>
+        <a class="atalho" href="#">
+          <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg></span>
+          <div style="flex:1;min-width:0">
+            <div class="tit"><span>Resultados</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
+            <p>Consulte o desempenho das lives realizadas.</p>
+          </div>
+        </a>
+        <a class="atalho" href="#">
+          <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="12" r="3"/><path d="m16 16-1.5-1.5"/></svg></span>
+          <div style="flex:1;min-width:0">
+            <div class="tit"><span>Scout</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
+            <p>Cadastre e qualifique prospects do canal de aquisição.</p>
+          </div>
+        </a>
+        <a class="atalho" href="#">
+          <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></span>
+          <div style="flex:1;min-width:0">
+            <div class="tit"><span>Influencers</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
+            <p>Gerencie o cadastro e o status dos influencers.</p>
+          </div>
+        </a>
+        <a class="atalho" href="#">
+          <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg></span>
+          <div style="flex:1;min-width:0">
+            <div class="tit"><span>Financeiro</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
+            <p>Gerencie os ciclos de pagamento dos influencers e afiliados, do rascunho ao pago.</p>
+          </div>
+        </a>
+        <a class="atalho" href="#">
+          <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M2 12C2 6.5 6.5 2 12 2a10 10 0 0 1 8 4"/><path d="M12 8v8"/><path d="M8 12h8"/></svg></span>
+          <div style="flex:1;min-width:0">
+            <div class="tit"><span>Banca de Jogo</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
+            <p>Solicite, aprove e libere bancas de jogo por parceiro e operadora.</p>
+          </div>
+        </a>
+        <a class="atalho" href="#">
+          <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg></span>
+          <div style="flex:1;min-width:0">
+            <div class="tit"><span>Ajuda</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
+            <p>Conheça as funcionalidades da plataforma, o glossário, tutoriais e soluções para problemas comuns.</p>
+          </div>
+        </a>
+      </div>
+      <p class="nota-mock">Lista curada — só com Ver liberado. <strong>Fora:</strong> <span class="removed">dump do menu</span>, Overview Spin / Estúdio / RH. Este layout-base serve de molde para Marketing, Operações, Tech Ops, Academy e RH (só mudam atalhos + 1–2 alertas/KPIs).</p>
+    </div>
+
+  </div>
+
+  <div class="legenda">
+    <div class="content-box">
+      <h2 class="section-title">Notas para aprovação — Home Gestor de Aquisição</h2>
+      <ul>
+        <li><strong>Família Gestores:</strong> 1 layout-base + variantes de atalho/alerta por departamento. Este mockup é o #1 da família.</li>
+        <li><strong>Alertas (AÇÃO NECESSÁRIA):</strong> (1) influencers com horas pendentes sem live agendada → Agenda; (2) lives com resultado pendente &gt; 48h → Resultados; (3) pagamentos em <strong>Em análise</strong> ou <strong>Aguard. pagamento</strong> há &gt; 7 dias no mesmo status → Financeiro.</li>
+        <li><strong>Atenção (amarelo):</strong> Banca de Jogo aguardando aprovação — condicional.</li>
+        <li><strong>Financeiro — regra fina:</strong> <strong>não</strong> alertar só por existir R$ pendente; só quando o status atual (&gt;7 dias) for <code>em_analise</code> ou <code>a_pagar</code>.</li>
+        <li><strong>KPIs:</strong> alinhados ao Financeiro (Pago / Pendente / Horas) + snapshot do canal (Lives, GGR, FTDs, Bancas abertas).</li>
+        <li><strong>Informativos:</strong> perfil <code>gestor_aquisicao</code>, 10 dias + «Li e Ocultar».</li>
+        <li><strong>Atalhos:</strong> Overview Influencer → Streamers → Agenda → Resultados → Scout → Influencers → Financeiro → Banca de Jogo → Ajuda.</li>
+        <li><strong>Sem:</strong> whitelabel, revisão RH 6m, Academy, dump do menu.</li>
+        <li><strong>Fluxo:</strong> só mockups agora — implantação em lote depois.</li>
+        <li><strong>Como abrir:</strong> duplo clique / navegador. Botão no topo alterna claro/escuro.</li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById("btn-tema").addEventListener("click", function () {
+      document.body.classList.toggle("dark");
+    });
+  </script>
+</body>
+</html>

@@ -2,8 +2,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { FONT, FONT_TITLE } from "../../constants/theme";
+import { useDisableAppUiZoom } from "../../hooks/useDisableAppUiZoom";
 import {
   PAINEL_NOTICIAS_BG,
+  PAINEL_NOTICIAS_FETCH_LIMIT,
   PAINEL_NOTICIAS_POLL_MS,
   PAINEL_NOTICIAS_RELOAD_MS,
   PAINEL_NOTICIAS_SLIDE_MS,
@@ -16,6 +18,7 @@ import {
 
 const VAZIO_MSG = "Aguardando notícias…";
 const ERRO_MSG = "Não foi possível carregar as notícias. Tentando novamente…";
+const POLL_FALHA_MSG = "Atualização pausada — tentando novamente…";
 const SLIDE_TRANSITION_MS = 900;
 
 function usePainelNoticiasViewportBg() {
@@ -75,17 +78,19 @@ function usePainelNoticiasTituloAba() {
   }, []);
 }
 
-/** TV em tamanho real — ignora o zoom da plataforma logada. */
-function usePainelNoticiasZoomReal() {
+function usePrefersReducedMotion(): boolean {
+  const [reduce, setReduce] = useState(() =>
+    typeof window !== "undefined"
+      ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      : false,
+  );
   useEffect(() => {
-    const html = document.documentElement;
-    const anterior = html.style.getPropertyValue("--app-ui-zoom");
-    html.style.setProperty("--app-ui-zoom", "1");
-    return () => {
-      if (anterior) html.style.setProperty("--app-ui-zoom", anterior);
-      else html.style.removeProperty("--app-ui-zoom");
-    };
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const onChange = () => setReduce(mq.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
   }, []);
+  return reduce;
 }
 
 function exibirNoticia(row: PainelNoticiaRow) {
@@ -162,12 +167,20 @@ function preservarIndiceAtual(
   return Math.min(indiceAnterior, novaLista.length - 1);
 }
 
-function PainelNoticiasCarrossel({ itens }: { itens: PainelNoticiaRow[] }) {
+function PainelNoticiasCarrossel({
+  itens,
+  paused,
+}: {
+  itens: PainelNoticiaRow[];
+  paused: boolean;
+}) {
   const [idx, setIdx] = useState(0);
   const [saindo, setSaindo] = useState(false);
   const idxRef = useRef(0);
   const itensRef = useRef(itens);
   const timerRef = useRef<number | null>(null);
+  const reduceMotion = usePrefersReducedMotion();
+  const transitionMs = reduceMotion ? 0 : SLIDE_TRANSITION_MS;
 
   const syncIdx = useCallback((next: number) => {
     idxRef.current = next;
@@ -189,20 +202,33 @@ function PainelNoticiasCarrossel({ itens }: { itens: PainelNoticiaRow[] }) {
 
   const agendarProximo = useCallback(() => {
     limparTimer();
-    if (itens.length <= 1) return;
+    if (paused || itens.length <= 1) return;
     timerRef.current = window.setTimeout(() => {
       setSaindo(true);
     }, PAINEL_NOTICIAS_SLIDE_MS);
-  }, [itens.length, limparTimer]);
+  }, [itens.length, limparTimer, paused]);
 
   useEffect(() => {
+    if (paused) {
+      limparTimer();
+      setSaindo(false);
+      return undefined;
+    }
     if (saindo) return undefined;
     agendarProximo();
     return limparTimer;
-  }, [idx, saindo, agendarProximo, limparTimer]);
+  }, [idx, saindo, paused, agendarProximo, limparTimer]);
 
   useEffect(() => {
-    if (!saindo) return undefined;
+    if (!saindo || paused) return undefined;
+    if (transitionMs === 0) {
+      const lista = itensRef.current;
+      if (lista.length > 1) {
+        syncIdx((idxRef.current + 1) % lista.length);
+      }
+      setSaindo(false);
+      return undefined;
+    }
     const t = window.setTimeout(() => {
       const lista = itensRef.current;
       if (lista.length <= 1) {
@@ -211,15 +237,13 @@ function PainelNoticiasCarrossel({ itens }: { itens: PainelNoticiaRow[] }) {
       }
       syncIdx((idxRef.current + 1) % lista.length);
       setSaindo(false);
-    }, SLIDE_TRANSITION_MS);
+    }, transitionMs);
     return () => window.clearTimeout(t);
-  }, [saindo, syncIdx]);
+  }, [saindo, paused, syncIdx, transitionMs]);
 
   const atual = itens[idx];
   const proximo = itens.length > 1 ? itens[(idx + 1) % itens.length] : null;
   if (!atual) return null;
-
-  const animBase = `${SLIDE_TRANSITION_MS}ms cubic-bezier(0.4, 0, 0.2, 1) forwards`;
 
   const atualExibir = exibirNoticia(atual);
   const proximoExibir = proximo ? exibirNoticia(proximo) : null;
@@ -239,33 +263,19 @@ function PainelNoticiasCarrossel({ itens }: { itens: PainelNoticiaRow[] }) {
       {saindo && proximo && proximoExibir && (
         <>
           <div
-            style={{
-              ...slideShellStyle,
-              animation: `painelNoticiaSai ${animBase}`,
-            }}
+            className={reduceMotion ? undefined : "painel-noticia-slide-sai"}
+            style={slideShellStyle}
           >
             <PainelNoticiaConteudo titulo={atualExibir.titulo} detalhe={atualExibir.detalhe} />
           </div>
           <div
-            style={{
-              ...slideShellStyle,
-              animation: `painelNoticiaEntra ${animBase}`,
-            }}
+            className={reduceMotion ? undefined : "painel-noticia-slide-entra"}
+            style={slideShellStyle}
           >
             <PainelNoticiaConteudo titulo={proximoExibir.titulo} detalhe={proximoExibir.detalhe} />
           </div>
         </>
       )}
-      <style>{`
-        @keyframes painelNoticiaSai {
-          from { transform: translateY(0); opacity: 1; }
-          to { transform: translateY(-100%); opacity: 0; }
-        }
-        @keyframes painelNoticiaEntra {
-          from { transform: translateY(100%); opacity: 0.35; }
-          to { transform: translateY(0); opacity: 1; }
-        }
-      `}</style>
     </div>
   );
 }
@@ -274,19 +284,32 @@ export default function PainelNoticiasPage() {
   usePainelNoticiasViewportBg();
   usePainelNoticiasNoIndex();
   usePainelNoticiasTituloAba();
-  usePainelNoticiasZoomReal();
+  useDisableAppUiZoom(true);
 
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState(false);
   const [itens, setItens] = useState<PainelNoticiaRow[]>([]);
+  const [abaOculta, setAbaOculta] = useState(
+    () => typeof document !== "undefined" && document.hidden,
+  );
+  const loadGenRef = useRef(0);
 
-  const carregar = useCallback(async () => {
-    const { data, error } = await supabase
+  const carregar = useCallback(async (signal?: AbortSignal) => {
+    const gen = ++loadGenRef.current;
+    let query = supabase
       .from("painel_noticia")
       .select("id, titulo, resumo, visivel_desde, visivel_ate")
       .eq("passou_filtro", true)
       .order("visivel_desde", { ascending: false })
-      .limit(100);
+      .limit(PAINEL_NOTICIAS_FETCH_LIMIT);
+
+    if (signal) {
+      query = query.abortSignal(signal);
+    }
+
+    const { data, error } = await query;
+
+    if (signal?.aborted || gen !== loadGenRef.current) return;
 
     if (error) {
       console.error("[PainelNoticias]", error.message);
@@ -300,18 +323,64 @@ export default function PainelNoticiasPage() {
   }, []);
 
   useEffect(() => {
-    void carregar();
-    const poll = window.setInterval(() => {
-      void carregar();
-    }, PAINEL_NOTICIAS_POLL_MS);
-    const reload = window.setInterval(() => {
-      window.location.reload();
-    }, PAINEL_NOTICIAS_RELOAD_MS);
+    let abort: AbortController | null = null;
+    let pollId: number | null = null;
+    let reloadId: number | null = null;
+
+    const limparTimers = () => {
+      if (pollId != null) {
+        window.clearInterval(pollId);
+        pollId = null;
+      }
+      if (reloadId != null) {
+        window.clearInterval(reloadId);
+        reloadId = null;
+      }
+    };
+
+    const dispararCarga = () => {
+      abort?.abort();
+      abort = new AbortController();
+      void carregar(abort.signal);
+    };
+
+    const iniciarTimers = () => {
+      limparTimers();
+      pollId = window.setInterval(() => {
+        dispararCarga();
+      }, PAINEL_NOTICIAS_POLL_MS);
+      reloadId = window.setInterval(() => {
+        window.location.reload();
+      }, PAINEL_NOTICIAS_RELOAD_MS);
+    };
+
+    const onVisibility = () => {
+      const hidden = document.hidden;
+      setAbaOculta(hidden);
+      if (hidden) {
+        limparTimers();
+        abort?.abort();
+        loadGenRef.current += 1;
+      } else {
+        dispararCarga();
+        iniciarTimers();
+      }
+    };
+
+    dispararCarga();
+    if (!document.hidden) iniciarTimers();
+    else setAbaOculta(true);
+
+    document.addEventListener("visibilitychange", onVisibility);
     return () => {
-      window.clearInterval(poll);
-      window.clearInterval(reload);
+      document.removeEventListener("visibilitychange", onVisibility);
+      limparTimers();
+      abort?.abort();
+      loadGenRef.current += 1;
     };
   }, [carregar]);
+
+  const mostrarFalhaPoll = erro && itens.length > 0;
 
   return (
     <div
@@ -360,8 +429,28 @@ export default function PainelNoticiasPage() {
           {erro ? ERRO_MSG : VAZIO_MSG}
         </div>
       ) : (
-        <PainelNoticiasCarrossel itens={itens} />
+        <PainelNoticiasCarrossel itens={itens} paused={abaOculta} />
       )}
+      {mostrarFalhaPoll ? (
+        <div
+          role="status"
+          aria-live="polite"
+          style={{
+            position: "absolute",
+            left: 0,
+            right: 0,
+            bottom: "clamp(12px, 2.5vh, 28px)",
+            textAlign: "center",
+            color: "#9ca3af",
+            fontSize: "clamp(0.85rem, 1.4vw, 1.1rem)",
+            fontFamily: FONT.body,
+            pointerEvents: "none",
+            padding: "0 16px",
+          }}
+        >
+          {POLL_FALHA_MSG}
+        </div>
+      ) : null}
     </div>
   );
 }

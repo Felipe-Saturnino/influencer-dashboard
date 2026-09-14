@@ -21,6 +21,7 @@ export function HomeKpiCard({
   value,
   icon,
   accentVar = "--brand-primary",
+  subValue,
   breakdown,
   comparativoMensal,
 }: {
@@ -28,6 +29,8 @@ export function HomeKpiCard({
   value?: string;
   icon: ReactNode;
   accentVar?: string;
+  /** Linha abaixo do valor — padrão Overview (ex.: acessos / valor R$). */
+  subValue?: { label: string; value: string } | null;
   breakdown?: HomeKpiBreakdownItem[];
   comparativoMensal?: HomeKpiComparativoMensal | null;
 }) {
@@ -80,14 +83,28 @@ export function HomeKpiCard({
           </span>
         </div>
         {value != null && value !== "" ? (
-          <div style={{ fontSize: 22, fontWeight: 800, color: t.text, fontFamily: FONT.body, lineHeight: 1.1 }}>
+          <div
+            style={{
+              fontSize: 22,
+              fontWeight: 800,
+              color: t.text,
+              fontFamily: FONT.body,
+              lineHeight: 1.1,
+              marginBottom: subValue ? 4 : 0,
+            }}
+          >
             {value}
+          </div>
+        ) : null}
+        {subValue ? (
+          <div style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, lineHeight: 1.35 }}>
+            <span style={{ color: t.text, fontWeight: 600 }}>{subValue.value}</span> {subValue.label}
           </div>
         ) : null}
         {comparativoMensal ? (
           <div
             style={{
-              marginTop: value != null && value !== "" ? 12 : 4,
+              marginTop: value != null && value !== "" || subValue ? 12 : 4,
               paddingTop: 10,
               borderTop: `1px solid ${t.cardBorder}`,
               fontFamily: FONT.body,

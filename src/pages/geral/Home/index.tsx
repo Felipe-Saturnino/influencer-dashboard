@@ -1,13 +1,10 @@
-import { useState, useEffect } from "react";
+import { lazy, Suspense, useState, useEffect, type ReactNode } from "react";
 import { useApp } from "../../../context/AppContext";
+import { useIdentidadeEfetiva } from "../../../hooks/useIdentidadeEfetiva";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { MENU } from "../../../constants/menu";
-import { Role, Live, LiveResultado, type PageKey } from "../../../types";
-import { supabase } from "../../../lib/supabase";
-import { isPerfilIncompleto } from "../../../lib/influencerPerfilCompleto";
-import { PLAYBOOK_ITENS_OBRIGATORIOS } from "../../../constants/playbookGuia";
-import { PLAT_LOGO, PLAT_LOGO_DARK } from "../../../constants/platforms";
+import { Role, type PageKey } from "../../../types";
 import {
   GiMicrophone,
   GiTv,
@@ -28,25 +25,13 @@ import {
   GiShare,
   GiRoundTable,
 } from "react-icons/gi";
-import { ArrowRight, AlertTriangle } from "lucide-react";
+import { ArrowRight, AlertTriangle, Loader2 } from "lucide-react";
 import { roleParidadeInfluencer } from "../../../lib/staffRoles";
-import HomeInvestidor from "./HomeInvestidor";
-import HomeExecutivo from "./HomeExecutivo";
-import HomePrestador from "./HomePrestador";
-import HomeFigurino from "./HomeFigurino";
-import HomeComunicacao from "./HomeComunicacao";
-import HomePerformanceCoach from "./HomePerformanceCoach";
-import HomeServiceManager from "./HomeServiceManager";
-import HomeCustomerService from "./HomeCustomerService";
-import HomeGamePresenter from "./HomeGamePresenter";
-import HomeShuffler from "./HomeShuffler";
-import HomeTechOps from "./HomeTechOps";
-import HomeShiftLeader from "./HomeShiftLeader";
-import HomeRh from "./HomeRh";
-import HomeOperadorRouter from "./operador/HomeOperadorRouter";
-import HomeAfiliado from "./HomeAfiliado";
 import { AppPageLink } from "../../../components/AppPageLink";
 import { useAppPageNav } from "../../../hooks/useAppPageNav";
+import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
+import { SEARCH_PLACEHOLDER_ELLIPSIS } from "../../../lib/searchBarConstants";
+import { textoContemBusca } from "../../../lib/searchText";
 import {
   buscarFuncionarioRevisaoCadastralPorEmail,
   revisaoCadastralPendenteParaFuncionario,
@@ -57,6 +42,62 @@ import {
 } from "../../../lib/rhCadastroRevisao";
 import { extrairPrimeiroNome } from "../../../lib/aniversarioHoje";
 
+const HomeInvestidor = lazy(() => import("./HomeInvestidor"));
+const HomeExecutivo = lazy(() => import("./HomeExecutivo"));
+const HomePrestador = lazy(() => import("./HomePrestador"));
+const HomeFigurino = lazy(() => import("./HomeFigurino"));
+const HomeComunicacao = lazy(() => import("./HomeComunicacao"));
+const HomePerformanceCoach = lazy(() => import("./HomePerformanceCoach"));
+const HomeServiceManager = lazy(() => import("./HomeServiceManager"));
+const HomeCustomerService = lazy(() => import("./HomeCustomerService"));
+const HomeGamePresenter = lazy(() => import("./HomeGamePresenter"));
+const HomeShuffler = lazy(() => import("./HomeShuffler"));
+const HomeTechOps = lazy(() => import("./HomeTechOps"));
+const HomeShiftLeader = lazy(() => import("./HomeShiftLeader"));
+const HomeRh = lazy(() => import("./HomeRh"));
+const HomeOperadorRouter = lazy(() => import("./operador/HomeOperadorRouter"));
+const HomeAfiliado = lazy(() => import("./HomeAfiliado"));
+const HomeInfluencer = lazy(() => import("./HomeInfluencer"));
+const HomeAgencia = lazy(() => import("./HomeAgencia"));
+const HomeGestorAquisicao = lazy(() => import("./HomeGestorAquisicao"));
+const HomeGestorMarketing = lazy(() => import("./HomeGestorMarketing"));
+const HomeGestorOperacoes = lazy(() => import("./HomeGestorOperacoes"));
+const HomeGestorTechOps = lazy(() => import("./HomeGestorTechOps"));
+const HomeGestorAcademy = lazy(() => import("./HomeGestorAcademy"));
+const HomeGestorRh = lazy(() => import("./HomeGestorRh"));
+const HomeAdmin = lazy(() => import("./HomeAdmin"));
+
+function HomeChunkFallback() {
+  const { theme: t } = useApp();
+  return (
+    <div
+      className="app-page-shell"
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        minHeight: 320,
+        fontFamily: FONT.body,
+      }}
+    >
+      <div style={{ textAlign: "center", color: t.textMuted }}>
+        <Loader2
+          size={24}
+          className="app-lucide-spin"
+          color="var(--brand-primary, #7c3aed)"
+          aria-hidden
+          style={{ marginBottom: 12 }}
+        />
+        <div style={{ fontSize: 13 }}>Carregando…</div>
+      </div>
+    </div>
+  );
+}
+
+function withHomeSuspense(node: ReactNode) {
+  return <Suspense fallback={<HomeChunkFallback />}>{node}</Suspense>;
+}
+
 const BRAND = {
   roxo: "#4a2082",
   roxoVivo: "#7c3aed",
@@ -66,69 +107,6 @@ const BRAND = {
   vermelho: "#e84025",
 } as const;
 
-function parseLiveLocal(data: string, horario: string): Date {
-  const [y, mo, d] = data.split("-").map((x) => parseInt(x, 10));
-  const parts = (horario || "00:00").split(":");
-  const hh = parseInt(parts[0] ?? "0", 10) || 0;
-  const mm = parseInt(parts[1] ?? "0", 10) || 0;
-  const ss = parseInt(parts[2] ?? "0", 10) || 0;
-  return new Date(y, mo - 1, d, hh, mm, ss);
-}
-
-function fmtDataHoraLive(data: string, horario: string): string {
-  const dt = parseLiveLocal(data, horario);
-  return dt.toLocaleString("pt-BR", {
-    weekday: "short",
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-function fmtDuracao(r: LiveResultado | undefined): string {
-  if (!r) return "—";
-  const h = r.duracao_horas ?? 0;
-  const m = r.duracao_min ?? 0;
-  if (h && m) return `${h}h ${m}min`;
-  if (h) return `${h}h`;
-  if (m) return `${m}min`;
-  return "—";
-}
-
-function PlatLogoHome({
-  plataforma,
-  size = 20,
-  isDark,
-}: {
-  plataforma: string;
-  size?: number;
-  isDark: boolean;
-}) {
-  const [err, setErr] = useState(false);
-  const src = isDark
-    ? PLAT_LOGO_DARK[plataforma] ?? PLAT_LOGO[plataforma]
-    : PLAT_LOGO[plataforma];
-  if (err || !src) {
-    return (
-      <span style={{ fontSize: size * 0.65, opacity: 0.6 }} title={plataforma}>
-        ●
-      </span>
-    );
-  }
-  return (
-    <img
-      src={src}
-      alt={plataforma}
-      width={size}
-      height={size}
-      onError={() => setErr(true)}
-      style={{ display: "block", flexShrink: 0 }}
-    />
-  );
-}
-
 const ROLE_LABELS: Record<Role, string> = {
   admin: "Administrador",
   gestor_aquisicao: "Gestor de Aquisição",
@@ -137,6 +115,8 @@ const ROLE_LABELS: Record<Role, string> = {
   gestor_tech_ops: "Gestor de Tech Ops",
   gestor_academy: "Gestor de Academy",
   gestor_rh: "Gestor de RH",
+  gestor_facilities: "Gestor de Facilities",
+  gestor_ti: "Gestor de TI",
   prestador: "Prestadores",
   executivo: "Executivo",
   shift_leader: "Shift Leader",
@@ -147,9 +127,11 @@ const ROLE_LABELS: Record<Role, string> = {
   tech_ops: "Tech Ops",
   figurino: "Figurino",
   comunicacao: "Comunicação",
+  facilities: "Facilities",
+  ti: "TI",
   performance_coach: "Performance Coach",
   rh: "RH",
-  influencer: "Influenciador",
+  influencer: "Influencer",
   afiliado: "Afiliado",
   investidor: "Investidor",
   operador: "Operador",
@@ -193,10 +175,20 @@ const ROLE_WELCOME: Record<Role, { title: string; subtitle: string }> = {
     subtitle:
       "Prestadores, escala e ferramentas de RH liberadas ao seu perfil — ajuste fino em Gestão de Usuários.",
   },
+  gestor_facilities: {
+    title: "Gestão de Facilities",
+    subtitle:
+      "Facilities e páginas liberadas ao seu perfil — ajuste fino em Gestão de Usuários.",
+  },
+  gestor_ti: {
+    title: "Gestão de TI",
+    subtitle:
+      "TI e páginas liberadas ao seu perfil — ajuste fino em Gestão de Usuários.",
+  },
   prestador: {
     title: "Área de atuação",
     subtitle:
-      "Seu menu reflete as áreas atribuídas ao seu perfil. Em caso de dúvida sobre acessos, fale com o administrador.",
+      "Seu menu reflete as áreas atribuídas ao seu perfil. Em caso de dúvida sobre acessos, fale com o suporte.",
   },
   executivo: {
     title: "Dashboard executivo",
@@ -242,6 +234,16 @@ const ROLE_WELCOME: Record<Role, { title: string; subtitle: string }> = {
     title: "Comunicação",
     subtitle:
       "Conteúdo, informativos e ferramentas de comunicação liberadas ao seu perfil.",
+  },
+  facilities: {
+    title: "Facilities",
+    subtitle:
+      "Operação de Facilities e páginas liberadas ao seu perfil. Ajuste fino em Gestão de Usuários.",
+  },
+  ti: {
+    title: "TI",
+    subtitle:
+      "Operação de TI e páginas liberadas ao seu perfil. Ajuste fino em Gestão de Usuários.",
   },
   performance_coach: {
     title: "Performance Coach",
@@ -298,19 +300,6 @@ const PAGE_ICONS: Record<string, React.ComponentType<{ size?: number; color?: st
   status_tecnico: GiRadarSweep,
 };
 
-type PerfilRow = {
-  nome_artistico?: string | null;
-  nome_completo?: string | null;
-  telefone?: string | null;
-  cpf?: string | null;
-  cache_hora?: number | null;
-  chave_pix?: string | null;
-  banco?: string | null;
-  agencia?: string | null;
-  conta?: string | null;
-  status?: string | null;
-};
-
 export default function Home() {
   const {
     theme: t,
@@ -322,18 +311,13 @@ export default function Home() {
     isDark,
     simulacaoLogin,
     simulacaoSomenteLeitura,
-    dadosUsuarioEfetivo,
   } = useApp();
+  const { name: nomeEfetivo } = useIdentidadeEfetiva();
   const { propsFor } = useAppPageNav();
 
-  const [influencerHomeReady, setInfluencerHomeReady] = useState(false);
-  const [perfilRow, setPerfilRow] = useState<PerfilRow | null>(null);
-  const [playbookPendente, setPlaybookPendente] = useState(false);
-  const [livesFuturas, setLivesFuturas] = useState<Live[]>([]);
-  const [livesRealizadasRecentes, setLivesRealizadasRecentes] = useState<Live[]>([]);
-  const [resultadosPorLive, setResultadosPorLive] = useState<Record<string, LiveResultado>>({});
   const [revisaoCadastralPendenteHome, setRevisaoCadastralPendenteHome] = useState(false);
   const [revisaoCadastralHomeReady, setRevisaoCadastralHomeReady] = useState(false);
+  const [buscaAtalho, setBuscaAtalho] = useState("");
 
   useEffect(() => {
     const roleGate = effectiveRole ?? user?.role;
@@ -352,6 +336,7 @@ export default function Home() {
       "shift_leader",
       "rh",
       "operador",
+      "agencia",
     ];
     if (roleGate && (homesDedicadas.includes(roleGate) || roleParidadeInfluencer(roleGate))) {
       setRevisaoCadastralPendenteHome(false);
@@ -392,147 +377,104 @@ export default function Home() {
     };
   }, [user, permissionsAcoes.rh_dados_cadastro?.editar, simulacaoSomenteLeitura, effectiveRole]);
 
-  useEffect(() => {
-    const roleDados = effectiveRole ?? user?.role;
-    if (!user || roleDados !== "influencer") {
-      setInfluencerHomeReady(true);
-      setPerfilRow(null);
-      setPlaybookPendente(false);
-      setLivesFuturas([]);
-      setLivesRealizadasRecentes([]);
-      return;
-    }
-
-    let cancelled = false;
-    const uid = dadosUsuarioEfetivo?.id ?? user.id;
-
-    async function loadInfluencerHome() {
-      setInfluencerHomeReady(false);
-      const [perfilRes, confRes, agRes, realRes] = await Promise.all([
-        supabase
-          .from("influencer_perfil")
-          .select(
-            "nome_artistico, nome_completo, telefone, cpf, cache_hora, chave_pix, banco, agencia, conta, status"
-          )
-          .eq("id", uid)
-          .maybeSingle(),
-        supabase.from("guia_confirmacoes").select("item_key").eq("influencer_id", uid),
-        supabase
-          .from("lives")
-          .select("*")
-          .eq("influencer_id", uid)
-          .eq("status", "agendada")
-          .order("data", { ascending: true })
-          .order("horario", { ascending: true }),
-        supabase
-          .from("lives")
-          .select("*")
-          .eq("influencer_id", uid)
-          .eq("status", "realizada")
-          .order("data", { ascending: false })
-          .order("horario", { ascending: false })
-          .limit(4),
-      ]);
-
-      if (cancelled) return;
-
-      setPerfilRow((perfilRes.data as PerfilRow) ?? null);
-
-      const keysOk = new Set((confRes.data ?? []).map((r: { item_key: string }) => r.item_key));
-      const faltaPlaybook = PLAYBOOK_ITENS_OBRIGATORIOS.some((k) => !keysOk.has(k));
-      setPlaybookPendente(faltaPlaybook);
-
-      const now = new Date();
-      const agendadas = (agRes.data ?? []) as Live[];
-      setLivesFuturas(
-        agendadas.filter((l) => parseLiveLocal(l.data, l.horario).getTime() > now.getTime())
-      );
-
-      const realizadas = (realRes.data ?? []) as Live[];
-      setLivesRealizadasRecentes(realizadas);
-
-      const ids = realizadas.map((l) => l.id);
-      const map: Record<string, LiveResultado> = {};
-      if (ids.length > 0) {
-        const { data: resRows } = await supabase.from("live_resultados").select("*").in("live_id", ids);
-        if (resRows) {
-          (resRows as LiveResultado[]).forEach((r) => {
-            map[r.live_id] = r;
-          });
-        }
-      }
-      if (!cancelled) setResultadosPorLive(map);
-      if (!cancelled) setInfluencerHomeReady(true);
-    }
-
-    void loadInfluencerHome();
-    return () => {
-      cancelled = true;
-    };
-  }, [user, effectiveRole, dadosUsuarioEfetivo?.id]);
-
   if (!user) return null;
 
   const roleHome = effectiveRole ?? user.role;
 
   if (roleHome === "investidor") {
-    return <HomeInvestidor />;
+    return withHomeSuspense(<HomeInvestidor />);
   }
 
   if (roleHome === "executivo") {
-    return <HomeExecutivo />;
+    return withHomeSuspense(<HomeExecutivo />);
   }
 
   if (roleHome === "prestador") {
-    return <HomePrestador />;
+    return withHomeSuspense(<HomePrestador />);
   }
 
   if (roleHome === "figurino") {
-    return <HomeFigurino />;
+    return withHomeSuspense(<HomeFigurino />);
   }
 
   if (roleHome === "comunicacao") {
-    return <HomeComunicacao />;
+    return withHomeSuspense(<HomeComunicacao />);
   }
 
   if (roleHome === "performance_coach") {
-    return <HomePerformanceCoach />;
+    return withHomeSuspense(<HomePerformanceCoach />);
   }
 
   if (roleHome === "service_manager") {
-    return <HomeServiceManager />;
+    return withHomeSuspense(<HomeServiceManager />);
   }
 
   if (roleHome === "customer_service") {
-    return <HomeCustomerService />;
+    return withHomeSuspense(<HomeCustomerService />);
   }
 
   if (roleHome === "game_presenter") {
-    return <HomeGamePresenter />;
+    return withHomeSuspense(<HomeGamePresenter />);
   }
 
   if (roleHome === "shuffler") {
-    return <HomeShuffler />;
+    return withHomeSuspense(<HomeShuffler />);
   }
 
   if (roleHome === "tech_ops") {
-    return <HomeTechOps />;
+    return withHomeSuspense(<HomeTechOps />);
   }
 
   if (roleHome === "shift_leader") {
-    return <HomeShiftLeader />;
+    return withHomeSuspense(<HomeShiftLeader />);
   }
 
   if (roleHome === "rh") {
-    return <HomeRh />;
+    return withHomeSuspense(<HomeRh />);
   }
 
   if (roleHome === "operador") {
-    return <HomeOperadorRouter />;
+    return withHomeSuspense(<HomeOperadorRouter />);
   }
 
   if (roleHome === "afiliado") {
-    return <HomeAfiliado />;
+    return withHomeSuspense(<HomeAfiliado />);
+  }
+
+  if (roleHome === "influencer") {
+    return withHomeSuspense(<HomeInfluencer />);
+  }
+
+  if (roleHome === "agencia") {
+    return withHomeSuspense(<HomeAgencia />);
+  }
+
+  if (roleHome === "gestor_aquisicao") {
+    return withHomeSuspense(<HomeGestorAquisicao />);
+  }
+
+  if (roleHome === "gestor_marketing") {
+    return withHomeSuspense(<HomeGestorMarketing />);
+  }
+
+  if (roleHome === "gestor_operacoes") {
+    return withHomeSuspense(<HomeGestorOperacoes />);
+  }
+
+  if (roleHome === "gestor_tech_ops") {
+    return withHomeSuspense(<HomeGestorTechOps />);
+  }
+
+  if (roleHome === "gestor_academy") {
+    return withHomeSuspense(<HomeGestorAcademy />);
+  }
+
+  if (roleHome === "gestor_rh") {
+    return withHomeSuspense(<HomeGestorRh />);
+  }
+
+  if (roleHome === "admin") {
+    return withHomeSuspense(<HomeAdmin />);
   }
 
   const role = roleHome;
@@ -553,37 +495,20 @@ export default function Home() {
   }
 
   const atalhosOrdenados = [...atalhos];
-  if (role === "influencer" || role === "agencia") {
-    const idxOverview = atalhosOrdenados.findIndex((a) => a.key === "dash_overview_influencer");
-    if (idxOverview > 0) {
-      const [item] = atalhosOrdenados.splice(idxOverview, 1);
-      atalhosOrdenados.unshift(item);
-    }
-  }
+  const atalhosVisiveis = buscaAtalho.trim()
+    ? atalhosOrdenados.filter((a) => textoContemBusca(a.label, buscaAtalho))
+    : atalhosOrdenados;
   const accentColor = useBrand ? "var(--brand-primary)" : BRAND.roxoVivo;
   const cardBg = useBrand && operadoraBrand?.brand_bg ? operadoraBrand.brand_bg : t.cardBg;
 
-  const nomePerfil = perfilRow?.nome_artistico?.trim() || dadosUsuarioEfetivo?.name || user.name;
+  const nomeBoasVindas = (nomeEfetivo || user.name || "").trim() || "usuário";
   const welcomeAvatarLabel = simulacaoSomenteLeitura
     ? (user.name || user.email || "?")
-    : (perfilRow?.nome_artistico?.trim() || user.name || user.email || "?");
+    : (user.name || user.email || "?");
   const welcomeInitial = welcomeAvatarLabel[0]?.toUpperCase() ?? "?";
-
-  const showPerfilIncompleto =
-    role === "influencer" &&
-    influencerHomeReady &&
-    (perfilRow?.status ?? "ativo") === "ativo" &&
-    isPerfilIncompleto(perfilRow, nomePerfil);
-
-  const showPlaybookAlert = role === "influencer" && influencerHomeReady && playbookPendente;
 
   const showRevisaoCadastralAlert =
     revisaoCadastralHomeReady && revisaoCadastralPendenteHome;
-
-  const showProximasLives = role === "influencer" && influencerHomeReady && livesFuturas.length > 0;
-
-  const showFeedbacksRecentes =
-    role === "influencer" && influencerHomeReady && livesRealizadasRecentes.length > 0;
 
   const alertBoxStyle: React.CSSProperties = {
     display: "flex",
@@ -657,7 +582,7 @@ export default function Home() {
                 marginBottom: 6,
               }}
             >
-              Olá, {user.name}!
+              Olá, {nomeBoasVindas}!
             </h1>
             <p style={{ margin: 0, fontSize: 12, color: t.textMuted, marginBottom: 8 }}>
               {ROLE_LABELS[role]}
@@ -715,242 +640,6 @@ export default function Home() {
         </div>
       )}
 
-      {showPerfilIncompleto && (
-        <div style={alertBoxStyle}>
-          <AlertTriangle size={20} color={BRAND.vermelho} style={{ flexShrink: 0, marginTop: 2 }} />
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div
-              style={{
-                fontSize: 12,
-                fontWeight: 800,
-                color: isDark ? "#ff9980" : "#b02a14",
-                letterSpacing: "0.06em",
-                marginBottom: 8,
-                fontFamily: FONT_TITLE,
-              }}
-            >
-              AÇÃO NECESSÁRIA
-            </div>
-            <p style={{ margin: 0, fontSize: 13, color: t.text, lineHeight: 1.65, marginBottom: 12 }}>
-              {simulacaoLogin
-                ? `Cadastro incompleto no usuário visualizado${simulacaoLogin.userName ? ` (${simulacaoLogin.userName})` : ""}. Na visualização, o menu segue esse perfil (somente leitura).`
-                : "Você ainda não concluiu o seu cadastro, isso impede o pagamento das lives realizadas. Acesse a página Influencers e preencha todos os itens pendentes das suas informações."}
-            </p>
-            <a
-              {...propsFor("influencers")}
-              style={{
-                display: "inline-block",
-                padding: "8px 16px",
-                borderRadius: 10,
-                border: `1px solid ${BRAND.vermelho}`,
-                background: `${BRAND.vermelho}18`,
-                color: BRAND.vermelho,
-                fontSize: 12,
-                fontWeight: 700,
-                cursor: "pointer",
-                fontFamily: FONT.body,
-                textDecoration: "none",
-              }}
-            >
-              Ir para Influencers
-            </a>
-          </div>
-        </div>
-      )}
-
-      {showPlaybookAlert && (
-        <div style={alertBoxStyle}>
-          <AlertTriangle size={20} color={BRAND.vermelho} style={{ flexShrink: 0, marginTop: 2 }} />
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div
-              style={{
-                fontSize: 12,
-                fontWeight: 800,
-                color: isDark ? "#ff9980" : "#b02a14",
-                letterSpacing: "0.06em",
-                marginBottom: 8,
-                fontFamily: FONT_TITLE,
-              }}
-            >
-              AÇÃO NECESSÁRIA
-            </div>
-            <p style={{ margin: 0, fontSize: 13, color: t.text, lineHeight: 1.65, marginBottom: 12 }}>
-              {simulacaoLogin ? (
-                `Playbook pendente no usuário visualizado${simulacaoLogin.userName ? ` (${simulacaoLogin.userName})` : ""}. A visualização é somente leitura.`
-              ) : (
-                <>
-                  Você ainda não confirmou todos os itens obrigatórios do Playbook. Acesse as abas{" "}
-                  <strong>Dealers</strong>, <strong>Agendamento</strong> e <strong>Jogos</strong> na página Playbook para
-                  dar sua ciência.
-                </>
-              )}
-            </p>
-            <a
-              {...propsFor("playbook_influencers")}
-              style={{
-                display: "inline-block",
-                padding: "8px 16px",
-                borderRadius: 10,
-                border: `1px solid ${BRAND.vermelho}`,
-                background: `${BRAND.vermelho}18`,
-                color: BRAND.vermelho,
-                fontSize: 12,
-                fontWeight: 700,
-                cursor: "pointer",
-                fontFamily: FONT.body,
-                textDecoration: "none",
-              }}
-            >
-              Ir para Playbook
-            </a>
-          </div>
-        </div>
-      )}
-
-      {showProximasLives && (
-        <div
-          style={{
-            background: cardBg,
-            border: `1px solid ${t.cardBorder}`,
-            borderRadius: 16,
-            padding: 20,
-            marginBottom: 24,
-          }}
-        >
-          <h2
-            style={{
-              margin: "0 0 14px 0",
-              fontSize: 13,
-              fontWeight: 800,
-              color: t.sectionTitle,
-              fontFamily: FONT_TITLE,
-              letterSpacing: "0.08em",
-              textTransform: "uppercase",
-            }}
-          >
-            Próximas lives
-          </h2>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 240px), 1fr))",
-              gap: 12,
-            }}
-          >
-            {livesFuturas.map((live) => (
-              <div
-                key={live.id}
-                style={{
-                  border: `1px solid ${t.cardBorder}`,
-                  borderRadius: 12,
-                  padding: "14px 16px",
-                  background: t.inputBg ?? t.cardBg,
-                }}
-              >
-                <div style={{ fontSize: 13, fontWeight: 700, color: t.text, marginBottom: 10, lineHeight: 1.4 }}>
-                  {fmtDataHoraLive(live.data, live.horario)}
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <PlatLogoHome plataforma={live.plataforma} size={22} isDark={isDark} />
-                  <span style={{ fontSize: 13, fontWeight: 600, color: t.textMuted }}>{live.plataforma}</span>
-                </div>
-                {live.titulo ? (
-                  <p style={{ margin: "10px 0 0 0", fontSize: 12, color: t.textMuted, lineHeight: 1.45 }}>
-                    {live.titulo}
-                  </p>
-                ) : null}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {showFeedbacksRecentes && (
-        <div
-          style={{
-            background: cardBg,
-            border: `1px solid ${t.cardBorder}`,
-            borderRadius: 16,
-            padding: 20,
-            marginBottom: 24,
-          }}
-        >
-          <h2
-            style={{
-              margin: "0 0 14px 0",
-              fontSize: 13,
-              fontWeight: 800,
-              color: t.sectionTitle,
-              fontFamily: FONT_TITLE,
-              letterSpacing: "0.08em",
-              textTransform: "uppercase",
-            }}
-          >
-            Feedbacks recentes
-          </h2>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 260px), 1fr))",
-              gap: 12,
-            }}
-          >
-            {livesRealizadasRecentes.map((live) => {
-              const res = resultadosPorLive[live.id];
-              const obs = live.observacao?.trim();
-              return (
-                <div
-                  key={live.id}
-                  style={{
-                    border: `1px solid ${t.cardBorder}`,
-                    borderRadius: 12,
-                    padding: "14px 16px",
-                    background: t.inputBg ?? t.cardBg,
-                  }}
-                >
-                  <div style={{ fontSize: 13, fontWeight: 700, color: t.text, marginBottom: 10, lineHeight: 1.4 }}>
-                    {fmtDataHoraLive(live.data, live.horario)}
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                    <PlatLogoHome plataforma={live.plataforma} size={22} isDark={isDark} />
-                    <span style={{ fontSize: 13, fontWeight: 600, color: t.textMuted }}>{live.plataforma}</span>
-                  </div>
-                  {obs ? (
-                    <p style={{ margin: "0 0 10px 0", fontSize: 12, color: t.textMuted, lineHeight: 1.5 }}>
-                      <span style={{ fontWeight: 700, color: t.text }}>Obs.: </span>
-                      {obs}
-                    </p>
-                  ) : null}
-                  <div
-                    style={{
-                      display: "grid",
-                      gap: 6,
-                      fontSize: 12,
-                      color: t.textMuted,
-                      borderTop: `1px solid ${t.cardBorder}`,
-                      paddingTop: 10,
-                    }}
-                  >
-                    <div>
-                      <span style={{ fontWeight: 600, color: t.sectionTitle }}>Duração: </span>
-                      {fmtDuracao(res)}
-                    </div>
-                    <div>
-                      <span style={{ fontWeight: 600, color: t.sectionTitle }}>Média de views: </span>
-                      {res?.media_views != null ? res.media_views.toLocaleString("pt-BR") : "—"}
-                    </div>
-                    <div>
-                      <span style={{ fontWeight: 600, color: t.sectionTitle }}>Pico de views: </span>
-                      {res?.max_views != null ? res.max_views.toLocaleString("pt-BR") : "—"}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
       {/* Acesso rápido */}
       <div
         style={{
@@ -978,9 +667,25 @@ export default function Home() {
           Clique em um atalho abaixo para ir diretamente à página desejada.
         </p>
 
+        {atalhosOrdenados.length > 8 ? (
+          <div style={{ marginBottom: 14 }}>
+            <BarraPesquisaPagina
+              value={buscaAtalho}
+              onChange={setBuscaAtalho}
+              placeholder={`Pesquisar atalho${SEARCH_PLACEHOLDER_ELLIPSIS}`}
+              aria-label="Pesquisar atalho no acesso rápido"
+              wrapperStyle={{ width: "100%" }}
+            />
+          </div>
+        ) : null}
+
         {atalhosOrdenados.length === 0 ? (
           <p style={{ margin: 0, fontSize: 13, color: t.textMuted }}>
             Nenhuma página disponível no momento.
+          </p>
+        ) : atalhosVisiveis.length === 0 ? (
+          <p style={{ margin: 0, fontSize: 13, color: t.textMuted }}>
+            Nenhum atalho encontrado para a busca.
           </p>
         ) : (
           <div
@@ -990,7 +695,7 @@ export default function Home() {
               gap: 12,
             }}
           >
-            {atalhosOrdenados.map((atalho) => {
+            {atalhosVisiveis.map((atalho) => {
               const Icon = atalho.icon;
               return (
                 <a

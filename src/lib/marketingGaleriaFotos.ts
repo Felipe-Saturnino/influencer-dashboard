@@ -336,7 +336,7 @@ export async function uploadMarketingFotoArquivo(
     return { ok: false, message: "Selecione um evento." };
   }
   if (tipo === "prestador" && !prestadorId) {
-    return { ok: false, message: "Selecione o colaborador." };
+    return { ok: false, message: "Selecione o prestador." };
   }
 
   const safe = sanitizeStorageFileName(file.name);

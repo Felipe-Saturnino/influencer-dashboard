@@ -128,11 +128,11 @@ export interface RhFuncionario {
   staff_live_no_estudio?: string | null;
   /** Fim do treinamento; preenchimento via Supabase (somente leitura na UI). */
   staff_fim_treinamento?: string | null;
-  /** Gênero no dealer (Gestão de Staff > Gestão de dealer). */
+  /** Gênero no Game Presenter (Gestão de Staff > Gestão de Game Presenter). */
   staff_dealer_genero?: "feminino" | "masculino" | null;
-  /** Bio do dealer (`dealers.perfil_influencer`). */
+  /** Bio do Game Presenter (`dealers.perfil_influencer`). */
   staff_dealer_bio?: string | null;
-  /** URLs das fotos do dealer (JSON array). */
+  /** URLs das fotos do Game Presenter (JSON array). */
   staff_dealer_fotos?: unknown;
   /**
    * Última revisão concluída pelo prestador em Dados de Cadastro (ciclo de 6 meses).

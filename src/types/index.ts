@@ -7,6 +7,8 @@ export type Role =
   | "gestor_tech_ops"
   | "gestor_academy"
   | "gestor_rh"
+  | "gestor_facilities"
+  | "gestor_ti"
   | "prestador"
   | "executivo"
   | "shift_leader"
@@ -19,6 +21,8 @@ export type Role =
   | "comunicacao"
   | "performance_coach"
   | "rh"
+  | "facilities"
+  | "ti"
   | "influencer"
   | "afiliado"
   | "operador"
@@ -97,7 +101,8 @@ export type PageKey =
   | "tech_ops_itens_alocados"
   | "configuracoes"
   | "simulador_login"
-  | "ajuda";
+  | "ajuda"
+  | "versionamento";
 
 // ─── PLATAFORMA / LIVE STATUS ────────────────────────────────────────────────
 export type Plataforma = "Twitch" | "YouTube" | "Instagram" | "TikTok" | "Kick" | "Discord" | "WhatsApp" | "Telegram";
@@ -249,8 +254,6 @@ export type ScopeType =
 /** Áreas de atuação do perfil Prestadores (mapeiam prestador_tipo_pages). */
 export type PrestadorTipoSlug =
   | "escritorio"
-  | "facilities"
-  | "ti"
   | "estudio";
 
 export interface UserScope {
@@ -352,6 +355,8 @@ export interface UsuarioCompleto {
   ativo?:           boolean;
   created_at?:      string;
   last_sign_in_at?: string | null;
+  /** Âncora do relógio de inatividade (cadastro/reativação) — ver `profilesInatividade`. */
+  acesso_referencia_em?: string | null;
   /** Alinhado ao vínculo «Emprestado para» (filtro quando can_view = próprios em Gestão de Usuários). */
   emprestado_para?: string | null;
   scopes?:          UserScope[];

@@ -1,3 +1,4 @@
+import { entradaAtrasadaMais5Min } from "./overviewPrestadorCalendarioHelpers";
 import { supabase } from "./supabase";
 
 export const MSG_ERRO_CT =
@@ -7,6 +8,8 @@ export const MSG_ERRO_CT_SALVAR =
 
 export type CtTurno = "manha" | "tarde" | "noite";
 export type CtMotivoAusencia = "medico" | "pessoal";
+/** Só quando motivo = pessoal. */
+export type CtTipoAusenciaPessoal = "programada" | "nao_programada";
 export type CtFeedbackRecomendacao =
   | "orientacao"
   | "alinhamento"
@@ -70,6 +73,8 @@ export type CtAusenciaRow = {
   prestador_id: string;
   prestador_nome: string;
   motivo: CtMotivoAusencia;
+  /** Preenchido só com motivo pessoal. */
+  tipo_ausencia: CtTipoAusenciaPessoal | null;
   inicio: string;
   fim: string | null;
   fim_nao_informado: boolean;
@@ -129,6 +134,8 @@ export type CtRelatorioTurnoRow = {
   manutencao: CtRelatorioManutencaoJson;
   manutencao_resumo: string;
   comentarios: string;
+  /** 0–5; null = não informado. */
+  termometro: number | null;
   publicado_em: string | null;
   updated_at: string | null;
 };
@@ -191,6 +198,183 @@ export function formatHoraCt(v: string | null | undefined): string {
   const m = /^(\d{1,2}):(\d{2})/.exec(s);
   if (!m) return s.slice(0, 5);
   return `${m[1]!.padStart(2, "0")}:${m[2]}`;
+}
+
+/** Soma horas a um HH:MM (módulo 24h). */
+export function hhmmMaisHorasCt(hhmm: string, horas: number): string {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(formatHoraCt(hhmm));
+  if (!m) return "";
+  const base = Number(m[1]) * 60 + Number(m[2]) + horas * 60;
+  const norm = ((base % (24 * 60)) + 24 * 60) % (24 * 60);
+  const h = Math.floor(norm / 60);
+  const mi = norm % 60;
+  return `${String(h).padStart(2, "0")}:${String(mi).padStart(2, "0")}`;
+}
+
+export type CtEstudioHorarioTurno = {
+  slug: string;
+  nome: string;
+  turno_manha_inicio: string | null;
+  turno_tarde_inicio: string | null;
+  turno_noite_inicio: string | null;
+};
+
+/** Início cadastrado do turno no estúdio → entrada/saída previstas (+8h). */
+export function horarioPrevistoTurnoCt(
+  turno: CtTurno,
+  turnoInicioRaw: string | null | undefined,
+): { entrada: string; saida: string } {
+  const fallback =
+    turno === "manha" ? "07:00" : turno === "tarde" ? "12:00" : "18:00";
+  const entrada = formatHoraCt(turnoInicioRaw) || fallback;
+  return { entrada, saida: hhmmMaisHorasCt(entrada, 8) };
+}
+
+/**
+ * Resolve horário previsto do turno para pré-preencher Registrar Horário.
+ * «Todos Estúdios» / vazio → 1.º estúdio ativo com horário do turno.
+ */
+export function resolverHorarioPrevistoPresencaCt(opts: {
+  turno: CtTurno;
+  estudioLabel: string;
+  estudios: CtEstudioHorarioTurno[];
+}): { entrada: string; saida: string } {
+  const col =
+    opts.turno === "manha"
+      ? "turno_manha_inicio"
+      : opts.turno === "tarde"
+        ? "turno_tarde_inicio"
+        : "turno_noite_inicio";
+  const label = opts.estudioLabel.trim().toLowerCase();
+  const ordenados = [...opts.estudios].sort((a, b) =>
+    a.nome.localeCompare(b.nome, "pt-BR"),
+  );
+
+  const inicioDe = (e: CtEstudioHorarioTurno): string | null => {
+    const raw = formatHoraCt(e[col]);
+    return raw || null;
+  };
+
+  let inicio: string | null = null;
+  if (label && label !== "—" && !label.includes("todos")) {
+    const hit = ordenados.find((e) => {
+      const nome = e.nome.trim().toLowerCase();
+      const slug = e.slug.trim().toLowerCase();
+      return (nome && label.includes(nome)) || (slug && label.includes(slug));
+    });
+    if (hit) inicio = inicioDe(hit);
+  }
+  if (!inicio) {
+    for (const e of ordenados) {
+      inicio = inicioDe(e);
+      if (inicio) break;
+    }
+  }
+  return horarioPrevistoTurnoCt(opts.turno, inicio);
+}
+
+/**
+ * Prefill de Registrar Horário: mantém o que já veio do check-in/CT;
+ * preenche só campos em branco com o horário previsto do turno.
+ */
+export function prefillRegistrarHorarioCt(opts: {
+  entradaAtual: string;
+  saidaAtual: string;
+  previsto: { entrada: string; saida: string };
+}): { entrada: string; saida: string } {
+  return {
+    entrada: opts.entradaAtual.trim() || opts.previsto.entrada,
+    saida: opts.saidaAtual.trim() || opts.previsto.saida,
+  };
+}
+
+/** KPIs do Relatório de Turno (Game Presenters / Shuffler). */
+export type CtStatsPresencaBloco = {
+  escalados: number;
+  presentes: number;
+  atrasados: number;
+  faltas: number;
+};
+
+export function grupoTimePresencaCt(time: string): "gp" | "shuffler" {
+  return time.toLowerCase().includes("shuffler") ? "shuffler" : "gp";
+}
+
+const STATUS_PRESENTES_REL: readonly CtPresencaStatus[] = [
+  "presente",
+  "atraso",
+  "saida_antecipada",
+  "hora_adicional",
+];
+
+function emptyStatsPresencaBloco(): CtStatsPresencaBloco {
+  return { escalados: 0, presentes: 0, atrasados: 0, faltas: 0 };
+}
+
+/**
+ * Consolida Escalados / Presentes / Atrasados / Faltas a partir da Escala do Turno.
+ * Atrasados: status `atraso` ou entrada realizada > prevista em mais de 5 min
+ * (mesma regra do Overview Prestador). Presentes exclui atrasados.
+ */
+export function statsPresencaRelatorioCt(
+  rows: CtPresencaRow[],
+  opts: {
+    turno: CtTurno;
+    estudios: CtEstudioHorarioTurno[];
+  },
+): { gp: CtStatsPresencaBloco; shuffler: CtStatsPresencaBloco } {
+  const gp = emptyStatsPresencaBloco();
+  const shuffler = emptyStatsPresencaBloco();
+
+  for (const row of rows) {
+    const bloco = grupoTimePresencaCt(row.time) === "shuffler" ? shuffler : gp;
+    bloco.escalados += 1;
+
+    if (row.status === "falta") {
+      bloco.faltas += 1;
+      continue;
+    }
+
+    const previsto = resolverHorarioPrevistoPresencaCt({
+      turno: opts.turno,
+      estudioLabel: row.estudio,
+      estudios: opts.estudios,
+    });
+    const entrada = formatHoraCt(row.entrada);
+    const atrasadoPorStatus = row.status === "atraso";
+    const atrasadoPorHora =
+      Boolean(entrada) && entradaAtrasadaMais5Min(previsto.entrada, entrada);
+
+    if (atrasadoPorStatus || atrasadoPorHora) {
+      bloco.atrasados += 1;
+      continue;
+    }
+
+    if (STATUS_PRESENTES_REL.includes(row.status)) {
+      bloco.presentes += 1;
+    }
+  }
+
+  return { gp, shuffler };
+}
+
+export async function listEstudiosHorariosTurnoCt(): Promise<CtEstudioHorarioTurno[]> {
+  const { data, error } = await supabase
+    .from("estudios_spin")
+    .select("slug, nome, turno_manha_inicio, turno_tarde_inicio, turno_noite_inicio")
+    .eq("ativo", true)
+    .order("nome", { ascending: true });
+  if (error) {
+    console.error(error);
+    return [];
+  }
+  return (data ?? []).map((e) => ({
+    slug: String(e.slug ?? ""),
+    nome: (e.nome ?? "").trim() || String(e.slug ?? ""),
+    turno_manha_inicio: e.turno_manha_inicio != null ? String(e.turno_manha_inicio) : null,
+    turno_tarde_inicio: e.turno_tarde_inicio != null ? String(e.turno_tarde_inicio) : null,
+    turno_noite_inicio: e.turno_noite_inicio != null ? String(e.turno_noite_inicio) : null,
+  }));
 }
 
 /** Data ISO + hora HH:MM → `dd/mm/aaaa HH:MM` (ou `—`). */
@@ -457,13 +641,21 @@ export async function updateFechamento(input: {
   }
 }
 
+function parseTipoAusencia(raw: unknown): CtTipoAusenciaPessoal | null {
+  const v = String(raw ?? "").trim();
+  if (v === "programada" || v === "nao_programada") return v;
+  return null;
+}
+
 function mapAusencia(row: Record<string, unknown>): CtAusenciaRow {
   const emb = unwrapEmbed(row.rh_funcionarios as PrestadorEmbed | PrestadorEmbed[] | null);
+  const motivo = row.motivo as CtMotivoAusencia;
   return {
     id: String(row.id ?? ""),
     prestador_id: String(row.prestador_id ?? ""),
     prestador_nome: (emb?.nome ?? "").trim() || "—",
-    motivo: row.motivo as CtMotivoAusencia,
+    motivo,
+    tipo_ausencia: motivo === "pessoal" ? parseTipoAusencia(row.tipo_ausencia) : null,
     inicio: isoDate(row.inicio),
     fim: row.fim ? isoDate(row.fim) : null,
     fim_nao_informado: Boolean(row.fim_nao_informado),
@@ -478,7 +670,7 @@ export async function listAusencias(diaIso: string): Promise<CtAusenciaRow[]> {
   const { data, error } = await supabase
     .from("escala_ct_ausencia")
     .select(
-      "id, prestador_id, motivo, inicio, fim, fim_nao_informado, observacao, lideranca_user_id, lideranca_nome, rh_funcionarios(id, nome)",
+      "id, prestador_id, motivo, tipo_ausencia, inicio, fim, fim_nao_informado, observacao, lideranca_user_id, lideranca_nome, rh_funcionarios(id, nome)",
     )
     .lte("inicio", dia)
     .or(`fim_nao_informado.eq.true,fim.gte.${dia}`)
@@ -494,6 +686,7 @@ export async function listAusencias(diaIso: string): Promise<CtAusenciaRow[]> {
 export async function createAusencia(input: {
   prestadorId: string;
   motivo: CtMotivoAusencia;
+  tipoAusencia: CtTipoAusenciaPessoal | null;
   inicio: string;
   fim: string | null;
   fimNaoInformado: boolean;
@@ -501,9 +694,12 @@ export async function createAusencia(input: {
   liderancaNome: string;
 }): Promise<void> {
   const uid = await authUserId();
+  const tipo =
+    input.motivo === "pessoal" ? input.tipoAusencia : null;
   const { error } = await supabase.from("escala_ct_ausencia").insert({
     prestador_id: input.prestadorId,
     motivo: input.motivo,
+    tipo_ausencia: tipo,
     inicio: input.inicio.slice(0, 10),
     fim: input.fimNaoInformado ? null : input.fim?.slice(0, 10) ?? null,
     fim_nao_informado: input.fimNaoInformado,
@@ -521,16 +717,20 @@ export async function updateAusencia(input: {
   id: string;
   prestadorId: string;
   motivo: CtMotivoAusencia;
+  tipoAusencia: CtTipoAusenciaPessoal | null;
   inicio: string;
   fim: string | null;
   fimNaoInformado: boolean;
   observacao: string;
 }): Promise<void> {
+  const tipo =
+    input.motivo === "pessoal" ? input.tipoAusencia : null;
   const { error } = await supabase
     .from("escala_ct_ausencia")
     .update({
       prestador_id: input.prestadorId,
       motivo: input.motivo,
+      tipo_ausencia: tipo,
       inicio: input.inicio.slice(0, 10),
       fim: input.fimNaoInformado ? null : input.fim?.slice(0, 10) ?? null,
       fim_nao_informado: input.fimNaoInformado,
@@ -740,6 +940,19 @@ export async function updateManutencao(input: {
   }
 }
 
+/** Select canónico do Relatório de Turno. */
+const RELATORIO_TURNO_SELECT =
+  "id, data, turno, status, relator_user_id, relator_nome, sos, sos_nenhum, figurino, figurino_nenhum, equipamentos, equipamentos_nenhum, manutencao, manutencao_resumo, comentarios, termometro, publicado_em, updated_at";
+
+/** Normaliza termômetro 0–5; inválido → null. */
+export function parseTermometroCt(v: unknown): number | null {
+  if (v == null || v === "") return null;
+  const n = typeof v === "number" ? v : Number(v);
+  if (!Number.isFinite(n)) return null;
+  const i = Math.trunc(n);
+  return i >= 0 && i <= 5 ? i : null;
+}
+
 function mapRelatorio(row: Record<string, unknown>): CtRelatorioTurnoRow {
   const rawManut = row.manutencao;
   const manut =
@@ -762,6 +975,7 @@ function mapRelatorio(row: Record<string, unknown>): CtRelatorioTurnoRow {
     manutencao: manut,
     manutencao_resumo: String(row.manutencao_resumo ?? ""),
     comentarios: String(row.comentarios ?? ""),
+    termometro: parseTermometroCt(row.termometro),
     publicado_em: row.publicado_em ? String(row.publicado_em) : null,
     updated_at: row.updated_at ? String(row.updated_at) : null,
   };
@@ -771,9 +985,7 @@ export async function listRelatoriosTurnoCt(diaIso: string): Promise<CtRelatorio
   const dia = diaIso.slice(0, 10);
   const { data, error } = await supabase
     .from("escala_ct_relatorio_turno")
-    .select(
-      "id, data, turno, status, relator_user_id, relator_nome, sos, sos_nenhum, figurino, figurino_nenhum, equipamentos, equipamentos_nenhum, manutencao, manutencao_resumo, comentarios, publicado_em, updated_at",
-    )
+    .select(RELATORIO_TURNO_SELECT)
     .eq("data", dia)
     .order("turno", { ascending: true });
 
@@ -791,9 +1003,7 @@ export async function getRelatorioTurnoCt(
   const dia = diaIso.slice(0, 10);
   const { data, error } = await supabase
     .from("escala_ct_relatorio_turno")
-    .select(
-      "id, data, turno, status, relator_user_id, relator_nome, sos, sos_nenhum, figurino, figurino_nenhum, equipamentos, equipamentos_nenhum, manutencao, manutencao_resumo, comentarios, publicado_em, updated_at",
-    )
+    .select(RELATORIO_TURNO_SELECT)
     .eq("data", dia)
     .eq("turno", turno)
     .maybeSingle();
@@ -820,6 +1030,7 @@ export async function upsertRelatorioTurnoCt(input: {
   manutencao: CtRelatorioManutencaoJson;
   manutencaoResumo: string;
   comentarios: string;
+  termometro: number | null;
 }): Promise<CtRelatorioTurnoRow> {
   const uid = await authUserId();
   if (!uid) throw new Error(MSG_ERRO_CT_SALVAR);
@@ -827,6 +1038,7 @@ export async function upsertRelatorioTurnoCt(input: {
   const dia = input.data.slice(0, 10);
   const existing = await getRelatorioTurnoCt(dia, input.turno).catch(() => null);
   const nome = getCurrentUserNome(input.relatorNome);
+  const termometro = parseTermometroCt(input.termometro);
   const payload = {
     data: dia,
     turno: input.turno,
@@ -842,6 +1054,7 @@ export async function upsertRelatorioTurnoCt(input: {
     manutencao: input.manutencao,
     manutencao_resumo: input.manutencaoResumo.trim(),
     comentarios: input.comentarios.trim(),
+    termometro,
     publicado_em: input.status === "publicado" ? new Date().toISOString() : existing?.publicado_em ?? null,
   };
 
@@ -850,9 +1063,7 @@ export async function upsertRelatorioTurnoCt(input: {
       .from("escala_ct_relatorio_turno")
       .update(payload)
       .eq("id", existing.id)
-      .select(
-        "id, data, turno, status, relator_user_id, relator_nome, sos, sos_nenhum, figurino, figurino_nenhum, equipamentos, equipamentos_nenhum, manutencao, manutencao_resumo, comentarios, publicado_em, updated_at",
-      )
+      .select(RELATORIO_TURNO_SELECT)
       .single();
     if (error || !data) {
       console.error(error);
@@ -864,9 +1075,7 @@ export async function upsertRelatorioTurnoCt(input: {
   const { data, error } = await supabase
     .from("escala_ct_relatorio_turno")
     .insert({ ...payload, relator_user_id: uid, relator_nome: nome })
-    .select(
-      "id, data, turno, status, relator_user_id, relator_nome, sos, sos_nenhum, figurino, figurino_nenhum, equipamentos, equipamentos_nenhum, manutencao, manutencao_resumo, comentarios, publicado_em, updated_at",
-    )
+    .select(RELATORIO_TURNO_SELECT)
     .single();
   if (error || !data) {
     console.error(error);

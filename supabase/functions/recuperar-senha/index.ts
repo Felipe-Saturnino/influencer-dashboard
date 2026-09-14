@@ -2,6 +2,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { enviarEmailRecuperacaoSenhaConta } from './enviarRecuperacaoSenha.ts'
 import { DEFAULT_LOGIN_URL } from './transacionalShell.ts'
+import { registrarHistoricoPerfil } from './common.ts'
 
 const supabaseServiceOptions = {
   auth: { autoRefreshToken: false, persistSession: false },
@@ -130,6 +131,14 @@ serve(async (req) => {
       headers: { ...cors, 'Content-Type': 'application/json' },
     })
   }
+
+  await registrarHistoricoPerfil(supabase, {
+    profileId: userId,
+    tipo: 'reset_senha',
+    origem: 'usuario',
+    realizadoPor: null,
+    resumo: 'Reset de senha solicitado na página de Login',
+  })
 
   const mail = await enviarEmailRecuperacaoSenhaConta({
     supabaseUrl,

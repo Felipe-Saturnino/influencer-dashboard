@@ -8,7 +8,7 @@ alwaysApply: false
 
 # Seção Plataforma
 
-**Antes de implementar:** `global.mdc` → `brand-css-variables.mdc` → este ficheiro.
+**Antes de implementar:** `business.mdc` (estúdio vs operadora) → `global.mdc` → `brand-css-variables.mdc` → este ficheiro.
 
 **Escopo:** `src/pages/plataforma/` — GestaoOperadoras, StatusTecnico, GestaoUsuarios, GestaoMesas (+ abas e modais).
 
@@ -22,7 +22,7 @@ alwaysApply: false
 
 ## Cabeçalho — título e subtítulo
 
-Header inline (badge 28×28 + `h1` 22px + `<p>` subtítulo) ou evoluir para `PageHeader`. **`h1`** = `label` em `menu.ts`.
+Header: **`PageHeader`** (Brand §4 — badge **32×32**, `h1` **18px**, subtítulo 13px). **`h1`** = `label` em `menu.ts`. Markup inline 28×28 / `h1` 22px é **legado a migrar** — não copiar em código novo.
 
 | PageKey | h1 | Subtítulo |
 |---|---|---|
@@ -44,19 +44,12 @@ Header inline (badge 28×28 + `h1` 22px + `<p>` subtítulo) ou evoluir para `Pag
 
 ```tsx
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
+import { PageHeader } from "../../../components/PageHeader";
+import { PageMenuIcon } from "../../../components/PageMenuIcon";
+
 const brand = useDashboardBrand();
 
-// Badge do header:
-<span style={{
-  width: 28, height: 28, borderRadius: 8,
-  background: brand.primaryIconBg,
-  border: brand.primaryIconBorder,
-  color: brand.primaryIconColor,
-  display: "flex", alignItems: "center", justifyContent: "center",
-  flexShrink: 0,
-}}>
-
-// h1: color: brand.primary
+// Header: PageHeader (Brand §4) — não badge 28×28 / h1 22px
 
 // CTA primário:
 background: brand.useBrand
@@ -234,7 +227,7 @@ Botões chip/pill que toggam filtro ativo devem expor `aria-pressed={ativo}`.
 - `useDashboardBrand()` obrigatório: header, CTA, modal.
 - Cards de resumo (Total/Ativas/Inativas): exibir `"—"` enquanto `loading === true`.
 - Bloco **Operadoras:** `getPageContentBoxStyle` + `SectionTitle` (`compact`) na linha 1; linha 2 — `BarraPesquisaPagina` (`PAGE_SEARCH.operadoraNome`) + `CtaCriarButton` **Nova Operadora** (`perm.canCriarOk`, `flexShrink: 0` ao lado da busca).
-- **Tabela principal** e **sub-tabela de mesas** no modal **Operações:** padrão canónico Global (`useDataTableBlock`, `getDataTableWrapStyle`, `getDataTableStyle`).
+- **Tabela principal:** paginação 20/página (`TabelaComPaginacao`); barra oculta com uma só página (`hideIfSinglePage`). KPIs/cards de resumo no conjunto completo. **Sub-tabela de mesas** no modal **Operações:** padrão canónico Global (`useDataTableBlock`, `getDataTableWrapStyle`, `getDataTableStyle`).
 - `app-table-wrap` + `getDataTableWrapStyle` — não `<div style={{ overflowX: "auto" }}>` solto.
 - `<caption style={{ display: "none" }}>` obrigatório; `scope="col"` em todas as colunas (incl. `SortTableTh` e Ações).
 - Excluir operadora: string amigável quando `foreign key` — nunca `e.message` cru no DOM.
@@ -248,7 +241,7 @@ Botões chip/pill que toggam filtro ativo devem expor `aria-pressed={ativo}`.
 ### GestaoMesas (Gestão de Estúdios)
 
 - Bloco de filtros: `getPageFilterBoxStyle` + carrossel de operadoras (`getCarouselBtnNavStyle` / `getCarouselPeriodLabelStyle`) + pill **Todas Operadoras** (`getFiltroBarTabButtonStyle` + ícone `Shield`) — **linha 2:** tablist `FiltroBarTabButton` **Estúdios** (`Building2`) | **Mesas** (`LayoutGrid`).
-- **Aba Estúdios:** KPIs `app-grid-2` — **Mesas Dedicadas** e **Mesas Network** (contagem de mesas por tipo de estúdio, respeitando filtro de operadora); bloco **Estúdios** com `SectionTitle`, `BarraPesquisaPagina`, `CtaCriarButton` **Novo Estúdio**, tabela (Nome, Tipo, Qtd Mesas, Operadoras, Ações); `ModalEstudio` (nome, tipo Network/Dedicado, operadoras ativas multi-seleção).
+- **Aba Estúdios:** KPIs `app-grid-2` — **Mesas Dedicadas** e **Mesas Network** (contagem de mesas por tipo de estúdio, respeitando filtro de operadora); bloco **Estúdios** com `SectionTitle`, `BarraPesquisaPagina`, `CtaCriarButton` **Novo Estúdio**, tabela (Nome, Tipo, Qtd Mesas, Operadoras, Ações) — paginação 20/página (`TabelaComPaginacao`; barra oculta com uma só página); `ModalEstudio` (nome, tipo Network/Dedicado, operadoras ativas multi-seleção).
 - **Aba Mesas:** KPIs por jogo `app-grid-kpi-4` + `getPageKpiSectionGapStyle` — Baccarat, Blackjack, Roleta, Futebol Brasileiro; `GAME_IDENTITY_HEX`; bloco **Mesas** com coluna **Nome do Estúdio** (não Operadora); paginação 20/página; `ModalMesa` com select de estúdio e campos opcionais de ID por operadora do estúdio (`mesas_spin_operadora_identificacao`).
 - Schema: `estudios_spin`, `estudios_spin_operadoras`, `mesas_spin_cadastro.estudio_slug` (legado `operadora_slug` mantido); migração futura remove colunas legadas.
 - Ícone do header: Lucide (`LayoutGrid` ou `Table2`) — `GiRoundTable` e qualquer GameIcon proibidos no header.
@@ -266,18 +259,17 @@ Botões chip/pill que toggam filtro ativo devem expor `aria-pressed={ativo}`.
 - **Tabelas Integrações Operadoras / Externas / E-mails:** cada bloco tem **ordenação independente** (`sortOperadoras` / `sortExternas` / `sortEmails`); default **`ultimoSync` desc** (Último Sync / Último envio — mais recente primeiro).
 - **KPIs consolidados:** formato **Financeiro** — `app-grid-kpi-4` + `getPageKpiSectionGapStyle`, `borderLeft` 3px semântico, `brand.blockBg`, rótulo caixa alta 11px, valor 26px `FONT_TITLE`, skeleton no loading (sem `StatusKpiCard` local).
 - **Blocos de conteúdo:** `getPageContentBoxStyle` + **`SectionTitle`** partilhado (**sem** ícone no bloco). CTA na mesma linha: `SectionTitle compact` + `CtaCriarButton` (Redes permitidas — **Nova Rede**).
-- **Títulos com subtítulo inline (`sub`):** Fluxo de Dados + `sub` «últimos 14 dias»; Redes permitidas + `sub` «check-in de prestadores»; Configuração de Alertas + `sub` «Condições monitoradas automaticamente» (sem legenda extra abaixo do título). O `SectionTitle` formata o `sub` com travessão e gap canónico (`sectionTitleSub.ts`) — não repetir separador no texto do `sub`.
-- **Alertas** e **Logs Recentes:** paginação 20/página (`TabelaComPaginacao`). **Não** paginar Status das Integrações, E-mails, Fluxo de Dados nem Redes permitidas.
+- **Títulos com subtítulo inline (`sub`):** Fluxo de Dados + `sub` «últimos 14 dias»; Redes permitidas + `sub` «check-in de prestadores». O `SectionTitle` formata o `sub` com travessão e gap canónico (`sectionTitleSub.ts`) — não repetir separador no texto do `sub`. **Não** há bloco Configuração de Alertas (regras ficam no código dos Alertas e no diagnóstico).
+- **Alertas** e **Logs Recentes:** paginação 20/página (`TabelaComPaginacao`). Logs Recentes: faixas **48h / 72h / 96h** (default 48h); fetch de `tech_logs` na janela de 96h. **Não** paginar Status das Integrações, E-mails, Fluxo de Dados nem Redes permitidas.
 - Status de integração e alertas: Lucide + cores semânticas — **sem emoji** (`XCircle` / `AlertTriangle`).
 - Funções de sync/email: `console.error(e)` + fallback PT-BR nos `catch`; **`resData.erro`** / `resData.error` da edge function permitidos no `try`.
 - **Alerta CDA «não executou hoje» / «sem dados recentes»:** checagem após **8h BRT** (cron Actions **4h**; GitHub atrasa com frequência). Duas contas TAP: `casa_apostas` (Influencers) e `casa_apostas_afiliados` (Afiliados — body `conta: "afiliados"`, secret `CDA_AFILIADOS_API_KEY`). «Ok hoje» usa `sync_logs` do slug correspondente. «Sem dados recentes» (métricas): `influencer_metricas` com **`data` = ontem (SP, D-1)** no fluxo de 14 dias (compartilhado — ambas as contas gravam `operadora_slug = casa_apostas`).
 - Confirmações antes de ações externas (sync/email/**diagnóstico**) — manter; overlay mínimo **`rgba(0,0,0,0.65)`**.
-- **Diagnóstico da plataforma:** botão **Executar Diagnóstico** no bloco **Alertas** (direita, alinhado ao título); `supabase.functions.invoke("platform-health-check")`; permissão UI `perm.canEditarOk`; Edge: admin ou `can_editar` em `status_tecnico`. Grava `tech_logs`; rótulos via `labelTipoTechLog`. Deploy: `docs/SETUP-PLATFORM-HEALTH.md`. Probe **Configuração CDA Afiliados** exige `CDA_AFILIADOS_API_KEY`.
+- **Diagnóstico da plataforma:** botão **Executar Diagnóstico** no bloco **Alertas** (direita, alinhado ao título); `supabase.functions.invoke("platform-health-check")`; permissão UI `perm.canEditarOk`; Edge: admin ou `can_editar` em `status_tecnico`. **Não** dispara sync nem e-mails. Suítes: smoke de infra (PostgREST, Storage, OPTIONS em todas as Edge Functions, pg_cron), saúde dos jobs (fetch **por slug** + fallback lobby nas 9 operadoras, mesmas regras dos Alertas), pings vivos (Resend, GitHub, Graph/Outlook, CDA Reporting, Brasil API, RSS, gov.br SPA) e conflitos de catálogo (slug sem `integrations`, CIDR vazio). Grava em `tech_logs` **só o resumo + avisos/falhas** (OKs no contador). Após executar, o filtro de Logs Recentes vai para **48h**. Rótulos via `labelTipoTechLog`. Deploy: `docs/SETUP-PLATFORM-HEALTH.md`. Probe **Configuração CDA Afiliados** exige `CDA_AFILIADOS_API_KEY`.
 - **Tabelas de status (3 blocos):** **Integrações de Operadoras** (CDA Influencers, **CDA Afiliados**, Lobby Blaze, Lobby CDA, **Lobby Esportiva Bet**, **Lobby Jonbet**, **Lobby Bateu Bet**, **Lobby Rico Bet**, **Lobby BRX Bet**, **Lobby Donald Bet**, **Lobby BetPontoBet**); **Integrações Externas** — subtítulo do bloco: *Automações com plataformas/sites de mercado* (Spin na Rede RSS, **Lista SPA**, **Validação de domínios de Marcas**, **Estado / Cidade** — enriquecimento cidade/UF por CNPJ do Pipeline B2B, Edge `enrich-comercial-cnpj`, cron **8h30 BRT**; **Painel de Notícias RSS** — `syncTipo: painel_rss`, Edge `sync-painel-noticias-rss`, cron horário + **Sync** com JWT da sessão; Social Media KPIs — botão **Sync** manual com permissão Editar); **E-mails** (Reset, Relatório, Boas-vindas, Agenda — cabeçalhos E-mail / Último envio / Envios Hoje). Ação **—** quando não há botão; **Enviar** com ícone `Mail` nos crons manuais.
-- **Lobby (Blaze, CDA, Esportiva, Jonbet, Bateu, Rico, BRX, Donald, BetPonto):** linha, KPI e alertas usam `sync_logs` quando existir; **fallback** em `lobby_monitor_execucao` (mesma fonte do Posicionamento) quando o log estiver ausente ou com falha mas houver coleta ok/parcial com mesas encontradas — evita falso «Falha» com dados no banco. As nove lobbies Telecom **não** têm Sync manual.
+- **Lobby (Blaze, CDA, Esportiva, Jonbet, Bateu, Rico, BRX, Donald, BetPonto):** linha, KPI e alertas usam `sync_logs` quando existir; **fallback** em `lobby_monitor_execucao` (mesma fonte do Posicionamento) quando o log estiver ausente ou com falha mas houver coleta ok/parcial com mesas encontradas — evita falso «Falha» com dados no banco. Fetch do fallback inclui as **9** operadoras (`donald_bet` e `betponto_bet` inclusive). As nove lobbies Telecom **não** têm Sync manual.
 - **KPIs consolidados — Integrações Ativas:** conta **18** jobs monitorados (inclui **CDA Afiliados**, **Estado / Cidade**, **Lobby Esportiva Bet**, **Lobby Jonbet**, **Lobby Bateu Bet**, **Lobby Rico Bet**, **Lobby BRX Bet**, **Lobby Donald Bet** e **Lobby BetPontoBet**); **Último Sync** e **Taxa de Erro** incluem logs dessas integrações; alerta «não executou hoje» pós-horário documentado por job.
 - **Fluxo de Dados (14 dias):** faixa **Estado / Cidade** (`comercial_cnpj` no gráfico) = empresas enriquecidas por dia (`registros_atualizados` + `registros_inseridos` em `sync_logs` OK, slug `comercial_cnpj_enriquecimento`).
-- **Configuração de Alertas:** três linhas para **Estado / Cidade** — último OK, execução diária pós-9h BRT, taxa de erro > 5% (slug `comercial_cnpj_enriquecimento`).
 - Filtros de log: `aria-pressed` + chip ativo com **`color-mix`** + `--brand-primary` (não `BRAND.roxoVivo + "22"`).
 - CTA página (allowlist CIDR): **`CtaCriarButton`** — rótulo **`Nova Rede`** (`Plus` 14px; Brand §3).
 - CTAs linha/modal (`btnAcao`, Confirmar, Salvar CIDR): gradiente `var(--brand-primary)` + `var(--brand-secondary)` — nunca `--brand-action`.
@@ -290,19 +282,22 @@ Botões chip/pill que toggam filtro ativo devem expor `aria-pressed={ativo}`.
 
 ### GestaoUsuarios
 
-- **index.tsx:** `PageHeader` + **`GestaoUsuariosFiltroBar`** (`primaryTransparent*`, abas centradas: Usuários | Permissões | Escopos | **Simulador de Login**). Escopos: sub-abas Operadora / Gestores / Prestadores no filtro (não no topo da página). **Simulador de Login:** seletor de perfil viewer (mesmas pills da aba Permissões) + checkboxes de perfis simuláveis (`AbaSimuladorLogin` → tabela `simulador_login_roles`). Loading com `GestaoUsuariosLoading`.
-- **GestaoUsuariosFiltroBar.tsx:** na grelha `app-marketplace-filtro-minhas`, a fileira do carrossel usa **`__spacer` + `__centro`** (classes reais do `responsive.css`) — classe inventada (ex.: `__filters`) cai na coluna 1 e desloca o carrossel para a esquerda. Filtros por aba — Usuários (carrossel Status + «Todos os Status», busca nome/e-mail, perfis Gerenciais / **Estúdio** / **Escritório** / Externos com `FiltroBarTabButton` / ícones de `gestaoUsuariosRoleIcons.tsx`); Permissões e **Simulador de Login** (linhas de perfil viewer: Gerenciais incl. **Gestor de Aquisição**, **Gestor de Marketing**, **Gestor de Operações**, **Gestor de Academy**, **Gestor de RH** — atribuição manual, sem sync RH); Escopos (sub-abas). **Estúdio:** Performance Coach, Service Manager, Customer Service, Shift Leader, Shuffler, Game Presenter. **Escritório:** RH, Figurino, Comunicação, Tech Ops, Prestadores — paridade staff interno (sem escopo operadora; matriz só em Permissões).
+- **index.tsx:** `PageHeader` + **`GestaoUsuariosFiltroBar`** (`primaryTransparent*`, abas centradas: Usuários | Permissões | Escopos | **Simulador de Login**). Escopos: sub-abas Operadora / Prestadores no filtro (não no topo da página). **Simulador de Login:** seletor de perfil viewer (mesmas pills da aba Permissões) + checkboxes de perfis simuláveis (`AbaSimuladorLogin` → tabela `simulador_login_roles`). Loading com `GestaoUsuariosLoading`.
+- **GestaoUsuariosFiltroBar.tsx:** na grelha `app-marketplace-filtro-minhas`, a fileira do carrossel usa **`__spacer` + `__centro`** (classes reais do `responsive.css`) — classe inventada (ex.: `__filters`) cai na coluna 1 e desloca o carrossel para a esquerda. Filtros por aba — Usuários (carrossel Status + «Todos os Status», busca nome/e-mail, perfis Gerenciais / **Estúdio** / **Escritório** / Externos com `FiltroBarTabButton` / ícones de `gestaoUsuariosRoleIcons.tsx`); Permissões e **Simulador de Login** (linhas de perfil viewer: Gerenciais incl. **Gestor de Aquisição**, **Gestor de Marketing**, **Gestor de Operações**, **Gestor de Tech Ops**, **Gestor de Academy**, **Gestor de RH**, **Gestor de Facilities**, **Gestor de TI** — atribuição manual, sem sync RH); Escopos (sub-abas Operadora / Prestadores). **Estúdio:** Performance Coach, Service Manager, Customer Service, Shift Leader, Shuffler, Game Presenter. **Escritório:** RH, Figurino, Comunicação, Facilities, TI, Tech Ops, Prestadores — paridade staff interno (sem escopo operadora; matriz só em Permissões). Gerência **Facilities** → perfil **Facilities**; gerência **TI** → perfil **TI** (não Prestadores). Se o usuário já tiver perfil **gestor de departamento** (atribuído em Gestão de Usuários), o sync RH **não** altera o `role` ao atualizar organograma/cargo.
 - **Abas (`AbaUsuarios`, `AbaPermissoes`, …):** `useApp()` internamente — **nunca** prop `t: Theme`.
 - **AbaUsuarios:** filtros controlados pelo `index` / `GestaoUsuariosFiltroBar`; erros fixos PT-BR (sem `e.message`); CTA **Novo Usuário** no topo do bloco, ao lado da busca.
   - **Lista = tabela canónica** (Global § Tabelas): `useDataTableBlock` + `getDataTableWrapStyle` / `getDataTableStyle`, `app-table-wrap`, `<caption hidden>`, `SkeletonTableRow` no loading, hover por linha. **Sem cards** por usuário.
   - Colunas: **Nome do Usuário** · **E-mail** · **Perfil** (texto na cor de `roleBadgeColor`) · **Escopo** (`formatarEscopo`, `—` quando vazio) · **Último Login** · **Ações** (só quando `modoAdmin` e há permissão de Editar ou Excluir). Todas ordenáveis via `SortTableTh`; default **`ultimoLogin` desc**.
   - **Sem 1ª coluna fixa** (`app-table-wrap--sticky-col`) — o hover da linha não cobriria a célula sticky, que tem fundo próprio; mesma escolha da tabela de Prestadores.
   - Status do usuário não é coluna: linha inativa fica com `opacity: 0.7` + pill **Desativado** ao lado do nome; o carrossel de status na barra continua sendo o filtro.
-  - Ações só ícone (`BtnIconeAcaoLinha` + `tooltipAcao`): **Editar Usuário** (`Pencil`), **Redefinir Senha** (`KeyRound`, amarelo), **Desativar Usuário** (`UserX`, vermelho) ou **Reativar Usuário** (`UserCheck`, verde) — nunca as duas últimas juntas. Ação em curso troca o ícone por `Loader2` e desabilita a linha inteira. Desativar e Reset abrem `ModalConfirmDelete`; Reativar é imediato.
+  - Ações só ícone (`BtnIconeAcaoLinha` + `tooltipAcao`): **Histórico do Usuário** (`History`) · **Editar Usuário** (`Pencil`) · **Redefinir Senha** (`KeyRound`, amarelo — **só se ativo**) · **Desativar Usuário** (`UserX`, vermelho) ou **Reativar Usuário** (`UserCheck`, verde) — nunca as duas últimas juntas. Ação em curso troca o ícone por `Loader2` e desabilita a linha inteira. Desativar e Reset abrem `ModalConfirmDelete`; Reativar é imediato. **Histórico** abre `ModalHistoricoUsuario` com abas **Gestão de Acesso** (Ativação / Desativação se inativo / Reset de Senha se houver) e **Alterações** (Nome, Perfil, Escopo).
+  - **Auditoria (`profiles_historico`):** RPC `profiles_historico_registrar`. Labels de origem: Ativação → nome do autor | `Ativação de Influencer/Afiliado` | `Contrato Ativado`; Desativação → nome | `Automação de Inatividade` (60d) | `Automação de Convite` (30d) | `Destrato`; Reset → nome | `Realizado pelo Usuário` (Login). Edges: `admin-usuario-acao`, `criar-usuario`, `criar-afiliado-network`, `sync-rh-prestador-auth-user`, `recuperar-senha`, `atualizar-perfil`; job `profiles_desativar_inativos`. Trigger `trg_influencer_perfil_reativar_usuario` chama `admin-usuario-acao` (`ativar` interno) ao status **ativo** em Influencers/Afiliados.
+  - **Desativação automática (job diário):** `profiles_desativar_inativos` + `pg_cron` `profiles-desativar-inativos-diario` (~07h BRT). Regras: (1) nunca acessou (`last_sign_in_at` nulo) e `acesso_referencia_em` ≥ **30 dias** → desativa; (2) já acessou e `GREATEST(last_sign_in_at, acesso_referencia_em)` ≥ **60 dias** → desativa. Coluna `acesso_referencia_em` nasce no cadastro (DEFAULT `now()`); **Reativar** (`admin-usuario-acao` → `ativar`) reinicia o relógio, redefine a senha para a padrão, exige troca no próximo login e envia o **e-mail de boas-vindas**. Lógica espelhada em `src/lib/profilesInatividade.ts`.
   - Paginação client-side: `TabelaPaginacaoBar` + `TABELA_PAGE_SIZE` (20); a página volta a 0 quando busca, filtros ou ordenação mudam.
 - **AbaPermissoes:** seleção de perfil no **filtro** (não dentro do card); matriz em `app-table-wrap` — **sem** `overflow: hidden` + `overflowX` no mesmo elemento; `<caption hidden>` + `scope="col"`; batch upsert; CTA com `Loader2` branco.
-- **AbaOperadora / AbaPrestadores:** batch delete + insert; fundos de marca via `color-mix` (não `rgba` fixo da paleta Spin); grids com `paddingBottom: 6` acima da scrollbar. Colunas de secção e páginas dentro de cada coluna na ordem de `PAGES` / menu (`secoesMenuFromPages` — sem sort alfabético). **Sem aba Gestores** — perfil genérico `gestor` e `gestor_tipo` removidos; gestores de departamento (`gestor_aquisicao`, `gestor_marketing`, `gestor_operacoes`, `gestor_tech_ops`, `gestor_academy`, `gestor_rh`) usam só `role_permissions`. Áreas Prestadores (`PRESTADOR_TIPOS`): Escritório, Estúdio, Facilities, TI — **sem** Financeiro, Customer Service, Game Presenter, Shuffler nem Tech Ops.
+- **AbaOperadora / AbaPrestadores:** batch delete + insert; fundos de marca via `color-mix` (não `rgba` fixo da paleta Spin); grids com `paddingBottom: 6` acima da scrollbar. Colunas de secção e páginas dentro de cada coluna na ordem de `PAGES` / menu (`secoesMenuFromPages` — sem sort alfabético). **Sem aba Gestores** — perfil genérico `gestor` e `gestor_tipo` removidos; gestores de departamento (`gestor_aquisicao`, `gestor_marketing`, `gestor_operacoes`, `gestor_tech_ops`, `gestor_academy`, `gestor_rh`, `gestor_facilities`, `gestor_ti`) usam só `role_permissions`. Áreas Prestadores (`PRESTADOR_TIPOS`): Escritório, Estúdio — **sem** Facilities nem TI (perfis próprios `facilities` / `ti`), Financeiro, Customer Service, Game Presenter, Shuffler nem Tech Ops.
 - **ModalUsuario:** `useApp()` + `useDashboardBrand()` internos; `MultiSelect` / `SingleSelectOperadora` em ficheiro de módulo (`ModalUsuarioScopeSelects.tsx`); CTA gradiente; erro com `aria-live="polite"`; `onFocus` → `var(--brand-primary)`.
+  - **Novo usuário Influencer:** Edge `criar-usuario` grava `influencer_perfil.status = inativo` (sem cota). Afiliado permanece `ativo`. Ativação operacional (Horas Acordadas) é em **Influencers**, não nesta página.
 - **ParesAgenciaUI:** `aria-label` nos selects e no botão remover par.
 - **Helpers:** `gestaoUsuariosUi.tsx`, `gestaoUsuariosTabNav` via `handleGestaoTabsArrowKeyDown`.
 

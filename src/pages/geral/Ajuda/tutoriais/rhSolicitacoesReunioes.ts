@@ -18,7 +18,7 @@ export const TUTORIAL_RH_SOLICITACOES_REUNIOES: TutorialDef = {
     {
       titulo: "1. Abrir a aba Reuniões",
       texto:
-        "1. No menu, seção RH, clique em **Solicitações**.\n2. Na segunda linha da barra, clique na aba **Reuniões**.\n3. O carrossel de status abre em **Em análise** — fila das reuniões aguardando parecer.\n4. A lista inclui **Reunião com RH** e **Reunião com Liderança** (pedidos pelo Calendário ou agendados nesta página).",
+        "1. No menu, seção RH, clique em **Solicitações de RH**.\n2. Na segunda linha da barra, clique na aba **Reuniões**.\n3. O carrossel de status abre em **Em análise** — fila das reuniões aguardando parecer.\n4. A lista inclui **Reunião com RH** e **Reunião com Liderança** (pedidos pelo Calendário ou agendados nesta página).",
       imagens: [
         {
           src: `${IMG}/01-aba-reunioes.png`,

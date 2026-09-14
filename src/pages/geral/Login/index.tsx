@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AlertCircle, Eye, EyeOff, Loader2 } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { lerEmailLoginDaUrl } from "../../../lib/rhLoginDadosCadastroDeepLink";
@@ -11,20 +11,24 @@ import {
   STAGING_LOGIN_BLOQUEADO_MSG,
   podeAcessarStagingLogin,
 } from "../../../lib/stagingLoginAllowlist";
+import {
+  consumeIdleSessionLogoutFlag,
+  IDLE_SESSION_LOGOUT_MSG,
+} from "../../../lib/idleSessionConstants";
 import { BASE_COLORS, FONT } from "../../../constants/theme";
 import { AUTH_PLATFORM_TAGLINE, AUTH_TAGLINE_STYLE } from "../../../constants/authScreen";
-import { useApp } from "../../../context/AppContext";
+import { useDisableAppUiZoom } from "../../../hooks/useDisableAppUiZoom";
 import { User } from "../../../types";
 import { LoginEsqueciSenhaModal } from "./LoginEsqueciSenhaModal";
 
 interface Props {
-  onLogin: (u: User) => void;
+  onLogin: (u: User) => void | Promise<void>;
 }
 
 const CONTACT_LINK_COLOR = LOGIN_ACCESS_CONTACT_LINK_COLOR;
 
 export default function Login({ onLogin }: Props) {
-  const { theme: t } = useApp();
+  useDisableAppUiZoom(true);
   const [email, setEmail] = useState(() => lerEmailLoginDaUrl());
   const [password, setPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
@@ -32,7 +36,14 @@ export default function Login({ onLogin }: Props) {
   const [loading, setLoading] = useState(false);
   const [esqueciSenhaOpen, setEsqueciSenhaOpen] = useState(false);
 
-  async function handleSubmit() {
+  useEffect(() => {
+    if (consumeIdleSessionLogoutFlag()) {
+      setError(IDLE_SESSION_LOGOUT_MSG);
+    }
+  }, []);
+
+  async function handleSubmit(e?: { preventDefault?: () => void }) {
+    e?.preventDefault?.();
     setError("");
     if (!email.trim()) return setError("Informe seu e-mail.");
     if (!/\S+@\S+\.\S+/.test(email)) return setError("E-mail inválido.");
@@ -45,50 +56,50 @@ export default function Login({ onLogin }: Props) {
     }
 
     setLoading(true);
-    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-      email: emailNorm,
-      password,
-    });
-    if (authError) {
-      const msg = authError.message?.toLowerCase() || "";
-      if (msg.includes("network") || msg.includes("fetch") || msg.includes("connection")) {
-        setError(
-          "Falha na conexão. Sua rede de internet pode estar bloqueando o acesso; tente novamente em outra rede ou dados móveis."
-        );
-      } else if (msg.includes("email not confirmed")) {
-        setError("E-mail ainda não confirmado. Verifique sua caixa de entrada.");
-      } else {
-        setError("E-mail ou senha incorretos.");
+    try {
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email: emailNorm,
+        password,
+      });
+      if (authError) {
+        const msg = authError.message?.toLowerCase() || "";
+        if (msg.includes("network") || msg.includes("fetch") || msg.includes("connection")) {
+          setError(
+            "Falha na conexão. Sua rede de internet pode estar bloqueando o acesso; tente novamente em outra rede ou dados móveis.",
+          );
+        } else if (msg.includes("email not confirmed")) {
+          setError("E-mail ainda não confirmado. Verifique sua caixa de entrada.");
+        } else {
+          setError("E-mail ou senha incorretos.");
+        }
+        return;
       }
-      setLoading(false);
-      return;
-    }
 
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("id, name, role, email, ativo, must_change_password")
-      .eq("id", authData.user.id)
-      .single();
-    if (profileError || !profile) {
-      setError("Perfil não encontrado. Contate o administrador.");
-      await supabase.auth.signOut();
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("id, name, role, email, ativo, must_change_password")
+        .eq("id", authData.user.id)
+        .single();
+      if (profileError || !profile) {
+        setError("Perfil não encontrado. Se o problema persistir, entre em contato com o suporte.");
+        await supabase.auth.signOut();
+        return;
+      }
+      if (profile.ativo === false) {
+        setError("Sua conta foi desativada. Se precisar de acesso, entre em contato com o suporte.");
+        await supabase.auth.signOut();
+        return;
+      }
+      const emailPerfil = (profile.email ?? emailNorm).toLowerCase().trim();
+      if (!podeAcessarStagingLogin(emailPerfil)) {
+        setError(STAGING_LOGIN_BLOQUEADO_MSG);
+        await supabase.auth.signOut();
+        return;
+      }
+      await onLogin(profile as User);
+    } finally {
       setLoading(false);
-      return;
     }
-    if (profile.ativo === false) {
-      setError("Sua conta foi desativada. Entre em contato com o administrador.");
-      await supabase.auth.signOut();
-      setLoading(false);
-      return;
-    }
-    const emailPerfil = (profile.email ?? emailNorm).toLowerCase().trim();
-    if (!podeAcessarStagingLogin(emailPerfil)) {
-      setError(STAGING_LOGIN_BLOQUEADO_MSG);
-      await supabase.auth.signOut();
-      setLoading(false);
-      return;
-    }
-    onLogin(profile as User);
   }
 
   return (
@@ -144,7 +155,7 @@ export default function Login({ onLogin }: Props) {
           />
           <div
             style={{
-              color: t.textMuted,
+              color: "rgba(229,220,225,0.65)",
               fontFamily: FONT.body,
               ...AUTH_TAGLINE_STYLE,
             }}
@@ -153,11 +164,11 @@ export default function Login({ onLogin }: Props) {
           </div>
         </div>
 
-        <div
-          className="app-auth-card-scroll"
+        <form
+          className="app-auth-card app-auth-card-scroll app-auth-card-scroll--login"
+          onSubmit={(ev) => void handleSubmit(ev)}
           style={{
             background: "rgba(15,15,26,0.85)",
-            backdropFilter: "blur(20px)",
             border: "1px solid #1a1a2e",
             borderRadius: "24px",
             padding: "clamp(20px, 5vw, 36px)",
@@ -166,6 +177,7 @@ export default function Login({ onLogin }: Props) {
         >
           <div style={{ marginBottom: "20px" }}>
             <label
+              htmlFor="login-email"
               style={{
                 display: "block",
                 color: "#e5dce1",
@@ -179,6 +191,7 @@ export default function Login({ onLogin }: Props) {
               E-mail
             </label>
             <input
+              id="login-email"
               type="email"
               autoComplete="email"
               className="app-auth-input"
@@ -188,7 +201,6 @@ export default function Login({ onLogin }: Props) {
                 setEmail(e.target.value);
                 setError("");
               }}
-              onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
               style={{
                 width: "100%",
                 boxSizing: "border-box",
@@ -206,6 +218,7 @@ export default function Login({ onLogin }: Props) {
 
           <div style={{ marginBottom: "20px" }}>
             <label
+              htmlFor="login-password"
               style={{
                 display: "block",
                 color: "#e5dce1",
@@ -220,6 +233,7 @@ export default function Login({ onLogin }: Props) {
             </label>
             <div style={{ position: "relative" }}>
               <input
+                id="login-password"
                 type={showPass ? "text" : "password"}
                 autoComplete="current-password"
                 className="app-auth-input"
@@ -229,7 +243,6 @@ export default function Login({ onLogin }: Props) {
                   setPassword(e.target.value);
                   setError("");
                 }}
-                onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
                 style={{
                   width: "100%",
                   boxSizing: "border-box",
@@ -255,7 +268,7 @@ export default function Login({ onLogin }: Props) {
                   background: "none",
                   border: "none",
                   cursor: "pointer",
-                  color: t.textMuted,
+                  color: "rgba(229,220,225,0.65)",
                   padding: "12px",
                   display: "flex",
                   alignItems: "center",
@@ -312,8 +325,7 @@ export default function Login({ onLogin }: Props) {
           )}
 
           <button
-            type="button"
-            onClick={handleSubmit}
+            type="submit"
             disabled={loading}
             aria-busy={loading}
             style={{
@@ -339,7 +351,7 @@ export default function Login({ onLogin }: Props) {
             {loading ? (
               <>
                 <Loader2 className="app-lucide-spin" size={20} strokeWidth={2} color="#fff" aria-hidden />
-                Entrando...
+                Entrando…
               </>
             ) : (
               "Entrar"
@@ -376,7 +388,7 @@ export default function Login({ onLogin }: Props) {
               </a>
             </p>
           </div>
-        </div>
+        </form>
 
         <div style={{ textAlign: "center", marginTop: 28 }}>
           <a

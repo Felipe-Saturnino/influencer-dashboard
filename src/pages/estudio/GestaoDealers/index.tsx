@@ -342,7 +342,7 @@ export default function GestaoDealers() {
 
   const labelTurnoCarrossel =
     filtroTurno === "todos"
-      ? "Todos os turnos"
+      ? "Todos Turnos"
       : (TURNO_OPTS.find((o) => o.value === filtroTurno)?.label ?? filtroTurno);
 
   /** Slug da operadora para solicitações (operador com escopo — fluxo Central permanece por operadora). */
@@ -461,7 +461,7 @@ export default function GestaoDealers() {
             minHeight: 118,
           }}>
             <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: t.textMuted, fontFamily: FONT.body, marginBottom: 12 }}>
-              Dealers
+              Game Presenters
             </div>
             <div style={{ fontSize: 56, fontWeight: 900, color: brand.accent, fontFamily: FONT_TITLE, lineHeight: 1 }}>
               {totalDealersDestaque}
@@ -548,7 +548,7 @@ export default function GestaoDealers() {
               value={buscaDealer}
               onChange={setBuscaDealer}
               placeholder={PAGE_SEARCH.nomeNickname}
-              aria-label="Buscar dealers por nome ou nickname"
+              aria-label="Buscar Game Presenters por nome ou nickname"
               wrapperStyle={{ width: "100%" }}
             />
           </div>
@@ -753,7 +753,7 @@ function DealerCard({
   onVer: () => void;
   /** Só operador com escopo de operadora definido. */
   onSolicitar?: () => void;
-  /** Lista de solicitações do dealer (Central); ver permissão na página pai. */
+  /** Lista de solicitações do Game Presenter (Central); ver permissão na página pai. */
   onHistoricoSolicitacoes?: () => void;
 }) {
   const { theme: t } = useApp();
@@ -762,7 +762,7 @@ function DealerCard({
 
   return (
     <article
-      aria-label={`Dealer: ${dealer.nickname}`}
+      aria-label={`Game Presenter: ${dealer.nickname}`}
       style={{
       background: brand.blockBg,
       border: `1px solid ${t.cardBorder}`,
@@ -916,7 +916,7 @@ function DealerCard({
   );
 }
 
-// ─── Modal Histórico de solicitações (por dealer) ─────────────────────────────
+// ─── Modal Histórico de solicitações (por Game Presenter) ─────────────────────────────
 interface SolicResumo {
   id: string;
   tipo: SolicitacaoTipo;
@@ -946,7 +946,7 @@ function ModalHistoricoSolicitacoesDealer({
 }: {
   dealer: Dealer;
   operadoraBySlug: Record<string, OperadoraLabelRow>;
-  /** Operador: restringe à operadora; gestor/admin: null = todas as solicitações do dealer. */
+  /** Operador: restringe à operadora; gestor/admin: null = todas as solicitações do Game Presenter. */
   slugSolicitacaoFiltro: string | null;
   onClose: () => void;
   onAbrirThread: (solicitacaoId: string) => void;
@@ -981,7 +981,7 @@ function ModalHistoricoSolicitacoesDealer({
     <ModalBase onClose={onClose} maxWidth={520} zIndex={1050}>
       <ModalHeader title={`Solicitações · ${dealer.nickname}`} onClose={onClose} />
       <p style={{ margin: "0 0 14px", fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
-        Todas as solicitações ligadas a este dealer{slugSolicitacaoFiltro ? " na sua operadora" : ""}.
+        Todas as solicitações ligadas a este Game Presenter{slugSolicitacaoFiltro ? " na sua operadora" : ""}.
       </p>
       {solLoading ? (
         <div style={{ display: "flex", justifyContent: "center", padding: 24 }}>
@@ -1133,7 +1133,7 @@ function ModalVer({
         </div>
         {dealer.perfil_influencer && (
           <div>
-            <span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" }}>Bio do Dealer</span>
+            <span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" }}>Bio do Game Presenter</span>
             <br />
             <span style={{ fontSize: 14, color: t.text, whiteSpace: "pre-wrap" }}>{dealer.perfil_influencer}</span>
           </div>

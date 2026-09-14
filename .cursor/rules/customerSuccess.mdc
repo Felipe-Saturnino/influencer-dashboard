@@ -103,7 +103,7 @@ Dois blocos empilhados na mesma aba — filtros globais (status + Staff) aplicam
 | Editar | Modal Atender |
 | Criar / Excluir | `null` — chamados só via site |
 
-Seeds: demais perfis com **Não** até liberar em Gestão de Usuários. Perfil staff **Customer Service** (`customer_service`): **Atendimento** Ver/Editar **Sim** por defeito (`20260707233000_customer_service_organograma_sync.sql`) — sync RH atribui o perfil ao vincular gerência ou time Customer Service no organograma (sem escopo `prestador_tipo`; só `role_permissions`).
+Seeds: demais perfis com **Não** até liberar em Gestão de Usuários. Perfil staff **Customer Service** (`customer_service`): **Atendimento** Ver/Editar **Sim** por padrão (`20260707233000_customer_service_organograma_sync.sql`) — sync RH atribui o perfil ao vincular gerência ou time Customer Service no organograma (sem escopo `prestador_tipo`; só `role_permissions`).
 
 ---
 

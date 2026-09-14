@@ -54,12 +54,33 @@ describe("isLikelySafariModuleLoadFailure", () => {
     expect(isLikelySafariModuleLoadFailure(new TypeError(""))).toBe(true);
   });
 
+  it("trata cascata React lazy (módulo sem default) no Safari como falha de módulo", () => {
+    vi.stubGlobal("navigator", { userAgent: safariUa });
+    expect(
+      isLikelySafariModuleLoadFailure(
+        new Error(
+          "Element type is invalid: expected a string (for built-in components) or a class/function (for composite components) but got: undefined.",
+        ),
+      ),
+    ).toBe(true);
+    expect(
+      isLikelySafariModuleLoadFailure(
+        new TypeError("undefined is not an object (evaluating 'm.default')"),
+      ),
+    ).toBe(true);
+  });
+
   it("não aplica heurística Safari fora do WebKit", () => {
     vi.stubGlobal("navigator", {
       userAgent:
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     });
     expect(isLikelySafariModuleLoadFailure(new TypeError(""))).toBe(false);
+    expect(
+      isLikelySafariModuleLoadFailure(
+        new Error("Element type is invalid: expected a string but got: undefined."),
+      ),
+    ).toBe(false);
   });
 });
 

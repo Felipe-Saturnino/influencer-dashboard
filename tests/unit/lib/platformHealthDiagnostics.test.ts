@@ -1,11 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
   buildPlatformHealthTechLogs,
+  classificarHttpSmoke,
   countDiagnosticSummary,
+  githubRepoPath,
   hasDestinatariosList,
   isValidResendFromAddress,
   labelTipoTechLog,
+  primeiraUrlDeLista,
   readPlatformHealthSecrets,
+  techLogsParaGravar,
   TIPO_DIAGNOSTICO_RESUMO,
 } from "../../../src/lib/platformHealthDiagnostics";
 import type { PlatformHealthSnapshot } from "../../../src/lib/platformHealthDiagnostics";
@@ -138,6 +142,74 @@ describe("buildPlatformHealthTechLogs", () => {
       secrets: { ...secretsOk(), senhaPadraoValida: false },
     });
     expect(rows.some((r) => r.descricao.includes("SENHA_PADRAO"))).toBe(true);
+  });
+
+  it("grava só resumo e problemas (OKs ficam no contador)", () => {
+    const all = buildPlatformHealthTechLogs(baseSnapshot());
+    const gravar = techLogsParaGravar(all);
+    expect(gravar[0]?.tipo).toBe(TIPO_DIAGNOSTICO_RESUMO);
+    expect(gravar.every((r) => r.tipo !== "diagnostico_ok")).toBe(true);
+    expect(gravar).toHaveLength(1);
+  });
+
+  it("marca taxa de erro alta como falha", () => {
+    const rows = buildPlatformHealthTechLogs({
+      ...baseSnapshot(),
+      integracoes: [
+        {
+          slug: "casa_apostas",
+          nome: "CDA",
+          integracaoSlugFk: "casa_apostas",
+          ultimoStatus: "ok",
+          ultimoEm: "2026-06-02T08:00:00.000Z",
+          okHoje: true,
+          teveHistorico: true,
+          erros24h: 0,
+          taxaErroPct: 12.5,
+          jobKind: "cda",
+        },
+      ],
+    });
+    const counts = countDiagnosticSummary(rows);
+    expect(counts.erro).toBeGreaterThan(0);
+    expect(rows.some((r) => r.descricao.includes("Taxa de erro alta"))).toBe(true);
+  });
+
+  it("inclui probes extras no resumo", () => {
+    const rows = buildPlatformHealthTechLogs({
+      ...baseSnapshot(),
+      extras: [
+        {
+          nome: "Resend — API",
+          severidade: "erro",
+          descricao: "HTTP 401 — credencial recusada ou acesso negado.",
+          integracaoSlugFk: null,
+        },
+      ],
+    });
+    expect(rows.some((r) => r.descricao.includes("Resend — API"))).toBe(true);
+    expect(techLogsParaGravar(rows).length).toBeGreaterThan(1);
+  });
+});
+
+describe("helpers de smoke", () => {
+  it("classifica HTTP de ping", () => {
+    expect(classificarHttpSmoke(200, false).severidade).toBe("ok");
+    expect(classificarHttpSmoke(401, false).severidade).toBe("erro");
+    expect(classificarHttpSmoke(404, false).severidade).toBe("erro");
+    expect(classificarHttpSmoke(503, false).severidade).toBe("aviso");
+    expect(classificarHttpSmoke(0, true).severidade).toBe("aviso");
+  });
+
+  it("extrai path do repositório GitHub", () => {
+    expect(githubRepoPath("acme/app")).toBe("acme/app");
+    expect(githubRepoPath("https://github.com/acme/app.git")).toBe("acme/app");
+    expect(githubRepoPath("")).toBeNull();
+  });
+
+  it("lê a primeira URL de uma lista de feeds", () => {
+    expect(primeiraUrlDeLista("https://a.com/rss, https://b.com/rss")).toBe("https://a.com/rss");
+    expect(primeiraUrlDeLista("")).toBeNull();
   });
 });
 

@@ -85,6 +85,8 @@ interface AfiliadoRow {
   id: string;
   name: string;
   email: string;
+  /** Acesso à plataforma (`profiles.ativo`) — false = desativado. */
+  ativo?: boolean | null;
   perfil: Perfil | null;
   operadoras: InfluencerOperadora[];
 }
@@ -199,9 +201,8 @@ export default function Afiliados() {
     if (showManagementUI) {
       const { data: profiles } = await supabase
         .from("profiles")
-        .select("id, name, email")
+        .select("id, name, email, ativo")
         .eq("role", "afiliado")
-        .or("ativo.is.null,ativo.eq.true")
         .order("name");
       if (profiles) {
         const ids = profiles.map((p: { id: string }) => p.id);
@@ -216,10 +217,11 @@ export default function Afiliados() {
           if (!opsPor[o.influencer_id]) opsPor[o.influencer_id] = [];
           opsPor[o.influencer_id].push({ ...o, operadora_nome: opsMap[o.operadora_slug] ?? o.operadora_nome });
         });
-        setList(profiles.map((p: { id: string; name?: string | null; email?: string | null }) => ({
+        setList(profiles.map((p: { id: string; name?: string | null; email?: string | null; ativo?: boolean | null }) => ({
           id: p.id,
           name: p.name ?? p.email ?? "",
           email: p.email ?? "",
+          ativo: p.ativo,
           perfil: perfisMap[p.id] ?? null,
           operadoras: opsPor[p.id] ?? [],
         })));
@@ -247,7 +249,21 @@ export default function Afiliados() {
     if (!podeAlterarStatus) return;
     const previousStatus = list.find((i) => i.id === id)?.perfil?.status;
     const agoraIso = new Date().toISOString();
-    setList((prev) => prev.map((i) => (i.id === id ? { ...i, perfil: { ...(i.perfil ?? emptyPerfil(id)), status: newStatus, ...(previousStatus !== newStatus ? { status_alterado_em: agoraIso } : {}) } } : i)));
+    setList((prev) =>
+      prev.map((i) =>
+        i.id === id
+          ? {
+              ...i,
+              ...(newStatus === "ativo" ? { ativo: true } : {}),
+              perfil: {
+                ...(i.perfil ?? emptyPerfil(id)),
+                status: newStatus,
+                ...(previousStatus !== newStatus ? { status_alterado_em: agoraIso } : {}),
+              },
+            }
+          : i,
+      ),
+    );
     const upsertPatch: Record<string, unknown> = { id, status: newStatus };
     if (previousStatus !== newStatus) upsertPatch.status_alterado_em = agoraIso;
     const { error } = await supabase.from("influencer_perfil").upsert(upsertPatch, { onConflict: "id" });
@@ -280,7 +296,7 @@ export default function Afiliados() {
   });
 
   const incompletos = listNoEscopo.filter((i) =>
-    influencerElegivelQuadroPerfilIncompleto(i.perfil, true) &&
+    influencerElegivelQuadroPerfilIncompleto(i.perfil, i.ativo !== false) &&
     isAfiliadoPerfilIncompleto(i.perfil, i.perfil?.nome_artistico ?? i.name ?? "", i.email),
   );
 
@@ -427,6 +443,11 @@ export default function Afiliados() {
                   <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 8 }}>
                     <span style={{ fontSize: 14, fontWeight: 700, color: t.text, fontFamily: FONT.body }}>{p?.nome_artistico || inf.name}</span>
                     <StatusBadge value={status} onChange={(v) => void handleStatusChange(inf.id, v)} readonly={!podeAlterarStatus} />
+                    {inf.ativo === false ? (
+                      <span style={{ display: "inline-flex", alignItems: "center", fontSize: 11, padding: "3px 9px", borderRadius: 20, background: `${t.textMuted}22`, color: t.textMuted, fontWeight: 600, fontFamily: FONT.body, border: `1px solid ${t.cardBorder}` }}>
+                        Desativado
+                      </span>
+                    ) : null}
                     {incompleto && status === "ativo" && (
                       <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, padding: "3px 9px", borderRadius: 20, background: `${BRAND.vermelho}22`, color: BRAND.vermelho, fontWeight: 600, fontFamily: FONT.body }}>
                         <AlertCircle size={10} aria-hidden="true" /> Perfil incompleto

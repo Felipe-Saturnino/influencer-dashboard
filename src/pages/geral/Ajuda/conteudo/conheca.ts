@@ -9,7 +9,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Filtros e Navegação",
         texto:
-          "Use as setas para navegar entre os meses disponíveis. O botão Histórico exibe o acumulado de 13 competências mensais — a atual e as 12 anteriores — permitindo comparar futuramente a competência atual com a mesma competência do ano anterior. Nesse modo a navegação de mês fica desativada e os subtítulos dos blocos principais passam a mostrar \"acumulado\" (o comparativo MoM do mês anterior deixa de aparecer nos KPIs Executivos).\n\nO filtro de influencer restringe todas as abas ao influencer selecionado. O filtro de operadora restringe aos influencers vinculados àquela plataforma. Ambos os filtros são aplicados simultaneamente em todas as abas ao trocar de aba.\n\nEnquanto uma aba carrega dados, a barra de filtros pode exibir \"Carregando…\" — os filtros permanecem os mesmos ao mudar entre Overview, Conversão e Financeiro.\n\nCom o foco em uma aba, use as setas ← → do teclado para alternar entre Overview, Conversão e Financeiro (padrão de acessibilidade com role=\"tablist\").",
+          "Use as setas para navegar entre os meses disponíveis. O botão Histórico exibe o acumulado de 13 competências mensais — a atual e as 12 anteriores — permitindo comparar futuramente a competência atual com a mesma competência do ano anterior. Nesse modo a navegação de mês fica desativada e os subtítulos dos blocos principais passam a mostrar \"acumulado\" (o comparativo MoM do mês anterior deixa de aparecer nos KPIs Executivos).\n\nO filtro de influencer restringe todas as abas ao influencer selecionado. O filtro de operadora restringe aos influencers vinculados àquela operadora. Ambos os filtros são aplicados simultaneamente em todas as abas ao trocar de aba.\n\nEnquanto uma aba carrega dados, a barra de filtros pode exibir \"Carregando…\" — os filtros permanecem os mesmos ao mudar entre Overview, Conversão e Financeiro.\n\nCom o foco em uma aba, use as setas ← → do teclado para alternar entre Overview, Conversão e Financeiro (padrão de acessibilidade das abas).",
       },
       {
         subtitulo: "Aba Overview — KPIs e Ranking",
@@ -53,7 +53,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Detalhamento Diário / Mensal",
         texto:
-          "Tabela com uma linha por dia no mês selecionado (subtítulo \"dia a dia\") — inclusive dias sem movimentação da operadora, com valores zerados — ou por mês no modo Histórico (subtítulo \"mês a mês\"). No mês corrente a grade vai até o último dia fechado (D-1). No modo **Todas Operadoras**, cada linha pode ser expandida clicando na seta à esquerda da data para ver o desdobramento por plataforma.\n\nA tabela mostra até **20 linhas** por vez; com mais dias (ou meses no Histórico), use as setas abaixo para avançar. O modo Gráfico não pagina.\n\nAlterne para o modo Gráfico usando o botão no canto superior direito da seção. No gráfico, escolha o KPI a ser exibido pelas opções acima do gráfico.",
+          "Tabela com uma linha por dia no mês selecionado (subtítulo \"dia a dia\") — inclusive dias sem movimentação da operadora, com valores zerados — ou por mês no modo Histórico (subtítulo \"mês a mês\"). No mês corrente a grade vai até o último dia fechado (D-1). No modo **Todas Operadoras**, cada linha pode ser expandida clicando na seta à esquerda da data para ver o desdobramento por operadora.\n\nA tabela mostra até **20 linhas** por vez; com mais dias (ou meses no Histórico), use as setas abaixo para avançar. O modo Gráfico não pagina.\n\nAlterne para o modo Gráfico usando o botão no canto superior direito da seção. No gráfico, escolha o KPI a ser exibido pelas opções acima do gráfico.",
       },
       {
         subtitulo: "Comparativo de Jogo",
@@ -61,24 +61,24 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
           "Tabela com os resultados separados por tipo de jogo — Blackjack (verde), Roleta (ouro), Baccarat (azul) e Futebol Brasileiro (laranja). Selecione quais KPIs exibir pelos botões 'KPIs visíveis'. O percentual abaixo de cada valor indica a participação daquele jogo no total do período (coluna Total alinhada ao resumo diário oficial).\n\nNo mês corrente, a evolução é dia a dia; no Histórico, o subtítulo da seção é \"mês a mês\" e cada linha representa um mês. Alterne para o modo Gráfico para visualizar a evolução temporal de um único KPI por jogo.",
       },
       {
-        subtitulo: "Comparativo de Mesa (Blackjack)",
+        subtitulo: "Comparativo de mesa (Blackjack)",
         texto:
-          "Disponível nas abas Overview e Estúdio Dedicado. Com **Todas Operadoras**, o bloco pede para selecionar uma operadora. Com uma operadora escolhida, compare duas mesas de Blackjack lado a lado pelos seletores A e B.\n\nNa aba Estúdio Network o bloco não aparece — o inventário network não tem par de mesas Blackjack para comparar.",
+          "Disponível nas abas Overview e Estúdio Dedicado. Com **Todas Operadoras**, o bloco pede para selecionar uma operadora. Com uma operadora escolhida, compare duas mesas de Blackjack lado a lado pelos seletores A e B.\n\nNa aba **Overview**, cada dia (ou mês no Histórico) soma Dedicado e Network da mesma mesa — aparece **uma linha** por período. Em Estúdio Dedicado, só o canal dedicado.\n\nNa aba Estúdio Network o bloco não aparece — o inventário network não tem par de mesas Blackjack para comparar.",
       },
       {
-        subtitulo: "Dados por Mesa",
+        subtitulo: "Dados por mesa",
         texto:
-          "Exibe o desempenho diário (ou mensal no Histórico) das mesas em painéis paralelos. Com **Todas Operadoras**, o bloco pede para selecionar uma operadora. Nas abas Overview e Estúdio Dedicado: Speed Baccarat e Roleta na primeira linha; Futebol Brasileiro abaixo quando aplicável.\n\nNa aba Estúdio Network a ordem é Blackjack e Roleta na primeira linha, e Speed Baccarat e Futebol Brasileiro na segunda.\n\nCada tabela de mesa mostra até **20 linhas** por vez (a linha Total continua no conjunto completo).",
+          "Exibe o desempenho diário (ou mensal no Histórico) das mesas em painéis paralelos. Com **Todas Operadoras**, o bloco pede para selecionar uma operadora. Nas abas Overview e Estúdio Dedicado: Speed Baccarat e Roleta na primeira linha; Futebol Brasileiro abaixo quando aplicável.\n\nNa aba **Overview**, cada dia (ou mês no Histórico) soma Dedicado e Network da mesma mesa — **uma linha** por período, alinhado aos KPIs consolidados.\n\nNa aba Estúdio Network a ordem é Blackjack e Roleta na primeira linha, e Speed Baccarat e Futebol Brasileiro na segunda.\n\nCada tabela de mesa mostra até **20 linhas** por vez (a linha Total continua no conjunto completo).",
       },
       {
         subtitulo: "Aba Posicionamento",
         texto:
-          "Monitora a posição das mesas Spin no lobby das plataformas parceiras. A navegação por mês e o botão Histórico da barra não se aplicam nesta aba.\n\nSe ainda não houver coleta no dia de hoje, a aba mostra o **último horário** válido (em geral ontem) e os KPIs comparam **vs último horário**, em vez de vs ontem no mesmo horário.\n\nCom **Todas Operadoras**, cada card (Blaze, Casa de Apostas, Esportiva Bet, Jonbet, Bateu Bet, Rico Bet, BRX Bet, Donald Bet, BetPontoBet) é uma mini-tabela com colunas Atual (posição com cores), Estúdio, Mesa e Anterior (última posição diferente nos últimos 7 dias). O bloco **Alertas do período** lista todas as mudanças de posição dia a dia nessa janela de 7 dias, por operadora.\n\nCom uma operadora específica: os KPIs mostram Visibilidade na vitrine (% das mesas no top 20 do lobby), Mesas no top 10, Melhor posição registrada no dia e Maior queda de posição. A lista 'Posição atual das mesas' exibe a posição de cada mesa no último snapshot, com indicador de melhora (↑) ou piora (↓). O rótulo usa Estúdio - Mesa.\n\n'Concorrentes à frente' mostra, por tipo de jogo Spin, quantos jogos de outras plataformas estão à frente (máximo entre as mesas daquele tipo). O hover lista esses jogos.\n\n'Ranking de concorrentes' lista esses mesmos jogos únicos (posição e provedor), alinhado ao bloco Concorrentes à frente.\n\nO Histórico de Posicionamento (operadora específica) exibe um heatmap das posições nos últimos dias — use os botões Dia / 7 dias / 30 dias para controlar o período. A tabela pagina **20 mesas** por vez.",
+          "Monitora a posição das mesas Spin no lobby das operadoras parceiras. A navegação por mês e o botão Histórico da barra não se aplicam nesta aba.\n\nSe ainda não houver coleta no dia de hoje, a aba mostra o **último horário** válido (em geral ontem) e os KPIs comparam **vs último horário**, em vez de vs ontem no mesmo horário.\n\nCom **Todas Operadoras**, cada card (Blaze, Casa de Apostas, Esportiva Bet, Jonbet, Bateu Bet, Rico Bet, BRX Bet, Donald Bet, BetPontoBet) é uma mini-tabela com colunas Atual (posição com cores), Estúdio, Mesa e Anterior (última posição diferente nos últimos 7 dias). O bloco **Alertas do período** mostra, por operadora, a **alteração mais recente de cada mesa** nessa janela de 7 dias (se a mesa mudou várias vezes, só a mudança mais nova aparece).\n\nCom uma operadora específica: os KPIs mostram Visibilidade na vitrine (% das mesas no top 20 do lobby), Mesas no top 10, Melhor posição registrada no dia e Maior queda de posição. A lista 'Posição atual das mesas' exibe a posição de cada mesa no último snapshot, com indicador de melhora (↑) ou piora (↓). O rótulo usa Estúdio - Mesa.\n\n'Concorrentes à frente' mostra, por tipo de jogo Spin, quantos jogos de outras plataformas estão à frente (máximo entre as mesas daquele tipo). O hover lista esses jogos.\n\n'Ranking de concorrentes' lista esses mesmos jogos únicos (posição e provedor), alinhado ao bloco Concorrentes à frente — **20 por página**.\n\nO Histórico de Posicionamento (operadora específica) exibe um heatmap das posições nos últimos dias — use os botões Dia / 7 dias / 30 dias para controlar o período. A tabela pagina **20 mesas** por vez. Posição atual das mesas e Alertas do período também paginam **20** quando a lista passa desse tamanho.",
       },
       {
         subtitulo: "Navegação entre abas",
         texto:
-          "As abas compartilham a FilterBar de mês/operadora nas seções financeiras. Com o foco em uma aba, use ← → do teclado para alternar entre as abas visíveis (padrão tablist).",
+          "As abas compartilham a barra de filtros de mês/operadora nas seções financeiras. Com o foco em uma aba, use ← → do teclado para alternar entre as abas visíveis.",
       },
     ],
   },
@@ -87,12 +87,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "O dashboard de Afiliados consolida a performance do canal de afiliados em três dimensões: visão executiva (financeiro e conversão), análise de conversão e ranking financeiro. Todas as abas compartilham os mesmos filtros de período, afiliado e operadora. As métricas vêm da integração TAP CDA — conta Afiliados, considerando apenas os perfis cadastrados como afiliado.",
+          "O dashboard de Afiliados consolida a performance do canal de afiliados em três dimensões: visão executiva (financeiro e conversão), análise de conversão e ranking financeiro. Todas as abas compartilham os mesmos filtros de período, afiliado e operadora. As métricas vêm da integração TAP CDA — conta Afiliados, considerando apenas os perfis cadastrados como afiliado.\n\nNão confunda com **Overview Afiliado** (visão do próprio afiliado) nem com a página **Afiliados** da seção de cadastro.",
       },
       {
         subtitulo: "Filtros e Navegação",
         texto:
-          "Use as setas para navegar entre os meses disponíveis. O botão Histórico exibe o acumulado de 13 competências mensais — a atual e as 12 anteriores.\n\nO filtro de afiliado restringe todas as abas ao afiliado selecionado. O filtro de operadora restringe aos afiliados vinculados àquela plataforma.\n\nCom o foco em uma aba, use as setas ← → do teclado para alternar entre Overview, Conversão e Financeiro.",
+          "Use as setas para navegar entre os meses disponíveis. O botão Histórico exibe o acumulado de 13 competências mensais — a atual e as 12 anteriores.\n\nO filtro de afiliado restringe todas as abas ao afiliado selecionado. O filtro de operadora restringe aos afiliados vinculados àquela operadora.\n\nCom o foco em uma aba, use as setas ← → do teclado para alternar entre Overview, Conversão e Financeiro.",
       },
       {
         subtitulo: "Aba Overview",
@@ -107,7 +107,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Aba Financeiro",
         texto:
-          "KPIs Financeiros (FTD, Depósitos, Saques, WD Ratio, GGR por Jogador, PVI), Investimento por Afiliado e Ranking Financeiro com coluna Afiliado e perfis de jogador (Whales, Core, Recreativos, Caçadores de Bônus).",
+          "KPIs Financeiros (FTD, Depósitos, Saques, WD Ratio, GGR por Jogador, PVI), Investimento por Afiliado e Ranking Financeiro com coluna Afiliado e perfis de jogador (Whales, Core, Recreativos, Caçadores de Bônus). As tabelas mostram até **20 linhas** por vez; a barra some quando o resultado cabe numa página.",
       },
     ],
   },
@@ -121,7 +121,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Filtros e Navegação",
         texto:
-          "Use as setas para navegar entre os meses disponíveis desde Janeiro de 2026, quando os dados de mídias sociais passaram a ser registrados. O botão Histórico exibe 13 competências mensais — a atual e as 12 anteriores.\n\nO filtro Operadoras aparece nas abas Overview e Conversão (quando visível para o seu perfil): KPIs, funis e tabelas mostram apenas campanhas da operadora selecionada, conforme cadastro em Marketing → Campanhas. Perfil operador vê automaticamente só a própria operadora, sem dropdown. Nas abas Impulsionamento e Alcance o filtro não é exibido — impulsionamento Meta e alcance orgânico são sempre globais (páginas Spin).\n\nAs quatro abas compartilham o mesmo período. Com o foco em uma aba, use ← → do teclado para alternar (tablist).",
+          "Use as setas para navegar entre os meses disponíveis desde Janeiro de 2026, quando os dados de mídias sociais passaram a ser registrados. O botão Histórico exibe 13 competências mensais — a atual e as 12 anteriores.\n\nO filtro Operadoras aparece nas abas Overview e Conversão (quando visível para o seu perfil): KPIs, funis e tabelas mostram apenas campanhas da operadora selecionada, conforme cadastro em Marketing → Campanhas. O perfil Operador vê automaticamente só a própria operadora, sem dropdown. Nas abas Impulsionamento e Alcance o filtro não é exibido — impulsionamento Meta e alcance orgânico são sempre globais (páginas Spin).\n\nAs quatro abas compartilham o mesmo período. Com o foco em uma aba, use ← → do teclado para alternar entre as abas.",
       },
       {
         subtitulo: "Aba Overview — Conversão por Campanha",
@@ -155,7 +155,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Filtros e Navegação",
         texto:
-          "Use as setas para navegar entre os meses disponíveis. O botão Histórico exibe o acumulado de 13 competências mensais — a atual e as 12 anteriores.\n\nO filtro de influencer restringe a visão a um único influencer — quando selecionado, todos os blocos refletem apenas os dados daquele influencer.\n\nO filtro de operadora restringe aos dados de uma plataforma específica.\n\nSe um influencer selecionado não tiver dados no novo período após trocar de mês, o filtro é removido automaticamente e uma notificação amarela é exibida no topo.",
+          "Use as setas para navegar entre os meses disponíveis. O botão Histórico exibe o acumulado de 13 competências mensais — a atual e as 12 anteriores.\n\nO filtro de influencer restringe a visão a um único influencer — quando selecionado, todos os blocos refletem apenas os dados daquele influencer.\n\nO filtro de operadora restringe aos dados de uma operadora específica.\n\nSe um influencer selecionado não tiver dados no novo período após trocar de mês, o filtro é removido automaticamente e uma notificação amarela é exibida no topo.",
       },
       {
         subtitulo: "KPIs Executivos",
@@ -228,7 +228,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Como ler as coberturas",
         texto:
-          "Nas tabelas **Cobertura por turno** e **Cobertura por estúdio**, a coluna **Prestadores** conta pessoas distintas com jornada no período — quem apenas trocou o dia entra em Movimentações, sem ocupar vaga do turno. Um prestador que assume um turno comprado fora do seu turno habitual aparece nos dois turnos, por isso a soma das linhas pode passar do Total, que é sempre a contagem de pessoas distintas. Só a escala do time selecionado entra na conta: dias em treinamento ou em outra área não contam.",
+          "Nas tabelas **Cobertura por turno** e **Cobertura por estúdio**, a coluna **Prestadores** conta pessoas distintas com jornada no período — quem apenas trocou o dia entra em Movimentações, sem ocupar vaga do turno. Um prestador que assume um turno comprado fora do seu turno habitual aparece nos dois turnos, por isso a soma das linhas pode passar do Total, que é sempre a contagem de pessoas distintas. Só a escala do time selecionado entra na conta: dias em treinamento ou em outra área não contam. **Cobertura por estúdio** mostra até **20 linhas** por vez (a linha Total continua no conjunto completo; a barra some quando cabe numa página).",
       },
       {
         subtitulo: "Detalhamento Diário",
@@ -243,7 +243,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Aba KPIs de OCR",
         texto:
-          "No time **Service Manager**, a segunda aba chama-se **KPIs de OCR** e avalia o desempenho dos SMs no atendimento.\n\n**Sinais** vêm dos sinais resolvidos pelo SM selecionado — ou por todos os SMs do time quando o filtro está em **Todo o time**. **Tickets** são os incidentes em que o SM é o **relator** (quem abriu o ticket); em Todo o time, entram todos os tickets relatados pelos SMs do time.\n\nCards: Sinais, TMA Total, TMA de Atendimento, TMA de Resolução e Tickets (com comparativo ao mês anterior em formato de relógio nos TMAs; tempos e tickets usam semântica inversa — menor é melhor). Tabelas: **Por Jogo**, **Por Estúdio** (expanda o estúdio para ver as mesas) e **Equipe** (só na visão de time — ranking por SM: sinais, TMAs e tickets) e **Detalhamento Diário** (até **20 linhas** por vez; **Por Jogo** não pagina). O período do mês corrente inclui até **hoje** (mesmo critério da aba Sinais em Incidentes). Shift Leader não tem esta aba.",
+          "No time **Service Manager**, a segunda aba chama-se **KPIs de OCR** e avalia o desempenho dos SMs no atendimento.\n\n**Sinais** vêm dos sinais resolvidos pelo SM selecionado — ou por todos os SMs do time quando o filtro está em **Todo o time**. **Tickets** são os incidentes em que o SM é o **relator** (quem abriu o ticket); em Todo o time, entram todos os tickets relatados pelos SMs do time.\n\nCards: Sinais, TMA Total, TMA de Atendimento, TMA de Resolução e Tickets (com comparativo ao mês anterior em formato de relógio nos TMAs; tempos e tickets usam semântica inversa — menor é melhor). Tabelas: **Por Jogo**, **Por Estúdio** (expanda o estúdio para ver as mesas) e **Equipe** (só na visão de time — ranking por SM: sinais, TMAs e tickets) e **Detalhamento Diário**. **Por Estúdio**, **Equipe** e Detalhamento mostram até **20 linhas** por vez (a barra some quando cabe numa página; **Por Jogo** não pagina). O período do mês corrente inclui até **hoje** (mesmo critério da aba Sinais em Incidentes). Shift Leader não tem esta aba.",
       },
     ],
   },
@@ -257,12 +257,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Filtros",
         texto:
-          "Navegue pelos meses com as setas. O botão **Histórico** mostra a janela de 13 competências mensais — a atual e as 12 anteriores (rótulo **Todo o período**). Filtre por **diretoria** (Todas as diretorias por padrão). Na segunda linha, alterne entre as abas Overview, Contratação e Distratos.",
+          "Navegue pelos meses com as setas. O botão **Histórico** mostra a janela de 13 competências mensais — a atual e as 12 anteriores (rótulo **Todo o período**). Filtre por **diretoria** (Todas Diretorias por padrão). Na segunda linha, alterne entre as abas Overview, Contratação e Distratos.",
       },
       {
         subtitulo: "Aba Overview",
         texto:
-          "No modo mês: KPIs HC Ativo, Contratação e Distrato na primeira linha; Variação, Turnover e Permanência na segunda (comparação com o mês anterior só com o valor). Pizza do HC por gerência (total no centro; hover na lista mostra HC por time) e barras por tipo de contrato.\n\nNo **Histórico**: KPIs HC Ativo, Distrato, Turnover e Permanência Média, mais a tabela **Mês a Mês** com Headcount, Contratação, Distrato e Turnover dos últimos 13 meses.",
+          "No modo mês: KPIs HC Ativo, Contratação e Distrato na primeira linha; Variação, Turnover e Permanência na segunda (comparação com o mês anterior só com o valor). Pizza do HC por gerência (total no centro; hover na lista mostra HC por time) e barras por tipo de contrato.\n\nNo **Histórico**: KPIs HC Ativo, Distrato, Turnover e Permanência Média, mais a tabela **Mês a Mês** com Headcount, Contratação, Distrato e Turnover dos últimos 13 meses (até **20 linhas** por vez; a barra some quando cabe numa página).",
       },
       {
         subtitulo: "Aba Contratação",
@@ -286,17 +286,17 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Modos de Visualização",
         texto:
-          "A agenda oferece três modos, selecionáveis no filtro em pill (ícone de calendário em intervalo — Mês, Semana ou Dia):\n\n— Mês: grid completo do calendário. As células variam de cor conforme o estado do dia — azul para hoje, verde para dias futuros e vermelho para dias passados. Cada célula exibe até 8 lives; quando há mais, um link '+N mais' abre a visualização Dia automaticamente.\n— Semana: **semana calendário** (sete colunas dom–sáb) com as lives de cada dia. O número do dia aparece em destaque com a mesma codificação de cores do modo Mês. **Não confundir** com o filtro **Semana** da **Escala Estúdio** / **Escala Escritório**, que mostra apenas **7 dias em torno de hoje** (3 anteriores, hoje e 3 seguintes) e trava o carrossel no mês corrente.\n— Dia: lista detalhada de todas as lives do dia selecionado, com logo da plataforma, nome do influencer, badges de plataforma e status, horário e link clicável abaixo de cada item.",
+          "A agenda oferece três modos, selecionáveis no filtro (ícone de calendário em intervalo — Mês, Semana ou Dia):\n\n— Mês: grid completo do calendário. As células variam de cor conforme o estado do dia — azul para hoje, verde para dias futuros e vermelho para dias passados. Cada célula exibe até 8 lives; quando há mais, um link '+N mais' abre a visualização Dia automaticamente.\n— Semana: **semana calendário** (sete colunas dom–sáb) com as lives de cada dia. O número do dia aparece em destaque com a mesma codificação de cores do modo Mês. **Não confundir** com o filtro **Semana** da **Escala Estúdio** / **Escala Escritório**, que mostra apenas **7 dias em torno de hoje** (3 anteriores, hoje e 3 seguintes) e trava o carrossel no mês corrente.\n— Dia: lista detalhada de todas as lives do dia selecionado, com logo da plataforma, nome do influencer, badges de plataforma e status, horário e link clicável abaixo de cada item.",
       },
       {
         subtitulo: "Navegação e Filtros",
         texto:
-          "Use as setas para avançar ou recuar no período conforme o modo (mês, semana ou dia). O botão **Hoje** (pill alinhado aos outros filtros da barra, ícone distinto do Histórico dos dashboards) volta para a data atual e abre a visualização Dia — fica destacado quando você já está no dia de hoje nesse modo.\n\nO seletor **Mês / Semana / Dia** usa o mesmo estilo de pill: **Mês** é o padrão (aparência neutra); **Semana** e **Dia** aparecem destacados quando selecionados.\n\nNa mesma linha, para perfis com escopo amplo: **Influencers** (**Todos Influencers** por defeito; pesquisa no painel com mais de cinco nomes) e **Operadoras** (**Todas Operadoras**).\n\nOs filtros de Status (Agendada, Realizada, Não Realizada) e Plataforma ficam numa segunda linha abaixo.\n\nO botão Limpar filtros aparece automaticamente quando há qualquer filtro ativo.",
+          "Use as setas para avançar ou recuar no período conforme o modo (mês, semana ou dia). O botão **Hoje**  volta para a data atual e abre a visualização Dia — fica destacado quando você já está no dia de hoje nesse modo.\n\nO seletor **Mês / Semana / Dia** usa o mesmo estilo de filtro: **Mês** é o padrão (aparência neutra); **Semana** e **Dia** aparecem destacados quando selecionados.\n\nNa mesma linha, para perfis com escopo amplo: **Influencers** (**Todos Influencers** por padrão; pesquisa no painel com mais de cinco nomes) e **Operadoras** (**Todas Operadoras**).\n\nOs filtros de Status (Agendada, Realizada, Não Realizada) e Plataforma ficam numa segunda linha abaixo.\n\nO botão Limpar filtros aparece automaticamente quando há qualquer filtro ativo.",
       },
       {
         subtitulo: "Criando uma Nova Live",
         texto:
-          "No bloco **Calendário** (subtítulo *Data e hora das lives dos influencers*), use **Nova Live** no canto direito da mesma linha do título para abrir o formulário. Enquanto o sistema verifica pré-requisitos (perfil e Playbook), o botão exibe \"Verificando…\" com spinner.\n\nPreencha:\n\n— Influencer: selecione o parceiro responsável (disponível para gestores, executivos e operadores). Quando o próprio influencer agenda, o cadastro é fixo no perfil logado.\n— Data e Horário: quando a live está programada\n— Plataforma: botões visuais com logo — Twitch, YouTube, Kick, Instagram, TikTok, Discord, WhatsApp ou Telegram\n— Link: obrigatório para salvar. É pré-preenchido automaticamente com o link cadastrado no perfil do influencer para a plataforma selecionada, e atualiza automaticamente ao trocar de plataforma. Se o perfil não tiver o link da plataforma selecionada, o campo fica em branco e deve ser preenchido manualmente.\n\nAo salvar uma nova live, a operadora é definida automaticamente a partir do vínculo ativo do influencer em Influencers → Operadoras (primeira operadora ativa). Assim a live fica visível no escopo da operadora correspondente.",
+          "No bloco **Calendário** (subtítulo *Data e hora das lives dos influencers*), use **Nova Live** no canto direito da mesma linha do título para abrir o formulário. Enquanto o sistema verifica pré-requisitos (perfil, Playbook e cadastro ativo), o botão exibe \"Verificando…\" com spinner.\n\nCadastro **Inativo** ou **Cancelado** não agenda: o bloqueio aparece **ao clicar** em Nova Live (ou ao escolher o influencer inativo no formulário). Lives já agendadas continuam no calendário.\n\n— **Influencer / Agência:** a mensagem pede para falar com o Gestor do Contrato.\n— **Gestor e demais perfis internos:** a mensagem indica ativar o cadastro na página **Influencers** (atalho no próprio aviso).\n\nPreencha:\n\n— Influencer: selecione o influencer responsável (disponível para gestores, executivos e operadores). Quando o próprio influencer agenda, o cadastro é fixo no perfil logado.\n— Data e Horário: quando a live está programada\n— Plataforma: botões visuais com logo — Twitch, YouTube, Kick, Instagram, TikTok, Discord, WhatsApp ou Telegram\n— Link: obrigatório para salvar. É pré-preenchido automaticamente com o link cadastrado no perfil do influencer para a plataforma selecionada, e atualiza automaticamente ao trocar de plataforma. Se o perfil não tiver o link da plataforma selecionada, o campo fica em branco e deve ser preenchido manualmente.\n\nAo salvar uma nova live, a operadora é definida automaticamente a partir do vínculo ativo do influencer em Influencers → Operadoras (primeira operadora ativa). Assim a live fica visível no escopo da operadora correspondente.",
       },
       {
         subtitulo: "Restrições de Data e Permissão",
@@ -325,7 +325,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Validando uma Live",
         texto:
-          "Clique em Validar na live desejada para abrir o formulário. Os campos disponíveis são:\n\n— Status: Realizada ou Não Realizada\n— Operadora: obrigatório para qualquer status. É o vínculo que conecta a live ao cálculo de pagamentos no módulo Financeiro\n— Observação: campo livre, opcional\n\nPara lives Realizadas, campos adicionais ficam disponíveis:\n— Horário Real de Início: pré-preenchido com o horário agendado da live — altere se ela começou em horário diferente\n— Duração: horas e minutos separados; ambos não podem ser zero simultaneamente\n— Média de Views: audiência média ao longo da live\n— Máximo de Views: pico de audiência; não pode ser menor que a Média",
+          "Clique em Validar na live desejada para abrir o formulário. Os campos disponíveis são:\n\n— Status: Realizada ou Não Realizada\n— Operadora: obrigatório para qualquer status. É o vínculo que conecta a live ao cálculo de pagamentos no módulo Financeiro\n— Observação: campo livre, opcional\n\nPara lives Realizadas, campos adicionais ficam disponíveis:\n— Horário Real de Início: pré-preenchido com o horário agendado da live — altere se ela começou em horário diferente\n— Duração: horas e minutos separados; ambos não podem ser zero simultaneamente\n— Média de Views: audiência média ao longo da live\n— Máximo de Views: pico de audiência; não pode ser menor que a Média\n\nQuando as horas validadas desta cota atingem as Horas Acordadas, o cadastro do influencer passa a **Inativo**. Lives já agendadas não são canceladas; para agendar de novo é preciso reativar em Influencers com uma nova cota.",
       },
       {
         subtitulo: "Live Não Realizada",
@@ -364,12 +364,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Filtro de Status",
         texto:
-          "Na segunda linha dos filtros, os chips de Status permitem isolar o tipo de live: Realizada (verde), Não Realizada (vermelho) ou Todos (padrão ativo). O filtro ativo fica destacado — clique nele para desativar ou escolha outra opção.",
+          "Na segunda linha dos filtros, os filtros de Status permitem isolar o tipo de live: Realizada (verde), Não Realizada (vermelho) ou Todos (padrão ativo). O filtro ativo fica destacado — clique nele para desativar ou escolha outra opção.",
       },
       {
         subtitulo: "KPIs do Período",
         texto:
-          "Três indicadores consolidados calculados sobre todas as lives do período e filtros selecionados, independentemente do chip de status da lista:\n\n— Total de Lives: quantidade total, com breakdown 'N realizadas · N não realizadas' abaixo do número.\n— Horas Realizadas: soma das durações no formato XhYm, com sublegenda 'em N lives' indicando quantas contribuíram para o total.\n— Média de Views: média das médias de views por live realizada. A sublegenda 'média das médias por live' esclarece o cálculo. Exibe '—' quando nenhuma live realizada tem views registradas.",
+          "Três indicadores consolidados calculados sobre todas as lives do período e filtros selecionados, independentemente do filtro de status da lista:\n\n— Total de Lives: quantidade total, com breakdown 'N realizadas · N não realizadas' abaixo do número.\n— Horas Realizadas: soma das durações no formato XhYm, com sublegenda 'em N lives' indicando quantas contribuíram para o total.\n— Média de Views: média das médias de views por live realizada. A sublegenda 'média das médias por live' esclarece o cálculo. Exibe '—' quando nenhuma live realizada tem views registradas.",
       },
       {
         subtitulo: "Lista de Lives",
@@ -379,7 +379,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Editando uma Live",
         texto:
-          "O botão Editar aparece para perfis com permissão de edição. O formulário permite ajustar o status, a operadora, a observação e os dados de resultado (duração, média e pico de views). A operadora é obrigatória para lives realizadas — é o dado usado pelo Financeiro para calcular os pagamentos do ciclo correspondente.",
+          "O botão Editar aparece para perfis com permissão de edição. O formulário permite ajustar o status, a operadora, a observação e os dados de resultado (duração, média e pico de views). A operadora é obrigatória para lives realizadas — é o dado usado pelo Financeiro para calcular os pagamentos do ciclo correspondente. Aumentar a duração pode completar a cota de horas e inativar o cadastro; reduzir a duração não reativa quem já ficou Inativo.",
       },
       {
         subtitulo: "Excluindo uma Live",
@@ -398,32 +398,32 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "Cadastro central dos parceiros de **lives** (perfil Influencer). Reúne os dados necessários para ativar, acompanhar e pagar cada influencer — e serve de base para Agenda, Resultados, Feedback e Financeiro. Afiliados criados pelo Network ficam na página **Afiliados**, não nesta lista.\n\nPara gestores e administradores, o subtítulo da página é 'Gerencie o cadastro completo dos parceiros — perfil, canais e financeiro.' Para o próprio influencer logado, a página exibe apenas o próprio perfil com a mensagem 'Seu perfil completo na plataforma.'",
+          "Cadastro central dos **influencers** de lives. Reúne os dados necessários para ativar, acompanhar e pagar cada influencer — e serve de base para Agenda, Resultados, Feedback e Financeiro. Afiliados criados pelo Network ficam na página **Afiliados**, não nesta lista.\n\nPara gestores e administradores, o subtítulo da página é 'Gerencie o cadastro completo dos influencers — perfil, canais e financeiro.' Para o próprio influencer logado, a página exibe apenas o próprio perfil com a mensagem 'Seu perfil completo na plataforma.'",
       },
       {
         subtitulo: "Quadros de Resumo",
         texto:
-          "Dois cards no topo, visíveis para gestores, executivos e operadores:\n\n— Total de Influencers: quantidade total com breakdown por status (Ativo, Inativo, Cancelado). As contagens por plataforma aparecem nos chips de filtro Plataforma abaixo.\n— Perfil Incompleto: contador vermelho com os nomes dos influencers ativos com dados obrigatórios pendentes. Cada nome é um link clicável que abre diretamente o formulário de edição daquele influencer. Quando todos os perfis ativos estão completos, o card exibe 'Todos os perfis ativos estão completos!' em verde.",
+          "Dois cards no topo, visíveis para gestores, executivos e operadores:\n\n— Total de Influencers: quantidade total com breakdown por status (Ativo, Inativo, Cancelado). As contagens por plataforma aparecem nos filtros de Plataforma abaixo.\n— Perfil Incompleto: contador vermelho com os nomes dos influencers ativos com dados obrigatórios pendentes. Cada nome é um link clicável que abre diretamente o formulário de edição daquele influencer. Quando todos os perfis ativos estão completos, o card exibe 'Todos os perfis ativos estão completos!' em verde.",
       },
       {
         subtitulo: "Filtros",
         texto:
-          "O bloco de filtros está organizado em quatro linhas:\n\n— Linha 1 — Status e Operadora: chips Ativo, Inativo, Cancelado; seletor de operadora para perfis com acesso a múltiplas parceiras\n— Linha 2 — Plataforma: chips por canal cadastrado na base\n— Linha 3 — Cachê por Hora: slider de R$0 até o maior cachê cadastrado\n— Linha 4 — Busca: campo de texto por nome artístico ou e-mail\n\nO botão Limpar filtros aparece automaticamente quando há qualquer filtro ativo.",
+          "O bloco de filtros está organizado em quatro linhas:\n\n— Linha 1 — Status e Operadora: filtros Ativo, Inativo, Cancelado; seletor de operadora para perfis com acesso a múltiplas parceiras\n— Linha 2 — Plataforma: filtros por canal cadastrado na base\n— Linha 3 — Cachê por Hora: slider de R$0 até o maior cachê cadastrado\n— Linha 4 — Busca: campo de texto por nome artístico ou e-mail\n\nO botão Limpar filtros aparece automaticamente quando há qualquer filtro ativo.",
       },
       {
         subtitulo: "Card de Influencer",
         texto:
-          "Cada card exibe: avatar com a inicial em gradiente de marca, nome artístico, badge de status, cachê por hora, canais ativos com links clicáveis (ícone de link externo) e tags das operadoras vinculadas.\n\nO badge de status é um dropdown interativo — Admin e Gestor podem alterar o status diretamente no card sem abrir o modal. Para outros perfis, o badge é somente leitura.\n\nO badge 'Perfil incompleto' aparece em influencers ativos com dados obrigatórios faltando. As tags de operadoras não são exibidas para o perfil Operador.",
+          "Cada card exibe: avatar com a inicial em gradiente de marca, nome artístico, badge de status, cachê por hora, canais ativos com links clicáveis (ícone de link externo) e tags das operadoras vinculadas.\n\nO badge de status é um dropdown interativo — Admin e Gestor podem alterar o status diretamente no card sem abrir o modal. Para outros perfis, o badge é somente leitura. Passar de **Inativo** ou **Cancelado** para **Ativo** abre o modal **Ativar influencer**, com **Horas Acordadas** obrigatório (cota operacional, independente do ciclo de pagamento). Inativo e Cancelado limpam a cota. Se a conta estiver desativada na plataforma, aparece a etiqueta **Desativado**; ao voltar o status do cadastro para **Ativo**, o acesso é reativado, a senha volta para a padrão e o influencer recebe o e-mail de boas-vindas.\n\nO badge 'Perfil incompleto' aparece em influencers ativos com dados obrigatórios faltando. As tags de operadoras não são exibidas para o perfil Operador.",
       },
       {
         subtitulo: "Visualizando um Perfil (Ver)",
         texto:
-          "O modal de visualização abre com um banner 'Modo visualização — somente leitura. Dados sensíveis protegidos.' e tem cinco abas com navegação acessível (tablist / role tab):\n\n— Cadastral: nome completo, nome artístico, e-mail, telefone e CPF (com desfoque)\n— Canais: plataformas ativas com link clicável para abrir em nova aba\n— Financeiro: cachê por hora, Chave PIX, Banco, Agência e Conta (todos com desfoque)\n— Operadoras: status do vínculo (Ativo/Inativo) e ID em cada operadora\n— Histórico: data de criação do cadastro, data da última atualização e data da última alteração de status\n\nDados sensíveis (CPF, Chave PIX e dados bancários) ficam com desfoque e exigem clique no ícone de olho para revelar — ocultam-se automaticamente após 10 segundos. Pressione Esc para fechar o modal.",
+          "O modal de visualização abre com um banner 'Modo visualização — somente leitura. Dados sensíveis protegidos.' e tem seis abas com navegação por abas:\n\n— Cadastral: nome completo, nome artístico, e-mail, telefone e CPF (com desfoque)\n— Horas: Horas Pendentes e Horas Realizadas da cota atual (não seguem o ciclo de pagamento). Sem cota ativa os campos ficam vazios\n— Canais: plataformas ativas com link clicável para abrir em nova aba\n— Financeiro: cachê por hora, Chave PIX, Banco, Agência e Conta (todos com desfoque)\n— Operadoras: status do vínculo (Ativo/Inativo) e ID em cada operadora\n— Histórico: data de criação do cadastro, data da última atualização e data da última alteração de status\n\nDados sensíveis (CPF, Chave PIX e dados bancários) ficam com desfoque e exigem clique no ícone de olho para revelar — ocultam-se automaticamente após 10 segundos. Pressione Esc para fechar o modal.",
       },
       {
         subtitulo: "Editando um Perfil (Editar)",
         texto:
-          "O formulário de edição tem quatro abas com navegação acessível (tablist) — Cadastral, Canais, Financeiro e Operadoras — sem a aba Histórico. Salvar Perfil confirma todas as alterações de uma vez. Pressione Esc para fechar o modal.\n\nO campo Cachê por Hora e o badge de Status são restritos a Admin e Gestor — para outros perfis, esses campos aparecem bloqueados. No modo de edição, CPF e dados bancários ficam visíveis para facilitar o preenchimento.\n\nNa aba Canais, cada plataforma ativa exige que o link correspondente esteja preenchido. Na aba Operadoras, cada operadora marcada como ativa exige o ID do influencer naquela operadora. O primeiro vínculo ativo em Operadoras é o usado pela Agenda ao definir a operadora automaticamente em novas lives.",
+          "O formulário de edição tem quatro abas com navegação por abas — Cadastral, Canais, Financeiro e Operadoras — sem as abas Horas e Histórico (Horas só no Ver). Salvar Perfil confirma todas as alterações de uma vez. Pressione Esc para fechar o modal.\n\nO campo Cachê por Hora e o badge de Status são restritos a Admin e Gestor — para outros perfis, esses campos aparecem bloqueados. No modo de edição, ativar o cadastro também abre o modal de Horas Acordadas. CPF e dados bancários ficam visíveis para facilitar o preenchimento.\n\nNa aba Canais, cada plataforma ativa exige que o link correspondente esteja preenchido. Na aba Operadoras, cada operadora marcada como ativa exige o ID do influencer naquela operadora. O primeiro vínculo ativo em Operadoras é o usado pela Agenda ao definir a operadora automaticamente em novas lives.",
       },
       {
         subtitulo: "Visibilidade por Perfil",
@@ -442,12 +442,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Funil de Prospecção e Cobertura de Plataformas",
         texto:
-          "Os quatro cards no topo mostram a distribuição dos prospectos por etapa:\n\n— Visualizado: primeiro contato identificado, informações básicas coletadas\n— Contato: negociação em andamento, dados de contato registrados\n— Negociação: proposta enviada, cachê em discussão\n— Fechado: parceria confirmada — o prospecto vira influencer ativo na plataforma\n\nClique em um card para filtrar a lista por aquele status; clique de novo no card ativo para voltar à vista padrão. Por padrão, nenhum card está selecionado e prospectos **Fechados** não aparecem na lista — clique no card Fechado para visualizá-los.",
+          "Os quatro cards no topo mostram a distribuição dos prospectos por etapa:\n\n— Visualizado: primeiro contato identificado, informações básicas coletadas\n— Contato: negociação em andamento, dados de contato registrados\n— Negociação: proposta enviada, cachê em discussão\n— Fechado: parceria confirmada — o prospecto vira usuário influencer com cadastro **Inativo** até a ativação com horas acordadas\n\nClique em um card para filtrar a lista por aquele status; clique de novo no card ativo para voltar à vista padrão. Por padrão, nenhum card está selecionado e prospectos **Fechados** não aparecem na lista — clique no card Fechado para visualizá-los.",
       },
       {
         subtitulo: "Filtros",
         texto:
-          "No bloco inferior, combine:\n\n— Plataforma: chips com contagem por canal\n— Cachê por Hora — até: slider até o maior cachê cadastrado\n— Views — até: slider até o maior volume de views cadastrado\n— Busca: por nome artístico ou e-mail\n\nO botão Limpar filtros aparece automaticamente quando há qualquer filtro ativo (inclui card do funil e plataforma). O filtro por status é feito diretamente nos cards do funil.",
+          "No bloco inferior, combine:\n\n— Plataforma: filtros com contagem por canal\n— Cachê por Hora — até: slider até o maior cachê cadastrado\n— Views — até: slider até o maior volume de views cadastrado\n— Busca: por nome artístico ou e-mail\n\nO botão Limpar filtros aparece automaticamente quando há qualquer filtro ativo (inclui card do funil e plataforma). O filtro por status é feito diretamente nos cards do funil.",
       },
       {
         subtitulo: "Card de Prospecto",
@@ -457,12 +457,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Cadastrando e Editando um Prospecto",
         texto:
-          "Clique em Novo Influencer (botão com ícone + e gradiente de criação) para registrar um novo prospecto. O formulário tem Nome Artístico e Status no topo, mais três abas (tablist acessível — Contato, Canais, Anotações). Pressione Esc para fechar o modal.\n\nAbaixo de Nome e Status (Ver / Editar), **Registrado por** e **Data de Registro** do cadastro na plataforma; se **Registrado por** estiver vazio, use **Atribuir a mim** e Salvar.\n\n— Contato: Tipo de Contato (Agente, Plataforma ou Direto), Nome do Agente (quando tipo for Agente), Telefone, Cachê Negociado, Live Cassino (Sim/Não), E-mail e Operadora\n— Canais: toggle de plataformas ativas. Cada plataforma ativa exige link e métrica correspondente (Views ou Seguidores conforme a plataforma). Abaixo, seleção de Categorias em multi-seleção: Vida Real, Jogos Populares, Variedades, Esportes, Cassino\n— Anotações: campo para nova anotação e histórico com autor e data de cada anotação",
+          "Clique em Novo Influencer  para registrar um novo prospecto. O formulário tem Nome Artístico e Status no topo, mais três abas (abas — Contato, Canais, Anotações). Pressione Esc para fechar o modal.\n\nAbaixo de Nome e Status (Ver / Editar), **Registrado por** e **Data de Registro** do cadastro na plataforma; se **Registrado por** estiver vazio, use **Atribuir a mim** e Salvar.\n\n— Contato: Tipo de Contato (Agente, Plataforma ou Direto), Nome do Agente (quando tipo for Agente), Telefone, Cachê Negociado, Live Cassino (Sim/Não), E-mail e Operadora\n— Canais: toggle de plataformas ativas. Cada plataforma ativa exige link e métrica correspondente (Views ou Seguidores conforme a plataforma). Abaixo, seleção de Categorias em multi-seleção: Vida Real, Jogos Populares, Variedades, Esportes, Cassino\n— Anotações: campo para nova anotação e histórico com autor e data de cada anotação",
       },
       {
         subtitulo: "Fechando uma Parceria",
         texto:
-          "Ao marcar um prospecto como Fechado, a plataforma cria automaticamente o usuário do influencer com as informações cadastradas. Para que o fechamento seja concluído, os seguintes campos são obrigatórios:\n\n— Nome artístico e e-mail\n— Cachê negociado maior que zero\n— Operadora (aba Contato)\n— Pelo menos uma plataforma com link e métrica preenchidos — views ou seguidores, conforme a plataforma (aba Canais)\n\nDurante o processo, o botão exibe 'Criando usuário...' com um spinner. Não feche o modal até que a confirmação apareça. A operadora selecionada é gravada automaticamente no perfil do influencer criado e no escopo de acesso na Gestão de Usuários.",
+          "Ao marcar um prospecto como Fechado, a plataforma cria automaticamente o usuário do influencer com as informações cadastradas. O cadastro em **Influencers** nasce **Inativo**, sem cota de horas — o gestor ativa depois, informando as Horas Acordadas. Para que o fechamento seja concluído, os seguintes campos são obrigatórios:\n\n— Nome artístico e e-mail\n— Cachê negociado maior que zero\n— Operadora (aba Contato)\n— Pelo menos uma plataforma com link e métrica preenchidos — views ou seguidores, conforme a plataforma (aba Canais)\n\nDurante o processo, o botão exibe 'Criando usuário...' com um spinner. Não feche o modal até que a confirmação apareça. A operadora selecionada é gravada automaticamente no perfil do influencer criado e no escopo de acesso na Gestão de Usuários.",
       },
       {
         subtitulo: "Anotações",
@@ -476,32 +476,32 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "Catálogo de **Game Presenters** (dealers) em operação, sincronizado com **Gestão de Staff**. A operadora consulta especialidades, turno e **estúdio** e envia solicitações — não cadastra nem edita perfil aqui.\n\n**Fluxo:** RH cadastra e define a função em **Gestão de Prestadores** → gestor configura perfil, estúdio e horários em **Gestão de Staff** → o card aparece aqui com o **mesmo estúdio** configurado no Staff (ex.: Sports Club mostra só a tag Sports Club).",
+          "Catálogo de **Game Presenters** em operação, sincronizado com **Gestão de Staff**. A operadora consulta especialidades, turno e **estúdio** e envia solicitações — não cadastra nem edita perfil aqui.\n\n**Fluxo:** RH cadastra e define a função em **Gestão de Prestadores** → gestor configura perfil, estúdio e horários em **Gestão de Staff** → o card aparece aqui com o **mesmo estúdio** configurado no Staff (ex.: Sports Club mostra só a tag Sports Club).",
       },
       {
         subtitulo: "Filtros e Navegação",
         texto:
-          "O carrossel de turnos no topo da página filtra o elenco por período de trabalho — Manhã, Tarde ou Noite. Use as setas laterais para alternar o turno; o rótulo central mostra o turno ativo. Quando o rótulo exibe 'Todos os turnos', nenhum filtro de turno está aplicado.\n\nAo lado do carrossel fica o filtro de **estúdio** (**Todos Estúdios** por padrão, com a opção **Nenhum estúdio** para dealers ainda sem vínculo). Perfis Operador veem no filtro os estúdios ligados à sua operadora em Gestão de Estúdios — por exemplo, Blaze vê **Blaze** e **Sports Club** (network). Com um único estúdio no escopo, ele já entra selecionado.\n\nO bloco consolidado abaixo exibe o total de dealers que atendem aos filtros ativos, com chips de gênero (Feminino / Masculino) e jogo (Blackjack / Roleta / Baccarat / Futebol Brasileiro) para refinar ainda mais a listagem. Cada chip mostra a contagem parcial e pode ser ativado ou desativado com um clique.\n\nO campo de busca aceita nome real ou nickname.",
+          "O carrossel de turnos no topo da página filtra o elenco por período de trabalho — Manhã, Tarde ou Noite. Use as setas laterais para alternar o turno; o rótulo central mostra o turno ativo. Quando o rótulo exibe 'Todos Turnos', nenhum filtro de turno está aplicado.\n\nAo lado do carrossel fica o filtro de **estúdio** (**Todos Estúdios** por padrão, com a opção **Nenhum estúdio** para Game Presenters ainda sem vínculo). O perfil Operador vê no filtro os estúdios ligados à sua operadora em Gestão de Estúdios — por exemplo, Blaze vê **Blaze** e **Sports Club** (network). Com um único estúdio no escopo, ele já entra selecionado.\n\nO bloco consolidado abaixo exibe o total de Game Presenters que atendem aos filtros ativos, com filtros de gênero (Feminino / Masculino) e jogo (Blackjack / Roleta / Baccarat / Futebol Brasileiro) para refinar ainda mais a listagem. Cada filtro mostra a contagem parcial e pode ser ativado ou desativado com um clique.\n\nO campo de busca aceita nome real ou nickname.",
       },
       {
         subtitulo: "Cards de Dealers",
         texto:
-          "Cada dealer é exibido em um card com foto (ou inicial quando não há foto), badges de status e VIP sobre a imagem, turno no rodapé da foto e, no corpo, nome artístico, nome real, tags dos jogos de especialidade, bio e, na base, as tags de gênero e **estúdio** (o mesmo definido em Gestão de Staff). Não há tag de operadora no card — o vínculo visível é o estúdio.\n\nQuando o dealer tem mais de uma foto cadastrada, setas de navegação aparecem sobre a imagem — use-as para ver todas as fotos do carrossel. O indicador de posição ('1 / 3', por exemplo) aparece no rodapé da foto.\n\nClique em Ver para abrir o perfil completo em modo somente leitura, incluindo gênero, turno, jogos, estúdio e bio do dealer.",
+          "Cada Game Presenter é exibido em um card com foto (ou inicial quando não há foto), badges de status e VIP sobre a imagem, turno no rodapé da foto e, no corpo, nome artístico, nome real, tags dos jogos de especialidade, bio e, na base, as tags de gênero e **estúdio** (o mesmo definido em Gestão de Staff). Não há tag de operadora no card — o vínculo visível é o estúdio.\n\nQuando o Game Presenter tem mais de uma foto cadastrada, setas de navegação aparecem sobre a imagem — use-as para ver todas as fotos do carrossel. O indicador de posição ('1 / 3', por exemplo) aparece no rodapé da foto.\n\nClique em Ver para abrir o perfil completo em modo somente leitura, incluindo gênero, turno, jogos, estúdio e bio do Game Presenter.",
       },
       {
         subtitulo: "Solicitações ao Estúdio (perfil Operador)",
         texto:
-          "Operadores com escopo de operadora definido encontram dois botões adicionais em cada card:\n\n— Solicitar: abre o formulário de nova solicitação para aquele dealer. Escolha o tipo — 'Solicitar troca de dealer' ou 'Deixar feedback' — e descreva o pedido com pelo menos 10 caracteres. A solicitação é enviada ao estúdio Spin e ficará visível na Central de Notificações.\n\n— Histórico: lista todas as solicitações já enviadas para aquele dealer na sua operadora. Clique em qualquer item para abrir a thread completa da conversa.\n\nUm banner amarelo no topo da página informa quantas solicitações aguardam resposta da operadora. Clique em Ver no banner para acessar a primeira pendência diretamente.",
+          "Operadores com escopo de operadora definido encontram dois botões adicionais em cada card:\n\n— Solicitar: abre o formulário de nova solicitação para aquele Game Presenter. Escolha o tipo — 'Solicitar troca de Game Presenter' ou 'Deixar feedback' — e descreva o pedido com pelo menos 10 caracteres. A solicitação é enviada ao estúdio Spin e ficará visível na Central de Notificações.\n\n— Histórico: lista todas as solicitações já enviadas para aquele Game Presenter na sua operadora. Clique em qualquer item para abrir a thread completa da conversa.\n\nUm banner amarelo no topo da página informa quantas solicitações aguardam resposta da operadora. Clique em Ver no banner para acessar a primeira pendência diretamente.",
       },
       {
         subtitulo: "Origem do cadastro no elenco",
         texto:
-          "Um dealer só aparece quando o prestador está no time **Game Presenter** com status **Ativo** ou **Indisponível** em **Gestão de Prestadores** e o perfil operacional foi sincronizado a partir de **Gestão de Staff**. Se o colaborador existe em RH mas não aparece aqui, confira o time no organograma, o status e os dados em Staff — não há botão de criar ou editar dealer nesta página.",
+          "Um Game Presenter só aparece quando o prestador está no time **Game Presenter** com status **Ativo** ou **Indisponível** em **Gestão de Prestadores** e o perfil operacional foi sincronizado a partir de **Gestão de Staff**. Se o prestador existe em RH mas não aparece aqui, confira o time no organograma, o status e os dados em Staff — não há botão de criar ou editar Game Presenter nesta página.",
       },
       {
         subtitulo: "Visibilidade por Perfil",
         texto:
-          "— Gestor / Admin: visualização do elenco de todos os estúdios e do histórico de solicitações de todas as operadoras.\n— Operador: visualiza os dealers dos **estúdios associados à sua operadora** (dedicado e network — ex.: Blaze + Sports Club). A tag do card indica em qual estúdio o GP está. Pode **Solicitar** troca ou feedback e abrir **Histórico** de solicitações por dealer, sempre restrito à própria operadora.\n— Executivo: visualização completa, sem ações de escrita nesta página.\n\nO botão Solicitar só aparece para perfil Operador com operadora ativa no escopo. O botão Histórico exige permissão de visualização na Central de Notificações.",
+          "— Gestor / Admin: visualização do elenco de todos os estúdios e do histórico de solicitações de todas as operadoras.\n— Operador: visualiza os Game Presenters dos **estúdios associados à sua operadora** (dedicado e network — ex.: Blaze + Sports Club). A tag do card indica em qual estúdio o GP está. Pode **Solicitar** troca ou feedback e abrir **Histórico** de solicitações por Game Presenter, sempre restrito à própria operadora.\n— Executivo: visualização completa, sem ações de escrita nesta página.\n\nO botão Solicitar só aparece para perfil Operador com operadora ativa no escopo. O botão Histórico exige permissão de visualização na Central de Notificações.",
       },
     ],
   },
@@ -510,7 +510,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "Hub de comunicação entre as operadoras e o estúdio Spin Gaming. Centraliza todas as solicitações em aberto e resolvidas — trocas de dealer, feedbacks, solicitações de roteiro de campanha e de roteiro de mesa — num único lugar, com histórico de conversa e status de cada item.\n\nA experiência é diferente conforme o perfil: gestores Spin visualizam o inbox completo organizado por tipo de solicitação; operadores veem as próprias solicitações e as campanhas da sua operadora.",
+          "Hub de comunicação entre as operadoras e o estúdio Spin Gaming. Centraliza todas as solicitações em aberto e resolvidas — trocas de Game Presenter, feedbacks, solicitações de roteiro de campanha e de roteiro de mesa — num único lugar, com histórico de conversa e status de cada item.\n\nA experiência é diferente conforme o perfil: gestores Spin visualizam o inbox completo organizado por tipo de solicitação; operadores veem as próprias solicitações e as campanhas da sua operadora.",
       },
       {
         subtitulo: "Filtros e Navegação",
@@ -520,12 +520,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Inbox do Estúdio — perfil Gestor",
         texto:
-          "Gestores e administradores Spin visualizam o inbox organizado em quatro abas:\n\n— Troca de dealer: solicitações de troca enviadas pelas operadoras para dealers específicos.\n— Feedbacks: mensagens de feedback sobre o desempenho ou comportamento de dealers.\n— Campanhas: solicitações ligadas a roteiros de campanha cadastrados no módulo Roteiro de Mesa.\n— Roteiros: solicitações ligadas a sugestões de roteiro de mesa.\n\nCada aba exibe um badge vermelho com a contagem de itens que aguardam resposta do estúdio — ou seja, onde o campo 'aguarda resposta de' está apontado para o gestor. Itens já resolvidos aparecem na mesma lista com o status 'Concluído' para consulta histórica dentro do período selecionado.",
+          "Gestores e administradores Spin visualizam o inbox organizado em quatro abas:\n\n— Troca de Game Presenter: solicitações de troca enviadas pelas operadoras para Game Presenters específicos.\n— Feedbacks: mensagens de feedback sobre o desempenho ou comportamento de Game Presenters.\n— Campanhas: solicitações ligadas a roteiros de campanha cadastrados no módulo Roteiro de Mesa.\n— Roteiros: solicitações ligadas a sugestões de roteiro de mesa.\n\nCada aba exibe um badge vermelho com a contagem de itens que aguardam resposta do estúdio — ou seja, onde o campo 'aguarda resposta de' está apontado para o gestor. Itens já resolvidos aparecem na mesma lista com o status 'Concluído' para consulta histórica dentro do período selecionado.",
       },
       {
         subtitulo: "Minhas Solicitações e Campanhas — perfil Operador",
         texto:
-          "Operadores visualizam a página em modo diferente do inbox do estúdio:\n\n— Minhas solicitações: lista das solicitações de dealer enviadas pela operadora que ainda estão abertas (pendente ou em andamento).\n— Roteiros de mesa: solicitações de roteiro vinculadas à operadora, também em aberto.\n— Minhas Campanhas: campanhas de roteiro cadastradas para a operadora no período selecionado. Campanhas vigentes são destacadas com o badge 'VIGENTE' em verde. Quando a campanha tem uma conversa aberta com o estúdio, o botão 'Ver conversa' aparece no card.\n\nA seção Solicitações concluídas aparece na parte inferior da página e lista os itens marcados como resolvidos no período selecionado.",
+          "Operadores visualizam a página em modo diferente do inbox do estúdio:\n\n— Minhas solicitações: lista das solicitações de Game Presenter enviadas pela operadora que ainda estão abertas (pendente ou em andamento).\n— Roteiros de mesa: solicitações de roteiro vinculadas à operadora, também em aberto.\n— Minhas Campanhas: campanhas de roteiro cadastradas para a operadora no período selecionado. Campanhas vigentes são destacadas com o badge 'VIGENTE' em verde. Quando a campanha tem uma conversa aberta com o estúdio, o botão 'Ver conversa' aparece no card.\n\nA seção Solicitações concluídas aparece na parte inferior da página e lista os itens marcados como resolvidos no período selecionado.",
       },
       {
         subtitulo: "Conversas e Status",
@@ -597,22 +597,27 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "Gerencia vagas abertas, candidaturas e etapas do processo seletivo interno. Publicação, triagem e movimentação de candidatos dependem das permissões de Criar e Editar na página.",
+          "Gerencia o funil de vagas internas e externas: candidatura, processos em andamento, cadastro de vagas e o kanban de candidatos. A barra tem **duas linhas** — abas no topo e pesquisa (com filtros contextuais) abaixo. Publicação, triagem e exclusão dependem das permissões de **Criar**, **Editar** e **Excluir**.",
       },
       {
-        subtitulo: "Filtros e candidaturas",
+        subtitulo: "Aba Vagas Abertas",
         texto:
-          "Use os filtros de status, tipo de vaga e busca para localizar processos. Cada vaga concentra candidatos, histórico de movimentação e ações de RH conforme o perfil logado.",
+          "Lista só vagas com status **Aberta**. Use a pesquisa por nome ou diretoria. Em vagas **Internas**, o botão **Candidatura** abre o formulário de inscrição (ou aparece **Já me candidatei** se você já enviou). Em vagas **Externas**, use **Compartilhar** para copiar o link da página de Carreiras (`https://spingaming.com.br/carreiras/`) e orientar o candidato — em **Como chegou até nós?** escolha **Indicação** e em **Quem indicou?** informe o nome do Prestador (necessário para o bônus).",
       },
       {
-        subtitulo: "Nova vaga",
+        subtitulo: "Aba Vagas em Andamento",
         texto:
-          "No modal **Nova Vaga**, preencha título, tipo, organograma, datas, descrição e responsabilidades. Em vagas **Externas**, **repasse inicial** (valor em reais) e **Tags** são obrigatórios — adicione ao menos um rótulo (digite e pressione Enter). Vagas **Internas** não exibem repasse nem Tags. Requisitos e Escala de trabalho não fazem mais parte do cadastro.",
+          "Mostra vagas cujo status efetivo é **Em andamento** (processo seletivo já iniciado). A linha de filtros traz só a pesquisa. Abra o card para acompanhar o andamento e as ações disponíveis conforme a sua permissão.",
       },
       {
-        subtitulo: "Compartilhar vaga externa",
+        subtitulo: "Aba Gerenciamento de Vagas",
         texto:
-          "Em vagas **Externas** abertas, use **Compartilhar** para copiar o link da página de Carreiras (`https://spingaming.com.br/carreiras/`). Oriente o candidato a preencher o formulário no site: em **Como chegou até nós?** escolha **Indicação** e em **Quem indicou?** informe o nome do Prestador — necessário para o recebimento do bônus.",
+          "Visível com permissão de **Criar** ou **Excluir**. Reúne todas as vagas (qualquer status), com pesquisa, filtro **Todos Status** e o botão **Nova Vaga**. No modal, preencha título, tipo, organograma, datas, descrição e responsabilidades. Em vagas **Externas**, **repasse inicial** e **Tags** são obrigatórios (digite a tag e pressione Enter). Vagas **Internas** não exibem repasse nem Tags. Com **Excluir**, use o ícone de lixeira no card e confirme no pop-up.",
+      },
+      {
+        subtitulo: "Aba Candidaturas",
+        texto:
+          "Visível com permissão de **Criar**. Exibe o kanban de candidatos por etapa, com pesquisa, filtros de **Status**, **Tipo** (**Todos Tipos**) e **Vaga** (**Todas Vagas**). Cada coluna mostra até 10 cards visíveis — com mais candidatos, role só aquela raia. Candidaturas do site Carreiras entram em **Inscritos**; o modal **Ver** mostra contato, origem, currículo e anexos.",
       },
     ],
   },
@@ -621,7 +626,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "Canal interno (logado) para registrar, acompanhar e tratar protocolos de denúncia. KPIs, filtros por período, tipo e status, e atendimento pelos perfis autorizados — distinto do formulário público anônimo da Spin.\n\nPara encaminhar o canal a quem **não** tem login, use a página pública **/canal-denuncias-spin** no mesmo endereço da plataforma (sem menu). Quem relata recebe um protocolo para consultar o andamento; se se identificar, precisa do mesmo e-mail na consulta.",
+          "Canal interno (logado) para registrar, acompanhar e tratar protocolos de denúncia. KPIs, filtros por período, tipo e status, e atendimento pelos perfis autorizados — distinto do formulário público anônimo da Spin.\n\nPara encaminhar o canal a quem **não** tem login, use a página pública **/canal-denuncias-spin** no mesmo endereço da plataforma (sem menu). Quem relata recebe um protocolo para consultar o andamento (pode copiá-lo na confirmação); se se identificar, precisa do mesmo e-mail na consulta. Na consulta pública, o desfecho formal (Procedente / Não procedente) aparece na linha do tempo.",
       },
       {
         subtitulo: "Período",
@@ -674,7 +679,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "A página de Figurinos gerencia o estoque de peças de roupa e acessórios utilizados pelos dealers nas transmissões. Permite cadastrar peças, registrar retiradas e devoluções, controlar manutenções e gerar etiquetas com código de barras para identificação física.",
+          "A página de Figurinos gerencia o estoque de peças de roupa e acessórios utilizados pelos Game Presenters nas transmissões. Permite cadastrar peças, registrar retiradas e devoluções, controlar manutenções e gerar etiquetas com código de barras para identificação física.",
       },
       {
         subtitulo: "Filtros e Consolidado",
@@ -723,7 +728,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Filtros e estúdio",
         texto:
-          "Selecione o estúdio na barra superior (quando o perfil tem acesso a mais de um). Com **Todos Estúdios**, gestores veem o inventário completo no escopo; cada item exibe a tag do estúdio.\n\nFiltros de Jogo (Todos, Blackjack, Roleta, Baccarat, Futebol Brasileiro) e Tipo (Script, Orientação, Alerta) refinam as sugestões dentro de cada bloco — não afetam o bloco de Campanhas.\n\nEm telas estreitas, os chips de filtro podem rolar horizontalmente; use o gesto de arrastar ou as setas do touchpad para ver todas as opções.",
+          "Selecione o estúdio na barra superior (quando o perfil tem acesso a mais de um). Com **Todos Estúdios**, gestores veem o inventário completo no escopo; cada item exibe a tag do estúdio.\n\nFiltros de Jogo (Todos, Blackjack, Roleta, Baccarat, Futebol Brasileiro) e Tipo (Script, Orientação, Alerta) refinam as sugestões dentro de cada bloco — não afetam o bloco de Campanhas.\n\nEm telas estreitas, os filtros podem rolar horizontalmente; use o gesto de arrastar ou as setas do touchpad para ver todas as opções.",
       },
       {
         subtitulo: "Campanhas",
@@ -772,7 +777,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Consultar um incidente",
         texto:
-          "Clique no ícone de olho na linha da tabela para abrir os detalhes. Em **Dados do Incidente**: abertura, relator (nickname cadastrado na Gestão de Staff), data/hora da rodada, ID da rodada, mesa, prestador (**Nome - Nickname**) e time. Em **Descrição**: resolução, payout (e **Local do Shoe** para Shuffler), texto da descrição e anexos listados como **Arquivo 1**, **Arquivo 2**, … (com link para abrir).",
+          "Clique no ícone de olho na linha da tabela para abrir os detalhes. Em **Dados do Incidente**: abertura, relator (nickname cadastrado na Gestão de Staff), data/hora da rodada, ID da rodada, mesa, **jogo**, prestador (**Nome - Nickname**) e time. Em **Descrição**: resolução, payout (e **Local do Shoe** para Shuffler), texto da descrição e anexos listados como **Arquivo 1**, **Arquivo 2**, … (com link para abrir). A coluna **Jogo** não aparece na tabela — só neste modal.",
       },
       {
         subtitulo: "Editar um incidente",
@@ -791,17 +796,17 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "Monta e mantém a escala operacional do **estúdio** por área (time ou gerência sem times), colaborador e dia do mês. Inclui grade diária, sugestão automática, aprovação e registro de alterações conforme permissões de Criar e Editar. O motor da página é o mesmo da **Escala Escritório** (menu RH), com modo Estúdio. As abas de time seguem esta ordem e abrem em **Game Presenter** por padrão: Game Presenter, Shuffler, Shift Leader, Service Manager e **Academy** (Performance Coach + Treinamento). Também entram gerências sem times ativos (pessoas vinculadas só à gerência).",
+          "Monta e mantém a escala operacional do **estúdio** por área (time ou gerência sem times), prestador e dia do mês. Inclui grade diária, sugestão automática, aprovação e registro de alterações conforme permissões de Criar e Editar. O motor da página é o mesmo da **Escala Escritório** (menu RH), com modo Estúdio. As abas de time seguem esta ordem e abrem em **Game Presenter** por padrão: Game Presenter, Shuffler, Shift Leader, Service Manager e **Academy** (Performance Coach + Treinamento). Também entram gerências sem times ativos (pessoas vinculadas só à gerência).",
       },
       {
         subtitulo: "Fluxo da escala",
         texto:
-          "A página abre na aba **Game Presenter** (com **Ver = Sim**). Com **Ver = Próprios**, aparece só a aba do **seu time** no Organograma — a grade dessa aba mostra todo o time. Selecione o time (ou gerência sem times) e o mês no carrossel. Ao lado do carrossel, o filtro **Mês / Semana** (mesmo estilo pill da Agenda) controla quantas colunas aparecem no **Consolidado** e na **Escala Diária**: **Mês** = todos os dias do mês selecionado (carrossel livre); **Semana** = **7 dias em torno de hoje** (3 anteriores, hoje e 3 seguintes), com carrossel **travado no mês corrente** — ao ativar Semana, a página pula para o mês de hoje. Totais do Consolidado em Semana consideram só os dias visíveis; **Baixar Excel** continua exportando o **mês inteiro**. O filtro **Estúdios** fica em **Todos Estúdios** nas áreas Shuffler, Shift Leader, Service Manager e Academy; só na aba **Game Presenter** é possível escolher um estúdio específico ou **Nenhum** (ao sair de Game Presenter, o filtro volta a Todos Estúdios). No **Consolidado** (Game Presenter + Todos Estúdios), as setas de drilldown por estúdio começam **recolhidas** — abra o turno que desejar. Clique num **turno** do Consolidado para filtrar a Escala Diária pelos colaboradores com aquele **status no dia** (inclui Compra - Turno), alinhado à contagem. Use **Sugestão de Escala** ou preencha as células manualmente — na primeira alteração manual o botão de sugestão some e passam a aparecer **Salvar Alterações**, **Aprovar Escala** e **Nova Escala**. **Compra** e **Venda** não aparecem nas opções manuais: esses estados são preenchidos exclusivamente pela automação do Marketplace. Após salvar, qualquer nova edição na grade faz **Salvar Alterações** reaparecer. **Nova Escala** (em rascunho ou após aprovada) pede confirmação e limpa a grade gravada daquele mês/área. **Aprovar** também pede confirmação.\n\nNa **Escala Diária**, as colunas de fim de semana usam o mesmo estilo dos dias úteis; cada cabeçalho de dia tem um **filtro** (ícone) para escolher quais status ver, no estilo Excel. As células usam **cores por status** (Manhã e Compra - Manhã, Tarde e Compra - Tarde, Noite e Compra - Noite, Venda, Folga, Troca, etc.) em todas as abas de time.\n\nAo **aprovar**, o turno de cada prestador (e o horário cadastrado na Staff) fica **congelado** para aquele mês/área: mudar o turno depois na Gestão de Staff **não** altera a coluna Turno nem o calendário daquele mês aprovado. Com a escala aprovada, **Alterar Escala** (permissão de **Editar**) abre o modal com a **grade do mês** daquele prestador: altere **um ou vários dias** a partir de hoje (**Folga**, **Manhã**, **Tarde**, **Noite** ou **Troca**; na Academy também **Comercial**), com **uma** observação obrigatória para a gravação. Células de **Compra**/**Venda** do Marketplace ficam travadas. Ao salvar, só aquele prestador é atualizado — a mudança aparece no Calendário e na Rotação. Na Escala Diária, dias de trabalho aparecem como **Manhã**, **Tarde** ou **Noite**. Prestadores enxergam a escala publicada no Calendário e no Overview Prestador, dentro do escopo liberado.\n\nTutorial: `/Ajuda/Tutoriais/AlterarEscala` (**Alterar Escala**).",
+          "A página abre na aba **Game Presenter** (com **Ver = Sim**). Com **Ver = Próprios**, aparece só a aba do **seu time** no Organograma — a grade dessa aba mostra todo o time. Selecione o time (ou gerência sem times) e o mês no carrossel. Ao lado do carrossel, o filtro **Mês / Semana** (mesmo estilo de filtro da Agenda) controla quantas colunas aparecem no **Consolidado** e na grade **Escala Diária** (dentro de Escala Estúdio): **Mês** = todos os dias do mês selecionado (carrossel livre); **Semana** = **7 dias em torno de hoje** (3 anteriores, hoje e 3 seguintes), com carrossel **travado no mês corrente** — ao ativar Semana, a página pula para o mês de hoje. Totais do Consolidado em Semana consideram só os dias visíveis; **Baixar Excel** continua exportando o **mês inteiro**. O filtro **Estúdios** fica em **Todos Estúdios** nas áreas Shuffler, Shift Leader, Service Manager e Academy; só na aba **Game Presenter** é possível escolher um estúdio específico ou **Nenhum** (ao sair de Game Presenter, o filtro volta a Todos Estúdios). No **Consolidado** (Game Presenter + Todos Estúdios), as setas de drilldown por estúdio começam **recolhidas** — abra o turno que desejar. Clique num **turno** do Consolidado para filtrar a Escala Diária pelos colaboradores com aquele **status no dia** (inclui Compra - Turno), alinhado à contagem. Use **Sugestão de Escala** ou preencha as células manualmente — na primeira alteração manual o botão de sugestão some e passam a aparecer **Salvar Alterações**, **Aprovar Escala** e **Nova Escala**. **Compra** e **Venda** não aparecem nas opções manuais: esses estados são preenchidos exclusivamente pela automação do Marketplace. Após salvar, qualquer nova edição na grade faz **Salvar Alterações** reaparecer. **Nova Escala** (em rascunho ou após aprovada) pede confirmação e limpa a grade gravada daquele mês/área. **Aprovar** também pede confirmação.\n\nNa **Escala Diária**, as colunas de fim de semana usam o mesmo estilo dos dias úteis; cada cabeçalho de dia tem um **filtro** (ícone) para escolher quais status ver, no estilo Excel. As células usam **cores por status** (Manhã e Compra - Manhã, Tarde e Compra - Tarde, Noite e Compra - Noite, Venda, Folga, Troca, etc.) em todas as abas de time.\n\nAo **aprovar**, o turno de cada prestador (e o horário cadastrado na Staff) fica **congelado** para aquele mês/área: mudar o turno depois na Gestão de Staff **não** altera a coluna Turno nem o calendário daquele mês aprovado. Com a escala aprovada, **Alterar Escala** (permissão de **Editar**) abre o modal com a **grade do mês** daquele prestador: altere **um ou vários dias** a partir de hoje (**Folga**, **Manhã**, **Tarde**, **Noite** ou **Troca**; na Academy também **Comercial**), com **uma** observação obrigatória para a gravação. Células de **Compra**/**Venda** do Marketplace ficam travadas. Ao salvar, só aquele prestador é atualizado — a mudança aparece no Calendário e na Rotação. Na Escala Diária, dias de trabalho aparecem como **Manhã**, **Tarde** ou **Noite**. Prestadores enxergam a escala publicada no Calendário e no Overview Prestador, dentro do escopo liberado.\n\nTutorial: `/Ajuda/Tutoriais/AlterarEscala` (**Alterar Escala**).",
       },
       {
         subtitulo: "Baixar Excel",
         texto:
-          "O botão **Baixar Excel**, acima da barra de pesquisa da Escala Diária, gera uma planilha do time e do mês selecionados. A aba **Consolidado** traz um bloco por turno (Manhã, Tarde e Noite) com estúdio nas linhas, dias do mês nas colunas e uma linha de Total; a aba **Detalhado** traz Nome, Nickname, Turno, Estúdio e o status de cada dia. O arquivo respeita os filtros aplicados na tela (estúdio, turno e busca).",
+          "O botão **Baixar Excel**, acima da barra de pesquisa da grade Escala Diária, gera uma planilha do time e do mês selecionados. A aba **Consolidado** traz um bloco por turno (Manhã, Tarde e Noite) com estúdio nas linhas, dias do mês nas colunas e uma linha de Total; a aba **Detalhado** traz Nome, Nickname, Turno, Estúdio e o status de cada dia. O arquivo respeita os filtros aplicados na tela (estúdio, turno e busca).",
       },
       {
         subtitulo: "Comentários do Marketplace",
@@ -815,7 +820,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "Monta e mantém a escala mensal dos times **e gerências sem times** de **escritório** (prestadores com área de atuação Escritório) por colaborador e dia. Reutiliza a mesma interface da **Escala Estúdio**, sem filtro de estúdio e com células **Comercial**, Folga, Compra, Venda e Troca. O time **Arte** não aparece nesta página. A **Gestão de Prestadores** não muda por esta página — só a grade operacional.",
+          "Monta e mantém a escala mensal dos times **e gerências sem times** de **escritório** (prestadores com área de atuação Escritório) por prestador e dia. Reutiliza a mesma interface da **Escala Estúdio**, sem filtro de estúdio e com células **Comercial**, Folga, Compra, Venda e Troca. O time **Arte** não aparece nesta página. A **Gestão de Prestadores** não muda por esta página — só a grade operacional.",
       },
       {
         subtitulo: "Fluxo e Calendário",
@@ -839,12 +844,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "ID TOS (Service Manager)",
         texto:
-          "No time **Service Manager**, o campo **ID TOS** (modais Ver e Editar — não aparece na tabela) salva o UUID do colaborador no sistema TOS. Esse valor liga os sinais atendidos ao cadastro do SM. O **ID operacional** continua sendo o Work ID usado por Game Presenters. O valor deve ser um UUID; o servidor recusa formato inválido.",
+          "No time **Service Manager**, o campo **ID TOS** (modais Ver e Editar — não aparece na tabela) salva o UUID do prestador no sistema TOS. Esse valor liga os sinais atendidos ao cadastro do SM. O **ID operacional** continua sendo o Work ID usado por Game Presenters. O valor deve ser um UUID; o servidor recusa formato inválido.",
       },
       {
         subtitulo: "Permissões",
         texto:
-          "Consulta exige permissão de **Ver**; alterações de turno, estúdio, skills, dealer e **Imprimir IDs** exigem **Editar**. Com Ver ou Editar em **Próprios**, a lista, a edição e a impressão ficam só no time do seu cadastro de prestador (Game Floor / Operation Management). **Sim** vê todos os times da página. A busca restringe a tabela na tela — não há alterações em lote. Times **Service Manager**, **Shift Leader** e **Shuffler** ficam sempre em **Todos Estúdios**.",
+          "Consulta exige permissão de **Ver**; alterações de turno, estúdio, skills, Game Presenter e **Imprimir IDs** exigem **Editar**. Com Ver ou Editar em **Próprios**, a lista, a edição e a impressão ficam só no time do seu cadastro de prestador (Game Floor / Operation Management). **Sim** vê todos os times da página. A busca restringe a tabela na tela — não há alterações em lote. Times **Service Manager**, **Shift Leader** e **Shuffler** ficam sempre em **Todos Estúdios**.",
       },
     ],
   },
@@ -858,7 +863,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Modos e filtros",
         texto:
-          "Alterne entre Compromissos, Controle de Presença e Relatório de Justificativas. Os filtros de Time e Staff usam os vínculos ativos do Organograma e são atualizados automaticamente quando a estrutura muda. Gerências **sem times** aparecem no filtro Time (efeito cascata): ao selecioná-las, o Staff lista quem está vinculado diretamente à gerência.\n\nCom permissão de **Ver = Sim** e vínculo de colaborador no RH, a aba **Compromissos** abre com **Meu Calendário** ativo (só a sua grade). Para ver outras pessoas, escolha **Time** ou **Staff** (ou desligue Meu Calendário e filtre). Sem filtro, a grade da empresa inteira não é carregada. Com **Ver = Próprios**, quem é líder imediato vê o próprio calendário e a cascata que lidera; quem não é líder vê somente o próprio — sem mudança.\n\nNa aba **Compromissos**, o botão **Download** gera um PDF do **seu** calendário no mês do carrossel: título **Calendário - mês/ano**, subtítulo com nome e time, grade mensal (turno + horário ou Folga; reuniões como **Reunião - com quem**) e lista diária no formato data — dia da semana: situação — mesmo se a grelha estiver filtrada por outro time ou staff.\n\nO botão **Adicionar à agenda** (ao lado do Download) gera um link secreto para colar no Google Agenda, Outlook ou Apple. Passam a aparecer **os seus** turnos e as reuniões **aprovadas** (não a grade de outro staff filtrado). A agenda externa costuma atualizar cerca de uma vez por dia; a fonte da verdade continua sendo esta página. No Simulador de Login o botão não aparece.\n\nA Situação (Escalado/Folga) e os turnos de **estúdio** vêm só da Escala Diária **aprovada** em **Escala Estúdio** — rascunho, sugestão ou dados só no navegador não aparecem no Calendário. Cada área (Game Presenter, Service Manager, etc.) precisa ser aprovada à parte. A Situação de **escritório** espelha a **Escala Escritório** aprovada quando existir; senão, aplica a regra comercial automática (ver abaixo). Se a Situação estiver em branco (—) mesmo após aprovar, atualize a plataforma (carga completa da grade).\n\nAções de presença e justificativa respeitam o escopo e dependem da permissão de Editar.",
+          "Alterne entre Compromissos, Controle de Presença e Relatório de Justificativas. Os filtros de Time e Staff usam os vínculos ativos do Organograma e são atualizados automaticamente quando a estrutura muda. Gerências **sem times** aparecem no filtro Time (efeito cascata): ao selecioná-las, o Staff lista quem está vinculado diretamente à gerência.\n\nCom permissão de **Ver = Sim** e vínculo de prestador no RH, a aba **Compromissos** abre com **Meu Calendário** ativo (só a sua grade). Para ver outras pessoas, escolha **Time** ou **Staff** (ou desligue Meu Calendário e filtre). Sem filtro, a grade da empresa inteira não é carregada. Com **Ver = Próprios**, quem é líder imediato vê o próprio calendário e a cascata que lidera; quem não é líder vê somente o próprio — sem mudança.\n\nNa aba **Compromissos**, o botão **Download** gera um PDF do **seu** calendário no mês do carrossel: título **Calendário - mês/ano**, subtítulo com nome e time, grade mensal (turno + horário ou Folga; reuniões como **Reunião - com quem**) e lista diária no formato data — dia da semana: situação — mesmo se a grelha estiver filtrada por outro time ou staff.\n\nO botão **Adicionar à agenda** (ao lado do Download) gera um link secreto para colar no Google Agenda, Outlook ou Apple. Passam a aparecer **os seus** turnos e as reuniões **aprovadas** (não a grade de outro staff filtrado). A agenda externa costuma atualizar cerca de uma vez por dia; a fonte da verdade continua sendo esta página. No Simulador de Login o botão não aparece.\n\nA Situação (Escalado/Folga) e os turnos de **estúdio** vêm só da grade **Escala Diária** **aprovada** em **Escala Estúdio** — rascunho, sugestão ou dados só no navegador não aparecem no Calendário. Cada área (Game Presenter, Service Manager, etc.) precisa ser aprovada à parte. A Situação de **escritório** espelha a **Escala Escritório** aprovada quando existir; senão, aplica a regra comercial automática (ver abaixo). Se a Situação estiver em branco (—) mesmo após aprovar, atualize a plataforma (carga completa da grade).\n\nAções de presença e justificativa respeitam o escopo e dependem da permissão de Editar.",
       },
       {
         subtitulo: "Check-in e Check-out",
@@ -892,7 +897,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "O que você vê",
         texto:
-          "Com permissão de **Ver: Próprios**, a lista traz as ofertas do **seu grupo de negociação** — o próprio time do Organograma ou, para Shift Leader e Service Manager, o grupo **Liderança** (os dois times) — e a aba **Minhas Ofertas**. Com **Ver: Sim** (gestão), aparecem as ofertas de todos os times, o filtro **Times** fica disponível na primeira linha (**Todos Times**, **Game Presenter**, **Shuffler** e **Liderança**) e a segunda aba é **Ofertas Encerradas** — **Ofertas aceitas** e **Ofertas Canceladas** de todos os prestadores, filtradas pelo time. Perfil típico de liderança (**Ver: Sim**, **Criar: Próprios**, **Editar: Próprios**): exige cadastro de prestador ligado ao login; **Nova Oferta** aparece com **Criar: Próprios**; no mural de gestão (Minhas Negociações **desligado**) não há **Enviar proposta** — aprovar, recusar, cancelar e desistir ficam só nas próprias ofertas; com **Minhas Negociações** ligado, a liderança pode enviar proposta no mural do grupo **Liderança**. Se o login também tem cadastro de prestador, o botão **Minhas Negociações** (ao lado do Histórico) troca a visão de gestão pela do grupo: em **Todas as Ofertas** o mural passa a ser só do seu time (Liderança = SL + SM) **sem mudar de aba**; a partir de **Ofertas Spin** o botão leva a **Minhas Ofertas**; Encerradas e o filtro Times somem até você desligar o botão. A página abre com **Histórico** selecionado; desative-o para navegar pelo carrossel mensal (julho/2026+ até o **mês civil seguinte**, como na Escala Estúdio). Com Histórico ligado, o mural aberto usa a janela de competências do carrossel; já os blocos de arquivo — **Ofertas Encerradas**, **Minhas Ofertas** (Ofertas que aceitei e Histórico) e **Ofertas Spin → Histórico** — mostram só os **últimos 30 dias**. Com o carrossel em um mês, esses blocos mostram o mês inteiro. No bloco **Histórico** (Minhas Ofertas e Ofertas Spin) há filtro de **Status** na mesma linha do título, com padrão **Aprovada**. O filtro de ações fica na mesma linha do carrossel; as abas ficam na linha seguinte e a pesquisa por ofertante, estúdio ou turno na última linha. Na aba **Todas as Ofertas** há ainda o filtro de dia (**Todos os Dias**), que lista somente os dias com oferta no período — com mais de cinco dias, o painel do filtro abre com pesquisa.",
+          "Com permissão de **Ver: Próprios**, a lista traz as ofertas do **seu grupo de negociação** — o próprio time do Organograma ou, para Shift Leader e Service Manager, o grupo **Liderança** (os dois times) — e a aba **Minhas Ofertas**. Com **Ver: Sim** (gestão), aparecem as ofertas de todos os times, o filtro **Times** fica disponível na primeira linha (**Todos Times**, **Game Presenter**, **Shuffler** e **Liderança**) e a segunda aba é **Ofertas Encerradas** — **Ofertas aceitas** e **Ofertas Canceladas** de todos os prestadores, filtradas pelo time. Perfil típico de liderança (**Ver: Sim**, **Criar: Próprios**, **Editar: Próprios**): exige cadastro de prestador ligado ao login; **Nova Oferta** aparece com **Criar: Próprios**; no mural de gestão (Minhas Negociações **desligado**) não há **Enviar proposta** — aprovar, recusar, cancelar e desistir ficam só nas próprias ofertas; com **Minhas Negociações** ligado, a liderança pode enviar proposta no mural do grupo **Liderança**. Se o login também tem cadastro de prestador, o botão **Minhas Negociações** (ao lado do Histórico) troca a visão de gestão pela do grupo: em **Todas as Ofertas** o mural passa a ser só do seu time (Liderança = SL + SM) **sem mudar de aba**; a partir de **Ofertas Spin** o botão leva a **Minhas Ofertas**; Encerradas e o filtro Times somem até você desligar o botão. A página abre com **Histórico** selecionado; desative-o para navegar pelo carrossel mensal (julho/2026+ até o **mês civil seguinte**, como na Escala Estúdio). Com Histórico ligado, o mural aberto usa a janela de competências do carrossel; já os blocos de arquivo — **Ofertas Encerradas**, **Minhas Ofertas** (Ofertas que aceitei e Histórico) e **Ofertas Spin → Histórico** — mostram só os **últimos 30 dias**. Com o carrossel em um mês, esses blocos mostram o mês inteiro. No bloco **Histórico** (Minhas Ofertas e Ofertas Spin) há filtro de **Status** na mesma linha do título, com padrão **Aprovada**. O filtro de ações fica na mesma linha do carrossel; as abas ficam na linha seguinte e a pesquisa por ofertante, estúdio ou turno na última linha. Na aba **Todas as Ofertas** há ainda o filtro de dia (**Todos Dias**), que lista somente os dias com oferta no período — com mais de cinco dias, o painel do filtro abre com pesquisa.",
       },
       {
         subtitulo: "Publicar uma oferta",
@@ -931,22 +936,22 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Escala do Turno",
         texto:
-          "Lista os Game Presenters e Shufflers escalados no dia/turno (incluindo **Compra - Turno**). A coluna **Aprovado** (Sim/Não) só muda para **Sim** pela ação **Aprovar** — disponível quando Entrada e Saída estão preenchidas **ou** quando o Status é **Falta**. **Registrar** (Falta, Saída Antecipada, Hora Adicional, Registrar Horário) atualiza status e horários, mas **não** marca Aprovado. Tutorial: `/Ajuda/Tutoriais/ControleTurnoAprovacaoEscala`.",
+          "Lista os Game Presenters e Shufflers escalados no dia/turno (incluindo **Compra - Turno**). A coluna **Aprovado** (Sim/Não) só muda para **Sim** pela ação **Aprovar** — disponível quando Entrada e Saída estão preenchidas **ou** quando o Status é **Falta**. **Registrar** (Falta, Saída Antecipada, Hora Adicional, Registrar Horário) atualiza status e horários, mas **não** marca Aprovado. Em **Registrar Horário**, Entrada/Saída em branco são pré-preenchidas com o horário previsto do turno no estúdio; valores já registrados no check-in são mantidos. Tutorial: `/Ajuda/Tutoriais/ControleTurnoAprovacaoEscala`.",
       },
       {
         subtitulo: "Rotação",
         texto:
-          "Cada **estúdio ativo** tem o próprio bloco de Game Presenters (**Pool do turno** + ações). Há também o bloco **Shuffler** (todos os estúdios): sem **Mover estúdio**, e na grade a posição é **TODOS**. O pool usa a Escala Estúdio / Escala do Turno com status **Presente**, **Pendente**, **Saída Antecipada** ou **Hora Adicional**. KPIs do bloco: **Escalados**, **Não Chegaram**, **Horas Adicionais** e **Disponíveis**. Com horário de saída, a grade marca **X** a partir desse horário. **Hora Adicional** do turno anterior também entra no turno seguinte. **Falta** fica de fora. Em chips de GP use **Mover estúdio…** (ou **Restaurar estúdio**) para realocar no turno. Fluxo por bloco: **Gerar prévia** → **Incluir Liderança** (só GP) / **Rotação de 20min–30min** / **Publicar** → após publicar só **Regenerar** (volta ao pool). A cada **Gerar prévia** / **Regenerar**, a ordem das linhas é **aleatória** (não alfabética). Ao **Publicar**, se alguém tiver **2 horas ou mais** seguidas em mesa, a plataforma pede confirmação com o tempo detectado. Na prévia, arraste o nome na coluna **Equipe** para trocar a sequência. **Shift Leaders** e **Service Managers** só entram por **Incluir Liderança** nos blocos de estúdio; a grade marca **X** fora da janela **08h–20h** / **20h–08h**."
+          "Cada **estúdio ativo** tem o próprio bloco de Game Presenters (**Pool do turno** + ações). Há também o bloco **Shuffler** (todos os estúdios): sem **Mover estúdio**, e na grade a posição é **TODOS** — vários Shufflers em TODOS no mesmo horário, com **apenas 1 Break por vez** e no máximo **3 TODOS seguidos** por pessoa. O pool usa a Escala Estúdio / Escala do Turno com status **Presente**, **Pendente**, **Saída Antecipada** ou **Hora Adicional**. Os badges **Chegou** / **Não chegou** seguem essa mesma Escala do Turno (Presente, Saída Antecipada e Hora Adicional = Chegou; Pendente = Não chegou). KPIs do bloco: **Escalados**, **Não Chegaram**, **Horas Adicionais** e **Disponíveis**. Com horário de saída, a grade marca **X** a partir desse horário. **Hora Adicional** do turno anterior também entra no turno seguinte. **Falta** fica de fora. Nos filtros de GP use **Mover estúdio…** (ou **Restaurar estúdio**) para realocar no turno. Fluxo por bloco: **Gerar prévia** → **Incluir Liderança** (só GP) / **Rotação de 20min–30min** / **Publicar** → após publicar só **Regenerar** (volta ao pool). A cada **Gerar prévia** / **Regenerar**, a ordem das linhas é **aleatória** (não alfabética). Ao **Publicar**, se alguém tiver **2 horas ou mais** seguidas em mesa, a plataforma pede confirmação com o tempo detectado. Na prévia, arraste o nome na coluna **Equipe** para trocar a sequência. A grade mostra até **20 linhas** por vez (a barra some quando cabe numa página). **Shift Leaders** e **Service Managers** só entram por **Incluir Liderança** nos blocos de estúdio; a grade marca **X** fora da janela **08h–20h** / **20h–08h**."
       },
       {
         subtitulo: "Notificações",
         texto:
-          "Com permissão de **Criar**, registre fechamentos, ausências prolongadas, feedbacks e manutenções do dia. No **Fechamento de Mesa**, informe **data e hora** de fechamento e de abertura; se a mesa ficar fechada de um dia para o outro, o registro aparece em **todos** os dias do intervalo até a reabertura. No **Registrar Feedback**, se a recomendação for **Orientação**, o campo de texto chama-se **Ata da Orientação**; nos demais tipos permanece **Observação**. Com **Editar**, atualize fechamentos/ausências e cancele manutenções abertas — a aplicação de feedbacks fica em **Solicitações** (RH). Itens em aberto (mesa não aberta, ausência sem fim, feedback a revisar, manutenção aberta ou em andamento) continuam visíveis nos dias seguintes até serem resolvidos. Tutorial: `/Ajuda/Tutoriais/ControleTurnoNotificacoes`.",
+          "Com permissão de **Criar**, registre fechamentos, ausências prolongadas, feedbacks e manutenções do dia. No **Fechamento de Mesa**, informe **data e hora** de fechamento e de abertura; se a mesa ficar fechada de um dia para o outro, o registro aparece em **todos** os dias do intervalo até a reabertura. Em **Registrar Ausência**, se o Motivo for **Pessoal**, o **Tipo de Ausência** é obrigatório: **Programada** quando o prestador avisou com pelo menos 24h antes do início do turno; **Não Programada** quando avisou com menos de 24h. No **Registrar Feedback**, se a recomendação for **Orientação**, o campo de texto chama-se **Ata da Orientação**; nos demais tipos permanece **Observação**. Com **Editar**, atualize fechamentos/ausências e cancele manutenções abertas — a aplicação de feedbacks fica em **Solicitações de RH**. Itens em aberto (mesa não aberta, ausência sem fim, feedback a revisar, manutenção aberta ou em andamento) continuam visíveis nos dias seguintes até serem resolvidos. Tutorial: `/Ajuda/Tutoriais/ControleTurnoNotificacoes`.",
       },
       {
         subtitulo: "Relatório de Turno",
         texto:
-          "Cards por turno (Manhã, Tarde, Noite): **Não iniciado**, **Rascunho** ou **Publicado**. Com permissão de **Criar**, use **Gerar Relatório**; com **Editar**, continue o rascunho. SOS, Figurino, Equipamentos, checklist de manutenção e comentários são gravados por data e turno. Para publicar, todos os prestadores da Escala do Turno precisam estar com **Aprovado Sim**. Tutorial: `/Ajuda/Tutoriais/ControleTurnoRelatorio`.",
+          "Cards por turno (Manhã, Tarde, Noite): **Não iniciado**, **Rascunho** ou **Publicado**. Os indicadores **Escalados**, **Presentes**, **Atrasados** e **Faltas** (Game Presenters e Shuffler) vêm da **Escala do Turno** do mesmo dia e turno — **Atrasados** quando a entrada realizada passa de 5 minutos do horário previsto do estúdio. Com permissão de **Criar**, use **Gerar Relatório**; com **Editar**, continue o rascunho. Na aba **Anotações**, informe o **Termômetro do Turno** (0 a 5 estrelas: 0 = horrível, 5 = maravilhoso) e os **Comentários Gerais** — ambos obrigatórios para publicar. SOS, Figurino, Equipamentos e checklist de manutenção também são gravados por data e turno. Para publicar, todos os prestadores da Escala do Turno precisam estar com **Aprovado Sim**. Tutorial: `/Ajuda/Tutoriais/ControleTurnoRelatorio`.",
       },
       {
         subtitulo: "Tutoriais (Ajuda)",
@@ -956,16 +961,26 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     ],
   },
   escala_solicitacoes: {
-    titulo: "Solicitações",
+    titulo: "Solicitações de Cliente",
     blocos: [
       {
         texto:
-          "Acompanhe solicitações de escala em aberto e o histórico arquivado — trocas, coberturas e pedidos operacionais distintos das solicitações de RH (atestados, reuniões, vagas) na seção RH.",
+          "Acompanhe pedidos operacionais de escala — trocas, coberturas e demais solicitações ligadas ao Marketplace / operação de turno. É distinta de **Solicitações de RH** (atestados, reuniões, vagas e feedback) na seção RH.",
       },
       {
         subtitulo: "Filtros",
         texto:
-          "Navegue por período, time e colaborador. Status em aberto aparecem na fila principal; arquivados ficam disponíveis no histórico conforme filtros de data e status.",
+          "Na primeira linha: carrossel de mês (ou **Histórico** = 13 competências), tipo de ação, Time e Staff (Time/Staff ficam ocultos com permissão **Ver = Próprios**). O período usa a **data de abertura** da solicitação. Na segunda linha ficam as abas e os atalhos de Ajuda.",
+      },
+      {
+        subtitulo: "Aba Solicitações em Aberto",
+        texto:
+          "Fila ativa: pedidos ainda em análise ou aguardando ação. A tabela mostra Data de Abertura, solicitante, tipo de ação e demais colunas do fluxo; use a ordenação nos cabeçalhos. Vazio: «Nenhuma solicitação encontrada.»",
+      },
+      {
+        subtitulo: "Aba Solicitações Arquivadas",
+        texto:
+          "Histórico de solicitações **canceladas**, **aprovadas** ou **recusadas** no período filtrado. Mantém os mesmos filtros de período, tipo, Time e Staff da aba em aberto — útil para auditoria e acompanhamento do que já foi concluído.",
       },
     ],
   },
@@ -1033,7 +1048,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Nova postagem",
         texto:
-          "Na aba **Gerenciamento**, **Nova Postagem** abre o modal com tipos Comunicados, Dicas ou Manuais. Campos com asterisco são obrigatórios ao publicar. Dicas e manuais do tipo **Jogos** exibem **Qual Jogo?** — **multi-seleção** alimentada pelos jogos cadastrados em **Gestão de Estúdios** (coluna Jogo), sem duplicar.\n\n**Imagem/Vídeo** e **Anexo** usam o botão **Adicionar…** (sem a barra nativa do navegador). Os arquivos aparecem numa lista abaixo, com badge **Pendente** até salvar ou publicar; dá para remover itens antes do envio.\n\n**Manuais** incluem **Versão**, **Exige ciência do colaborador?** (Sim/Não), **Introdução** e **Descrição** — **sem** campo Código no modal. Quando a ciência for **Sim**, aparece **Aplicável a** (multi-seleção de times das gerências **Game Floor** e **Operation Management**, como em Gestão de Staff). O código é atribuído automaticamente no primeiro salvamento (3 primeiras letras da categoria + sequencial, ex.: Jogos → **JOG-000001**, Imagem → **IMA-000001**), com contador independente por tipo.",
+          "Na aba **Gerenciamento**, **Nova Postagem** abre o modal com tipos Comunicados, Dicas ou Manuais. Campos com asterisco são obrigatórios ao publicar. Dicas e manuais do tipo **Jogos** exibem **Qual Jogo?** — **multi-seleção** alimentada pelos jogos cadastrados em **Gestão de Estúdios** (coluna Jogo), sem duplicar.\n\n**Imagem/Vídeo** e **Anexo** usam o botão **Adicionar…** (sem a barra nativa do navegador). Os arquivos aparecem numa lista abaixo, com badge **Pendente** até salvar ou publicar; dá para remover itens antes do envio.\n\n**Manuais** incluem **Versão**, **Exige ciência do prestador?** (Sim/Não), **Introdução** e **Descrição** — **sem** campo Código no modal. Quando a ciência for **Sim**, aparece **Aplicável a** (multi-seleção de times das gerências **Game Floor** e **Operation Management**, como em Gestão de Staff). O código é atribuído automaticamente no primeiro salvamento (3 primeiras letras da categoria + sequencial, ex.: Jogos → **JOG-000001**, Imagem → **IMA-000001**), com contador independente por tipo.",
       },
       {
         subtitulo: "Editar postagem e aprovação",
@@ -1174,7 +1189,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Gerenciamento de Informativos",
         texto:
-          "Visível apenas para quem tem permissão de editar nesta página. Inclui tabela com todos os status (rascunho, aprovação, publicado, arquivado), filtros de status, carrossel de mês, Histórico e ações por linha: editar, aprovar, arquivar (ícone Archive + pop-up de confirmação), histórico de alterações e excluir (ícone vermelho + pop-up de confirmação, quando liberado). Use Novo Informativo para criar; no modal informe assunto, descrição com formatação e os perfis que verão o aviso na Home (Administrador e Executivo não entram como destino). Ao marcar o perfil Operador, escolha também a operadora de destino (operadoras com status Ativa em Gestão de Operadoras) ou a opção Todos.\n\nPublicação direta só quando o informativo for apenas para perfis de Estúdio ou Escritório (RH, Prestadores, Figurino, etc.). Se incluir Investidor, Operador, Agência, Influenciador, Afiliado ou qualquer Gestor de departamento, use apenas Enviar para aprovação.\n\nQuem pode aprovar: Investidor ou Operador → Administrador ou Executivo; Agência, Influenciador ou Afiliado → Administrador, Executivo ou Gestor de Aquisição; gestores de departamento → Administrador, Executivo ou Gestor de RH. Se misturar grupos, vale a regra mais restritiva. Apenas Administradores podem aprovar a própria postagem — os demais precisam de outro usuário.",
+          "Visível apenas para quem tem permissão de editar nesta página. Inclui tabela com todos os status (rascunho, aprovação, publicado, arquivado), filtros de status, carrossel de mês, Histórico e ações por linha: editar, aprovar, arquivar (ícone Archive + pop-up de confirmação), histórico de alterações e excluir (ícone vermelho + pop-up de confirmação, quando liberado). Use Novo Informativo para criar; no modal informe assunto, descrição com formatação e os perfis que verão o aviso na Home (Administrador e Executivo não entram como destino). Ao marcar o perfil Operador, escolha também a operadora de destino (operadoras com status Ativa em Gestão de Operadoras) ou a opção Todos.\n\nPublicação direta só quando o informativo for apenas para perfis de Estúdio ou Escritório (RH, Prestadores, Figurino, etc.). Se incluir Investidor, Operador, Agência, Influencer, Afiliado ou qualquer Gestor de departamento, use apenas Enviar para aprovação.\n\nQuem pode aprovar: Investidor ou Operador → Administrador ou Executivo; Agência, Influencer ou Afiliado → Administrador, Executivo ou Gestor de Aquisição; gestores de departamento → Administrador, Executivo ou Gestor de RH. Se misturar grupos, vale a regra mais restritiva. Apenas Administradores podem aprovar a própria postagem — os demais precisam de outro usuário.",
       },
       {
         subtitulo: "Permissões",
@@ -1184,11 +1199,11 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     ],
   },
   rh_solicitacoes: {
-    titulo: "Solicitações",
+    titulo: "Solicitações de RH",
     blocos: [
       {
         texto:
-          "Centraliza o atendimento de pedidos ao RH em quatro abas: **Atestados**, **Reuniões**, **Vagas** e **Feedback**. Perfis com permissão de **Editar** podem registrar o parecer e alterar o status; com **Ver = Sim** sem Editar a lista é só leitura (sem ícones nem CTAs).\n\n**Atestados:** justificativa **Médico** no **Calendário** (Controle de Presença) cria a solicitação automaticamente (**Em análise**).\n\n**Reuniões:** agende pelo **Calendário** (**Agendar Reunião**, na aba Compromissos) ou pelo CTA **Agendar Reunião** nesta página (RH escolhe o prestador). Reunião com RH ou Liderança fica **Em análise** até o atendimento; só depois do **Aprovado** a reunião aparece como **Agendado** no calendário.\n\n**Vagas:** CTA **Solicitar Vaga** (com Editar).\n\n**Feedback:** registros da liderança e espelho do **Controle de Turno → Notificações → Feedbacks**. Status **Revisar** no CT corresponde a **Em análise** aqui; **Aplicado** é o mesmo nas duas. Ao atender (**Aprovado** → **Aplicado** / **Rejeitado** → **Rejeitado**), o Controle de Turno atualiza **somente** se a origem for Controle de Turno. Feedback criado só em Solicitações **não** cria linha no CT.",
+          "Centraliza o atendimento de pedidos ao RH em quatro abas: **Atestados**, **Reuniões**, **Vagas** e **Feedback**. Perfis com permissão de **Editar** podem registrar o parecer e alterar o status; com **Ver = Sim** sem Editar a lista é só leitura (sem ícones nem botões de ação).\n\n**Atestados:** justificativa **Médico** no **Calendário** (Controle de Presença) cria a solicitação automaticamente (**Em análise**).\n\n**Reuniões:** agende pelo **Calendário** (**Agendar Reunião**, na aba Compromissos) ou pelo botão **Agendar Reunião** nesta página (RH escolhe o prestador). Reunião com RH ou Liderança fica **Em análise** até o atendimento; só depois do **Aprovado** a reunião aparece como **Agendado** no calendário.\n\n**Vagas:** botão **Solicitar Vaga** (com Editar).\n\n**Feedback:** registros da liderança e espelho do **Controle de Turno → Notificações → Feedbacks**. Status **Revisar** no CT corresponde a **Em análise** aqui; **Aplicado** é o mesmo nas duas. Ao atender (**Aprovado** → **Aplicado** / **Rejeitado** → **Rejeitado**), o Controle de Turno atualiza **somente** se a origem for Controle de Turno. Feedback criado só em Solicitações **não** cria linha no CT.",
       },
       {
         subtitulo: "Filtros",
@@ -1226,7 +1241,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "O Portal de RH centraliza os comunicados oficiais, as políticas e normativas internas e as atas das RH Talks. É o canal oficial da equipe de RH para comunicação com todos os colaboradores da Spin Gaming.",
+          "O Portal de RH centraliza os comunicados oficiais, as políticas e normativas internas e as atas das RH Talks. É o canal oficial da equipe de RH para comunicação com todos os prestadores da Spin Gaming.",
       },
       {
         subtitulo: "Comunicados",
@@ -1251,7 +1266,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "RH Talks",
         texto:
-          "Reúne as atas das reuniões periódicas do RH com colaboradores.\n\nCada RH Talk tem um número sequencial, título, introdução e o campo **Aplicável a** (mesmo critério das Políticas). Com **Ver = Próprios**, só aparecem atas cujo público inclui **Todos os prestadores** ou a diretoria/gerência/time do seu cadastro. Com **Ver = Sim** ou **Editar = Sim**, todas as atas publicadas aparecem. Clique em **Ver Ata** para ler o conteúdo completo. O registro de participantes da reunião fica em Anotações RH (operacional), não restringe a leitura no portal.",
+          "Reúne as atas das reuniões periódicas do RH com prestadores.\n\nCada RH Talk tem um número sequencial, título, introdução e o campo **Aplicável a** (mesmo critério das Políticas). Com **Ver = Próprios**, só aparecem atas cujo público inclui **Todos os prestadores** ou a diretoria/gerência/time do seu cadastro. Com **Ver = Sim** ou **Editar = Sim**, todas as atas publicadas aparecem. Clique em **Ver Ata** para ler o conteúdo completo. O registro de participantes da reunião fica em Anotações RH (operacional), não restringe a leitura no portal.",
       },
       {
         subtitulo: "Gerenciamento de Postagens (Gestores)",
@@ -1280,7 +1295,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Filtros e Navegação",
         texto:
-          "Navegue pelos meses com as setas ou ative o Histórico para ver as solicitações de 13 competências mensais — a atual e as 12 anteriores (rótulo **Todo o período**). O filtro de Influencers (pill, **Todos Influencers** por defeito; pesquisa no painel com mais de cinco nomes) permite selecionar nomes específicos; o de operadora restringe à plataforma escolhida.\n\nO filtro de operadora só aparece para perfis de gestão — influencers e agências veem apenas seus próprios dados.",
+          "Navegue pelos meses com as setas ou ative o Histórico para ver as solicitações de 13 competências mensais — a atual e as 12 anteriores (rótulo **Todo o período**). O filtro de Influencers (**Todos Influencers** por padrão; pesquisa no painel com mais de cinco nomes) permite selecionar nomes específicos; o de operadora restringe à operadora escolhida.\n\nO filtro de operadora só aparece para perfis de gestão — influencers e agências veem apenas seus próprios dados.",
       },
       {
         subtitulo: "Solicitações",
@@ -1299,7 +1314,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "Afiliados centraliza o cadastro de parceiros que atuam como afiliados na plataforma. Diferente dos influencers, os afiliados são parceiros comerciais que operam canais de aquisição e tráfego — não necessariamente criadores de conteúdo. A página oferece gestão completa de perfil, dados financeiros e vínculos com operadoras.",
+          "Afiliados centraliza o cadastro de **afiliados** na plataforma. Diferente dos influencers, os afiliados são parceiros comerciais de aquisição e tráfego — não necessariamente criadores de conteúdo. A página oferece gestão completa de perfil, dados financeiros e vínculos com operadoras.",
       },
       {
         subtitulo: "Quadros de Resumo",
@@ -1309,7 +1324,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Filtros",
         texto:
-          "O bloco de filtros oferece:\n\n— Status: chips para Ativo, Inativo e Cancelado\n— Operadora: seletor para restringir à operadora escolhida\n— Busca por texto: nome artístico ou e-mail\n\nO botão Limpar filtros reseta todos os critérios de uma vez.",
+          "O bloco de filtros oferece:\n\n— Status: filtros para Ativo, Inativo e Cancelado\n— Operadora: seletor para restringir à operadora escolhida\n— Busca por texto: nome artístico ou e-mail\n\nO botão Limpar filtros reseta todos os critérios de uma vez.",
       },
       {
         subtitulo: "Visualizar e Editar Perfil",
@@ -1324,7 +1339,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Status e Permissões",
         texto:
-          "Alteração de status (Ativo/Inativo/Cancelado) é restrita a Gestores e Admin. Afiliados visualizam e editam apenas seu próprio perfil. Operadores visualizam apenas os afiliados de sua operadora. Esta página não oferece exclusão de cadastro — use Network para remover prospectos ou contate um administrador para desativar acesso.",
+          "Alteração de status (Ativo/Inativo/Cancelado) é restrita a Gestores e Admin. Ao mudar o status para **Ativo**, se a conta do afiliado estiver desativada na plataforma, o acesso é reativado, a senha volta para a padrão e o afiliado recebe o e-mail de boas-vindas. Afiliados visualizam e editam apenas seu próprio perfil. Operadores visualizam apenas os afiliados de sua operadora. Esta página não oferece exclusão de cadastro — use Network para remover prospectos ou entre em contato com um administrador para desativar acesso.",
       },
     ],
   },
@@ -1348,7 +1363,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Lista de Prospectos",
         texto:
-          "Com permissão de criar, use **Novo Afiliado** (botão com ícone + e gradiente de criação) na barra de filtros para abrir o cadastro de prospecto.\n\nCada card exibe nome, status do funil, uma prévia do campo Operação (truncado em 2 linhas) e flags na parte inferior quando preenchidas: **Live Cassino** (roxo), **Operadora** (cor do brand guide), **Origem** (cinza), **Registrado** (índigo — quem cadastrou na plataforma). Prospectos do site público não exibem Registrado até atribuição manual. O botão Ver abre o modal de visualização completa. O botão Editar abre o formulário de edição. Pressione Esc para fechar qualquer modal.",
+          "Com permissão de criar, use **Novo Afiliado**  na barra de filtros para abrir o cadastro de prospecto.\n\nCada card exibe nome, status do funil, uma prévia do campo Operação (truncado em 2 linhas) e flags na parte inferior quando preenchidas: **Live Cassino** (roxo), **Operadora** (cor do brand guide), **Origem** (cinza), **Registrado** (índigo — quem cadastrou na plataforma). Prospectos do site público não exibem Registrado até atribuição manual. O botão Ver abre o modal de visualização completa. O botão Editar abre o formulário de edição. Pressione Esc para fechar qualquer modal.",
       },
       {
         subtitulo: "Cadastro e Edição",
@@ -1358,7 +1373,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Criação de usuário na plataforma",
         texto:
-          "Sempre que você salva um prospecto (novo ou existente) que ainda não tem usuário na plataforma, o sistema exige e-mail e operadora e aciona a criação automática do perfil Afiliado, do cadastro de perfil e do vínculo com a operadora — em qualquer status do funil, não só em Fechado.\n\nO botão exibe 'Salvando...' durante o processo. Se a criação falhar, o prospecto permanece salvo no Network e uma mensagem vermelha descreve o erro (ex.: e-mail já cadastrado). Após sucesso, o parceiro aparece em Afiliados e pode receber e-mail de boas-vindas quando o envio estiver configurado.",
+          "Sempre que você salva um prospecto (novo ou existente) que ainda não tem usuário na plataforma, o sistema exige e-mail e operadora e aciona a criação automática do perfil Afiliado, do cadastro de perfil e do vínculo com a operadora — em qualquer status do funil, não só em Fechado.\n\nO botão exibe 'Salvando…' durante o processo. Se a criação falhar, o prospecto permanece salvo no Network e uma mensagem vermelha descreve o erro (ex.: e-mail já cadastrado). Após sucesso, o afiliado aparece em Afiliados e pode receber e-mail de boas-vindas quando o envio estiver configurado.",
       },
       {
         subtitulo: "Anotações",
@@ -1377,7 +1392,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Filtros e Navegação",
         texto:
-          "Use as setas para navegar entre os meses e o botão Histórico para ver os ciclos de 13 competências mensais — a atual e as 12 anteriores (rótulo **Todo o período**). O filtro de Influencers (pill, **Todos Influencers** por defeito; pesquisa no painel com mais de cinco nomes) permite focar em um ou mais nomes específicos; o filtro de operadora restringe os dados à plataforma selecionada.\n\nO mês exibido no carrossel determina quais ciclos aparecem no bloco de Ciclo de Pagamento — ciclos cujo último dia cai dentro do mês selecionado.",
+          "Use as setas para navegar entre os meses e o botão Histórico para ver os ciclos de 13 competências mensais — a atual e as 12 anteriores (rótulo **Todo o período**). O filtro de Influencers (**Todos Influencers** por padrão; pesquisa no painel com mais de cinco nomes) permite focar em um ou mais nomes específicos; o filtro de operadora restringe os dados à operadora selecionada.\n\nO mês exibido no carrossel determina quais ciclos aparecem no bloco de Ciclo de Pagamento — ciclos cujo último dia cai dentro do mês selecionado.",
       },
       {
         subtitulo: "KPIs",
@@ -1430,17 +1445,17 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "A página **Galeria de Fotos** centraliza imagens de eventos e ações da Spin. Fotos **gerais** ficam na sub-aba **Gerais** (visíveis a quem tem permissão de Ver). Fotos **individuais de colaboradores** ficam em **Minhas Fotos** — a equipe com permissão de **Editar** filtra por qualquer colaborador; quem tem **Ver (próprios)** vê todas as gerais e, em Minhas Fotos, apenas as fotos atribuídas ao seu cadastro de colaborador (e-mail de login ou e-mail Spin), com o filtro travado no próprio nome.",
+          "A página **Galeria de Fotos** centraliza imagens de eventos e ações da Spin. Fotos **gerais** ficam na sub-aba **Gerais** (visíveis a quem tem permissão de Ver). Fotos **individuais de prestadores** ficam em **Minhas Fotos** — a equipe com permissão de **Editar** filtra por qualquer prestador; quem tem **Ver (próprios)** vê todas as gerais e, em Minhas Fotos, apenas as fotos atribuídas ao seu cadastro de prestador (e-mail de login ou e-mail Spin), com o filtro travado no próprio nome.",
       },
       {
         subtitulo: "Aba Galeria",
         texto:
-          "Use as sub-abas **Gerais** e **Minhas Fotos**. Em **Gerais**, filtre por evento no campo **Eventos** (**Todos Eventos** por defeito) e busque por nome do evento ou arquivo. Cada evento aparece em um bloco recolhível (seta à esquerda, **fechado por defeito**): o título e a data ficam no cabeçalho, com a **descrição do evento** logo abaixo; clique na seta para ver as fotos. Com busca ativa, os blocos com resultados abrem automaticamente.\n\nEm **Minhas Fotos**, quem tem permissão de **Editar** filtra por colaborador (**Todos Colaboradores** por defeito); demais perfis veem o filtro fixo no próprio nome.\n\nAs fotos aparecem em blocos por evento (Gerais) ou por colaborador (Minhas Fotos). Clique na miniatura para ampliar; use o ícone de download para salvar. Exclusão exige permissão de Excluir e abre o pop-up padrão de confirmação.",
+          "Use as sub-abas **Gerais** e **Minhas Fotos**. Em **Gerais**, filtre por evento no campo **Eventos** (**Todos Eventos** por padrão) e busque por nome do evento ou arquivo. Cada evento aparece em um bloco recolhível (seta à esquerda, **fechado por padrão**): o título e a data ficam no cabeçalho, com a **descrição do evento** logo abaixo; clique na seta para ver as fotos. Com busca ativa, os blocos com resultados abrem automaticamente.\n\nEm **Minhas Fotos**, quem tem permissão de **Editar** filtra por prestador (**Todos Prestadores** por padrão); demais perfis veem o filtro fixo no próprio nome.\n\nAs fotos aparecem em blocos por evento (Gerais) ou por prestador (Minhas Fotos). Clique na miniatura para ampliar; use o ícone de download para salvar. Exclusão exige permissão de Excluir e abre o pop-up padrão de confirmação.",
       },
       {
         subtitulo: "Aba Upload",
         texto:
-          "Disponível com permissão de **Criar**. Escolha o **tipo de foto** (gerais ou de colaborador). Para **Fotos gerais**, selecione ou cadastre um **evento** (**Novo Evento** — nome, data e descrição obrigatórios). Com permissão de **Editar**, use **Editar Eventos** para alterar um evento existente ou excluí-lo; se o evento tiver fotos, a confirmação avisa que as imagens serão perdidas. Para **Fotos de colaborador**, selecione o colaborador na lista com busca (seleção única). Em seguida, selecione um ou mais arquivos (JPG, PNG ou WebP, até 25 MB cada).",
+          "Disponível com permissão de **Criar**. Escolha o **tipo de foto** (gerais ou de prestador). Para **Fotos gerais**, selecione ou cadastre um **evento** (**Novo Evento** — nome, data e descrição obrigatórios). Com permissão de **Editar**, use **Editar Eventos** para alterar um evento existente ou excluí-lo; se o evento tiver fotos, a confirmação avisa que as imagens serão perdidas. Para **Fotos de prestador**, selecione o prestador na lista com busca (seleção única). Em seguida, selecione um ou mais arquivos (JPG, PNG ou WebP, até 25 MB cada).",
       },
     ],
   },
@@ -1540,7 +1555,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Lista de operadoras",
         texto:
-          "Exibe todas as operadoras cadastradas com status (Ativa ou Inativa), slug interno e data de criação. Os cards de resumo no topo mostram os totais. Use a busca abaixo do título do bloco para filtrar pelo nome da operadora. A tabela permite ordenação por qualquer coluna.",
+          "Exibe todas as operadoras cadastradas com status (Ativa ou Inativa), slug interno e data de criação. Os cards de resumo no topo mostram os totais. Use a busca abaixo do título do bloco para filtrar pelo nome da operadora. A tabela permite ordenação por qualquer coluna e mostra até **20 linhas** por vez (a barra some quando cabe numa página).",
       },
       {
         subtitulo: "Cadastrar ou editar operadora",
@@ -1564,12 +1579,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Filtros e navegação",
         texto:
-          "No topo, use as setas do carrossel para alternar a operadora exibida ou o botão **Todas Operadoras** para ver todas de uma vez. Na segunda linha, alterne entre as abas **Estúdios** e **Mesas**.\n\nNa aba Estúdios, os cards **Mesas Dedicadas** e **Mesas Network** mostram a quantidade de mesas do tipo conforme o filtro de operadora. A tabela lista estúdios com nome, tipo, quantidade de mesas e operadoras vinculadas.\n\nNa aba Mesas, os cards por jogo (Baccarat, Blackjack, Roleta e Futebol Brasileiro) atualizam conforme o filtro. Use a busca para filtrar por nome da mesa, estúdio, ID Spin ou número da mesa.",
+          "No topo, use as setas do carrossel para alternar a operadora exibida ou o botão **Todas Operadoras** para ver todas de uma vez. Na segunda linha, alterne entre as abas **Estúdios** e **Mesas**.\n\nNa aba Estúdios, os cards **Mesas Dedicadas** e **Mesas Network** mostram a quantidade de mesas do tipo conforme o filtro de operadora. A tabela lista estúdios com nome, tipo, quantidade de mesas e operadoras vinculadas — até **20 linhas** por vez (a barra some quando cabe numa página).\n\nNa aba Mesas, os cards por jogo (Baccarat, Blackjack, Roleta e Futebol Brasileiro) atualizam conforme o filtro. Use a busca para filtrar por nome da mesa, estúdio, ID Spin ou número da mesa. A lista de mesas também mostra até **20 linhas** por vez.",
       },
       {
         subtitulo: "Cadastrar ou editar estúdio",
         texto:
-          "Informe nome, tipo (Network ou Dedicado) e selecione as operadoras ativas que utilizam aquele estúdio. Na edição, a aba Operações concentra os horários de início dos turnos da manhã, tarde e noite dos dealers — usados no Calendário e na Gestão de Staff. Cada estúdio pode ter várias operadoras; cada mesa pertence a um único estúdio.",
+          "Informe nome, tipo (Network ou Dedicado) e selecione as operadoras ativas que utilizam aquele estúdio. Na edição, a aba Operações concentra os horários de início dos turnos da manhã, tarde e noite dos Game Presenters — usados no Calendário e na Gestão de Staff. Cada estúdio pode ter várias operadoras; cada mesa pertence a um único estúdio.",
       },
       {
         subtitulo: "Cadastrar ou editar mesa",
@@ -1593,7 +1608,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Logs Recentes",
         texto:
-          "Lista eventos técnicos das últimas horas, incluindo falhas de sync e linhas geradas pelo diagnóstico manual. Filtre por tipo; entradas de diagnóstico resumem quantos checks passaram, avisaram ou falharam na execução.",
+          "Lista falhas técnicas e o relatório do diagnóstico manual. Filtre pelas últimas **48h**, **72h** ou **96h** (padrão 48h). O diagnóstico grava um resumo e só as linhas de atenção ou falha — o que passou não aparece como linha extra.",
       },
       {
         subtitulo: "Fluxo de dados",
@@ -1603,7 +1618,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Alertas automáticos",
         texto:
-          "A plataforma detecta automaticamente condições anômalas: syncs atrasados (> 24h ou > 36h), taxas de erro acima de 5%, e e-mails operacionais não enviados no dia. O aviso de CDA sem dados recentes considera a data de métrica de ontem (D-1), pois o sync diário grava o dia anterior. Alertas em vermelho indicam falha; em amarelo, atenção.",
+          "A plataforma detecta automaticamente condições anômalas: syncs que não rodaram no dia após o horário do job, coletas de lobby atrasadas (mais de 24h), taxas de erro acima de 5%, e e-mails operacionais não enviados no dia. O aviso de CDA sem dados recentes considera a data de métrica de ontem (D-1), pois o sync diário grava o dia anterior. Alertas em vermelho indicam falha; em amarelo, atenção.",
       },
       {
         subtitulo: "Redes permitidas — Check-in de prestadores",
@@ -1613,7 +1628,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Testes automatizados (CI) vs diagnóstico na plataforma",
         texto:
-          "A suíte Vitest no repositório (CI e pre-commit) valida helpers e imports — não substitui o diagnóstico em produção. Use **Executar diagnóstico** quando precisar de um snapshot operacional gravado em Logs Recentes no ambiente atual.",
+          "A suíte Vitest no repositório (CI e pre-commit) valida helpers e imports — não substitui o diagnóstico em produção. Use **Executar diagnóstico** para um snapshot do ambiente atual: jobs, credenciais, se as rotinas estão publicadas, Storage, e se ferramentas externas (e-mail, CDA, Outlook, feeds RSS) respondem. Não dispara sync nem envia e-mail. O resumo e os problemas aparecem em Logs Recentes (últimas 48h).",
       },
     ],
   },
@@ -1685,7 +1700,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Filtros e Navegação",
         texto:
-          "A barra no topo tem as quatro abas e, abaixo, a busca (por código, nome, marca, modelo, série, lote, empresa, CNPJ ou contato — sem diferenciar acentos), o filtro de **Local** (**Todos Locais** por padrão — estúdios de Gestão de Estúdios mais Shuffler Room, OCR e Academy) e o filtro de Categoria, cujas opções mudam conforme a aba. Local e Categoria não se aplicam à aba Fornecedores.\n\nNa aba **Equipamentos**, o Catálogo lista Código, Categoria, Nome, Número de Série, Status, Alocação e Ações (Marca e Modelo ficam no modal Ver). O **Catálogo** mostra até **20 linhas** por vez. Com mais registros, use as setas abaixo da tabela para avançar entre as páginas (o texto indica o intervalo visível e a página atual). KPIs e filtros continuam considerando a lista completa. Com o foco nas abas, use ← → do teclado para alternar entre elas (padrão tablist).",
+          "A barra no topo tem as quatro abas e, abaixo, a busca (por código, nome, marca, modelo, série, lote, empresa, CNPJ ou contato — sem diferenciar acentos), o filtro de **Local** (**Todos Locais** por padrão — estúdios de Gestão de Estúdios mais Shuffler Room, OCR e Academy) e o filtro de Categoria, cujas opções mudam conforme a aba. Local e Categoria não se aplicam à aba Fornecedores.\n\nNa aba **Equipamentos**, o Catálogo lista Código, Categoria, Nome, Número de Série, Status, Alocação e Ações (Marca e Modelo ficam no modal Ver). O **Catálogo** mostra até **20 linhas** por vez. Com mais registros, use as setas abaixo da tabela para avançar entre as páginas (o texto indica o intervalo visível e a página atual). KPIs e filtros continuam considerando a lista completa. Com o foco nas abas, use ← → do teclado para alternar entre elas (setas do teclado nas abas).",
       },
       {
         subtitulo: "Consolidado de KPIs",
@@ -1724,22 +1739,27 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "Página de acesso restrito a administradores. Centraliza o cadastro de usuários, a configuração de permissões por perfil e a definição de quais páginas cada grupo pode acessar no menu.",
+          "Página de acesso restrito. Centraliza o cadastro de usuários, a matriz de permissões, os escopos de menu e quais perfis cada viewer pode simular. Com permissão de **Ver** sem ser Administrador com **Editar**, só a aba **Usuários** aparece. Administrador com **Editar** vê as quatro abas: **Usuários**, **Permissões**, **Escopos** e **Simulador de Login**.",
       },
       {
         subtitulo: "Aba Usuários",
         texto:
-          "Lista todos os usuários cadastrados em uma tabela com as colunas Nome do Usuário, E-mail, Perfil, Escopo, Último Login e Ações. Clique no título de qualquer coluna para reordenar — a lista abre pelo login mais recente. Usuários desativados aparecem com a etiqueta Desativado ao lado do nome.\n\nPermite buscar por nome ou e-mail, filtrar por status (Ativo / Desativado) e por perfil. Administradores podem criar novos usuários e, na coluna Ações, editar dados e escopos (lápis), redefinir a senha para a padrão (chave), desativar o acesso ou reativar um usuário desativado.",
+          "Lista todos os usuários cadastrados em uma tabela com as colunas Nome do Usuário, E-mail, Perfil, Escopo, Último Login e Ações. Clique no título de qualquer coluna para reordenar — a lista abre pelo login mais recente. Usuários desativados aparecem com a etiqueta Desativado ao lado do nome.\n\nPermite buscar por nome ou e-mail, filtrar por status (Ativo / Desativado) e por perfil. Administradores podem criar novos usuários e, na coluna Ações, abrir o **Histórico** (acesso e alterações), editar dados e escopos (lápis), redefinir a senha para a padrão (chave — só em usuários ativos), desativar o acesso ou reativar um usuário desativado.\n\nAo **reativar**, a senha volta para a padrão, o usuário recebe o mesmo e-mail de boas-vindas do cadastro e, no próximo login, deve definir uma nova senha. O prazo de inatividade também recomeça do zero.\n\nNo Histórico, a aba **Gestão de Acesso** mostra quem liberou o acesso, a data de liberação e o primeiro login; se a conta estiver inativa, também a desativação (manual, automação de inatividade/convite ou destrato); e o último reset de senha, quando houver. A aba **Alterações** lista mudanças de Nome, Perfil e Escopo.\n\nA plataforma também desativa automaticamente contas ativas: **60 dias** seguidos sem login (quem já acessou) ou **30 dias** após o convite/cadastro sem nenhum acesso.",
       },
       {
         subtitulo: "Aba Permissões",
         texto:
-          "Define, por perfil, o que cada papel pode Ver, Criar, Editar e Excluir em cada página da plataforma. O perfil Administrador não é configurado aqui — mantém acesso total fixo. As alterações entram em vigor no próximo carregamento de página do usuário afetado.",
+          "Define, por perfil, o que cada papel pode Ver, Criar, Editar e Excluir em cada página da plataforma. O perfil Administrador não é configurado aqui — mantém acesso total fixo. As alterações entram em vigor no próximo login (ou atualização de sessão) do usuário afetado.",
       },
       {
-        subtitulo: "Abas Operadora e Prestadores",
+        subtitulo: "Aba Escopos",
         texto:
-          "Controlam quais páginas aparecem no menu para cada grupo operacional.\n— Operadora: define o menu visível para operadores de cada operadora.\n— Prestadores: define o menu por área de atuação (ex.: Escritório, Estúdio, Facilities, TI).\nGestores de departamento (Aquisição, Marketing, Operações, Academy, RH) usam só a matriz de Permissões, sem aba de escopo própria.\nO acesso efetivo de Operadora/Prestadores é o cruzamento destas marcações com a matriz de Permissões.",
+          "Dentro de **Escopos** há duas sub-abas:\n— **Operadora:** quais páginas entram no menu dos operadores de cada operadora.\n— **Prestadores:** quais páginas entram no menu por área de atuação (Escritório, Estúdio).\nGestores de departamento (Aquisição, Marketing, Operações, Tech Ops, Academy, RH, Facilities, TI) usam só a matriz de **Permissões**, sem coluna própria nesta aba.\nOs perfis **Facilities** e **TI** (e os gestores correspondentes) também usam só Permissões — quem é cadastrado na gerência Facilities ou TI em Gestão de Prestadores recebe o perfil de staff automaticamente. Se alguém for colocado manualmente em um perfil de **Gestor de departamento**, o sync do organograma **não** altera esse perfil.\nO acesso efetivo é o cruzamento destas marcações com a matriz de Permissões.",
+      },
+      {
+        subtitulo: "Aba Simulador de Login",
+        texto:
+          "Configura, por perfil **viewer**, quais outros perfis podem ser escolhidos na página **Simulador de Login**. Use o seletor de perfil (mesmas linhas da aba Permissões) e marque os perfis simuláveis. Isso só vale para quem também tiver permissão de **Ver** em Simulador de Login. Após salvar, o viewer precisa atualizar a sessão (logout/login ou recarregar) para ver a lista atualizada.",
       },
     ],
   },
@@ -1753,12 +1773,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Abas de Status",
         texto:
-          "Os links são organizados em três abas:\n— Pendentes: links detectados sem associação — precisam ser mapeados ou ignorados\n— Mapeados: links já associados a um influencer, afiliado ou campanha\n— Ignorados: links descartados, que não serão mapeados\n\nO contador em vermelho na aba Pendentes indica quantos links aguardam ação. Use as setas ← → do teclado com o foco na tablist para alternar entre as abas.",
+          "Os links são organizados em três abas:\n— Pendentes: links detectados sem associação — precisam ser mapeados ou ignorados\n— Mapeados: links já associados a um influencer, afiliado ou campanha\n— Ignorados: links descartados, que não serão mapeados\n\nO contador em vermelho na aba Pendentes indica quantos links aguardam ação. Use as setas ← → do teclado com o foco nas abas para alternar entre elas.",
       },
       {
         subtitulo: "Filtro de Operadora",
         texto:
-          "Quando visível, o filtro de operadora restringe a listagem à plataforma selecionada. Ao selecionar uma operadora específica, a coluna Operadora some da tabela — os dados já estão filtrados. Selecione **Todas Operadoras** no filtro para ver tudo junto.",
+          "Quando visível, o filtro de operadora restringe a listagem à operadora selecionada. Ao selecionar uma operadora específica, a coluna Operadora some da tabela — os dados já estão filtrados. Selecione **Todas Operadoras** no filtro para ver tudo junto.",
       },
       {
         subtitulo: "Busca por UTM Source",
@@ -1782,7 +1802,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "Página de preferências da sua conta. Permite ajustar a aparência da interface (quando o perfil permitir) e alterar a senha de acesso. O acesso fica no menu do avatar (canto superior), junto com Ajuda — não aparece no menu lateral.",
+          "Página de preferências da sua conta. Permite ajustar a aparência da interface (quando o perfil permitir) e alterar a senha de acesso. O acesso fica no menu do avatar (canto superior), junto com Ajuda e Versionamento — não aparece no menu lateral.",
       },
       {
         subtitulo: "Aparência",
@@ -1816,17 +1836,41 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "O que você vê na simulação",
         texto:
-          "O menu e as permissões seguem o perfil simulado, o usuário ativo escolhido e o escopo de operadora ou área, quando aplicável. A sua conta (nome no avatar) não muda. Ações de Criar, Editar e Excluir ficam bloqueadas.\n\nEm todas as páginas, a visão pessoal (Meu Calendário, Minhas Fotos, Dados de Cadastro, Overview Prestador, Marketplace, Portais) usa o cadastro da pessoa escolhida — não a conta de quem está simulando. Um Game Presenter não vê Relatório de Justificativas nem fotos de outros colaboradores em Minhas Fotos. A aba Gerais da Galeria continua com as fotos de evento, que são compartilhadas.\n\nPáginas sensíveis de administração (Gestão de Usuários, Gestão de Operadoras e Status Técnico) não entram no menu simulado. Gestão de Estúdios continua visível se o perfil simulado tiver acesso.",
+          "O menu e as permissões seguem o perfil simulado, o usuário ativo escolhido e o escopo de operadora ou área, quando aplicável. A sua conta (nome no avatar) não muda. Ações de Criar, Editar e Excluir ficam bloqueadas.\n\nEm todas as páginas, a visão pessoal (Meu Calendário, Minhas Fotos, Dados de Cadastro, Overview Prestador, Marketplace, Portais) usa o cadastro da pessoa escolhida — não a conta de quem está simulando. Um Game Presenter não vê Relatório de Justificativas nem fotos de outros prestadores em Minhas Fotos. A aba Gerais da Galeria continua com as fotos de evento, que são compartilhadas.\n\nPáginas sensíveis de administração (Gestão de Usuários, Gestão de Operadoras e Status Técnico) não entram no menu simulado. Gestão de Estúdios continua visível se o perfil simulado tiver acesso.",
       },
       {
         subtitulo: "Quem pode usar e o que aparece na lista",
         texto:
-          "É necessário permissão de **Ver** em Simulador de Login. Os perfis disponíveis na página são definidos em **Gestão de Usuários → Simulador de Login** (matriz do perfil viewer × perfis simuláveis). Administrador vê o catálogo completo. Se a lista estiver vazia, peça ao administrador para liberar perfis nessa aba.",
+          "É necessário permissão de **Ver** em Simulador de Login. Os perfis disponíveis na página são definidos em **Gestão de Usuários → Simulador de Login** (matriz do perfil viewer × perfis simuláveis). Perfil Administrador vê o catálogo completo. Se a lista estiver vazia, peça a quem tem permissão de Editar nessa aba para liberar perfis.",
       },
       {
         subtitulo: "Encerrar",
         texto:
           "Use **Encerrar visualização** na faixa amarela no topo ou no bloco de status da página. A sessão volta ao seu perfil real e às permissões originais. Se a volta falhar, a faixa permanece e aparece um aviso para recarregar.",
+      },
+    ],
+  },
+  versionamento: {
+    titulo: "Versionamento",
+    blocos: [
+      {
+        texto:
+          "Página de novidades da plataforma: o que foi lançado, o que melhorou e o que foi corrigido a cada semana. O acesso fica no menu do avatar, abaixo de Ajuda — não aparece no menu lateral.\n\nAs releases entram só pelo fluxo interno da equipe (chat + handoff). Não há botão para publicar pela tela.",
+      },
+      {
+        subtitulo: "Release recente e histórico",
+        texto:
+          "A release mais nova aparece em destaque, com a tag **Recente**, o número sequencial e a data. As anteriores ficam no bloco **Histórico de releases**, recolhidas por padrão — abra o acordeão para ler os cards.",
+      },
+      {
+        subtitulo: "Cards e permissão",
+        texto:
+          "Cada card é **Novo**, **Melhoria** ou **Correção**. Você só vê o card se tiver permissão de **Ver** (ou **Próprios**) na página daquela feature. Mudanças de toda a plataforma aparecem para quem acessa Versionamento.",
+      },
+      {
+        subtitulo: "Filtros e busca",
+        texto:
+          "Filtre por tipo, por seção do menu e por palavras-chave (título, resumo, data, tipo e texto dos cards). Várias palavras exigem todas (E). A busca ignora acentos.",
       },
     ],
   },

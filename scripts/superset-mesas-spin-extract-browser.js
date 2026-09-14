@@ -3,7 +3,9 @@
  * (dashboard 15, dataset 12, C1-BR / live-sg).
  *
  * Abrir https://superset-sg.proxylive.tech/superset/dashboard/15/ logado,
- * ajustar MODO / DE / ATE abaixo, injetar o IIFE no CDP (awaitPromise + returnByValue).
+ * ajustar MODO / DE / ATE abaixo (ou via tmp/make-compact-extract.mjs),
+ * injetar o IIFE no CDP (awaitPromise + returnByValue) — preferir oneshot
+ * (tmp/make-oneshot-inject.mjs) em vez de dezenas de chunks.
  *
  * MODO:
  *   network  — Sports Club × Esportiva group / Casa / Blaze.br / jonbet.bet.br
@@ -12,14 +14,12 @@
  *              (ATE exclusivo). Não usar DE mid-month — evita UAP parcial no monthly_summary.
  *
  * Grupo EsportivaBet (operator_name=EsportivaBet, brand_name vazio):
- *   separa marcas pelo sufixo de player_id (último segmento após o ponto):
- *     bateubetbr_*         → bateu     (slug plataforma: bateu_bet)
- *     brxbetbr_*           → brx       (slug: brx_bet)
- *     ricobetbr_*          → rico      (slug: rico_bet)
- *     donaldbetbr_*        → donald    (slug: donald_bet)
- *     betpontobetbetbr_*   → betponto  (slug: betponto_bet) — Bet.Bet
- *     esportivabetbr_*     → esportiva (slug: esportiva_bet)
- *     sem prefixo (só número/UUID) → esportiva (junto com Esportiva Bet)
+ *   1 query por métrica com coluna SQL `marca` (multiIf no último segmento de player_id),
+ *   depois split client-side nas keys esportiva/bateu/brx/rico/donald/betponto.
+ *
+ * Performance:
+ *   FORCE=false — usa cache do Superset (true só em reload histórico).
+ *   CONCURRENCY — pool de queries paralelas (WebSocket async).
  *
  * ATE é exclusivo no time_range do Superset (usar o dia seguinte ao último dia).
  * Ex.: 04–11/08 → DE='2026-08-04', ATE='2026-08-13'
@@ -29,6 +29,10 @@
   const MODO = "network"; // "network" | "dedicado" | "monthly"
   const DE = "2026-08-28";
   const ATE = "2026-08-31";
+  /** false = cache Superset (carga diária). true = bypass (reload histórico). */
+  const FORCE = false;
+  /** Máx. de chart/data em voo (async jobs via WS). */
+  const CONCURRENCY = 4;
 
   const SC = [
     "Sports Club Blackjack",
@@ -57,26 +61,15 @@
   /** MTD do mês de DE: sempre do dia 1 até ATE (exclusivo). */
   const MONTHLY_TIME_RANGE = `${DE.slice(0, 7)}-01 : ${ATE}`;
 
-  /** Último segmento de player_id (ex.: bateubetbr_1834047 ou 1092408). */
   const PLAYER_LAST_SEG =
     "arrayElement(splitByChar('.', assumeNotNull(toString(player_id))), -1)";
-  /** Esportiva Bet = prefixo esportivabetbr_ + IDs sem marca (número/UUID). */
-  const WHERE_ESPORTIVA =
-    `(match(${PLAYER_LAST_SEG}, '^esportivabetbr_') OR NOT match(${PLAYER_LAST_SEG}, '^[A-Za-z][A-Za-z0-9]*_'))`;
-  const WHERE_BATEU = `match(${PLAYER_LAST_SEG}, '^bateubetbr_')`;
-  const WHERE_BRX = `match(${PLAYER_LAST_SEG}, '^brxbetbr_')`;
-  const WHERE_RICO = `match(${PLAYER_LAST_SEG}, '^ricobetbr_')`;
-  const WHERE_DONALD = `match(${PLAYER_LAST_SEG}, '^donaldbetbr_')`;
-  const WHERE_BETPONTO = `match(${PLAYER_LAST_SEG}, '^betpontobetbetbr_')`;
+  /** Dimensão de marca — uma query cobre as 6 keys do grupo EsportivaBet. */
+  const BRAND_SQL = `multiIf(match(${PLAYER_LAST_SEG}, '^bateubetbr_'), 'bateu', match(${PLAYER_LAST_SEG}, '^brxbetbr_'), 'brx', match(${PLAYER_LAST_SEG}, '^ricobetbr_'), 'rico', match(${PLAYER_LAST_SEG}, '^donaldbetbr_'), 'donald', match(${PLAYER_LAST_SEG}, '^betpontobetbetbr_'), 'betponto', 'esportiva')`;
+  const ESPORTIVA_KEYS = ["esportiva", "bateu", "brx", "rico", "donald", "betponto"];
 
   const SCENARIOS = {
     network: [
-      { key: "esportiva", op: "EsportivaBet", brand: null, playerWhere: WHERE_ESPORTIVA, tables: SC },
-      { key: "bateu", op: "EsportivaBet", brand: null, playerWhere: WHERE_BATEU, tables: SC },
-      { key: "brx", op: "EsportivaBet", brand: null, playerWhere: WHERE_BRX, tables: SC },
-      { key: "rico", op: "EsportivaBet", brand: null, playerWhere: WHERE_RICO, tables: SC },
-      { key: "donald", op: "EsportivaBet", brand: null, playerWhere: WHERE_DONALD, tables: SC },
-      { key: "betponto", op: "EsportivaBet", brand: null, playerWhere: WHERE_BETPONTO, tables: SC },
+      { key: "esportiva_group", op: "EsportivaBet", brand: null, tables: SC, splitMarca: true },
       { key: "casa", op: "Casa De Apostas", brand: null, tables: SC },
       { key: "blaze", op: "Blaze", brand: "Blaze.br", tables: SC },
       { key: "jonbet", op: "Blaze", brand: "jonbet.bet.br", tables: SC },
@@ -88,12 +81,7 @@
     monthly: [
       { key: "ded_casa", op: "Casa De Apostas", brand: null, tables: CASA },
       { key: "ded_blaze", op: "Blaze", brand: null, tables: BLAZE },
-      { key: "net_esportiva", op: "EsportivaBet", brand: null, playerWhere: WHERE_ESPORTIVA, tables: SC },
-      { key: "net_bateu", op: "EsportivaBet", brand: null, playerWhere: WHERE_BATEU, tables: SC },
-      { key: "net_brx", op: "EsportivaBet", brand: null, playerWhere: WHERE_BRX, tables: SC },
-      { key: "net_rico", op: "EsportivaBet", brand: null, playerWhere: WHERE_RICO, tables: SC },
-      { key: "net_donald", op: "EsportivaBet", brand: null, playerWhere: WHERE_DONALD, tables: SC },
-      { key: "net_betponto", op: "EsportivaBet", brand: null, playerWhere: WHERE_BETPONTO, tables: SC },
+      { key: "net_esportiva_group", op: "EsportivaBet", brand: null, tables: SC, splitMarca: true },
       { key: "net_casa", op: "Casa De Apostas", brand: null, tables: SC },
       { key: "net_blaze", op: "Blaze", brand: "Blaze.br", tables: SC },
       { key: "net_jonbet", op: "Blaze", brand: "jonbet.bet.br", tables: SC },
@@ -129,6 +117,20 @@
 
   const isoDay = (ms) => new Date(Number(ms)).toISOString().slice(0, 10);
 
+  async function mapPool(items, limit, fn) {
+    const results = new Array(items.length);
+    let next = 0;
+    async function worker() {
+      while (next < items.length) {
+        const idx = next++;
+        results[idx] = await fn(items[idx], idx);
+      }
+    }
+    const n = Math.min(limit, Math.max(1, items.length));
+    await Promise.all(Array.from({ length: n }, () => worker()));
+    return results;
+  }
+
   function metricValue(row, valueKey) {
     if (row[valueKey] != null) return row[valueKey];
     const aliases = {
@@ -140,11 +142,25 @@
     for (const k of aliases[valueKey] || []) {
       if (row[k] != null) return row[k];
     }
-    const skip = new Set(["f", "at", "game_type", "table_name"]);
+    const skip = new Set(["f", "at", "game_type", "table_name", "marca"]);
     for (const [k, v] of Object.entries(row)) {
       if (!skip.has(k) && typeof v === "number") return v;
     }
     return undefined;
+  }
+
+  function emptyMetric() {
+    return { byDay: {}, ok: true };
+  }
+
+  function emptyBlock() {
+    return {
+      TO: emptyMetric(),
+      GGR: emptyMetric(),
+      BET: emptyMetric(),
+      UAP: emptyMetric(),
+      UAP_TOT: emptyMetric(),
+    };
   }
 
   function byDayFrom(data, valueKey, dimKey) {
@@ -158,9 +174,25 @@
     return byDay;
   }
 
-  async function runQuery(sliceId, sc, columns, valueKey, dimKey) {
+  /** Split rows com coluna `marca` → map key → byDay. */
+  function byDayFromMarca(data, valueKey, fieldKey) {
+    const byMarca = Object.fromEntries(ESPORTIVA_KEYS.map((k) => [k, {}]));
+    for (const row of data || []) {
+      const day = isoDay(row.at);
+      if (day < DE || day >= ATE) continue;
+      const marca = ESPORTIVA_KEYS.includes(row.marca) ? row.marca : "esportiva";
+      if (!byMarca[marca][day]) byMarca[marca][day] = [];
+      byMarca[marca][day].push({
+        [valueKey]: metricValue(row, valueKey),
+        f: fieldKey ? (row[fieldKey] ?? null) : null,
+      });
+    }
+    return byMarca;
+  }
+
+  async function fetchChartData({ sliceId, sc, columns, timeRange, whereSql }) {
     const slice = sliceById[sliceId];
-    if (!slice) return { err: `slice ${sliceId} ausente`, byDay: {} };
+    if (!slice) return { err: `slice ${sliceId} ausente`, data: [] };
     const filters = [
       { col: "operator_name", op: "IN", val: [sc.op] },
       { col: "table_name", op: "IN", val: sc.tables },
@@ -173,7 +205,7 @@
         subject: "at",
         operator: "TEMPORAL_RANGE",
         operatorId: "TEMPORAL_RANGE",
-        comparator: TIME_RANGE,
+        comparator: timeRange,
         expressionType: "SIMPLE",
         isExtra: true,
       },
@@ -208,18 +240,17 @@
       });
     }
     fm.adhoc_filters = adhoc;
-    const whereSql = sc.playerWhere || "";
     const url =
       "/api/v1/chart/data?form_data=" +
       encodeURIComponent(JSON.stringify({ slice_id: sliceId })) +
       "&dashboard_id=15";
     const body = {
       datasource: { id: 12, type: "table" },
-      force: true,
+      force: FORCE,
       queries: [
         {
           filters,
-          extras: { having: "", where: whereSql },
+          extras: { having: "", where: whereSql || "" },
           applied_time_extras: {},
           columns,
           metrics: fm.metrics,
@@ -228,7 +259,7 @@
           row_limit: 10000,
           series_limit: 0,
           group_others_when_limit_reached: false,
-          time_range: TIME_RANGE,
+          time_range: timeRange,
         },
       ],
       form_data: fm,
@@ -257,12 +288,22 @@
           resolve(cacheKey);
         });
       });
-      if (!ck) return { err: "timeout", byDay: {}, ok: false };
+      if (!ck) return { err: "timeout", data: null, ok: false };
       const cr = await fetch("/api/v1/chart/data/" + ck, { credentials: "include" });
       const cj = await cr.json();
       res = (cj.result && cj.result[0]) || {};
     }
-    return { byDay: byDayFrom(res.data, valueKey, dimKey), ok: true };
+    return { data: res.data || [], ok: true };
+  }
+
+  async function runQuery(sliceId, sc, columns, valueKey, dimKey, timeRange) {
+    const tr = timeRange || TIME_RANGE;
+    const got = await fetchChartData({ sliceId, sc, columns, timeRange: tr });
+    if (!got.ok) return { err: got.err || "timeout", byDay: {}, ok: false };
+    if (sc.splitMarca) {
+      return { byMarca: byDayFromMarca(got.data, valueKey, dimKey), ok: true, splitMarca: true };
+    }
+    return { byDay: byDayFrom(got.data, valueKey, dimKey), ok: true };
   }
 
   const dayCol = {
@@ -277,6 +318,7 @@
   };
   const gameCol = { expressionType: "SQL", label: "game_type", sqlExpression: "`game_type`" };
   const tableCol = { expressionType: "SQL", label: "table_name", sqlExpression: "`table_name`" };
+  const marcaCol = { expressionType: "SQL", label: "marca", sqlExpression: BRAND_SQL };
 
   const out = { modo: MODO, de: DE, ate: ATE };
 
@@ -284,115 +326,36 @@
     const mesUtc = Date.UTC(Number(DE.slice(0, 4)), Number(DE.slice(5, 7)) - 1, 1);
     out.mes = `${DE.slice(0, 7)}-01`;
     out.monthlyTimeRange = MONTHLY_TIME_RANGE;
-    for (const sc of SCENARIOS.monthly) {
-      const slice = sliceById[SLICES.UAP_TOT];
-      const filters = [
-        { col: "operator_name", op: "IN", val: [sc.op] },
-        { col: "table_name", op: "IN", val: sc.tables },
-      ];
-      if (sc.brand) filters.push({ col: "brand_name", op: "IN", val: [sc.brand] });
-      const fm = { ...slice.form_data, dashboardId: 15, extra_form_data: { filters } };
-      const adhoc = [
-        {
-          clause: "WHERE",
-          subject: "at",
-          operator: "TEMPORAL_RANGE",
-          operatorId: "TEMPORAL_RANGE",
-          comparator: MONTHLY_TIME_RANGE,
-          expressionType: "SIMPLE",
-          isExtra: true,
-        },
-        {
-          clause: "WHERE",
-          subject: "operator_name",
-          operator: "IN",
-          operatorId: "IN",
-          comparator: [sc.op],
-          expressionType: "SIMPLE",
-          isExtra: true,
-        },
-        {
-          clause: "WHERE",
-          subject: "table_name",
-          operator: "IN",
-          operatorId: "IN",
-          comparator: sc.tables,
-          expressionType: "SIMPLE",
-          isExtra: true,
-        },
-      ];
-      if (sc.brand) {
-        adhoc.push({
-          clause: "WHERE",
-          subject: "brand_name",
-          operator: "IN",
-          operatorId: "IN",
-          comparator: [sc.brand],
-          expressionType: "SIMPLE",
-          isExtra: true,
-        });
-      }
-      fm.adhoc_filters = adhoc;
-      const whereSql = sc.playerWhere || "";
-      const url =
-        "/api/v1/chart/data?form_data=" +
-        encodeURIComponent(JSON.stringify({ slice_id: SLICES.UAP_TOT })) +
-        "&dashboard_id=15";
-      const body = {
-        datasource: { id: 12, type: "table" },
-        force: true,
-        queries: [
-          {
-            filters,
-            extras: { having: "", where: whereSql },
-            applied_time_extras: {},
-            columns: [monthCol],
-            metrics: fm.metrics,
-            orderby: [],
-            annotation_layers: [],
-            row_limit: 10000,
-            series_limit: 0,
-            group_others_when_limit_reached: false,
-            time_range: MONTHLY_TIME_RANGE,
-          },
-        ],
-        form_data: fm,
-        result_format: "json",
-        result_type: "full",
-      };
-      const r = await fetch(url, {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-          "X-Requested-With": "XMLHttpRequest",
-          Referer: location.origin + "/superset/dashboard/15/",
-        },
-        body: JSON.stringify(body),
+    for (const k of ESPORTIVA_KEYS) out[`net_${k}`] = { uap: 0 };
+
+    await mapPool(SCENARIOS.monthly, CONCURRENCY, async (sc) => {
+      const cols = sc.splitMarca ? [monthCol, marcaCol] : [monthCol];
+      const got = await fetchChartData({
+        sliceId: SLICES.UAP_TOT,
+        sc,
+        columns: cols,
+        timeRange: MONTHLY_TIME_RANGE,
       });
-      const j = await r.json();
-      let res = null;
-      if (r.status === 200 && j.result) res = j.result[0];
-      else {
-        const ck = await new Promise((resolve) => {
-          const t = setTimeout(() => resolve(null), 90000);
-          pending.set(j.job_id, (cacheKey) => {
-            clearTimeout(t);
-            resolve(cacheKey);
-          });
-        });
-        if (!ck) {
-          out[sc.key] = { err: "timeout", uap: null };
-          continue;
+      if (!got.ok) {
+        if (sc.splitMarca) {
+          for (const k of ESPORTIVA_KEYS) out[`net_${k}`] = { err: got.err || "timeout", uap: null };
+        } else {
+          out[sc.key] = { err: got.err || "timeout", uap: null };
         }
-        const cr = await fetch("/api/v1/chart/data/" + ck, { credentials: "include" });
-        const cj = await cr.json();
-        res = (cj.result && cj.result[0]) || {};
+        return;
       }
-      const row = (res.data || []).find((d) => d.at === mesUtc);
+      if (sc.splitMarca) {
+        for (const row of got.data || []) {
+          if (row.at !== mesUtc) continue;
+          const marca = ESPORTIVA_KEYS.includes(row.marca) ? row.marca : "esportiva";
+          out[`net_${marca}`] = { uap: row.UAP != null ? row.UAP : 0 };
+        }
+        return;
+      }
+      const row = (got.data || []).find((d) => d.at === mesUtc);
       out[sc.key] = { uap: row ? row.UAP : null };
-    }
+    });
+
     try {
       ws.close();
     } catch {
@@ -403,17 +366,49 @@
 
   const dimCol = MODO === "dedicado" ? tableCol : gameCol;
   const dimKey = MODO === "dedicado" ? "table_name" : "game_type";
-  const uapDimCol = gameCol;
-  const uapDimKey = "game_type";
 
-  for (const sc of SCENARIOS[MODO]) {
-    const block = {};
-    block.TO = await runQuery(SLICES.TO, sc, [dayCol, dimCol], "TO", dimKey);
-    block.GGR = await runQuery(SLICES.GGR, sc, [dayCol, dimCol], "GGR", dimKey);
-    block.BET = await runQuery(SLICES.BET, sc, [dayCol, dimCol], "BET", dimKey);
-    block.UAP = await runQuery(SLICES.UAP, sc, [dayCol, uapDimCol], "UAP", uapDimKey);
-    block.UAP_TOT = await runQuery(SLICES.UAP_TOT, sc, [dayCol], "UAP", "game_type");
-    out[sc.key] = block;
+  if (MODO === "network") {
+    for (const k of ESPORTIVA_KEYS) out[k] = emptyBlock();
+  }
+
+  const scenarios = SCENARIOS[MODO];
+  const jobs = [];
+  for (const sc of scenarios) {
+    if (sc.splitMarca) {
+      jobs.push({ sc, sliceId: SLICES.TO, cols: [dayCol, marcaCol, dimCol], valueKey: "TO", fieldKey: dimKey, metric: "TO" });
+      jobs.push({ sc, sliceId: SLICES.GGR, cols: [dayCol, marcaCol, dimCol], valueKey: "GGR", fieldKey: dimKey, metric: "GGR" });
+      jobs.push({ sc, sliceId: SLICES.BET, cols: [dayCol, marcaCol, dimCol], valueKey: "BET", fieldKey: dimKey, metric: "BET" });
+      jobs.push({ sc, sliceId: SLICES.UAP, cols: [dayCol, marcaCol, gameCol], valueKey: "UAP", fieldKey: "game_type", metric: "UAP" });
+      jobs.push({ sc, sliceId: SLICES.UAP_TOT, cols: [dayCol, marcaCol], valueKey: "UAP", fieldKey: null, metric: "UAP_TOT" });
+    } else {
+      jobs.push({ sc, sliceId: SLICES.TO, cols: [dayCol, dimCol], valueKey: "TO", fieldKey: dimKey, metric: "TO" });
+      jobs.push({ sc, sliceId: SLICES.GGR, cols: [dayCol, dimCol], valueKey: "GGR", fieldKey: dimKey, metric: "GGR" });
+      jobs.push({ sc, sliceId: SLICES.BET, cols: [dayCol, dimCol], valueKey: "BET", fieldKey: dimKey, metric: "BET" });
+      jobs.push({ sc, sliceId: SLICES.UAP, cols: [dayCol, gameCol], valueKey: "UAP", fieldKey: "game_type", metric: "UAP" });
+      jobs.push({ sc, sliceId: SLICES.UAP_TOT, cols: [dayCol], valueKey: "UAP", fieldKey: "game_type", metric: "UAP_TOT" });
+    }
+  }
+
+  const results = await mapPool(jobs, CONCURRENCY, async (job) => {
+    const r = await runQuery(job.sliceId, job.sc, job.cols, job.valueKey, job.fieldKey);
+    return { job, r };
+  });
+
+  for (const { job, r } of results) {
+    if (job.sc.splitMarca) {
+      const byMarca = r.byMarca || {};
+      for (const k of ESPORTIVA_KEYS) {
+        if (!out[k]) out[k] = emptyBlock();
+        out[k][job.metric] = { byDay: byMarca[k] || {}, ok: !!r.ok, ...(r.err ? { err: r.err } : {}) };
+      }
+      continue;
+    }
+    if (!out[job.sc.key]) out[job.sc.key] = emptyBlock();
+    out[job.sc.key][job.metric] = {
+      byDay: r.byDay || {},
+      ok: !!r.ok,
+      ...(r.err ? { err: r.err } : {}),
+    };
   }
 
   try {

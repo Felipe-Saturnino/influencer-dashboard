@@ -55,7 +55,7 @@ export function getMesesDisponiveisEscalaCarrossel(hoje = new Date()): MesCarros
 
 /**
  * Meses de julho/2026 até o mês civil corrente + mês seguinte (inclusivo).
- * Alinhado a `dataMaximaEscalaCarrossel` na Gestão de Escala — permite ofertar dias
+ * Alinhado a `dataMaximaEscalaCarrossel` na Escala Estúdio — permite ofertar dias
  * da escala já aprovada no mês seguinte enquanto ainda estamos no mês corrente.
  */
 export function getMesesDisponiveisEscalaCarrosselComMesSeguinte(hoje = new Date()): MesCarrosselEscalaEntry[] {

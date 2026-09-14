@@ -9,7 +9,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
  *   PAINEL_NOTICIAS_RSS_URLS — feeds (vírgula ou quebra de linha); vazio = falha controlada no log.
  *   PAINEL_NOTICIAS_CONTEM_ALGUM / CONTEM_TODOS / EXCLUIR / ALLOWLIST_HOSTS — opcionais (vazios = sem filtro).
  *   PAINEL_NOTICIAS_INGEST_SECRET — obrigatório para cron/GitHub (header x-painel-noticias-ingest-secret).
- *   Chamada logada (Status Técnico) aceita JWT role=authenticated; service_role também.
+ *   Chamada logada (Status Técnico): JWT authenticated + profiles.role=admin OU
+ *   role_permissions.status_tecnico.can_editar sim|proprios. service_role também.
  *   Feeds só de PAINEL_NOTICIAS_RSS_URLS — o body não pode substituir a lista.
  */
 
@@ -124,6 +125,46 @@ function jwtRoleClaim(token: string): string | null {
   }
 }
 
+function okPermEditar(v: string | null | undefined): boolean {
+  return v === "sim" || v === "proprios";
+}
+
+async function callerPodeSyncStatusTecnico(
+  supabaseUrl: string,
+  serviceKey: string,
+  bearer: string,
+): Promise<boolean> {
+  try {
+    const res = await fetch(`${supabaseUrl}/auth/v1/user`, {
+      headers: { Authorization: `Bearer ${bearer}`, apikey: serviceKey },
+    });
+    if (!res.ok) return false;
+    const user = (await res.json()) as { id?: string };
+    const userId = typeof user.id === "string" ? user.id : "";
+    if (!userId) return false;
+
+    const supabase = createClient(supabaseUrl, serviceKey);
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", userId)
+      .maybeSingle();
+    const role = String(profile?.role ?? "").trim();
+    if (role === "admin") return true;
+    if (!role) return false;
+
+    const { data: rp } = await supabase
+      .from("role_permissions")
+      .select("can_editar")
+      .eq("role", role)
+      .eq("page_key", "status_tecnico")
+      .maybeSingle();
+    return okPermEditar(rp?.can_editar as string | undefined);
+  } catch {
+    return false;
+  }
+}
+
 async function autorizado(req: Request): Promise<boolean> {
   const secret = Deno.env.get("PAINEL_NOTICIAS_INGEST_SECRET")?.trim();
   const h =
@@ -139,14 +180,7 @@ async function autorizado(req: Request): Promise<boolean> {
   if (jwtRoleClaim(bearer) !== "authenticated") return false;
   const supabaseUrl = Deno.env.get("SUPABASE_URL")?.trim();
   if (!supabaseUrl || !sr || !bearer) return false;
-  try {
-    const res = await fetch(`${supabaseUrl}/auth/v1/user`, {
-      headers: { Authorization: `Bearer ${bearer}`, apikey: sr },
-    });
-    return res.ok;
-  } catch {
-    return false;
-  }
+  return callerPodeSyncStatusTecnico(supabaseUrl, sr, bearer);
 }
 
 function unescapeXml(s: string): string {

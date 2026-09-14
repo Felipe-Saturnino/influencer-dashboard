@@ -171,7 +171,7 @@ function tabelaMesasNetwork(rows: RelatorioDiretoriaData['mesasNetwork']): strin
             <th style="${TH}text-align:center;">Rico</th>
             <th style="${TH}text-align:center;">BRX</th>
             <th style="${TH}text-align:center;">Donald</th>
-            <th style="${TH}text-align:center;">BetPonto</th>
+            <th style="${TH}text-align:center;">Bet.Bet</th>
           </tr>
         </thead>
         <tbody>${linhas}</tbody>

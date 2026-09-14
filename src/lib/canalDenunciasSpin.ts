@@ -14,6 +14,9 @@ export const STORAGE_BUCKET = "canal-denuncias-spin";
 
 export const CANAL_DENUNCIA_ANEXO_MAX_BYTES = 20 * 1024 * 1024;
 
+/** Teto de anexos por envio/resposta (alinhado à policy no Supabase). */
+export const CANAL_DENUNCIA_ANEXO_MAX_COUNT = 5;
+
 /** Tipos aceitos no envio público (PDF, JPG, PNG, MP4). */
 export const CANAL_DENUNCIA_ANEXO_ACCEPT =
   ".pdf,.jpg,.jpeg,.png,.mp4,application/pdf,image/jpeg,image/png,video/mp4";
@@ -48,11 +51,19 @@ export function isProtocoloCanalFormatoValido(protocolo: string): boolean {
   return PROTOCOLO_CANAL_LEGADO_RE.test(protocolo) || PROTOCOLO_CANAL_SIGILO_RE.test(protocolo);
 }
 
-export const PROTOCOLO_CANAL_PLACEHOLDER = "Informe o protocolo recebido no envio";
+export const PROTOCOLO_CANAL_PLACEHOLDER = "Ex.: CDSPIN-A1B2C3D4E5F60789";
 
 export const MSG_CANAL_RATE_LIMITED = "Muitas tentativas. Aguarde alguns minutos e tente novamente.";
 export const MSG_CANAL_PROTOCOLO_NAO_ENCONTRADO =
   "Protocolo não encontrado. Se você se identificou, confira também o e-mail usado no envio.";
+export const MSG_CANAL_PROTOCOLO_FORMATO =
+  "Protocolo inválido. Use o código recebido no envio (formato CDSPIN-… ou o código antigo CDSPIN00001).";
+export const MSG_CANAL_ANEXO_FALHA_ENVIO =
+  "Denúncia registrada, mas algum anexo falhou. Guarde o protocolo e envie as evidências em «Consultar denúncia».";
+export const MSG_CANAL_ANEXO_RH_SO_NOME =
+  "Arquivos anexados pela equipe RH ficam só no atendimento interno — o nome aparece aqui como referência.";
+export const MSG_CANAL_TEXTO_INVALIDO =
+  "Texto inválido ou muito longo (máximo 8000 caracteres).";
 
 export type DenunciaStatusDb = "relatado" | "em_avaliacao" | "procedente" | "nao_procedente";
 
@@ -188,4 +199,42 @@ export function labelAutorMensagemRh(origem: CanalDenunciaAutorOrigem, nomeRh?: 
 export function sanitizeStorageFileName(name: string): string {
   const base = name.replace(/[/\\]/g, "_").replace(/[^\w.\-()\s\u00C0-\u024F]/g, "_");
   return base.length > 180 ? base.slice(-180) : base;
+}
+
+/** Validação leve de e-mail (cliente + espelho no RPC). */
+export function emailCanalDenunciaValido(email: string): boolean {
+  const e = email.trim();
+  if (!e || e.length > 254) return false;
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+}
+
+/**
+ * Executa tarefas com limite de paralelismo (uploads de anexo do canal).
+ * Retorna `true` se alguma tarefa falhou (fn devolve false ou lança).
+ */
+export async function mapComConcurrency<T>(
+  items: readonly T[],
+  concurrency: number,
+  fn: (item: T, index: number) => Promise<boolean>,
+): Promise<boolean> {
+  if (items.length === 0) return false;
+  let falha = false;
+  let next = 0;
+  const limit = Math.max(1, Math.min(concurrency, items.length));
+
+  async function worker() {
+    while (next < items.length) {
+      const i = next;
+      next += 1;
+      try {
+        const ok = await fn(items[i], i);
+        if (!ok) falha = true;
+      } catch {
+        falha = true;
+      }
+    }
+  }
+
+  await Promise.all(Array.from({ length: limit }, () => worker()));
+  return falha;
 }

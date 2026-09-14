@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../../../lib/supabase";
-import { fetchAllPages } from "../../../../lib/supabasePaginate";
+import { fetchAllPages, fetchInBatched } from "../../../../lib/supabasePaginate";
 import { getHomeKpiPeriodo } from "../../../../lib/homeInvestidorMtd";
 import { totaisSocialKpiFromRows, type KpiDailyRow } from "../../../../lib/socialKpiTotals";
 
@@ -71,18 +71,21 @@ export function useHomeInvestidorAquisicao() {
         const liveIds = lives.map((l) => l.id);
         let horas = 0;
         if (liveIds.length > 0) {
-          const CHUNK = 200;
-          for (let i = 0; i < liveIds.length; i += CHUNK) {
-            const slice = liveIds.slice(i, i + CHUNK);
-            const { data: resRows } = await supabase
-              .from("live_resultados")
-              .select("duracao_horas, duracao_min")
-              .in("live_id", slice);
-            for (const r of resRows ?? []) {
-              const row = r as { duracao_horas: number | null; duracao_min: number | null };
-              horas += (Number(row.duracao_horas) || 0) + (Number(row.duracao_min) || 0) / 60;
-            }
-            if (cancelled) return;
+          const resRows = await fetchInBatched<{ duracao_horas: number | null; duracao_min: number | null }>(
+            liveIds,
+            200,
+            async (slice) => {
+              const { data } = await supabase
+                .from("live_resultados")
+                .select("duracao_horas, duracao_min")
+                .in("live_id", slice);
+              return (data ?? []) as { duracao_horas: number | null; duracao_min: number | null }[];
+            },
+            3,
+          );
+          if (cancelled) return;
+          for (const row of resRows) {
+            horas += (Number(row.duracao_horas) || 0) + (Number(row.duracao_min) || 0) / 60;
           }
         }
 

@@ -26,6 +26,10 @@ export const MSG_NENHUM_USUARIO_ATIVO_AREA = "Nenhum usuário ativo nesta área.
 export const MSG_NENHUMA_OPERADORA_ENCONTRADA = "Nenhuma operadora encontrada.";
 export const MSG_USUARIO_INATIVO_SIMULACAO =
   "Este usuário não está mais ativo. Escolha outro usuário ativo.";
+export const MSG_ESCOPO_OPERADORA_INVALIDO =
+  "Este usuário não tem mais acesso à operadora selecionada. Escolha outro usuário ou operadora.";
+export const MSG_ESCOPO_AREA_INVALIDO =
+  "Este usuário não tem mais acesso à área selecionada. Escolha outro usuário ou área.";
 
 /** Linhas da página Simulador filtradas pelos perfis permitidos ao usuário logado. */
 export function filtrarLinhasSimuladorPorRoles(
@@ -387,6 +391,42 @@ export async function carregarUsuarioAtivoSimulavel(
   const row = data as ProfileSimulacaoRow | null;
   if (!row || row.ativo === false) return null;
   return mapUsuarioSimulavel(row);
+}
+
+/** Confirma que o usuário ainda possui o escopo escolhido no modal (operadora / área). */
+export async function validarEscopoUsuarioSimulacao(
+  userId: string,
+  input: Pick<IniciarSimulacaoInput, "operadoraSlug" | "prestadorTipoSlug">,
+): Promise<string | null> {
+  if (input.operadoraSlug) {
+    const { data, error } = await supabase
+      .from("user_scopes")
+      .select("user_id")
+      .eq("user_id", userId)
+      .eq("scope_type", "operadora")
+      .eq("scope_ref", input.operadoraSlug)
+      .maybeSingle();
+    if (error) {
+      console.error("Erro ao validar escopo operadora da simulação:", error);
+      return "Não foi possível validar o escopo do usuário. Se o problema persistir, entre em contato com o suporte.";
+    }
+    if (!data) return MSG_ESCOPO_OPERADORA_INVALIDO;
+  }
+  if (input.prestadorTipoSlug) {
+    const { data, error } = await supabase
+      .from("user_scopes")
+      .select("user_id")
+      .eq("user_id", userId)
+      .eq("scope_type", "prestador_tipo")
+      .eq("scope_ref", input.prestadorTipoSlug)
+      .maybeSingle();
+    if (error) {
+      console.error("Erro ao validar escopo área da simulação:", error);
+      return "Não foi possível validar o escopo do usuário. Se o problema persistir, entre em contato com o suporte.";
+    }
+    if (!data) return MSG_ESCOPO_AREA_INVALIDO;
+  }
+  return null;
 }
 
 export async function carregarOperadorasParaSimulacao(): Promise<{

@@ -4,6 +4,7 @@ import {
   idleSessionMsUntilExpiry,
   IDLE_SESSION_ACTIVITY_THROTTLE_MS,
   IDLE_SESSION_LAST_ACTIVITY_KEY,
+  markIdleSessionLogout,
   readIdleSessionLastActivityOrNull,
   writeIdleSessionLastActivity,
 } from "../lib/idleSessionConstants";
@@ -35,6 +36,7 @@ export function useIdleSessionTimeout(enabled: boolean, onTimeout: () => void | 
       if (firingRef.current) return;
       firingRef.current = true;
       clearScheduled();
+      markIdleSessionLogout();
       void Promise.resolve(onTimeoutRef.current()).finally(() => {
         firingRef.current = false;
       });

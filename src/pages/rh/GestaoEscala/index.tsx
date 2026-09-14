@@ -13,6 +13,7 @@ import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { useIdentidadeEfetiva } from "../../../hooks/useIdentidadeEfetiva";
 import { supabase } from "../../../lib/supabase";
+import { hojeIsoBrasil } from "../../../lib/dateBrasil";
 import { FONT } from "../../../constants/theme";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { getFiltroBarPillStateStyle } from "../../../lib/filterBarStyles";
@@ -430,12 +431,8 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
   const podeAlterarEscalaAprovada = perm.canEditarOk;
   const mostrarFiltroArea = perm.canView === "sim" || perm.canView === "proprios";
 
-  const hojeIso = useMemo(() => {
-    const y = hoje.getFullYear();
-    const m = String(hoje.getMonth() + 1).padStart(2, "0");
-    const d = String(hoje.getDate()).padStart(2, "0");
-    return `${y}-${m}-${d}`;
-  }, [hoje]);
+  /** Dia civil America/Sao_Paulo — paridade com RPC `rh_gestao_escala_grade_alterar_celula`. */
+  const hojeIso = useMemo(() => hojeIsoBrasil(), []);
 
   const mesHydratingRef = useRef(false);
   /** Áreas já hidratadas da BD no mês corrente (`refMes|areaKey`). */
@@ -737,7 +734,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
               : code === "escala_aprovada"
                 ? "Esta escala já está aprovada. Use «Nova Escala» para refazer (os compromissos saem do calendário até nova aprovação)."
                 : code === "prestador_fora_area"
-                  ? `Um ou mais colaboradores não pertencem ao time ${labelAreaEscala(areaKey, abasTimes)}.`
+                  ? `Um ou mais prestadores não pertencem ao time ${labelAreaEscala(areaKey, abasTimes)}.`
                   : code
                     ? `Não foi possível salvar: ${code}.`
                     : "Não foi possível salvar a grade.",
@@ -1448,7 +1445,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
       ? filtroEstudioEscalaEfetivo !== FILTRO_STAFF_ESTUDIO_TODOS ||
         (staffNaAreaSemFiltroEstudio > 0 &&
           filtrarPorArea(prestadoresFiltradosEstudio, filtroArea).length === 0)
-        ? "Nenhum colaborador com o estúdio selecionado."
+        ? "Nenhum prestador com o estúdio selecionado."
         : msgTabelaVazia
       : null;
 
@@ -1893,8 +1890,8 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
         title={getPageMenuLabel(pageKey)}
         subtitle={
           modo === "escritorio"
-            ? "Gere a escala mensal dos times de escritório por colaborador e dia."
-            : "Gere a escala por área (time), colaborador e dia do mês."
+            ? "Gere a escala mensal dos times de escritório por prestador e dia."
+            : "Gere a escala por área (time), prestador e dia do mês."
         }
       />
 
@@ -2151,7 +2148,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
         </div>
       )}
 
-      <div role="region" aria-label="Gestão de escala por colaborador e dia">
+      <div role="region" aria-label="Gestão de escala por prestador e dia">
         {loadingPrestadores || loadingGrade ? (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 200, gap: 10 }}>
             <Loader2 size={22} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden />
@@ -2496,7 +2493,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                           type="button"
                           disabled={toolbarGradeBloqueada}
                           onClick={() => void aplicarSugestaoEscalaArea(filtroArea)}
-                          aria-label="Gerar sugestão de escala para a área selecionada"
+                          aria-label="Gerar suEscala Estúdio para a área selecionada"
                           style={{
                             padding: "10px 16px",
                             borderRadius: 10,
@@ -2621,12 +2618,12 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
               <caption style={{ display: "none" }}>
                 Escala Diária - Definição de status diário por Prestador.{" "}
                 {semColunasNickTurno
-                  ? "Grade mensal por colaborador e dia do mês (sem nickname e turno)."
+                  ? "Grade mensal por prestador e dia do mês (sem nickname e turno)."
                   : semColunaNickname
-                    ? "Grade mensal por colaborador e dia do mês (sem nickname)."
+                    ? "Grade mensal por prestador e dia do mês (sem nickname)."
                   : semColunaNome
                     ? "Grade por nickname, turno e dia do mês (coluna Nome oculta nesta área)."
-                  : "Grade mensal por colaborador e dia do mês."}
+                  : "Grade mensal por prestador e dia do mês."}
               </caption>
               <thead>
                 <tr>
@@ -2767,15 +2764,15 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                     >
                       {linhasAposNickname.length === 0 && filtroNicknameEscala.trim()
                         ? semColunaNickname
-                          ? "Nenhum colaborador corresponde à pesquisa por nome."
-                          : "Nenhum colaborador corresponde à pesquisa por nome ou nickname."
+                          ? "Nenhum prestador corresponde à pesquisa por nome."
+                          : "Nenhum prestador corresponde à pesquisa por nome ou nickname."
                         : filtroTurnoConsolidado != null && linhasAposNickname.length > 0
-                          ? "Nenhum colaborador com o turno selecionado."
+                          ? "Nenhum prestador com o turno selecionado."
                           : Object.keys(filtroColunaDiaEscala).length > 0
-                            ? "Nenhum colaborador corresponde aos filtros das colunas de dia."
+                            ? "Nenhum prestador corresponde aos filtros das colunas de dia."
                           : filtroEstudioEscalaEfetivo !== FILTRO_STAFF_ESTUDIO_TODOS
-                            ? "Nenhum colaborador com o estúdio selecionado."
-                          : "Nenhum colaborador corresponde aos filtros aplicados."}
+                            ? "Nenhum prestador com o estúdio selecionado."
+                          : "Nenhum prestador corresponde aos filtros aplicados."}
                     </td>
                   </tr>
                 ) : (

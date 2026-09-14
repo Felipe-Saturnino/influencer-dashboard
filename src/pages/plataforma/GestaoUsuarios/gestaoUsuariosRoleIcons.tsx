@@ -23,6 +23,8 @@ import {
   Flag,
   Cpu,
   Wrench,
+  Warehouse,
+  Monitor,
 } from "lucide-react";
 import type { Role } from "../../../types";
 import { FILTRO_BAR_TAB_ICON_PROPS } from "../../../components/dashboard";
@@ -37,9 +39,13 @@ export const ROLE_PERM_TAB_ICONS: Partial<Record<Role, ReactNode>> = {
   gestor_tech_ops: <Cpu {...FILTRO_BAR_TAB_ICON_PROPS} />,
   gestor_academy: <GraduationCap {...FILTRO_BAR_TAB_ICON_PROPS} />,
   gestor_rh: <Users {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  gestor_facilities: <Warehouse {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  gestor_ti: <Monitor {...FILTRO_BAR_TAB_ICON_PROPS} />,
   rh: <Users {...FILTRO_BAR_TAB_ICON_PROPS} />,
   figurino: <Shirt {...FILTRO_BAR_TAB_ICON_PROPS} />,
   comunicacao: <Megaphone {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  facilities: <Warehouse {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  ti: <Monitor {...FILTRO_BAR_TAB_ICON_PROPS} />,
   performance_coach: <Target {...FILTRO_BAR_TAB_ICON_PROPS} />,
   service_manager: <Headphones {...FILTRO_BAR_TAB_ICON_PROPS} />,
   customer_service: <MessageCircle {...FILTRO_BAR_TAB_ICON_PROPS} />,

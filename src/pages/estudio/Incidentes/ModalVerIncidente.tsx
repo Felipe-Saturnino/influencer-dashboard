@@ -23,6 +23,7 @@ import {
   incidenteCategoriaLabel,
   labelLocalMesaIncidente,
   labelPrestadorIncidente,
+  labelTipoJogoIncidente,
   timeAlvoLabel,
 } from "../../../lib/estudioIncidentesHelpers";
 
@@ -204,11 +205,12 @@ export function ModalVerIncidente({
             <Campo label="Hora da Rodada" value={formatHoraRodada(incidente.hora_rodada)} />
           </div>
           <Campo label="ID da Rodada" value={incidente.id_rodada} fullWidth />
-          {ocultarPrestadorTimeRelator ? (
-            <Campo label="Mesa" value={incidente.mesa_label} fullWidth />
-          ) : (
-            <div style={row3}>
-              <Campo label="Mesa" value={incidente.mesa_label} />
+          <div style={row2}>
+            <Campo label="Mesa" value={incidente.mesa_label} />
+            <Campo label="Jogo" value={labelTipoJogoIncidente(incidente.jogo)} />
+          </div>
+          {ocultarPrestadorTimeRelator ? null : (
+            <div style={row2}>
               <Campo label="Prestador" value={prestadorLabel} />
               <Campo label="Time" value={timeAlvoLabel(incidente.time_alvo)} />
             </div>

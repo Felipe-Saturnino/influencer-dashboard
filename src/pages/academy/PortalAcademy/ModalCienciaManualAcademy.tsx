@@ -15,7 +15,7 @@ type CienciaRow = {
 const ERRO_CIENCIA =
   "Não foi possível carregar quem registrou ciência. Se o problema persistir, entre em contato com o suporte.";
 
-/** Lista quem registrou ciência no manual — só Editar = Sim (espelho Ver Lidos do Portal RH). */
+/** Lista quem registrou ciência no manual — só Editar = Sim (espelho Ver Lidos do Portal de RH). */
 export function ModalCienciaManualAcademy({
   open,
   titulo,

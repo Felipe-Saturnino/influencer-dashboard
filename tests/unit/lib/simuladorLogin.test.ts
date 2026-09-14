@@ -27,7 +27,7 @@ describe("simuladorLogin", () => {
 
   it("montarLabelSimulacao inclui usuário e recorte de operadora/área", () => {
     expect(montarLabelSimulacao({ role: "influencer", userId: "u-1" }, { userName: "Maria Silva" })).toBe(
-      "Influenciador — Maria Silva",
+      "Influencer — Maria Silva",
     );
     expect(
       montarLabelSimulacao(

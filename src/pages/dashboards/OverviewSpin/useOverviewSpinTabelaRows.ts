@@ -2,6 +2,8 @@ import { useMemo } from "react";
 import {
   getOntemIsoLocal,
   getPeriodoComparativoMoMDmenos1,
+  getPeriodoHistoricoCompetencias,
+  HISTORICO_COMPETENCIAS_MESES,
   preencherDetalhamentoDiarioZerado,
 } from "../../../lib/dashboardHelpers";
 import {
@@ -34,6 +36,18 @@ function dailyRowVazio(dia: string): DailyRow {
     bet_size: null,
     arpu: null,
   };
+}
+
+/** 13 competências YYYY-MM da janela Histórico (mais antiga → mais recente). */
+function listarYmHistoricoCompetencias(ref: Date = new Date()): string[] {
+  const { inicio } = getPeriodoHistoricoCompetencias(ref);
+  const [y0, m0] = inicio.slice(0, 7).split("-").map(Number);
+  const out: string[] = [];
+  for (let i = 0; i < HISTORICO_COMPETENCIAS_MESES; i++) {
+    const d = new Date(y0!, m0! - 1 + i, 1);
+    out.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
+  }
+  return out;
 }
 
 type Params = {
@@ -106,17 +120,17 @@ export function useOverviewSpinTabelaRows({
         dailyByYm.get(ym)!.push(r);
       }
       const monthlyByYm = new Map(monthlyData.map((m) => [m.mes.slice(0, 7), m] as const));
-      const allYm = new Set<string>([...dailyByYm.keys(), ...monthlyByYm.keys()]);
+      const allYm = listarYmHistoricoCompetencias();
       return [...allYm]
-        .sort((a, b) => b.localeCompare(a))
+        .reverse()
         .map((ym) => {
           const dias = dailyByYm.get(ym) ?? [];
           const agg = dias.length > 0 ? aggDailyMesKpi(dias) : null;
           const m = monthlyByYm.get(ym);
           if (modoAgregadoTodasOperadoras) {
-            const turnover = agg?.turnover ?? null;
-            const ggr = agg?.ggr ?? null;
-            const bets = agg?.bets ?? null;
+            const turnover = agg?.turnover ?? 0;
+            const ggr = agg?.ggr ?? 0;
+            const bets = agg?.bets ?? 0;
             const margin_pct =
               turnover != null && turnover !== 0 && ggr != null ? (ggr / turnover) * 100 : null;
             const bet_size =
@@ -139,9 +153,9 @@ export function useOverviewSpinTabelaRows({
           return enrich(
             {
               label: fmtMesAnoCurtoFromYm(ym),
-              turnover: agg?.turnover ?? null,
-              ggr: agg?.ggr ?? null,
-              bets: agg?.bets ?? null,
+              turnover: agg?.turnover ?? 0,
+              ggr: agg?.ggr ?? 0,
+              bets: agg?.bets ?? 0,
               uap: m?.uap != null ? Number(m.uap) : agg?.uap ?? null,
             },
             `${ym}-01`,
@@ -151,14 +165,21 @@ export function useOverviewSpinTabelaRows({
     const periodo = mesSelecionado
       ? getPeriodoComparativoMoMDmenos1(mesSelecionado.ano, mesSelecionado.mes).atual
       : null;
+    const ontemIso = getOntemIsoLocal();
+    const diasComDadoReal = new Set(dailyData.map((r) => r.data.slice(0, 10)));
     const dailyCompleto = periodo
       ? preencherDetalhamentoDiarioZerado({
           rows: dailyData,
           getDia: (r) => r.data,
           inicio: periodo.inicio,
           fim: periodo.fim,
-          fimMax: getOntemIsoLocal(),
+          fimMax: ontemIso,
           criarVazio: dailyRowVazio,
+        }).filter((r) => {
+          const d = r.data.slice(0, 10);
+          // B5: não inventar D-1 com R$ 0,00 se o daily ainda não tem linha real desse dia.
+          if (d === ontemIso && !diasComDadoReal.has(d)) return false;
+          return true;
         })
       : [...dailyData].sort((a, b) => b.data.localeCompare(a.data));
 

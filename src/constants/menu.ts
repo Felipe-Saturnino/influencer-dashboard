@@ -145,7 +145,7 @@ export const MENU: MenuSection[] = [
     section: "Escala",
     items: [
       { key: "rh_staff", label: "Gestão de Staff", icon: UsersRound },
-      { key: "escala_solicitacoes", label: "Solicitações", icon: ClipboardList },
+      { key: "escala_solicitacoes", label: "Solicitações de Cliente", icon: ClipboardList },
       { key: "rh_gestao_escala", label: "Escala Estúdio", icon: Calendar },
       { key: "rh_calendario", label: "Calendário", icon: CalendarRange },
       { key: "escala_marketplace_turnos", label: "Marketplace", icon: ShoppingCart },
@@ -159,7 +159,7 @@ export const MENU: MenuSection[] = [
       { key: "rh_organograma", label: "Organograma", icon: Network },
       { key: "escala_escritorio", label: "Escala Escritório", icon: Building2 },
       { key: "rh_vagas", label: "Vagas", icon: Briefcase },
-      { key: "rh_solicitacoes", label: "Solicitações", icon: ClipboardList },
+      { key: "rh_solicitacoes", label: "Solicitações de RH", icon: ClipboardList },
       { key: "rh_central_denuncias", label: "Central de Denúncias", icon: Scale },
     ],
   },

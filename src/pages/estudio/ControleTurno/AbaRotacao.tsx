@@ -9,10 +9,11 @@ import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { SectionTitle } from "../../../components/dashboard";
 import { getPageContentBoxRadius, getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
 import { getDataTableStyle, getDataTableWrapStyle } from "../../../lib/dataTableStyles";
+import { TabelaComPaginacao } from "../../../components/TabelaPaginacaoBar";
 import { labelHorarioTurnoStaffPorValor } from "../../../lib/rhStaffHorarioTurno";
 import {
   alocarEstudioRotacao,
-  anexarCheckinRotacao,
+  anexarChegadaRotacaoDePresencaCt,
   aplicarLimitesDisponibilidadeNaMatrixRotacao,
   carregarContextoRotacaoDia,
   carregarHorarioTurnoRotacaoShuffler,
@@ -234,7 +235,7 @@ export function AbaRotacao({ diaIso, turno }: Props) {
       });
 
       const todos = [...gpsFiltrados, ...res.data.liderancas];
-      const comCheckin = await anexarCheckinRotacao(diaIso, todos);
+      const comCheckin = anexarChegadaRotacaoDePresencaCt(todos, presencaAtual, presencaAnt);
       if (gen !== loadGen.current) return;
       const byId = new Map(comCheckin.map((p) => [p.funcionarioId, p]));
       const limById = new Map(
@@ -324,8 +325,11 @@ export function AbaRotacao({ diaIso, turno }: Props) {
         presencaAnterior: presencaAnt,
       });
 
-      const comCheckin = await anexarCheckinRotacao(diaIso, gpsFiltrados);
-      if (gen !== loadGen.current) return;
+      const comCheckin = anexarChegadaRotacaoDePresencaCt(
+        gpsFiltrados,
+        presencaAtual,
+        presencaAnt,
+      );
       const byId = new Map(comCheckin.map((p) => [p.funcionarioId, p]));
       const limById = new Map(
         gpsFiltrados
@@ -478,7 +482,7 @@ export function AbaRotacao({ diaIso, turno }: Props) {
         opts.setErro(
           isBlocoRotacaoShuffler(ctx.estudioSlug)
             ? "Não foi possível montar a posição TODOS para Shuffler."
-            : "Este estúdio não tem mesas com Número da Mesa cadastrado em Gestão de Mesas.",
+            : "Este estúdio não tem mesas com Número da Mesa cadastrado em Gestão de Estúdios.",
         );
         return null;
       }
@@ -1088,6 +1092,10 @@ function BlocoRotacaoEstudio({
     bloco.fase === "publicada" ? (bloco.publicada?.matrix ?? []) : (bloco.previa?.matrix ?? []);
   const gradeFaltosos =
     bloco.fase === "publicada" ? (bloco.publicada?.faltosos ?? []) : (bloco.previa?.faltosos ?? []);
+  const gradeLinhas = [
+    ...gradeGps.map((g, matrixIdx) => ({ kind: "gp" as const, g, matrixIdx })),
+    ...gradeFaltosos.map((g) => ({ kind: "faltoso" as const, g, matrixIdx: -1 })),
+  ];
 
   const subGrade =
     bloco.fase === "publicada" && bloco.publicada
@@ -1361,6 +1369,12 @@ function BlocoRotacaoEstudio({
                 ) : null}
               </div>
 
+              <TabelaComPaginacao
+                items={gradeLinhas}
+                t={t}
+                resetKey={`${bloco.fase}|${[...gradeLinhas.map((x) => x.g.funcionarioId)].sort().join(",")}`}
+              >
+                {(linhas, zebraIdx) => (
               <div className="app-table-wrap app-table-wrap--sticky-col" style={getDataTableWrapStyle()}>
                 <table style={getDataTableStyle({ minWidth: 720 })}>
                   <caption style={{ display: "none" }}>
@@ -1379,18 +1393,42 @@ function BlocoRotacaoEstudio({
                     </tr>
                   </thead>
                   <tbody>
-                    {gradeGps.map((g, i) => {
+                    {linhas.map((item, i) => {
+                      const z = zebraIdx(i);
+                      const g = item.g;
+                      if (item.kind === "faltoso") {
+                        return (
+                          <tr key={`f-${g.funcionarioId}`} style={{ background: dataTable.zebraRow(z) }}>
+                            <td style={{ ...dataTable.tdSticky(), textAlign: "center" }}>
+                              <div style={{ textAlign: "center" }}>
+                                <div style={{ fontWeight: 700, fontSize: 13, fontFamily: FONT.body }}>
+                                  {g.nomeExibicao}
+                                </div>
+                                <div style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body }}>
+                                  {g.nickname}
+                                </div>
+                              </div>
+                            </td>
+                            {gradeSlots.map((s) => (
+                              <td key={s} style={dataTable.tdCenter}>
+                                <CelulaPill valor="X" t={t} />
+                              </td>
+                            ))}
+                          </tr>
+                        );
+                      }
+                      const matrixIdx = item.matrixIdx;
                       const podeDrag = bloco.fase === "previa" && podeLideranca;
                       const isDropTarget =
-                        dropLinhaIdx === i && dragLinhaIdx !== null && dragLinhaIdx !== i;
-                      const isDragging = dragLinhaIdx === i;
+                        dropLinhaIdx === matrixIdx && dragLinhaIdx !== null && dragLinhaIdx !== matrixIdx;
+                      const isDragging = dragLinhaIdx === matrixIdx;
                       return (
                         <tr
                           key={g.funcionarioId}
                           style={{
                             background: isDropTarget
                               ? "color-mix(in srgb, var(--brand-primary, #7c3aed) 12%, transparent)"
-                              : dataTable.zebraRow(i),
+                              : dataTable.zebraRow(z),
                             opacity: isDragging ? 0.55 : 1,
                           }}
                         >
@@ -1407,9 +1445,9 @@ function BlocoRotacaoEstudio({
                             draggable={podeDrag}
                             onDragStart={(e) => {
                               if (!podeDrag) return;
-                              setDragLinhaIdx(i);
+                              setDragLinhaIdx(matrixIdx);
                               e.dataTransfer.effectAllowed = "move";
-                              e.dataTransfer.setData("text/plain", String(i));
+                              e.dataTransfer.setData("text/plain", String(matrixIdx));
                             }}
                             onDragEnd={() => {
                               setDragLinhaIdx(null);
@@ -1419,10 +1457,10 @@ function BlocoRotacaoEstudio({
                               if (!podeDrag || dragLinhaIdx === null) return;
                               e.preventDefault();
                               e.dataTransfer.dropEffect = "move";
-                              if (dropLinhaIdx !== i) setDropLinhaIdx(i);
+                              if (dropLinhaIdx !== matrixIdx) setDropLinhaIdx(matrixIdx);
                             }}
                             onDragLeave={() => {
-                              if (dropLinhaIdx === i) setDropLinhaIdx(null);
+                              if (dropLinhaIdx === matrixIdx) setDropLinhaIdx(null);
                             }}
                             onDrop={(e) => {
                               e.preventDefault();
@@ -1431,7 +1469,7 @@ function BlocoRotacaoEstudio({
                               setDragLinhaIdx(null);
                               setDropLinhaIdx(null);
                               if (!Number.isFinite(from)) return;
-                              onTrocarLinhas(from, i);
+                              onTrocarLinhas(from, matrixIdx);
                             }}
                             title={
                               podeDrag
@@ -1484,7 +1522,7 @@ function BlocoRotacaoEstudio({
                               </div>
                             </div>
                           </td>
-                          {(gradeMatrix[i] ?? []).map((valor, ci) => (
+                          {(gradeMatrix[matrixIdx] ?? []).map((valor, ci) => (
                             <td key={ci} style={dataTable.tdCenter}>
                               <CelulaPill
                                 valor={valor}
@@ -1496,31 +1534,11 @@ function BlocoRotacaoEstudio({
                         </tr>
                       );
                     })}
-                    {gradeFaltosos.map((g, i) => {
-                      const rowIndex = gradeGps.length + i;
-                      return (
-                        <tr key={`f-${g.funcionarioId}`} style={{ background: dataTable.zebraRow(rowIndex) }}>
-                          <td style={{ ...dataTable.tdSticky(), textAlign: "center" }}>
-                            <div style={{ textAlign: "center" }}>
-                              <div style={{ fontWeight: 700, fontSize: 13, fontFamily: FONT.body }}>
-                                {g.nomeExibicao}
-                              </div>
-                              <div style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body }}>
-                                {g.nickname}
-                              </div>
-                            </div>
-                          </td>
-                          {gradeSlots.map((s) => (
-                            <td key={s} style={dataTable.tdCenter}>
-                              <CelulaPill valor="X" t={t} />
-                            </td>
-                          ))}
-                        </tr>
-                      );
-                    })}
                   </tbody>
                 </table>
               </div>
+                )}
+              </TabelaComPaginacao>
             </div>
           ) : null}
         </>

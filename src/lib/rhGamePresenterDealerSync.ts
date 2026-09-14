@@ -63,7 +63,7 @@ export function staffTurnoTextoParaDealerTurno(raw: string | null | undefined): 
 
 type DealerJogoCadastro = Exclude<DealerJogo, "mesa_vip">;
 
-/** Skills em `ativo` viram jogos no dealer; skill `vip` ativa define `vip: true`. */
+/** Skills em `ativo` viram jogos no Game Presenter; skill `vip` ativa define `vip: true`. */
 export function staffSkillsParaJogosEVip(skills: Record<string, unknown> | null | undefined): {
   jogos: DealerJogoCadastro[];
   vip: boolean;

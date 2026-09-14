@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useApp } from "../../../context/AppContext";
 import { supabase } from "../../../lib/supabase";
 import type { PermissaoValor } from "../../../types";
@@ -18,22 +19,30 @@ export function useOverviewSpinFiltrosAcesso(opts: {
   const role = effectiveRole ?? user?.role;
   const isAdmin = role === "admin";
 
-  const [operadorasAtivas, setOperadorasAtivas] = useState<{ slug: string; nome: string }[]>([]);
+  const operadorasQuery = useQuery({
+    queryKey: ["overview-spin", "operadoras-ativas"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("operadoras")
+        .select("slug, nome")
+        .eq("ativo", true)
+        .order("nome");
+      if (error) throw error;
+      return (data ?? []) as { slug: string; nome: string }[];
+    },
+    staleTime: 10 * 60 * 1000,
+  });
 
-  useEffect(() => {
-    let alive = true;
-    void supabase
-      .from("operadoras")
-      .select("slug, nome")
-      .eq("ativo", true)
-      .order("nome")
-      .then(({ data }) => {
-        if (alive) setOperadorasAtivas(data ?? []);
-      });
-    return () => {
-      alive = false;
-    };
-  }, []);
+  const operadorasAtivas = useMemo(
+    () => operadorasQuery.data ?? [],
+    [operadorasQuery.data],
+  );
+  const erroOperadoras = operadorasQuery.isError
+    ? "Não foi possível carregar as operadoras. Se o problema persistir, entre em contato com o suporte."
+    : null;
+  const recarregarOperadoras = () => {
+    void operadorasQuery.refetch();
+  };
 
   const showFiltroOperadora = useMemo(() => {
     if (isAdmin) return true;
@@ -79,5 +88,7 @@ export function useOverviewSpinFiltrosAcesso(opts: {
     podeVerOperadora,
     escoposVisiveis,
     slugsPermitidosPelaAba,
+    erroOperadoras,
+    recarregarOperadoras,
   };
 }

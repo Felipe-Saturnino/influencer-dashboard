@@ -31,6 +31,34 @@ export async function accessGrantedByPayload(
   }
 }
 
+export async function registrarHistoricoPerfil(
+  supabase: SupabaseClient,
+  params: {
+    profileId: string
+    tipo: string
+    origem: string
+    realizadoPor?: string | null
+    resumo?: string | null
+    valorAnterior?: string | null
+    valorNovo?: string | null
+    preservarAccessGrantedAt?: boolean
+  },
+): Promise<void> {
+  const { error } = await supabase.rpc('profiles_historico_registrar', {
+    p_profile_id: params.profileId,
+    p_tipo: params.tipo,
+    p_origem: params.origem,
+    p_realizado_por: params.realizadoPor ?? null,
+    p_resumo: params.resumo ?? null,
+    p_valor_anterior: params.valorAnterior ?? null,
+    p_valor_novo: params.valorNovo ?? null,
+    p_preservar_access_granted_at: params.preservarAccessGrantedAt ?? true,
+  })
+  if (error) {
+    console.error('[profiles_historico_registrar]', error.message)
+  }
+}
+
 export function hojeISO(): string {
   return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' })
 }

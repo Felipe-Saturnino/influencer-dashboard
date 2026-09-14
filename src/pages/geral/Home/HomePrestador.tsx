@@ -1,4 +1,5 @@
 import { useApp } from "../../../context/AppContext";
+import { useIdentidadeEfetiva } from "../../../hooks/useIdentidadeEfetiva";
 import { FONT } from "../../../constants/theme";
 import { PAGE_CONTENT_BOX_GAP } from "../../../lib/pageContentBoxStyles";
 import { BoasVindasPrestador } from "./prestador/BoasVindasPrestador";
@@ -8,13 +9,12 @@ import { AtalhosPrestador } from "./prestador/AtalhosPrestador";
 import { BlogueiroSpinStaffHome } from "./shared/BlogueiroSpinStaffHome";
 
 export default function HomePrestador() {
-  const { theme: t, user, dadosUsuarioEfetivo, simulacaoLogin } = useApp();
+  const { theme: t, user } = useApp();
+  const { name: nomeEfetivo } = useIdentidadeEfetiva();
 
   if (!user) return null;
 
-  const nome = simulacaoLogin
-    ? user.name?.trim() || "Prestador"
-    : dadosUsuarioEfetivo?.name?.trim() || user.name?.trim() || "Prestador";
+  const nome = nomeEfetivo?.trim() || "Prestador";
 
   return (
     <div

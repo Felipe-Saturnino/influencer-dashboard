@@ -108,88 +108,102 @@ export function useHomeCentralAcademyFeed() {
 
         if (cancelled) return;
 
-        if (comRes.error || dicaRes.error || manualRes.error) {
-          console.error(
-            "[Home Central Academy]:",
-            comRes.error?.message ?? dicaRes.error?.message ?? manualRes.error?.message,
+        const drafts: DraftItem[] = [];
+        let algumErroFonte = false;
+
+        if (comRes.error) {
+          console.error("[Home Central Academy] comunicados:", comRes.error.message);
+          algumErroFonte = true;
+        } else {
+          for (const row of (comRes.data ?? []) as PostagemRow[]) {
+            if (!isPublicado(row.status)) continue;
+            drafts.push({
+              kind: "comunicado",
+              id: `academy-com-${row.id}`,
+              titulo: row.titulo?.trim() || "Comunicado",
+              published_at: row.published_at,
+              cienciaPendente: false,
+              autorId: autorIdPostagem(row),
+            });
+          }
+        }
+
+        if (dicaRes.error) {
+          console.error("[Home Central Academy] dicas:", dicaRes.error.message);
+          algumErroFonte = true;
+        } else {
+          for (const row of (dicaRes.data ?? []) as PostagemRow[]) {
+            if (!isPublicado(row.status)) continue;
+            drafts.push({
+              kind: "dica",
+              id: `academy-dica-${row.id}`,
+              titulo: row.titulo?.trim() || "Dica",
+              published_at: row.published_at,
+              cienciaPendente: false,
+              autorId: autorIdPostagem(row),
+            });
+          }
+        }
+
+        if (manualRes.error) {
+          console.error("[Home Central Academy] manuais:", manualRes.error.message);
+          algumErroFonte = true;
+        } else {
+          const manuais = (manualRes.data ?? []) as ManualRow[];
+          const manualIds = manuais.map((m) => m.id).filter(Boolean);
+          const precisaSetores = manuais.some(
+            (m) => m.requires_acknowledgment === true && (m.aplicavel_a?.length ?? 0) > 0,
           );
+
+          const [recRes, funcionario, org] = await Promise.all([
+            manualIds.length > 0
+              ? supabase
+                  .from("academy_portal_read_receipt")
+                  .select("content_id, read_at, acknowledged_at")
+                  .eq("user_id", userIdEfetivo)
+                  .in("content_id", manualIds)
+              : Promise.resolve({ data: [] as AcademyPortalReadReceiptRow[], error: null }),
+            precisaSetores && emailEfetivo?.trim()
+              ? buscarRhFuncionarioAtivoPorEmailLoginCached(emailEfetivo)
+              : Promise.resolve(null),
+            precisaSetores
+              ? carregarOpcoesTimesOrganograma()
+              : Promise.resolve({ grupos: [], opcoes: [], error: null }),
+          ]);
+
+          if (cancelled) return;
+
+          const setores = precisaSetores
+            ? setoresAplicavelDoUsuario(funcionario, flattenVinculosDeGrupos(org.grupos))
+            : [];
+
+          const receipts = new Map<string, AcademyPortalReadReceiptRow>();
+          for (const r of recRes.data ?? []) {
+            const row = r as AcademyPortalReadReceiptRow;
+            receipts.set(academyManualReceiptKey(row.content_id), row);
+          }
+
+          for (const row of manuais) {
+            if (!isPublicado(row.status)) continue;
+            const exige = manualExigeCienciaDoUsuario(row, setores);
+            const jaCiente = !!receipts.get(academyManualReceiptKey(row.id))?.acknowledged_at;
+            const cienciaPendente = exige && !jaCiente;
+            if (!cienciaPendente && !dentroJanela(row.published_at, desdeIso)) continue;
+            drafts.push({
+              kind: "manual",
+              id: `academy-manual-${row.id}`,
+              titulo: row.titulo?.trim() || "Manual",
+              published_at: row.published_at,
+              cienciaPendente,
+              autorId: autorIdPostagem(row),
+            });
+          }
+        }
+
+        if (drafts.length === 0 && algumErroFonte) {
           setErro(true);
           setLista([]);
           return;
-        }
-
-        const manuais = (manualRes.data ?? []) as ManualRow[];
-        const manualIds = manuais.map((m) => m.id).filter(Boolean);
-        const precisaSetores = manuais.some(
-          (m) => m.requires_acknowledgment === true && (m.aplicavel_a?.length ?? 0) > 0,
-        );
-
-        const [recRes, funcionario, org] = await Promise.all([
-          manualIds.length > 0
-            ? supabase
-                .from("academy_portal_read_receipt")
-                .select("content_id, read_at, acknowledged_at")
-                .eq("user_id", userIdEfetivo)
-                .in("content_id", manualIds)
-            : Promise.resolve({ data: [] as AcademyPortalReadReceiptRow[], error: null }),
-          precisaSetores && emailEfetivo?.trim()
-            ? buscarRhFuncionarioAtivoPorEmailLoginCached(emailEfetivo)
-            : Promise.resolve(null),
-          precisaSetores ? carregarOpcoesTimesOrganograma() : Promise.resolve({ grupos: [], opcoes: [], error: null }),
-        ]);
-
-        if (cancelled) return;
-
-        const setores = precisaSetores
-          ? setoresAplicavelDoUsuario(funcionario, flattenVinculosDeGrupos(org.grupos))
-          : [];
-
-        const receipts = new Map<string, AcademyPortalReadReceiptRow>();
-        for (const r of recRes.data ?? []) {
-          const row = r as AcademyPortalReadReceiptRow;
-          receipts.set(academyManualReceiptKey(row.content_id), row);
-        }
-
-        const drafts: DraftItem[] = [];
-
-        for (const row of (comRes.data ?? []) as PostagemRow[]) {
-          if (!isPublicado(row.status)) continue;
-          drafts.push({
-            kind: "comunicado",
-            id: `academy-com-${row.id}`,
-            titulo: row.titulo?.trim() || "Comunicado",
-            published_at: row.published_at,
-            cienciaPendente: false,
-            autorId: autorIdPostagem(row),
-          });
-        }
-
-        for (const row of (dicaRes.data ?? []) as PostagemRow[]) {
-          if (!isPublicado(row.status)) continue;
-          drafts.push({
-            kind: "dica",
-            id: `academy-dica-${row.id}`,
-            titulo: row.titulo?.trim() || "Dica",
-            published_at: row.published_at,
-            cienciaPendente: false,
-            autorId: autorIdPostagem(row),
-          });
-        }
-
-        for (const row of manuais) {
-          if (!isPublicado(row.status)) continue;
-          const exige = manualExigeCienciaDoUsuario(row, setores);
-          const jaCiente = !!receipts.get(academyManualReceiptKey(row.id))?.acknowledged_at;
-          const cienciaPendente = exige && !jaCiente;
-          if (!cienciaPendente && !dentroJanela(row.published_at, desdeIso)) continue;
-          drafts.push({
-            kind: "manual",
-            id: `academy-manual-${row.id}`,
-            titulo: row.titulo?.trim() || "Manual",
-            published_at: row.published_at,
-            cienciaPendente,
-            autorId: autorIdPostagem(row),
-          });
         }
 
         const autorIds = [...new Set(drafts.map((d) => d.autorId).filter(Boolean) as string[])];
@@ -207,6 +221,7 @@ export function useHomeCentralAcademyFeed() {
           });
 
         setLista(listaFinal);
+        setErro(false);
       } catch (e) {
         console.error("[Home Central Academy]:", e);
         if (!cancelled) {

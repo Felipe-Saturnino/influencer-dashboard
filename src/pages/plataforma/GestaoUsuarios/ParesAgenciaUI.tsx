@@ -1,7 +1,10 @@
+import { useMemo } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import type { Operadora } from "../../../types";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
+import { SelectListaComBusca } from "../../../components/SelectListaComBusca";
+import { FILTER_SEARCH_INFLUENCER, FILTER_SEARCH_OPERADORA } from "../../../lib/searchBarConstants";
 import { BRAND } from "./constants";
 import { FONT } from "../../../constants/theme";
 
@@ -13,7 +16,6 @@ interface ParesAgenciaUIProps {
   influencers: { id: string; nome: string }[];
   operadoras: Operadora[];
   labelStyle: React.CSSProperties;
-  selectStyle: React.CSSProperties;
   field: React.CSSProperties;
 }
 
@@ -25,10 +27,32 @@ export function ParesAgenciaUI({
   influencers,
   operadoras,
   labelStyle,
-  selectStyle,
   field,
 }: ParesAgenciaUIProps) {
   const { theme: t } = useApp();
+
+  const influencerOptions = useMemo(
+    () => [
+      { value: "", label: "Selecione o influencer" },
+      ...[...influencers]
+        .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
+        .map((i) => ({ value: i.id, label: i.nome })),
+    ],
+    [influencers],
+  );
+
+  const operadoraOptions = useMemo(
+    () => [
+      { value: "", label: "Selecione a operadora" },
+      ...[...operadoras]
+        .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
+        .map((op) => ({ value: op.slug, label: op.nome })),
+    ],
+    [operadoras],
+  );
+
+  const paresDefinidos = pares.filter((p) => p.influencerId && p.operadoraSlug).length;
+
   return (
     <div style={field}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
@@ -54,39 +78,35 @@ export function ParesAgenciaUI({
             fontFamily: FONT.body,
           }}
         >
-          <Plus size={14} /> Adicionar par
+          <Plus size={14} aria-hidden /> Adicionar par
         </button>
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         {pares.map((par, idx) => (
           <div key={idx} style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-            <select
-              aria-label={`Influencer — par ${idx + 1}`}
-              style={{ ...selectStyle, flex: 1, minWidth: 140 }}
-              value={par.influencerId}
-              onChange={(e) => onUpdate(idx, "influencerId", e.target.value)}
-            >
-              <option value="">Selecione o influencer</option>
-              {[...influencers].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map((i) => (
-                <option key={i.id} value={i.id}>
-                  {i.nome}
-                </option>
-              ))}
-            </select>
-            <span style={{ color: t.textMuted, fontSize: 14 }}>×</span>
-            <select
-              aria-label={`Operadora — par ${idx + 1}`}
-              style={{ ...selectStyle, flex: 1, minWidth: 140 }}
-              value={par.operadoraSlug}
-              onChange={(e) => onUpdate(idx, "operadoraSlug", e.target.value)}
-            >
-              <option value="">Selecione a operadora</option>
-              {[...operadoras].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map((op) => (
-                <option key={op.slug} value={op.slug}>
-                  {op.nome}
-                </option>
-              ))}
-            </select>
+            <div style={{ flex: 1, minWidth: 140 }}>
+              <SelectListaComBusca
+                variant="campo"
+                label={`Influencer — par ${idx + 1}`}
+                value={par.influencerId}
+                onChange={(v) => onUpdate(idx, "influencerId", v)}
+                options={influencerOptions}
+                searchPlaceholder={FILTER_SEARCH_INFLUENCER}
+              />
+            </div>
+            <span style={{ color: t.textMuted, fontSize: 14 }} aria-hidden>
+              ×
+            </span>
+            <div style={{ flex: 1, minWidth: 140 }}>
+              <SelectListaComBusca
+                variant="campo"
+                label={`Operadora — par ${idx + 1}`}
+                value={par.operadoraSlug}
+                onChange={(v) => onUpdate(idx, "operadoraSlug", v)}
+                options={operadoraOptions}
+                searchPlaceholder={FILTER_SEARCH_OPERADORA}
+              />
+            </div>
             <button
               type="button"
               onClick={() => onRemove(idx)}
@@ -112,9 +132,9 @@ export function ParesAgenciaUI({
         ))}
       </div>
       <p style={{ fontFamily: FONT.body, fontSize: 11, color: t.textMuted, marginTop: 6 }}>
-        {pares.filter((p) => p.influencerId && p.operadoraSlug).length} par
-        {pares.filter((p) => p.influencerId && p.operadoraSlug).length !== 1 ? "es" : ""} definido
-        {pares.filter((p) => p.influencerId && p.operadoraSlug).length !== 1 ? "s" : ""}
+        {paresDefinidos} par
+        {paresDefinidos !== 1 ? "es" : ""} definido
+        {paresDefinidos !== 1 ? "s" : ""}
       </p>
     </div>
   );

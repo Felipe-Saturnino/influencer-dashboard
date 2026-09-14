@@ -2,8 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   arquivoCanalDenunciaPermitido,
   CANAL_DENUNCIA_ANEXO_MAX_BYTES,
+  emailCanalDenunciaValido,
   isProtocoloCanalFormatoValido,
+  mapComConcurrency,
   normalizarProtocoloCanal,
+  statusLabel,
 } from "../../../src/lib/canalDenunciasSpin";
 
 describe("canalDenunciasSpin", () => {
@@ -34,5 +37,29 @@ describe("canalDenunciasSpin", () => {
         size: CANAL_DENUNCIA_ANEXO_MAX_BYTES + 1,
       }),
     ).toBe(false);
+  });
+
+  it("emailCanalDenunciaValido e statusLabel cobrem o canal público", () => {
+    expect(emailCanalDenunciaValido("a@b.co")).toBe(true);
+    expect(emailCanalDenunciaValido("invalido")).toBe(false);
+    expect(statusLabel("procedente")).toBe("Procedente");
+    expect(statusLabel("nao_procedente")).toBe("Não procedente");
+  });
+
+  it("mapComConcurrency limita paralelismo e reporta falha", async () => {
+    const seen: number[] = [];
+    let inFlight = 0;
+    let maxInFlight = 0;
+    const falhou = await mapComConcurrency([1, 2, 3, 4], 2, async (n) => {
+      inFlight += 1;
+      maxInFlight = Math.max(maxInFlight, inFlight);
+      seen.push(n);
+      await new Promise((r) => setTimeout(r, 5));
+      inFlight -= 1;
+      return n !== 3;
+    });
+    expect(falhou).toBe(true);
+    expect(seen.sort()).toEqual([1, 2, 3, 4]);
+    expect(maxInFlight).toBeLessThanOrEqual(2);
   });
 });

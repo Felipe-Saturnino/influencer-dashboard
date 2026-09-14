@@ -19,7 +19,6 @@ import {
   jogoComparativoKeysFromPorTabelaRows,
   labelMesaCda,
   linhaComparativoJogoAgregadaMes,
-  linhaMesaPorDiaFromRow,
   linhasMesaAgregadasPorDia,
   linhasMesaAgregadasPorMes,
   normalizeMesasYmd,
@@ -118,16 +117,10 @@ export function useOverviewSpinComparativos(p: Params) {
 
   const linhasSpeedBaccarat = useMemo(() => {
     const src = historico ? porTabelaFiltradasHist : porTabelaFiltradas;
-    if (historico) {
-      return linhasMesaAgregadasPorMes(
-        src,
-        (r) => labelMesaCda(r, operadorasListFmt) === "Speed Baccarat",
-      );
-    }
-    return src
-      .filter((r) => labelMesaCda(r, operadorasListFmt) === "Speed Baccarat")
-      .sort((a, b) => b.data_relatorio.localeCompare(a.data_relatorio))
-      .map(linhaMesaPorDiaFromRow);
+    const pred = (r: PorTabelaRow) => labelMesaCda(r, operadorasListFmt) === "Speed Baccarat";
+    // Overview (consolidado): Dedicado + Network no mesmo dia → uma linha (soma).
+    if (historico) return linhasMesaAgregadasPorMes(src, pred);
+    return linhasMesaAgregadasPorDia(src, pred);
   }, [historico, porTabelaFiltradasHist, porTabelaFiltradas, operadorasListFmt]);
 
   /** Uma tabela Blackjack (aba Network em Dados por mesa) — agrega BJ 1/2/VIP se houver. */
@@ -140,24 +133,16 @@ export function useOverviewSpinComparativos(p: Params) {
 
   const linhasRoleta = useMemo(() => {
     const src = historico ? porTabelaFiltradasHist : porTabelaFiltradas;
-    if (historico) {
-      return linhasMesaAgregadasPorMes(src, (r) => labelMesaCda(r, operadorasListFmt) === "Roleta");
-    }
-    return src
-      .filter((r) => labelMesaCda(r, operadorasListFmt) === "Roleta")
-      .sort((a, b) => b.data_relatorio.localeCompare(a.data_relatorio))
-      .map(linhaMesaPorDiaFromRow);
+    const pred = (r: PorTabelaRow) => labelMesaCda(r, operadorasListFmt) === "Roleta";
+    if (historico) return linhasMesaAgregadasPorMes(src, pred);
+    return linhasMesaAgregadasPorDia(src, pred);
   }, [historico, porTabelaFiltradasHist, porTabelaFiltradas, operadorasListFmt]);
 
   const linhasFutebolBrasileiro = useMemo(() => {
     const src = historico ? porTabelaFiltradasHist : porTabelaFiltradas;
-    if (historico) {
-      return linhasMesaAgregadasPorMes(src, (r) => isMesaFutebolBrasileiro(r, operadorasListFmt));
-    }
-    return src
-      .filter((r) => isMesaFutebolBrasileiro(r, operadorasListFmt))
-      .sort((a, b) => b.data_relatorio.localeCompare(a.data_relatorio))
-      .map(linhaMesaPorDiaFromRow);
+    const pred = (r: PorTabelaRow) => isMesaFutebolBrasileiro(r, operadorasListFmt);
+    if (historico) return linhasMesaAgregadasPorMes(src, pred);
+    return linhasMesaAgregadasPorDia(src, pred);
   }, [historico, porTabelaFiltradasHist, porTabelaFiltradas, operadorasListFmt]);
 
   const slugListEscopoComparativo = useMemo(
@@ -436,25 +421,18 @@ export function useOverviewSpinComparativos(p: Params) {
   const linhasMesaA = useMemo(() => {
     if (!compMesaA) return [];
     const src = historico ? porTabelaFiltradasHist : porTabelaFiltradas;
-    if (historico) {
-      return linhasMesaAgregadasPorMes(src, (r) => r.nome_tabela.trim() === compMesaA);
-    }
-    return src
-      .filter((r) => r.nome_tabela.trim() === compMesaA)
-      .sort((a, b) => b.data_relatorio.localeCompare(a.data_relatorio))
-      .map(linhaMesaPorDiaFromRow);
+    const pred = (r: PorTabelaRow) => r.nome_tabela.trim() === compMesaA;
+    // Overview (consolidado): mesma mesa em Dedicado + Network no dia → soma numa linha.
+    if (historico) return linhasMesaAgregadasPorMes(src, pred);
+    return linhasMesaAgregadasPorDia(src, pred);
   }, [historico, porTabelaFiltradasHist, porTabelaFiltradas, compMesaA]);
 
   const linhasMesaB = useMemo(() => {
     if (!compMesaB) return [];
     const src = historico ? porTabelaFiltradasHist : porTabelaFiltradas;
-    if (historico) {
-      return linhasMesaAgregadasPorMes(src, (r) => r.nome_tabela.trim() === compMesaB);
-    }
-    return src
-      .filter((r) => r.nome_tabela.trim() === compMesaB)
-      .sort((a, b) => b.data_relatorio.localeCompare(a.data_relatorio))
-      .map(linhaMesaPorDiaFromRow);
+    const pred = (r: PorTabelaRow) => r.nome_tabela.trim() === compMesaB;
+    if (historico) return linhasMesaAgregadasPorMes(src, pred);
+    return linhasMesaAgregadasPorDia(src, pred);
   }, [historico, porTabelaFiltradasHist, porTabelaFiltradas, compMesaB]);
 
   useEffect(() => {

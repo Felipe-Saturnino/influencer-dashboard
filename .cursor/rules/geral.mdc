@@ -11,7 +11,7 @@ alwaysApply: false
 
 # Seção Geral
 
-**Antes de implementar:** `global.mdc` → `brand-css-variables.mdc` → este ficheiro.
+**Antes de implementar:** `global.mdc` → `brand-css-variables.mdc` → este ficheiro. Domínio (estúdio vs operadora): `business.mdc` primeiro.
 
 **Marca / filtros / headers de páginas logadas:** Brand MDC — não duplicar aqui.
 
@@ -26,6 +26,7 @@ alwaysApply: false
 | Configurações | `geral/Configurações/` | Conta, tema, perfil |
 | Simulador de Login | `geral/SimuladorLogin/` | Visualização somente leitura de outro perfil |
 | Ajuda | `geral/Ajuda/` | Textos por página + glossário |
+| Versionamento | `geral/Versionamento/` | Releases semanais (catálogo em `releases.ts`; inclusão só via handoff) |
 | Trocar senha obrigatória | `geral/TrocarSenhaObrigatorio/` | Gate pós-login |
 | Canal de denúncias (público) | `public/CanalDenunciasSpinPage.tsx` | Rota pública; sem shell logado |
 | Painel de notícias (público) | `public/PainelNoticiasPage.tsx` | Rota `/painel-noticias`; RSS TV; sem shell logado |
@@ -43,9 +44,9 @@ Não há secção no menu lateral — páginas acessadas por fluxo, atalho ou UR
 
 ### Conheça e Troubleshooting — blocos recolhíveis
 
-- Componente **`AjudaBlocoRecolhivel`** (seta `ChevronRight` como no Glossário; fechado por defeito).
-- **Conheça:** 1.º bloco do conteúdo da página **sempre visível** (intro + link «Acesse a página AQUI»); cada bloco seguinte (com `subtitulo`) é um acordeão independente, **recolhido** por defeito.
-- **Troubleshooting:** **todos** os blocos (incl. transversal **Plataforma** e os da página) em acordeão, **recolhidos** por defeito. Título da secção (`h2`) permanece fora do acordeão.
+- Componente **`AjudaBlocoRecolhivel`** (seta `ChevronRight` como no Glossário; fechado por padrão).
+- **Conheça:** 1.º bloco do conteúdo da página **sempre visível** (intro + link «Acesse a página AQUI»); cada bloco seguinte (com `subtitulo`) é um acordeão independente, **recolhido** por padrão.
+- **Troubleshooting:** **todos** os blocos (incl. transversal **Plataforma** e os da página) em acordeão, **recolhidos** por padrão. Título da secção (`h2`) permanece fora do acordeão.
 
 ### Tutoriais
 
@@ -67,7 +68,7 @@ Não há secção no menu lateral — páginas acessadas por fluxo, atalho ou UR
 - **Vários tutoriais na mesma aba:** `tutorial` aceita um objeto **ou** um array `{ id, urlSlug, titulo?, descricao? }[]`. Se o perfil vir **2+**, o ícone abre o modal **Tutoriais desta aba**; se vir **1**, navega direto. Referência: Calendário → Controle de Presença (`controle-presenca` + `justificativa-presenca`). Em **Solicitações** (RH) há **um tutorial por aba** (não array na mesma aba).
 - **Cor por ação** (fixa, não whitelabel): Conheça azul · Troubleshooting amarelo · Tutorial roxo — `getAjudaContextualAcaoStyle` em `src/lib/ajudaContextualStyles.ts` (detalhe visual em Brand §5).
 - Conheça / Troubleshooting: o terceiro segmento da URL seleciona a página na navegação lateral. Página inexistente ou sem permissão cai no primeiro item visível e substitui a URL pelo destino permitido.
-- **Cobertura:** todas as páginas de produto do menu (exceto Home, Configurações e a própria Ajuda). Páginas sem barra de filtros usam `PageHeader` `actions`/`right`.
+- **Cobertura:** todas as páginas de produto do menu (exceto Home, Configurações, Ajuda e Versionamento). Páginas sem barra de filtros usam `PageHeader` `actions`/`right`.
 
 | Secção | Páginas | Tutorial contextual |
 |---|----|----|
@@ -132,7 +133,7 @@ Seguir **Global § Linguagem e copy (PT-BR)**. Regras específicas:
 
 ### Secção Geral na Ajuda
 
-Páginas fora do menu lateral (`configuracoes`, `simulador_login`) aparecem no **fim** da navegação Conheça / Troubleshooting, sob **Geral**, só com permissão de Ver **sim** ou **próprios**. Conteúdo em `CONTEUDO_CONHECA` / `CONTEUDO_TROUBLE`; glossário categoria `geral_conta`. Títulos = labels de `PAGES` (Gestão de Usuários).
+Páginas fora do menu lateral (`configuracoes`, `simulador_login`, `versionamento`) aparecem no **fim** da navegação Conheça / Troubleshooting, sob **Geral**, só com permissão de Ver **sim** ou **próprios**. Conteúdo em `CONTEUDO_CONHECA` / `CONTEUDO_TROUBLE`; glossário categoria `geral_conta`. Títulos = labels de `PAGES` (Gestão de Usuários).
 
 ### Handoff pendente
 
@@ -153,32 +154,47 @@ Páginas fora do menu lateral (`configuracoes`, `simulador_login`) aparecem no *
 - **`service_manager`:** `HomeServiceManager.tsx` — informativos `service_manager`. RLS: `20260531200000_home_service_manager_feed_rls.sql`.
 - **`customer_service`:** `HomeCustomerService.tsx` — atalhos Atendimento + Ajuda + Organograma; RLS: `20260707213000_role_customer_service.sql`.
 - **`game_presenter`:** `HomeGamePresenter.tsx` — informativos `game_presenter`; atalhos Calendário + Ajuda + Organograma. RLS: `20260708170000_roles_game_presenter_shuffler.sql`.
-- **`shuffler`:** `HomeShuffler.tsx` — informativos `shuffler`. RLS: `20260708170000_roles_game_presenter_shuffler.sql`.
+- **`shuffler`:** `HomeShuffler.tsx` — informativos `shuffler`; atalhos Calendário + Marketplace + Ajuda + Organograma. RLS: `20260708170000_roles_game_presenter_shuffler.sql`.
 - **`tech_ops`:** `HomeTechOps.tsx` — informativos `tech_ops`. RLS: `20260706180000_role_tech_ops.sql`.
 - **`shift_leader`:** `HomeShiftLeader.tsx` — informativos `shift_leader`. RLS: `20260601200000_home_shift_leader_feed_rls.sql`.
 - **`rh`:** `HomeRh.tsx` — baseline Prestador (copy a personalizar); informativos `rh`. RLS: `20260710200000_home_rh_feed_rls.sql`.
-- **Cobertura Estúdio / Escritório** (`ROLES_PERFIS_ESTUDIO` / `ROLES_PERFIS_ESCRITORIO`): cada perfil tem Home dedicada. Estúdio — Performance Coach, Service Manager, Customer Service, Shift Leader, Shuffler, Game Presenter. Escritório — RH, Figurino, Comunicação, Tech Ops, Prestadores.
-- **`operador`:** `HomeOperadorRouter` lê `operadoras.home_template` do escopo (`operadoraBrand`). **`default` / null / chave desconhecida → `HomeOperadorPadrao`** (boas-vindas, KPIs MTD com comparativo MoM, Spin na Rede, informativos com `operador_escopo`, atalhos Overview Spin + Ajuda). Templates dedicados: `lib/homeOperadoraTemplate.ts` + `operador/templates/`; campo na Gestão de Operadoras → aba Operações.
+- **Cobertura Estúdio / Escritório** (`ROLES_PERFIS_ESTUDIO` / `ROLES_PERFIS_ESCRITORIO`): cada perfil tem Home dedicada **exceto** o pendente abaixo. Estúdio — Performance Coach, Service Manager, Customer Service, Shift Leader, Shuffler, Game Presenter. Escritório — RH, Figurino, Comunicação, Tech Ops, Prestadores. **Pendente:** staff `facilities` e `ti` (ainda na Home legada).
+- **`operador`:** `HomeOperadorRouter` lê `operadoras.home_template` do escopo (`operadoraBrand`). **`default` / null / chave desconhecida → `HomeOperadorPadrao`** — boas-vindas com `BoasVindasPerfilHome` (rótulo «Operador» + **chip só com o nome da operadora** via `operadoraBrand.nome` ou fetch), KPIs MTD/MoM, **Top 3 mesas** por GGR do mês (faixa = `GAME_IDENTITY_HEX`, subtítulo = nome do estúdio, pill Dedicada/Network, Posicionamento = posição lobby mais recente; se o lobby falhar, Top 3 só com GGR), Spin na Rede, informativos `operador`, atalhos Overview Spin + Ajuda. Templates dedicados: `lib/homeOperadoraTemplate.ts` + `operador/templates/`; campo na Gestão de Operadoras → aba Operações.
 - **Dados Home Investidor/Operador:** não dependem de `usePermission` das páginas fonte; RLS em `supabase/migrations/20260526120000_home_investidor_feed_rls.sql` e `20260526140000_home_operador_feed_rls.sql` (aplicar no Supabase).
 - **Período KPI / Aquisição (Home Investidor, Executivo e Operador Padrão):** `getHomeKpiReferenciaMes` / `getHomeKpiPeriodo` em `lib/homeInvestidorMtd.ts` — dia 1 do mês civil → mês anterior (ETL D-1); demais dias → MTD do mês de referência até ontem. Subtítulo do bloco: `HomeSectionMesSubtitle` com label `"Maio 2026"`.
-- **`afiliado`:** layout dedicado em `HomeAfiliado.tsx` — boas-vindas com rótulo «Afiliado»; alerta de cadastro incompleto com copy de comissões e CTA **Ir para Afiliados** (`afiliados`); playbook pendente (mesmo fluxo do influencer); **sem** revisão cadastral RH de 6 meses; **sem** blocos Próximas lives / Feedbacks recentes; acesso rápido (Overview Afiliado primeiro quando liberado) + Informações.
-- **Demais perfis:** Home legada (`index.tsx`) — atalhos dinâmicos pelo menu + blocos **influencer** / agência. Influencer e afiliado **não** exibem revisão cadastral RH de 6 meses na Home.
+- **`influencer`:** layout dedicado em `HomeInfluencer.tsx` — boas-vindas com avatar + rótulo «Influenciador»; alertas de **AÇÃO NECESSÁRIA** nesta ordem: (1) cadastro incompleto → **Ir para Influencers**; (2) Playbook pendente → **Ir para Playbook**; (3) horas pendentes da cota **e** nenhuma live futura agendada → **Ir para Agenda** (`mensagemHorasPendentesHome`); bloco **Principais KPIs** (próprios, MoM D-1: Registros + acessos, FTDs + valor, Depósitos qtd + valor; Lives / Horas / Views — link Overview Influencer); blocos **Próximas lives** e **Feedbacks recentes**; **Informações** = Informativos do perfil (`influencer`, janela 10 dias + «Li e Ocultar», reações); **sem** revisão cadastral RH de 6 meses, Portal RH nem Academy; acesso rápido curado (Overview Influencer → Agenda → Resultados → Feedback → Influencers → Playbook → Links e Materiais → Financeiro → Ajuda, filtrado por permissão Ver).
+- **`afiliado`:** layout dedicado em `HomeAfiliado.tsx` — boas-vindas com rótulo «Afiliado»; alertas de **AÇÃO NECESSÁRIA**: cadastro incompleto (copy de comissões, CTA **Ir para Afiliados**) e Playbook pendente; bloco **Principais KPIs** (próprios, MoM: GGR / Investimento / ROI + Registros / FTDs / Depósitos / Saques — link Overview Afiliado); **Informações** = Informativos (`afiliado`, 10 dias + «Li e Ocultar»); **sem** revisão cadastral RH de 6 meses; **sem** Próximas lives / Feedbacks; acesso rápido curado (Overview Afiliado → Afiliados → Playbook → Links e Materiais → Financeiro → Ajuda).
+- **`agencia`:** layout dedicado em `HomeAgencia.tsx` — boas-vindas `BoasVindasPerfilHome` (rótulo «Agência», `HOME_AGENCIA_SUB`); alertas de **AÇÃO NECESSÁRIA** no **portfólio** (não «você»): (1) count de cadastros incompletos no escopo → **Ir para Influencers**; (2) influencers com horas pendentes da cota **e** sem live futura → **Ir para Agenda**; KPIs do escopo (`escoposVisiveis.influencersVisiveis` via `useHomeCanalKpisEscopo` + investimento `includeAgentes:false` — se IDs vazios, KPIs vazios/mensagem); Próximas lives do portfólio (~6); Informativos `agencia`; atalhos curados Overview Influencer → Agenda → Resultados → Feedback → Influencers → Links e Materiais → Financeiro → Ajuda. **Sem** Playbook próprio, Feedbacks recentes pessoais nem revisão RH.
+- **`gestor_aquisicao`:** `HomeGestorAquisicao.tsx` — alertas AÇÃO (horas pendentes sem agenda; resultados >48h; pagamentos em_analise/a_pagar >7d); KPIs Financeiro + canal (MoM); Informativos `gestor_aquisicao`; atalhos Overview Influencer → Streamers → Agenda → Resultados → Scout → Influencers → Financeiro → Banca → Ajuda.
+- **`gestor_marketing`:** `HomeGestorMarketing.tsx` — alerta UTMs pendentes → Gestão de Links; KPIs Resultado + Ações (Mídias Sociais); Informativos + Blogueiro Spin; atalhos Mídias → Campanhas → Gestão de Links → Galeria → Spin na Rede → Links e Materiais → Ajuda.
+- **`gestor_operacoes`:** `HomeGestorOperacoes.tsx` — **sem KPIs**; alerta Escala Estúdio não aprovada (GP/Shuffler/SL/SM) se ≤5 dias úteis até o fim do mês; Informativos `gestor_operacoes`; atalhos Overview Spin → Escala → Controle de Turno → Dealers → Solicitações → Marketplace → Incidentes → Ajuda.
+- **`gestor_tech_ops`:** `HomeGestorTechOps.tsx` (**não** confundir com staff `HomeTechOps`) — alerta OS `solicitada`; KPIs Pendências OS + Estoque; **sem** Status Técnico; Informativos `gestor_tech_ops`; atalhos Ordem de Saída → Estoque → Itens Alocados → Ajuda.
+- **`gestor_academy`:** `HomeGestorAcademy.tsx` — alerta postagens Portal em Aprovação; ATENÇÃO meta 3 avaliações/mês; KPIs Avaliações + Portal; **sem** Feedbacks pendentes; Informativos `gestor_academy`; atalhos Performance Hub → Portal → Ajuda.
+- **`gestor_rh`:** `HomeGestorRh.tsx` (**não** confundir com staff `HomeRh`) — alerta Solicitações Em análise; ATENÇÃO denúncias abertas; **sem** alerta revisão cadastral; KPIs Prestadores + Filas; Informativos `gestor_rh`; atalhos Prestadores → Solicitações → Vagas → Portal RH → Denúncias → Ajuda.
+- **`admin`:** `HomeAdmin.tsx` — ATENÇÃO falhas Status Técnico 48h; KPIs snapshot opcional (GGR MTD, operadoras, usuários, prestadores — ocultar se falhar); **sem** feed de Informativos; atalhos Usuários → Operadoras → Estúdios → Status Técnico → Overview Spin → Informativos → Ajuda.
+- **Demais perfis:** Home legada (`index.tsx`) — atalhos dinâmicos pelo menu (busca no Acesso rápido quando há mais de 8) + gestores Facilities/TI ainda sem Home dedicada. Homes por role em `React.lazy`. Influencer, afiliado, agência e gestores/admin acima **não** usam a Home legada.
+- **Pendências — Homes a retomar (mockup → aprovação → implantação):**
+  - **`gestor_facilities`** (Gestor de Facilities) e **`gestor_ti`** (Gestor de TI) — família Gestores; **adiados** porque as páginas de domínio ainda estão em andamento (ex.: Organização de Tarefas em `docs/mockups/facilities-organizacao-tarefas-mockup.html`; TI sem PageKey/menu ainda). Hoje ficam na Home legada. Retomar quando houver páginas liberáveis + KPIs/alertas de domínio.
+  - Staff **`facilities`** / **`ti`** — Home dedicada baseline Escritório (mesma onda ou depois dos gestores).
 
 ---
 
 ## Login (`geral/Login/`)
 
-- Fora do `app-page-shell` logado.
-- CTA com gradiente Brand; spinner `#fff` dentro do botão.
-- **Destino após login:** sempre a **Home** (não restaura o endereço anterior nem `after_login`). Refresh de sessão já autenticada continua na página atual.
-- **Esqueci senha:** link «Esqueceu sua senha?» abaixo do campo senha → modal «Reset de senha» → Edge `recuperar-senha` (senha padrão + e-mail Resend + `must_change_password`). E-mail inexistente: mensagem explícita + link «entre em contato» (`lib/loginAccessContact.ts`).
-- **Handoff:** fluxos whitelabel adicionais, erros inline.
+- Fora do `app-page-shell` logado; `useDisableAppUiZoom(true)` (hit-testing sem zoom `#root`).
+- `<form onSubmit>` + labels com `htmlFor`/`id`; cartão `app-auth-card-scroll--login` (sem scroll duplo).
+- CTA com gradiente Brand; spinner `#fff` dentro do botão; loading **Entrando…** (elipse Unicode).
+- **Destino após login:** sempre a **Home** (não restaura o endereço anterior nem `after_login`). Refresh de sessão já autenticada continua na página atual. Boot com usuário: «Preparando sua conta…»; bootstrap paralelo em `carregarBootstrapAuth` (`AppContext`).
+- **Logout por idle:** `markIdleSessionLogout` → mensagem no Login via `consumeIdleSessionLogoutFlag`.
+- **Esqueci senha:** link «Esqueceu sua senha?» → modal **Redefinir senha** (`appearance="auth-dark"`, só X) → Edge `recuperar-senha`. Status: success / not_found / inactive / email_error / **config_error**. Contato: `lib/loginAccessContact.ts`.
+- Blur/glows: `backdrop-filter` e `.auth-glow` desligados em viewport ≤720px (`responsive.css`).
 
 ## Trocar senha obrigatória (`geral/TrocarSenhaObrigatorio/`)
 
-- Gate bloqueante após login com `must_change_password`.
+- Gate bloqueante após login com `must_change_password`; `useDisableAppUiZoom(true)`.
 - Botão **Definir nova senha** só habilita com os 4 requisitos (8+ caracteres, maiúsculas e minúsculas, número, caractere especial) e confirmação igual; Enter envia o formulário.
-- Cartão com scroll (`app-auth-card-scroll`) para o botão permanecer acessível.
+- Cartão com scroll (`app-auth-card` + `app-auth-card-scroll`) para o botão permanecer acessível.
+- Após sucesso Auth: limpa `must_change_password` com **retry** uma vez; falha → mensagem com suporte. Loading **Salvando…** / **Redirecionando…**.
 - Após sucesso: `finalizarTrocaSenhaObrigatoria()` → Home (sem recarregar permissões).
 
 ---
@@ -186,7 +202,21 @@ Páginas fora do menu lateral (`configuracoes`, `simulador_login`) aparecem no *
 ## Configurações (`geral/Configuracoes/`)
 
 - Preferências de conta/tema; CTAs de marca quando aplicável.
-- **Handoff:** abas e campos por perfil.
+- **Alterar senha:** mesmos 4 requisitos + CTA desabilitado até cumprir (paridade com Trocar senha obrigatória); `<form>` + `htmlFor`; loading «Salvando…» (U+2026); erros Auth mapeados com suporte; vermelho semântico `#e84025`.
+- Sem permissão: string Global «Você não tem permissão para visualizar esta página.»
+
+## Versionamento (`geral/Versionamento/`)
+
+- **PageKey:** `versionamento` — menu do avatar, **abaixo de Ajuda** e acima de Sair; **não** no menu lateral.
+- **Utilitária:** qualquer autenticado vê a página (`PAGES_SEM_MATRIZ_ESCOPO_TIPO` + seed `can_view='sim'`). Cards filtram por permissão de Ver/Próprios da página da feature (`paginas: "*" | PageKey[]`). `paginas: "*"` = chip e seção **Toda Plataforma** (visível a quem acessa Versionamento).
+- **Subtítulo:** `Acompanhe as novidades, melhorias e correções publicadas a cada semana na plataforma.`
+- **Inclusão de release:** só via chat Cursor + `docs/HANDOFF-VERSIONAMENTO-RELEASE.md` → `src/pages/geral/Versionamento/releases.ts`. **Sem** CTA «Nova Release» e **sem** modal de cadastro.
+- **Catálogo vazio:** `Nenhuma release publicada.` Filtro sem resultado: `Nenhuma release encontrada para os filtros selecionados.`
+- **Destaque:** tag verde **Recente** + `Release #N` + data `DD/MM/AAAA`; título no `h2`. Histórico em acordeão **recolhido por padrão**.
+- **Cards / abas de tipo:** Novo `#22c55e` · Melhoria `#1e36f8` · Correção `#c45c5c` (vermelho sóbrio — não `#e84025`). Card «Estabilidade e qualidade da plataforma»: listar só páginas com Melhoria/Correção na **mesma** release — **proibido** incluir página que aparece como **Novo**; se sobrar nenhuma, omitir o card.
+- **Busca:** `PAGE_SEARCH.versionamento` — palavras-chave (AND, sem acentos) em título, resumo, data, tipo, seção e texto dos cards.
+- **Filtro de seção:** `FiltroBarCampoSelect` com ícone **`LayoutGrid`** 15px (`FILTRO_BAR_ICON_PROPS`) — exceção de domínio (não está no catálogo Brand de Operadora/Status). Agregadora **Todas Seções** (inclui **Toda Plataforma** quando houver card `*`).
+- **Ajuda contextual:** não usar `AjudaContextualAcoes` nesta página (igual Configurações / Ajuda).
 
 ## Simulador de Login (`geral/SimuladorLogin/`)
 
@@ -194,14 +224,14 @@ Páginas fora do menu lateral (`configuracoes`, `simulador_login`) aparecem no *
 - **Permissão:** Gestão de Usuários → **Simulador de Login** → Ver = Sim (ou Próprios); admin acesso implícito; demais perfis seed `Não`.
 - **Perfis simuláveis:** catálogo em `ROLES_SIMULAVEIS` (`ROLES` menos `admin`/`executivo`). **Quem vê o quê** na página do simulador: matriz **`simulador_login_roles`** configurável em **Gestão de Usuários → aba Simulador de Login** (perfil viewer × perfis simuláveis). Admin ignora a matriz (vê todos do catálogo).
 - **Checklist perfil novo:** incluir em `ROLES` + `FILTROS_PERFIL_LINHAS`; marcar na aba **Simulador de Login** quais viewers podem simulá-lo; seed opcional na migration.
-- **Operador:** modal com **todas** as operadoras cadastradas (ativas e inativas); rótulo `(inativa)` quando `ativo = false`; busca no painel se >5. Menu simulado = `role_permissions(operador)` ∩ `operadora_pages` da operadora escolhida.
+- **Operador:** modal com **todas** as operadoras cadastradas (ativas e inativas); rótulo `(inativa)` quando `ativo = false`; **busca no painel sempre** (Global § Pesquisa dentro do filtro). Menu simulado = `role_permissions(operador)` ∩ `operadora_pages` da operadora escolhida.
 - **Gestor / Prestadores:** modal de tipo ou área; menu = `role_permissions` ∩ `gestor_tipo_pages` ou `prestador_tipo_pages`.
-- **Usuário ativo (obrigatório):** após o perfil (e operadora/área, quando houver), a simulação escolhe um **usuário ativo** daquele perfil no momento — lista dinâmica (`profiles.ativo !== false`, exclui a conta viewer), pré-seleciona o de login mais recente (contas rotativas; sem pessoa fixa). Busca no painel se >5. Sem usuário ativo: mensagem específica (perfil / operadora / área). Restaurar sessão revalida se o usuário ainda está ativo.
+- **Usuário ativo (obrigatório):** após o perfil (e operadora/área, quando houver), a simulação escolhe um **usuário ativo** daquele perfil no momento — lista dinâmica (`profiles.ativo !== false`, exclui a conta viewer), pré-seleciona o de login mais recente (contas rotativas; sem pessoa fixa). **Busca no painel sempre.** Sem usuário ativo: mensagem específica (perfil / operadora / área). Restaurar sessão revalida se o usuário ainda está ativo.
 - **Quem usa o simulador** precisa ler as matrizes de escopo no Supabase — políticas RLS `_pode_usar_simulador_login()` em `operadora_pages`, `gestor_tipo_pages`, `prestador_tipo_pages` (migration `20260708160000_simulador_login_rls_scope_pages.sql`).
 - **Modo:** somente leitura (Criar/Editar/Excluir bloqueados); faixa global `SimuladorLoginBanner` (texto **Encerrar visualização**); sessão em `sessionStorage`. Trocar de perfil com visualização ativa pede confirmação **Substituir visualização**. Encerrar só limpa a faixa depois de restaurar o perfil real; falha mostra aviso.
 - **Oculto na simulação:** Gestão de Usuários, Gestão de Operadoras, Status Técnico (menu simulado). **Gestão de Estúdios** permanece visível se o perfil simulado tiver acesso.
-- **Identidade:** o nome no avatar continua o da conta real («sua conta não muda»). A **Home de perfil** (boas-vindas) e os dados pessoais usam o usuário visualizado. **Toda página** que resolve «eu» (cadastro RH, Minhas Fotos, recibos, Ver = Próprios, Overview Prestador, Marketplace, Figurinos, Incidentes, Performance Hub, Dados de Cadastro, Portais) deve usar `useIdentidadeEfetiva()` / `dadosUsuarioEfetivo` — **proibido** `user.email` / `user.id` / `user.role === admin` da conta viewer. RPCs com `auth.uid()` continuam da conta real: recortar no cliente pelo e-mail simulado. Check-in, uploads e demais escritas ficam ocultos (somente leitura).
-- **Calendário:** com Ver = Próprios no perfil simulado, a grade/filtros seguem o cadastro RH do **usuário escolhido** (não o viewer); Relatório de Presença e filtros Time/Staff só aparecem se o perfil efetivo tiver essa permissão. **Adicionar à agenda** fica oculto no Simulador (o token iCal segue o `auth.uid()` do viewer, não da pessoa simulada).
+- **Identidade:** o nome no avatar continua o da conta real («sua conta não muda»). A **Home de perfil** (boas-vindas «Olá») e os dados pessoais usam o usuário visualizado (`useIdentidadeEfetiva`). **«Li e Ocultar»** nos feeds da Home grava/lê com `userId` efetivo — **proibido** `user.id` do viewer. **Toda página** que resolve «eu» (cadastro RH, Minhas Fotos, recibos, Ver = Próprios, Overview Prestador, Marketplace, Figurinos, Incidentes, Performance Hub, Dados de Cadastro, Portais) deve usar `useIdentidadeEfetiva()` / `dadosUsuarioEfetivo` — **proibido** `user.email` / `user.id` / `user.role === admin` da conta viewer. RPCs com `auth.uid()` continuam da conta real: recortar no cliente pelo e-mail simulado. Check-in, uploads e demais escritas ficam ocultos (somente leitura).
+- **Calendário:** com Ver = Próprios no perfil simulado, a grade/filtros seguem o cadastro RH do **usuário escolhido** (não o viewer); **Relatório de Justificativas** (nome canónico; legado «Relatório de Presença») e filtros Time/Staff só aparecem se o perfil efetivo tiver essa permissão. **Adicionar à agenda** fica oculto no Simulador (o token iCal segue o `auth.uid()` do viewer, não da pessoa simulada).
 - **Galeria de Fotos:** Gerais = fotos de evento (partilhadas). **Minhas Fotos** = só o colaborador do e-mail simulado — sem listar todos os prestadores só porque o JWT é de administrador.
 
 ---
@@ -212,11 +242,12 @@ Páginas fora do menu lateral (`configuracoes`, `simulador_login`) aparecem no *
 
 - Rota **`/painel-noticias`** — `isPainelNoticiasPublicPath()` / `detectPublicUnauthenticatedRoute()`.
 - **Sem** login, menu, `PageHeader`, `usePermission`.
-- Dados: `painel_noticia` via **anon e authenticated** (RLS `painel_noticia_select_publico`); ingestão RSS horária (`sync-painel-noticias-rss`).
-- UI: fundo dark fixo, assunto + detalhe (sem URL/imagem), carrossel vertical **20 s** por slide (sobe), polling 60 s; **sem** zoom da plataforma (`--app-ui-zoom: 1`); título da aba **Painel de Notícias**; detalhe limitado a ~4–6 linhas.
-- Carrossel: todas as frescas (janela 4 h), **mínimo 5** (completa com vencidas) e **teto 15** (`PAINEL_NOTICIAS_MAX_EXIBICAO`).
+- Dados: `painel_noticia` via **anon e authenticated** (RLS `painel_noticia_select_publico`); SELECT público nas colunas `id, titulo, resumo, visivel_desde, visivel_ate, passou_filtro` (filtro PostgREST; **sem** `item_url` / `feed_url`). Ingestão RSS horária (`sync-painel-noticias-rss`).
+- UI: fundo dark fixo, assunto + detalhe (sem URL/imagem), carrossel vertical **20 s** por slide (sobe), polling **60 s** (pausado com aba oculta); **sem** zoom da plataforma (`useDisableAppUiZoom`); título da aba **Painel de Notícias**; detalhe limitado a ~4–6 linhas; `prefers-reduced-motion` troca slide sem animação.
+- Fetch: `limit` **40** (`PAINEL_NOTICIAS_FETCH_LIMIT`); carrossel: frescas até **15**, mínimo **5** (completa com vencidas). Item sem título utilizável após sanitize **não** entra no ciclo.
+- Poll falhou com conteúdo já na tela: carrossel segue + faixa **Atualização pausada — tentando novamente…**.
 - Purge físico na base após janela de 4 h quando fora do conjunto mínimo de 5 exibíveis.
-- Ingestão: só feeds de `PAINEL_NOTICIAS_RSS_URLS` (body **não** substitui a lista). Cron/GitHub exige `PAINEL_NOTICIAS_INGEST_SECRET`. Status Técnico → Sync dispara a mesma função com a sessão logada.
+- Ingestão: só feeds de `PAINEL_NOTICIAS_RSS_URLS` (body **não** substitui a lista). Cron/GitHub exige `PAINEL_NOTICIAS_INGEST_SECRET`. Status Técnico → Sync: JWT com **admin** ou `role_permissions.status_tecnico.can_editar` sim|proprios.
 - Primeira carga com falha: mensagem **Não foi possível carregar as notícias. Tentando novamente…** (não fica em Carregando…).
 
 ---
@@ -245,12 +276,16 @@ Páginas fora do menu lateral (`configuracoes`, `simulador_login`) aparecem no *
 - Formulários: `CampoObrigatorioMark` e semântica de erro do Global.
 - Tipos compartilhados com a Central interna via `TIPOS_DENUNCIA`; **Elogios** (`elogios`) segue o mesmo envio, protocolo e atendimento dos demais tipos.
 - Privacidade: não expor detalhes técnicos em mensagens de erro; na consulta, mensagens do RH aparecem como **Equipe RH** (sem nome do staff).
+- **Zoom UI:** `useDisableAppUiZoom(true)` — o zoom do `#root` desalinha cliques nas abas/Pesquisar (mesmo padrão Login / SemAcesso).
+- **Estrutura:** shell em `CanalDenunciasSpinPage.tsx` + painéis `CanalDenunciarPanel` / `CanalConsultarPanel` + `canalDenunciasPublicUi` / `canalDenunciasPublicFields`.
 
-**Protocolo:** novos registros usam código imprevisível (`CDSPIN-` + 16 hex). Protocolos legados `CDSPIN00001…` continuam válidos. Consulta e resposta (`consultar_denuncia_spin` / `responder_denuncia_spin`) exigem o **mesmo e-mail do envio** quando o relato foi identificado; anônimo consulta só com o protocolo. Erro genérico «não encontrado» (não revelar se o protocolo existe).
+**Protocolo:** novos registros usam código imprevisível (`CDSPIN-` + 16 hex). Protocolos legados `CDSPIN00001…` continuam válidos (produto: **não** invalidar/migrar o legado — prioridade no formato sigilo + rate mais estrito na consulta/resposta legado). Consulta e resposta (`consultar_denuncia_spin` / `responder_denuncia_spin`) exigem o **mesmo e-mail do envio** quando o relato foi identificado; anônimo consulta só com o protocolo. Erro genérico «não encontrado» (não revelar se o protocolo existe).
 
-**Limite de tentativas:** RPCs públicos com rate limit por IP (hash) + honeypot `p_hp` no registro. Insert da denúncia **só via RPC** (sem política INSERT anon/auth na tabela).
+**Limite de tentativas:** RPCs públicos com rate limit por IP (hash). Sem IP no request → **nega** (fail-closed). Protocolo legado `CDSPIN#####` tem teto mais baixo na consulta/resposta. Honeypot `p_hp` no registro. Insert da denúncia **só via RPC** (sem política INSERT anon/auth na tabela).
 
-**Consulta por protocolo:** status + linha do tempo + **Comunicação com o RH** (anotações com `visivel_externo`) + formulário de resposta com anexos opcionais (`CampoUploadArquivos`, PDF/JPG/PNG/MP4, 20MB) enquanto o status não estiver encerrado (Procedente / Não procedente). Enter no protocolo/e-mail dispara a pesquisa.
+**Anexos (envio/resposta):** máx. **5** por denúncia (abertura) ou por mensagem; janela **1 h**; helpers em schema `canal_internal` (não exposto no PostgREST). Bucket alinhado à UI: 20 MB, PDF/JPG/PNG/MP4.
+
+**Consulta por protocolo:** badge/status com `statusLabel` (Procedente / Não procedente); linha do tempo + **Comunicação com o RH** (anotações com `visivel_externo`) + formulário de resposta com anexos opcionais (`CampoUploadArquivos`) enquanto o status não estiver encerrado. Anexos do RH na thread pública mostram só o nome (sem download). Validar formato do protocolo no cliente antes do RPC. Enter no protocolo/e-mail dispara a pesquisa.
 
 **Upload no envio:** `CampoUploadArquivos` (exceção Global — canal público usa o componente por pedido de produto).
 

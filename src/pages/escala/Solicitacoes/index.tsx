@@ -706,7 +706,7 @@ export default function EscalaSolicitacoesPage() {
   if (perm.canView === "nao") {
     return (
       <div className="app-page-shell" style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-        Você não tem permissão para visualizar este dashboard.
+        Você não tem permissão para visualizar esta página.
       </div>
     );
   }
@@ -716,7 +716,7 @@ export default function EscalaSolicitacoesPage() {
       <DashboardPageHeader
         icon={<PageMenuIcon pageKey="escala_solicitacoes" />}
         title={getPageMenuLabel("escala_solicitacoes")}
-        subtitle="Acompanhe solicitações em aberto e o histórico arquivado por período, time e colaborador."
+        subtitle="Acompanhe solicitações em aberto e o histórico arquivado por período, time e prestador."
         brand={brand}
         t={t}
       />

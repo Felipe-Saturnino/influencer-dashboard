@@ -1,11 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useId } from "react";
 import { AlertCircle } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
+import { fetchAllPages, fetchInBatched } from "../../../lib/supabasePaginate";
 import { callSupabaseEdgeFunction, isAbortError } from "../../../lib/supabaseEdgeFetch";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
+import { SelectListaComBusca } from "../../../components/SelectListaComBusca";
 import { FONT } from "../../../constants/theme";
 import type { Role, UsuarioCompleto, Operadora } from "../../../types";
 import { BRAND, ROLES, roleBadgeColor, PRESTADOR_TIPOS } from "./constants";
@@ -22,9 +24,20 @@ interface ModalUsuarioProps {
   onSalvo: (aviso?: string) => void;
 }
 
+function precisaCatalogoInfluencers(role: Role): boolean {
+  if (role === "agencia") return true;
+  if (role === "admin" || role === "operador" || role === "prestador") return false;
+  if (role === "executivo" || role === "investidor" || roleGestorDepartamento(role)) return false;
+  if (ROLES_STAFF_APENAS_PERMISSOES.includes(role)) return false;
+  if (roleParidadeInfluencer(role)) return false;
+  return true;
+}
+
 export function ModalUsuario({ editando, operadoras, onClose, onSalvo }: ModalUsuarioProps) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
+  const idNome = useId();
+  const idEmail = useId();
   const [nome, setNome] = useState(editando?.name ?? "");
   const [email, setEmail] = useState(editando?.email ?? "");
   const [role, setRole] = useState<Role>(editando?.role ?? ROLES_GESTOR_DEPARTAMENTO[0] ?? "executivo");
@@ -38,29 +51,60 @@ export function ModalUsuario({ editando, operadoras, onClose, onSalvo }: ModalUs
   const [erro, setErro] = useState("");
 
   useEffect(() => {
+    if (!precisaCatalogoInfluencers(role)) {
+      setInfluencers([]);
+      return;
+    }
+    let cancelled = false;
     (async () => {
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("id, name, email")
-        .in("role", ["influencer", "afiliado"])
-        .order("name");
-      if (!profiles?.length) {
-        setInfluencers([]);
-        return;
+      try {
+        type ProfileMini = { id: string; name?: string; email?: string };
+        const profiles = await fetchAllPages<ProfileMini>(async (from, to) => {
+          const { data, error } = await supabase
+            .from("profiles")
+            .select("id, name, email")
+            .in("role", ["influencer", "afiliado"])
+            .order("name")
+            .range(from, to);
+          return { data, error };
+        });
+        if (cancelled) return;
+        if (!profiles.length) {
+          setInfluencers([]);
+          return;
+        }
+        const ids = profiles.map((p) => p.id);
+        const perfis = await fetchInBatched<{ id: string; nome_artistico: string }>(
+          ids,
+          150,
+          async (slice) => {
+            const { data, error } = await supabase
+              .from("influencer_perfil")
+              .select("id, nome_artistico")
+              .in("id", slice);
+            if (error) throw new Error(error.message);
+            return (data ?? []) as { id: string; nome_artistico: string }[];
+          },
+        );
+        if (cancelled) return;
+        const perfisMap = new Map(perfis.map((p) => [p.id, p.nome_artistico]));
+        setInfluencers(
+          profiles.map((p) => ({
+            id: p.id,
+            nome: perfisMap.get(p.id) ?? p.name ?? p.email ?? p.id,
+          })),
+        );
+      } catch (err) {
+        console.error("[GestaoUsuarios] carregar influencers do modal:", err);
+        if (!cancelled) setInfluencers([]);
       }
-      const ids = profiles.map((p: { id: string }) => p.id);
-      const { data: perfis } = await supabase.from("influencer_perfil").select("id, nome_artistico").in("id", ids);
-      const perfisMap = new Map((perfis ?? []).map((p: { id: string; nome_artistico: string }) => [p.id, p.nome_artistico]));
-      setInfluencers(
-        profiles.map((p: { id: string; name?: string; email?: string }) => ({
-          id: p.id,
-          nome: perfisMap.get(p.id) ?? p.name ?? p.email ?? p.id,
-        }))
-      );
     })();
-  }, []);
+    return () => {
+      cancelled = true;
+    };
+  }, [role]);
 
-  /** Sincroniza cabeçalho do formulário quando abre outro usuário (evita estado velho se o modal reutilizar instância). */
+  /** Sincroniza cabeçalho do formulário quando abre outro usuário. */
   useEffect(() => {
     setNome(editando?.name ?? "");
     setEmail(editando?.email ?? "");
@@ -68,24 +112,37 @@ export function ModalUsuario({ editando, operadoras, onClose, onSalvo }: ModalUs
     setErro("");
   }, [editando?.id, editando?.name, editando?.email, editando?.role]);
 
+  /** Escopos só na abertura / troca de registro — não após handleRoleChange. */
   useEffect(() => {
     const scopes = editando?.scopes ?? [];
-    const r = editando?.role ?? role;
+    const r = (editando?.role ?? ROLES_GESTOR_DEPARTAMENTO[0] ?? "executivo") as Role;
+    if (!editando) {
+      setScopeInfluencers([]);
+      setScopeOperadoras([]);
+      setScopePares([]);
+      setScopePrestadorTipos([]);
+      return;
+    }
     setScopeInfluencers(
-      r === "executivo" || r === "investidor" || roleGestorDepartamento(r as Role)
+      r === "executivo" || r === "investidor" || roleGestorDepartamento(r)
         ? []
-        : scopes.filter((s) => s.scope_type === "influencer").map((s) => s.scope_ref)
+        : scopes.filter((s) => s.scope_type === "influencer").map((s) => s.scope_ref),
     );
     setScopeOperadoras(
-      r === "executivo" || r === "investidor" || roleGestorDepartamento(r as Role) || ROLES_STAFF_APENAS_PERMISSOES.includes(r as Role)
+      r === "executivo" ||
+        r === "investidor" ||
+        roleGestorDepartamento(r) ||
+        ROLES_STAFF_APENAS_PERMISSOES.includes(r)
         ? []
-        : scopes.filter((s) => s.scope_type === "operadora").map((s) => s.scope_ref)
+        : scopes.filter((s) => s.scope_type === "operadora").map((s) => s.scope_ref),
     );
     setScopePares(scopes.filter((s) => s.scope_type === "agencia_par").map((s) => s.scope_ref));
     setScopePrestadorTipos(scopes.filter((s) => s.scope_type === "prestador_tipo").map((s) => s.scope_ref));
-  }, [editando, role]);
+    // Só na abertura / troca de id — troca de perfil limpa via handleRoleChange.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- sync intencional por editando.id
+  }, [editando?.id]);
 
-  /** Troca explícita no select: limpa escopos incompatíveis (evita useEffect em [role] que conflita com sync de `editando`). */
+  /** Troca explícita no select: limpa escopos incompatíveis. */
   const handleRoleChange = (next: Role) => {
     if (next === role) return;
     setRole(next);
@@ -230,8 +287,7 @@ export function ModalUsuario({ editando, operadoras, onClose, onSalvo }: ModalUs
         if (!uid) throw new Error("Usuário criado mas ID não retornado");
         if (fnData.emailEnviado === false) {
           onSalvo(
-            fnData.emailErro ??
-              "Usuário criado, mas o e-mail de boas-vindas não foi enviado. Verifique RESEND_API_KEY e RESEND_FROM_SISTEMA no Supabase, ou redefina a senha manualmente.",
+            "Usuário criado, mas o e-mail de boas-vindas não foi enviado. Se o problema persistir, entre em contato com o suporte.",
           );
         } else {
           onSalvo();
@@ -242,10 +298,10 @@ export function ModalUsuario({ editando, operadoras, onClose, onSalvo }: ModalUs
       console.error("[GestaoUsuarios] salvar usuário:", e);
       if (isAbortError(e)) {
         setErro(
-          "Tempo esgotado ou rede indisponível. Confira se as funções criar-usuario e atualizar-perfil estão deployadas no Supabase (CLI: supabase functions deploy)."
+          "Tempo esgotado ou rede indisponível. Se o problema persistir, entre em contato com o suporte.",
         );
       } else {
-        setErro("Não foi possível salvar o usuário. Tente novamente.");
+        setErro("Não foi possível salvar o usuário. Se o problema persistir, entre em contato com o suporte.");
       }
     } finally {
       setSalvando(false);
@@ -275,7 +331,6 @@ export function ModalUsuario({ editando, operadoras, onClose, onSalvo }: ModalUs
     outline: "none",
     transition: "border-color 0.18s",
   };
-  const selectStyle: React.CSSProperties = { ...inputStyle, cursor: "pointer" };
   const field: React.CSSProperties = { marginBottom: 18 };
 
   const addParAgencia = () => setParesAgencia((prev) => [...prev, { influencerId: "", operadoraSlug: "" }]);
@@ -286,16 +341,18 @@ export function ModalUsuario({ editando, operadoras, onClose, onSalvo }: ModalUs
 
   const tituloModal = editando ? "Editar Usuário" : "Novo Usuário";
   const salvarBg = ctaGradientSalvar(brand, salvando, BRAND.cinza);
+  const roleOptions = ROLES.map((r) => ({ value: r.value, label: r.label }));
 
   return (
     <ModalBase onClose={onClose} maxWidth={560} zIndex={999}>
       <ModalHeader title={tituloModal} onClose={onClose} />
         <div style={field}>
-          <label style={labelStyle}>
+          <label style={labelStyle} htmlFor={idNome}>
             Nome
             <CampoObrigatorioMark />
           </label>
           <input
+            id={idNome}
             style={inputStyle}
             value={nome}
             onChange={(e) => setNome(e.target.value)}
@@ -306,11 +363,12 @@ export function ModalUsuario({ editando, operadoras, onClose, onSalvo }: ModalUs
         </div>
         {!editando && (
           <div style={field}>
-            <label style={labelStyle}>
+            <label style={labelStyle} htmlFor={idEmail}>
               E-mail
               <CampoObrigatorioMark />
             </label>
             <input
+              id={idEmail}
               style={inputStyle}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -322,14 +380,14 @@ export function ModalUsuario({ editando, operadoras, onClose, onSalvo }: ModalUs
           </div>
         )}
         <div style={field}>
-          <label style={labelStyle}>Perfil</label>
-          <select style={selectStyle} value={role} onChange={(e) => handleRoleChange(e.target.value as Role)}>
-            {ROLES.map((r) => (
-              <option key={r.value} value={r.value}>
-                {r.label}
-              </option>
-            ))}
-          </select>
+          <SelectListaComBusca
+            variant="campo"
+            label="Perfil"
+            value={role}
+            onChange={(v) => handleRoleChange(v as Role)}
+            options={roleOptions}
+            searchPlaceholder="Pesquisar Perfil..."
+          />
         </div>
         {role === "admin" || ROLES_STAFF_APENAS_PERMISSOES.includes(role) ? (
           <div style={field}>
@@ -358,6 +416,7 @@ export function ModalUsuario({ editando, operadoras, onClose, onSalvo }: ModalUs
               field={field}
               labelStyle={labelStyle}
               label="Áreas de atuação"
+              searchNome="Área"
               obrigatorio
               cor={roleBadgeColor("prestador")}
               items={PRESTADOR_TIPOS.map((g) => ({ value: g.slug, label: g.label }))}
@@ -380,7 +439,6 @@ export function ModalUsuario({ editando, operadoras, onClose, onSalvo }: ModalUs
             influencers={influencers}
             operadoras={operadoras}
             labelStyle={labelStyle}
-            selectStyle={selectStyle}
             field={field}
           />
         ) : roleParidadeInfluencer(role) ? (
@@ -389,6 +447,7 @@ export function ModalUsuario({ editando, operadoras, onClose, onSalvo }: ModalUs
             field={field}
             labelStyle={labelStyle}
             label="Operadoras atribuídas"
+            searchNome="Operadora"
             obrigatorio
             cor={roleBadgeColor(role)}
             items={operadoras.map((o) => ({ value: o.slug, label: o.nome }))}
@@ -403,6 +462,7 @@ export function ModalUsuario({ editando, operadoras, onClose, onSalvo }: ModalUs
                 field={field}
                 labelStyle={labelStyle}
                 label="Influencers (opcional)"
+                searchNome="Influencer"
                 cor={roleBadgeColor("operador")}
                 items={influencers.map((i) => ({ value: i.id, label: i.nome }))}
                 selected={scopeInfluencers}
@@ -427,6 +487,7 @@ export function ModalUsuario({ editando, operadoras, onClose, onSalvo }: ModalUs
                 field={field}
                 labelStyle={labelStyle}
                 label="Operadoras (opcional)"
+                searchNome="Operadora"
                 cor={roleBadgeColor("executivo")}
                 items={operadoras.map((o) => ({ value: o.slug, label: o.nome }))}
                 selected={scopeOperadoras}

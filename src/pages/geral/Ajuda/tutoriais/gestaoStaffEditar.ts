@@ -12,7 +12,7 @@ export const TUTORIAL_GESTAO_STAFF_EDITAR: TutorialDef = {
   icon: IdCard,
   relatedPageKey: "rh_staff",
   objetivo:
-    "Atualizar os dados de função, skills e dealer de um prestador na Gestão de Staff.",
+    "Atualizar os dados de função, skills e Game Presenter de um prestador na Gestão de Staff.",
   passos: [
     {
       titulo: "1. Abrir a Gestão de Staff",
@@ -48,13 +48,13 @@ export const TUTORIAL_GESTAO_STAFF_EDITAR: TutorialDef = {
       ],
     },
     {
-      titulo: "4. Aba Gestão de dealer (Game Presenter)",
+      titulo: "4. Aba Gestão de Game Presenter",
       texto:
-        "1. Em prestadores do time Game Presenter, clique na aba Gestão de dealer.\n2. Selecione o Gênero.\n3. Preencha a Bio do Dealer.\n4. Em Fotos, use Adicionar fotos (ou arraste / cole Ctrl+V).\n5. Em outros times essa aba não aparece.",
+        "1. Em prestadores do time Game Presenter, clique na aba Gestão de Game Presenter.\n2. Selecione o Gênero.\n3. Preencha a Bio do Game Presenter.\n4. Em Fotos, use Adicionar fotos (ou arraste / cole Ctrl+V).\n5. Em outros times essa aba não aparece.",
       imagens: [
         {
           src: `${IMG}/04-editar-gestao-dealer.png`,
-          alt: "Modal Editar — aba Gestão de dealer",
+          alt: "Modal Editar — aba Gestão de Game Presenter",
         },
       ],
     },

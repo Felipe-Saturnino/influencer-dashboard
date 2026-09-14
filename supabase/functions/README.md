@@ -67,7 +67,7 @@ Espelho do builder: `src/lib/rhCalendarioIcs.ts`. `verify_jwt = false` no Dashbo
 
 ### `index.ts` + `platformHealthDiagnostics.ts`
 
-**Function:** `platform-health-check` — diagnóstico Status Técnico (secrets CDA, Resend, e-mail transacional/cron, integrações).
+**Function:** `platform-health-check` — diagnóstico Status Técnico (infra, jobs, pings vivos, catálogo). Não dispara sync nem e-mails.
 
 | Ficheiro |
 |----------|
@@ -246,7 +246,7 @@ $env:VITE_SUPABASE_ANON_KEY = "sua-anon-key"
 
 Login como **admin** → **Status Técnico** → linha **Diagnóstico da Plataforma** → **Executar**.
 
-Verifica CDA, GitHub social, **RESEND_API_KEY**, **RESEND_FROM_SISTEMA**, **RESEND_FROM_RELATORIOS**, **SENHA_PADRAO**, listas de destinatários dos crons e estado das integrações. Resultado em **Logs Recentes** (tipos `diagnostico_ok` / `diagnostico_aviso` / `diagnostico_erro`).
+Verifica jobs, credenciais, se as Edge Functions estão publicadas, Storage, pg_cron e conexões (Resend, CDA, Outlook, RSS, Brasil API). **Não** dispara sync nem e-mails. Resultado em **Logs Recentes** (resumo + avisos/falhas; tipos `diagnostico_plataforma` / `diagnostico_aviso` / `diagnostico_erro`).
 
 **Importante:** a function precisa de **`index.ts` + `platformHealthDiagnostics.ts`** no Supabase (ver `docs/SETUP-PLATFORM-HEALTH.md`).
 

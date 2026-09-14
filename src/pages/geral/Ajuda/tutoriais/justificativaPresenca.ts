@@ -36,7 +36,7 @@ export const TUTORIAL_JUSTIFICATIVA_PRESENCA: TutorialDef = {
     {
       titulo: "2. Motivo Médico (atestado)",
       texto:
-        "1. Em Motivo, escolha Médico.\n2. Informe Início do Atestado e Fim do Atestado (obrigatórios).\n3. Em Atestado, anexe o arquivo do documento (obrigatório).\n4. Observação é opcional.\n5. Clique em Salvar.\n6. O status da linha fica Em análise até o RH atender a solicitação de Atestado em Solicitações (seção RH).\n7. Se o RH aprovar com Abono remunerado = SIM, os dias cobertos pelo atestado passam a Status Abonado.",
+        "1. Em Motivo, escolha Médico.\n2. Informe Início do Atestado e Fim do Atestado (obrigatórios).\n3. Em Atestado, anexe o arquivo do documento (obrigatório).\n4. Observação é opcional.\n5. Clique em Salvar.\n6. O status da linha fica Em análise até o RH atender a solicitação de Atestado em Solicitações de RH.\n7. Se o RH aprovar com Abono remunerado = SIM, os dias cobertos pelo atestado passam a Status Abonado.",
       imagens: [
         {
           src: `${IMG}/03-motivo-medico.png`,
@@ -57,5 +57,5 @@ export const TUTORIAL_JUSTIFICATIVA_PRESENCA: TutorialDef = {
     },
   ],
   notasFinais:
-    "— Depois de salvar a justificativa, o botão Justificar some naquela linha.\n— Motivo Outro usa o mesmo formulário de horários que Esquecimento (também vai para o líder).\n— Atestado médico não é aprovado pelo líder no Calendário — o atendimento é em Solicitações (RH).",
+    "— Depois de salvar a justificativa, o botão Justificar some naquela linha.\n— Motivo Outro usa o mesmo formulário de horários que Esquecimento (também vai para o líder).\n— Atestado médico não é aprovado pelo líder no Calendário — o atendimento é em Solicitações de RH.",
 };

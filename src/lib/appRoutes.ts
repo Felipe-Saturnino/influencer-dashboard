@@ -14,8 +14,8 @@ export const ROUTE_SLUG_HOME = "Home";
 export const ROUTE_SLUG_LOGIN = "Login";
 export const ROUTE_SLUG_SEM_ACESSO = "SemAcesso";
 
-/** Home, Configurações e Ajuda — acessíveis a qualquer perfil autenticado. */
-export const PAGE_KEYS_UTILITY: PageKey[] = ["home", "configuracoes", "ajuda"];
+/** Home, Configurações, Ajuda e Versionamento — acessíveis a qualquer perfil autenticado. */
+export const PAGE_KEYS_UTILITY: PageKey[] = ["home", "configuracoes", "ajuda", "versionamento"];
 
 export type AppRouteTabDef = {
   /** Chave interna do componente (ex.: `overview`, `conversao`). */
@@ -60,7 +60,6 @@ export const APP_ROUTE_CATALOG: AppRouteDef[] = [
   page("Overview Afiliado", "dash_overview_afiliado", "OverviewAfiliado"),
   page("Headcount", "dash_headcount", "Headcount", [
     { tabId: "overview", slug: "Overview", label: "Overview", access: "always" },
-    { tabId: "plano_carreira", slug: "PlanoDeCarreira", label: "Plano de Carreira", access: "always" },
     { tabId: "vagas", slug: "Contratacao", label: "Contratação", access: "always" },
     { tabId: "distrato", slug: "Distratos", label: "Distratos", access: "always" },
   ]),
@@ -165,7 +164,7 @@ export const APP_ROUTE_CATALOG: AppRouteDef[] = [
     { tabId: "ignorados", slug: "Ignorados", label: "Ignorados", access: "always" },
   ]),
   page("Central de Notificações", "central_notificacoes", "CentralDeNotificacoes", [
-    { tabId: "troca", slug: "TrocaDeDealer", label: "Troca de dealer", access: "always" },
+    { tabId: "troca", slug: "TrocaDeDealer", label: "Troca de Game Presenter", access: "always" },
     { tabId: "feedback", slug: "Feedbacks", label: "Feedbacks", access: "always" },
     { tabId: "campanha_roteiro", slug: "Campanhas", label: "Campanhas", access: "always" },
     { tabId: "roteiro_mesa", slug: "Roteiros", label: "Roteiros", access: "always" },
@@ -237,7 +236,7 @@ export const APP_ROUTE_CATALOG: AppRouteDef[] = [
   ]),
   page("Playbook Influencers", "playbook_influencers", "PlaybookInfluencers", [
     { tabId: "posicionamento", slug: "Posicionamento", label: "Posicionamento", access: "always" },
-    { tabId: "dealers", slug: "Dealers", label: "Dealers", access: "always" },
+    { tabId: "dealers", slug: "Dealers", label: "Game Presenters", access: "always" },
     { tabId: "agendamento", slug: "Agendamento", label: "Agendamento", access: "always" },
     { tabId: "jogos", slug: "Jogos", label: "Jogos", access: "always" },
     { tabId: "blackjack", slug: "SideBets", label: "Side Bets", access: "always" },
@@ -318,6 +317,7 @@ export const APP_ROUTE_CATALOG: AppRouteDef[] = [
     { tabId: "escopos", slug: "Escopos", label: "Escopos", access: "always" },
     { tabId: "simulador", slug: "SimuladorDeLogin", label: "Simulador de Login", access: "always" },
   ]),
+  page("Versionamento", "versionamento", "Versionamento"),
   page("Ajuda", "ajuda", "Ajuda", [
     { tabId: "conheca", slug: "ConhecaAPlataforma", label: "Conheça a Plataforma", access: "always" },
     { tabId: "troubleshooting", slug: "Troubleshooting", label: "Troubleshooting", access: "always" },

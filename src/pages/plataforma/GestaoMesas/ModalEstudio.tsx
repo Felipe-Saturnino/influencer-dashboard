@@ -342,7 +342,7 @@ export function ModalEstudio({
               onTurnoNoite={setTurnoNoite}
             />
             <p style={{ margin: "4px 0 0", fontSize: 12, color: t.textMuted, fontFamily: FONT.body, lineHeight: 1.5 }}>
-              Horários usados no RH (Calendário e Gestão de Staff) para dealers vinculados às operadoras deste estúdio.
+              Horários usados no RH (Calendário e Gestão de Staff) para Game Presenters vinculados às operadoras deste estúdio.
             </p>
           </ModalTabPanel>
         </>

@@ -21,6 +21,7 @@ import { compareLocaleTexto, compareNumber } from "../../../lib/classificacaoSor
 import { SectionTitle, SkeletonKpiCard, SortTableTh } from "../../../components/dashboard";
 import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
 import { getDataTableStyle, getDataTableWrapStyle } from "../../../lib/dataTableStyles";
+import { TabelaComPaginacao } from "../../../components/TabelaPaginacaoBar";
 import type {
   HeadcountGerenciaMix,
   HeadcountOverviewHistoricoMetricas,
@@ -246,6 +247,8 @@ function OverviewHistorico({
 
       <div style={pageBox}>
         <SectionTitle sub="comparativo dos últimos 13 meses">Mês a Mês</SectionTitle>
+        <TabelaComPaginacao items={rows} t={t} resetKey={`${sort.col}|${sort.dir}`}>
+          {(linhas, zebraIdx) => (
         <div className="app-table-wrap app-table-wrap--sticky-col" style={getDataTableWrapStyle()}>
           <table style={getDataTableStyle({ minWidth: 720 })}>
             <caption style={{ display: "none" }}>Comparativo mês a mês do Headcount</caption>
@@ -299,8 +302,8 @@ function OverviewHistorico({
               </tr>
             </thead>
             <tbody>
-              {rows.map((row, i) => (
-                <tr key={row.competencia} style={{ background: dataTable.zebraRow(i) }}>
+              {linhas.map((row, i) => (
+                <tr key={row.competencia} style={{ background: dataTable.zebraRow(zebraIdx(i)) }}>
                   <td style={dataTable.tdSticky()}>{row.label}</td>
                   <td style={dataTable.tdCenter}>{row.headcount}</td>
                   <td style={dataTable.tdCenter}>{row.contratacao}</td>
@@ -311,6 +314,8 @@ function OverviewHistorico({
             </tbody>
           </table>
         </div>
+          )}
+        </TabelaComPaginacao>
       </div>
     </>
   );

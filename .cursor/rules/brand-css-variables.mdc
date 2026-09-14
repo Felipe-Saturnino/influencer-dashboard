@@ -15,7 +15,7 @@ alwaysApply: true
 | **Brand (este)** | Global (limite semântica vs marca vs jogo); MDC **Dashboards** (KpiCard, funil, A/B, MoM) |
 | **Secções** (`dashboards`, `lives`, `estudio`, …) | **Global** + **Brand** — sem citar outras secções para marca |
 
-**Antes de codar:** ler Global → Brand → MDC da secção (ordem detalhada no Global).
+**Antes de codar:** Global → Brand → MDC da secção (ordem detalhada no Global). Se o trabalho tocar domínio (estúdio vs operadora, Dedicada/Network, Mesas Spin): **`business.mdc` primeiro**.
 
 ---
 
@@ -215,7 +215,7 @@ import { getPageMenuLabel } from "../lib/pageHeaderMenu";
 
 ### Pill `borderRadius: 999` (padrão de controles na barra)
 
-Filtros e toggles repetíveis na **barra de filtros** usam pill **999** por defeito — alinhado a **Histórico** (`FiltroHistoricoButton`), **Operadora** (`FiltroOperadoraSelect` com `pill`), **Influencer** (`FiltroInfluencerSelect`) e **novos filtros** da barra em código novo.
+Filtros e toggles repetíveis na **barra de filtros** usam pill **999** por padrão — alinhado a **Histórico** (`FiltroHistoricoButton`), **Operadora** (`FiltroOperadoraSelect` com `pill`), **Influencer** (`FiltroInfluencerSelect`) e **novos filtros** da barra em código novo.
 
 - **Exceção — chips semânticos Status / Plataforma:** `borderRadius: **10**`, `padding: 10px 18px`, `minHeight: 44` — **`FiltroStatusSemanticoPill`**, **`FiltroPlataformaSemanticoPill`** (Global § Filtros semânticos; referência visual: abas Overview Spin). Ativo na cor do domínio, não `brand.accent`.
 - **Não** usar `borderRadius: 20` na barra salvo exceção documentada na secção.
@@ -336,7 +336,9 @@ import { Network, LayoutList } from "lucide-react";
 
 ### Filtro de operadora — contrato visual (obrigatório)
 
-Import: `FiltroOperadoraSelect` de `components/dashboard` (reexporta constantes `OPERADORA_FILTRO_TODAS_VALUE`, `OPERADORA_FILTRO_TODAS_LABEL`).
+**Lista dropdown:** Import `FiltroOperadoraSelect` de `components/dashboard` (reexporta constantes `OPERADORA_FILTRO_TODAS_VALUE`, `OPERADORA_FILTRO_TODAS_LABEL`).
+
+**Carrossel** (Gestão de Estúdios, Campanhas): setas Brand §7 + pill **Todas Operadoras** — **não** usar `FiltroOperadoraSelect` nessa barra (`plataforma.mdc` / `marketing.mdc`).
 
 - Ícone **Shield** Lucide 15px no trigger (via `SelectComIcone` / `SelectListaComBusca` interno).
 - Primeira opção do painel: valor `todas`, texto visível **`Todas Operadoras`** (`OPERADORA_FILTRO_TODAS_LABEL`).
@@ -386,6 +388,7 @@ Regras de dados e `extraOptions` (“Nenhuma”): **Global** § Filtro de operad
 | Tipo / vagas (contrato) | `ClipboardType` | Vagas Candidaturas |
 | Gerência / contrato (RH) | `Layers` / `FileSignature` | Gestão de Prestadores |
 | Meu Calendário | `CalendarCheck` | Calendário RH (`FiltroMeuCalendarioButton`) |
+| Seção (Versionamento) | `LayoutGrid` | Versionamento — filtro **Todas Seções** |
 
 | Tipo (outro padrão) | Ícone / UI | Componente / notas |
 |---------------------|------------|-------------------|
@@ -482,7 +485,7 @@ Ações de **fluxo da página** (**Nova Escala**, **Salvar Alterações**, **Sug
 
 ### Linha de tabela, card ou lista densa
 
-Ações por registro (**Editar, Ver, Histórico, Aprovar, Arquivar, Excluir, …**): botão **somente ícone**, sem texto visível por defeito.
+Ações por registro (**Editar, Ver, Histórico, Aprovar, Arquivar, Excluir, …**): botão **somente ícone**, sem texto visível por padrão.
 
 - **`aria-label` descritivo** obrigatório.
 - **`title` obrigatório** — tooltip nativo no hover; **mesmo texto** que `aria-label`.
@@ -599,7 +602,7 @@ import { BtnExcluirComTexto } from "../components/BtnExcluirComTexto";
 - CTA de criação inline sem `CtaCriarButton`; label com `+` em vez de ícone `Plus`.
 - Filtro sem ícone quando existe entrada no catálogo (secção 6).
 - Aba de navegação (`role="tab"`) sem `FiltroBarTabButton`, sem ícone 16px dedicado, ou com estilo pill 20/999 em vez do layout Organograma (secção 6 — Abas).
-- Filtro de operadoras sem `FiltroOperadoraSelect` ou com agregadora “Todas as operadoras”, “Operadoras” (sem “Todas”) / label lateral “Operadora”.
+- Filtro de operadoras **como lista** sem `FiltroOperadoraSelect` ou com agregadora “Todas as operadoras”, “Operadoras” (sem “Todas”) / label lateral “Operadora”. **Exceção documentada:** carrossel de operadoras (Gestão de Estúdios, Campanhas) — Brand §7 + MDC da secção; **não** misturar carrossel e `FiltroOperadoraSelect` na mesma barra.
 - `FiltroOperadoraSelect` alimentado com operadoras **inativas** na barra de filtros.
 - Filtro de influencers na barra sem `FiltroInfluencerSelect`, agregadora diferente de **Todos Influencers**, ou `SelectComIcone` / dropdown local duplicado.
 - Controlo novo na barra de filtros com pill retangular (`borderRadius` 10/20) sem exceção documentada — **exceto** chips semânticos Status/Plataforma (`FiltroStatusSemanticoPill`, `FiltroPlataformaSemanticoPill`, Global § Filtros semânticos).

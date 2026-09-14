@@ -8,6 +8,11 @@ import { FONT } from "../../../constants/theme";
 import { BRAND, FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { verificarElegibilidadeAgendaLive } from "../../../lib/influencerAgendaGate";
+import {
+  isErroInfluencerCadastroInativo,
+  verificarPodeAgendarPorStatus,
+  type PersonaBloqueioAgendaCota,
+} from "../../../lib/influencerHorasCota";
 import { Live, Plataforma, type Role } from "../../../types";
 import ModalBloqueioAgendaLive from "./ModalBloqueioAgendaLive";
 import ModalLiveSomenteVer from "./ModalLiveSomenteVer";
@@ -46,18 +51,22 @@ function fmtDataLive(iso: string): string {
 
 interface Props {
   live?:   Live;
+  influencerIdInicial?: string;
   onClose: () => void;
   onSave:  () => void;
+  onBloqueioInativo?: (persona: PersonaBloqueioAgendaCota) => void;
 }
 
 // ─── MODAL ────────────────────────────────────────────────────────────────────
-export default function ModalLive({ live, onClose, onSave }: Props) {
+export default function ModalLive({ live, influencerIdInicial, onClose, onSave, onBloqueioInativo }: Props) {
   const { theme: t, user, isDark, setActivePage } = useApp();
   const { userId: userIdEfetivo, role: roleEfetivo } = useIdentidadeEfetiva();
   const brand = useDashboardBrand();
   const { podeVerInfluencer } = useDashboardFiltros();
   const perm = usePermission("agenda");
   const isInfluencer = roleParidadeInfluencer(roleEfetivo ?? user?.role);
+  const personaCota: PersonaBloqueioAgendaCota =
+    isInfluencer || roleEfetivo === "agencia" ? "contrato" : "interno";
   const isEdit       = !!live;
   const isAdminOuGestor =
     !!roleEfetivo && ROLES_STAFF_OPERACOES_LIVES.includes(roleEfetivo as Role);
@@ -77,7 +86,9 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
 
   const [influencers, setInfluencers] = useState<{ id: string; name: string }[]>([]);
   const [form, setForm] = useState({
-    influencer_id: live?.influencer_id ?? (roleParidadeInfluencer(roleEfetivo ?? user?.role) ? userIdEfetivo ?? "" : ""),
+    influencer_id: live?.influencer_id
+      ?? influencerIdInicial
+      ?? (roleParidadeInfluencer(roleEfetivo ?? user?.role) ? userIdEfetivo ?? "" : ""),
     data:          live?.data          ?? "",
     horario:       live?.horario       ?? "",
     plataforma:    (live?.plataforma    ?? "Twitch") as Plataforma,
@@ -134,6 +145,30 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
     setForm(f => ({ ...f, [k]: v }));
     if (k === "link") setLinkAutoPreenchido(false);
   };
+
+  async function escolherInfluencer(id: string) {
+    if (!id) {
+      setForm((f) => ({ ...f, influencer_id: "", link: "" }));
+      setLinkAutoPreenchido(false);
+      return;
+    }
+    if (!isEdit) {
+      const gate = await verificarPodeAgendarPorStatus(id);
+      if (gate.erroVerificacao) {
+        setError(
+          "Não foi possível verificar o cadastro do influencer. Se o problema persistir, entre em contato com o suporte.",
+        );
+        return;
+      }
+      if (!gate.podeAgendar) {
+        onBloqueioInativo?.(personaCota);
+        onClose();
+        return;
+      }
+    }
+    setForm((f) => ({ ...f, influencer_id: id, link: "" }));
+    setLinkAutoPreenchido(false);
+  }
 
   async function handleSave() {
     setError("");
@@ -216,6 +251,11 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
       if (err) {
         console.error("Agenda insert live:", err);
         setSaving(false);
+        if (isErroInfluencerCadastroInativo(err.message)) {
+          onBloqueioInativo?.(personaCota);
+          onClose();
+          return;
+        }
         setError("Não foi possível salvar a live. Se o problema persistir, entre em contato com o suporte.");
         return;
       }
@@ -370,11 +410,8 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
             </label>
             <select
               value={form.influencer_id}
-                onChange={e => {
-                  if (!somenteLeitura) {
-                    setForm(f => ({ ...f, influencer_id: e.target.value, link: "" }));
-                    setLinkAutoPreenchido(false);
-                  }
+                onChange={(e) => {
+                  if (!somenteLeitura) void escolherInfluencer(e.target.value);
                 }}
               disabled={somenteLeitura}
               style={inputStyle}

@@ -187,15 +187,15 @@ export type PresencaJustificativaMeta = {
   atestadoStoragePath?: string;
   atestadoFileName?: string;
   observacao?: string | null;
-  /** Status da solicitação de atestado em Solicitações (RH). */
+  /** Status da solicitação de atestado em Solicitações de RH. */
   atestadoStatus?: PresencaJustificativaAtestadoStatus;
   solicitacaoId?: string;
   /** Dia em que a justificativa foi registrada (âncora da solicitação em Solicitações RH). */
   atestadoDiaRegistro?: string;
-  /** Atendimento em Solicitações (RH) — preenchido ao aprovar/rejeitar. */
+  /** Atendimento em Solicitações de RH — preenchido ao aprovar/rejeitar. */
   atestadoAtendidoPorNome?: string;
   atestadoAtendidoEm?: string;
-  /** Abono remunerado definido em Solicitações (RH) ao aprovar atestado. */
+  /** Abono remunerado definido em Solicitações de RH ao aprovar atestado. */
   abonoRemunerado?: "sim" | "nao" | null;
 };
 

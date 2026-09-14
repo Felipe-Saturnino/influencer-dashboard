@@ -34,14 +34,6 @@ export function Checkbox({ checked, onChange, label }: CheckboxProps) {
         cursor: "pointer",
         transition: "all 0.15s",
         padding: 0,
-        outline: "none",
-      }}
-      onFocus={(e) => {
-        e.currentTarget.style.boxShadow =
-          "0 0 0 2px color-mix(in srgb, var(--brand-primary, #7c3aed) 40%, transparent)";
-      }}
-      onBlur={(e) => {
-        e.currentTarget.style.boxShadow = "none";
       }}
     >
       {checked && (

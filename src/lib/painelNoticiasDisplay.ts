@@ -60,9 +60,11 @@ export function calcularPainelNoticiasExibicao(
   now: Date = new Date(),
 ): PainelNoticiaRow[] {
   const nowMs = now.getTime();
-  const elegiveis = ordenarPainelNoticias(rows).filter((r) =>
-    itemElegivelPainelNoticia(r.titulo, r.resumo),
-  );
+  const elegiveis = ordenarPainelNoticias(rows).filter((r) => {
+    if (!itemElegivelPainelNoticia(r.titulo, r.resumo)) return false;
+    const { titulo } = prepararTextoPainelNoticia(r.titulo, r.resumo);
+    return titulo.trim().length > 0;
+  });
   const frescas = elegiveis.filter((r) => parseMs(r.visivel_ate) > nowMs);
   if (frescas.length >= PAINEL_NOTICIAS_MIN_EXIBICAO) {
     return frescas.slice(0, PAINEL_NOTICIAS_MAX_EXIBICAO);

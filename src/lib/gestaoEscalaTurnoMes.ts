@@ -1,5 +1,5 @@
 /**
- * Snapshot de turno por mês/área na Gestão de Escala (congelado na aprovação).
+ * Snapshot de turno por mês/área na Escala Estúdio (congelado na aprovação).
  */
 
 export type EscalaTurnoMesSnap = {

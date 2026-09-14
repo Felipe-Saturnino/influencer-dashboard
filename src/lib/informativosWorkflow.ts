@@ -10,7 +10,7 @@ export const PERFIS_INFORMATIVO_APROVACAO_INVESTIDOR_OPERADOR: readonly Role[] =
   "operador",
 ] as const;
 
-/** Agência / Influenciador / Afiliado → aprovação: Admin, Executivo ou Gestor de Aquisição. */
+/** Agência / Influencer / Afiliado → aprovação: Admin, Executivo ou Gestor de Aquisição. */
 export const PERFIS_INFORMATIVO_APROVACAO_AQUISICAO: readonly Role[] = [
   "agencia",
   "influencer",
@@ -25,6 +25,8 @@ export const PERFIS_INFORMATIVO_APROVACAO_GESTORES: readonly Role[] = [
   "gestor_tech_ops",
   "gestor_academy",
   "gestor_rh",
+  "gestor_facilities",
+  "gestor_ti",
 ] as const;
 
 /** União dos destinos que exigem «Enviar para aprovação» (sem Publicar direto). */

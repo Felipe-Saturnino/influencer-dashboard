@@ -22,8 +22,22 @@ import { supabase } from "../../../lib/supabase";
 /** Tokens semânticos fixos (não whitelabel). */
 const SEMANTIC = {
   verde: "#22c55e",
-  vermelho: "#e94025",
+  vermelho: "#e84025",
 } as const;
+
+function mapPasswordUpdateError(raw: string | undefined): string {
+  const m = (raw ?? "").toLowerCase();
+  if (m.includes("different from the old") || m.includes("should be different") || m.includes("same as")) {
+    return "A nova senha deve ser diferente da atual.";
+  }
+  if (m.includes("session") || m.includes("missing") || m.includes("jwt") || m.includes("expired")) {
+    return "Sessão expirada. Faça login novamente.";
+  }
+  if (m.includes("weak") || m.includes("least") || m.includes("password")) {
+    return "A nova senha não atende aos requisitos de segurança.";
+  }
+  return "Não foi possível atualizar a senha. Se o problema persistir, entre em contato com o suporte.";
+}
 
 const CTA_GRADIENT =
   "linear-gradient(135deg, var(--brand-secondary, #4a2082), var(--brand-accent, #1e36f8))";
@@ -79,7 +93,7 @@ export default function Configuracoes() {
         <ShieldOff size={32} color={t.textMuted} aria-hidden />
         <h1 style={{ fontSize: 18, fontWeight: 700, color: t.text, margin: 0 }}>Acesso restrito</h1>
         <p style={{ fontSize: 14, color: t.textMuted, margin: 0, lineHeight: 1.5 }}>
-          Você não tem permissão para acessar esta página. Entre em contato com seu administrador.
+          Você não tem permissão para visualizar esta página.
         </p>
       </div>
     );
@@ -92,46 +106,58 @@ export default function Configuracoes() {
     { ok: /[^a-zA-Z0-9]/.test(newPass), label: "Pelo menos um caractere especial" },
   ];
 
+  const requisitosOk = reqs.every((r) => r.ok);
+  const submitDisabled =
+    saving || !curPass || !requisitosOk || newPass !== confPass || confPass.length === 0;
+
   async function handleChangePassword() {
     setPassErr("");
     setPassOk(false);
     if (!curPass) return setPassErr("Informe sua senha atual.");
-    if (newPass.length < 8) return setPassErr("A nova senha deve ter pelo menos 8 caracteres.");
+    if (newPass.length < 8) return setPassErr("A senha deve ter no mínimo 8 caracteres.");
+    if (!(/[a-z]/.test(newPass) && /[A-Z]/.test(newPass))) {
+      return setPassErr("A senha deve combinar letras maiúsculas e minúsculas.");
+    }
+    if (!/\d/.test(newPass)) return setPassErr("A senha deve ter pelo menos um número.");
+    if (!/[^a-zA-Z0-9]/.test(newPass)) {
+      return setPassErr("A senha deve ter pelo menos um caractere especial.");
+    }
     if (newPass !== confPass) return setPassErr("As senhas não coincidem.");
     if (curPass === newPass) return setPassErr("A nova senha deve ser diferente da atual.");
 
     setSaving(true);
-    const {
-      data: { user: authUser },
-    } = await supabase.auth.getUser();
-    if (!authUser?.email) {
-      setPassErr("Sessão inválida.");
+    try {
+      const {
+        data: { user: authUser },
+      } = await supabase.auth.getUser();
+      if (!authUser?.email) {
+        setPassErr("Sessão inválida. Faça login novamente.");
+        return;
+      }
+
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: authUser.email,
+        password: curPass,
+      });
+      if (signInError) {
+        setPassErr("Senha atual incorreta.");
+        return;
+      }
+
+      const { error: updateError } = await supabase.auth.updateUser({ password: newPass });
+      if (updateError) {
+        setPassErr(mapPasswordUpdateError(updateError.message));
+        return;
+      }
+
+      setPassOk(true);
+      setCurPass("");
+      setNewPass("");
+      setConfPass("");
+      setTimeout(() => setPassOk(false), 4000);
+    } finally {
       setSaving(false);
-      return;
     }
-
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: authUser.email,
-      password: curPass,
-    });
-    if (signInError) {
-      setPassErr("Senha atual incorreta.");
-      setSaving(false);
-      return;
-    }
-
-    const { error: updateError } = await supabase.auth.updateUser({ password: newPass });
-    setSaving(false);
-    if (updateError) {
-      setPassErr("Erro ao atualizar senha. Tente novamente.");
-      return;
-    }
-
-    setPassOk(true);
-    setCurPass("");
-    setNewPass("");
-    setConfPass("");
-    setTimeout(() => setPassOk(false), 4000);
   }
 
   const card: CSSProperties = {
@@ -268,10 +294,17 @@ export default function Configuracoes() {
           subtitleColor={t.textMuted}
         />
 
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!submitDisabled) void handleChangePassword();
+          }}
+        >
         <div style={{ marginBottom: 14 }}>
-          <label style={labelStyle}>Senha Atual</label>
+          <label htmlFor="config-senha-atual" style={labelStyle}>Senha Atual</label>
           <div style={{ position: "relative" }}>
             <input
+              id="config-senha-atual"
               type={showCur ? "text" : "password"}
               autoComplete="current-password"
               value={curPass}
@@ -317,9 +350,10 @@ export default function Configuracoes() {
         </div>
 
         <div style={{ marginBottom: 14 }}>
-          <label style={labelStyle}>Nova Senha</label>
+          <label htmlFor="config-senha-nova" style={labelStyle}>Nova Senha</label>
           <div style={{ position: "relative" }}>
             <input
+              id="config-senha-nova"
               type={showNew ? "text" : "password"}
               autoComplete="new-password"
               value={newPass}
@@ -412,9 +446,10 @@ export default function Configuracoes() {
         </div>
 
         <div style={{ marginBottom: 24 }}>
-          <label style={labelStyle}>Confirmar Nova Senha</label>
+          <label htmlFor="config-senha-confirmar" style={labelStyle}>Confirmar Nova Senha</label>
           <div style={{ position: "relative" }}>
             <input
+              id="config-senha-confirmar"
               type={showConf ? "text" : "password"}
               autoComplete="new-password"
               value={confPass}
@@ -544,10 +579,10 @@ export default function Configuracoes() {
         )}
 
         <button
-          type="button"
-          onClick={handleChangePassword}
-          disabled={saving}
+          type="submit"
+          disabled={submitDisabled}
           aria-busy={saving}
+          title={submitDisabled && !saving ? "Preencha todos os requisitos para continuar" : undefined}
           style={{
             width: "100%",
             border: "none",
@@ -557,8 +592,8 @@ export default function Configuracoes() {
             fontWeight: 700,
             letterSpacing: "1px",
             textTransform: "uppercase",
-            cursor: saving ? "not-allowed" : "pointer",
-            opacity: saving ? 0.65 : 1,
+            cursor: submitDisabled ? "not-allowed" : "pointer",
+            opacity: submitDisabled ? 0.65 : 1,
             background: CTA_GRADIENT,
             color: "white",
             fontFamily: FONT_TITLE,
@@ -572,7 +607,7 @@ export default function Configuracoes() {
           {saving ? (
             <>
               <Loader2 className="app-lucide-spin" size={14} strokeWidth={2} color="#fff" aria-hidden />
-              Salvando...
+              Salvando…
             </>
           ) : (
             <>
@@ -581,6 +616,7 @@ export default function Configuracoes() {
             </>
           )}
         </button>
+        </form>
       </div>
     </div>
   );

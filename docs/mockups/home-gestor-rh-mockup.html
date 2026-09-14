@@ -1,0 +1,485 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mockup — Home Gestor de RH (proposta · variante Gestores)</title>
+  <style>
+    :root {
+      --brand-primary: #7c3aed;
+      --brand-secondary: #1e36f8;
+      --brand-accent: #7c3aed;
+      --brand-roxo: #4a2082;
+      --brand-azul: #1e36f8;
+      --vermelho: #e84025;
+      --amarelo: #f59e0b;
+      --verde: #22c55e;
+
+      --page-bg: #f4f4f8;
+      --card-bg: #ffffff;
+      --card-border: #e8e8f0;
+      --input-bg: #f8f8fc;
+      --text: #1a1a2e;
+      --text-muted: #666688;
+      --section-title: #1a1a2e;
+      --box-radius: 14px;
+      --box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+
+      --font: "Segoe UI", system-ui, -apple-system, sans-serif;
+      --font-title: "Segoe UI Semibold", "Segoe UI", system-ui, sans-serif;
+    }
+
+    body.dark {
+      --page-bg: #0f0f1a;
+      --card-bg: #1a1a2e;
+      --card-border: #2a2a4e;
+      --input-bg: rgba(255,255,255,0.07);
+      --text: #ffffff;
+      --text-muted: #e5dce1;
+      --section-title: #ffffff;
+      --box-radius: 18px;
+      --box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font);
+      background: var(--page-bg);
+      color: var(--text);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .mock-banner {
+      background: linear-gradient(135deg, #4a2082, #1e36f8);
+      color: #fff; padding: 10px 16px; font-size: 12px; font-weight: 600;
+      display: flex; align-items: center; justify-content: center; gap: 16px; flex-wrap: wrap;
+    }
+    .mock-banner button {
+      border: 1px solid rgba(255,255,255,.5); background: rgba(255,255,255,.12); color: #fff;
+      padding: 5px 12px; border-radius: 999px; font-size: 11px; font-weight: 700; cursor: pointer;
+      font-family: var(--font);
+    }
+
+    .page-shell {
+      max-width: 1100px; margin: 0 auto; padding: 24px 20px 40px;
+      display: flex; flex-direction: column; gap: 14px;
+    }
+
+    .block-tag {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+      color: var(--brand-primary); background: rgba(124, 58, 237, 0.12);
+      border: 1px dashed rgba(124, 58, 237, 0.45);
+      padding: 3px 8px; border-radius: 999px; margin-bottom: -6px; width: max-content;
+    }
+    body.dark .block-tag { color: #70cae4; }
+
+    .welcome-card {
+      position: relative; overflow: hidden;
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: 20px; padding: 28px; box-shadow: var(--box-shadow);
+    }
+    .welcome-card .topbar {
+      position: absolute; top: 0; left: 0; right: 0; height: 4px;
+      background: linear-gradient(90deg, var(--brand-primary), var(--brand-azul));
+    }
+    .welcome-row { display: flex; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+    .avatar {
+      width: 56px; height: 56px; border-radius: 50%; flex-shrink: 0;
+      background: linear-gradient(135deg, var(--brand-roxo), var(--brand-azul));
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-weight: 800; font-size: 20px;
+      border: 2px solid rgba(124, 58, 237, 0.45);
+    }
+    .welcome-card h1 {
+      font-family: var(--font-title); font-size: 22px; font-weight: 800;
+      letter-spacing: .02em; margin: 0 0 6px;
+    }
+    .role-label { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; }
+    .welcome-sub { font-size: 14px; color: var(--text-muted); line-height: 1.55; white-space: pre-line; }
+
+    .alert-box {
+      display: flex; gap: 14px; padding: 16px 18px; border-radius: 14px;
+      background: rgba(232,64,37,0.05); border: 1px solid rgba(232,64,37,0.28);
+      border-left: 4px solid var(--vermelho);
+    }
+    body.dark .alert-box { background: rgba(232,64,37,0.08); }
+    .alert-box.warn {
+      background: rgba(245,158,11,0.08); border-color: rgba(245,158,11,0.35);
+      border-left-color: var(--amarelo);
+    }
+    .alert-box .alert-icon { flex-shrink: 0; margin-top: 2px; color: var(--vermelho); }
+    .alert-box.warn .alert-icon { color: var(--amarelo); }
+    .alert-title {
+      font-size: 12px; font-weight: 800; letter-spacing: .06em;
+      color: #b02a14; margin-bottom: 8px; font-family: var(--font-title);
+    }
+    body.dark .alert-title { color: #ff9980; }
+    .alert-box.warn .alert-title { color: #a16207; }
+    body.dark .alert-box.warn .alert-title { color: var(--amarelo); }
+    .alert-body { font-size: 13px; line-height: 1.65; margin-bottom: 12px; }
+    .alert-cta {
+      display: inline-block; padding: 8px 16px; border-radius: 10px;
+      border: 1px solid var(--vermelho); background: rgba(232,64,37,0.09);
+      color: var(--vermelho); font-size: 12px; font-weight: 700; text-decoration: none;
+    }
+    .alert-box.warn .alert-cta {
+      border-color: var(--amarelo); background: rgba(245,158,11,0.12); color: #a16207;
+    }
+    body.dark .alert-box.warn .alert-cta { color: var(--amarelo); }
+
+    .content-box {
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: var(--box-radius); box-shadow: var(--box-shadow); padding: 20px;
+    }
+    .section-title {
+      font-family: var(--font-title); font-size: 13px; font-weight: 800;
+      letter-spacing: .08em; text-transform: uppercase; color: var(--section-title);
+      margin: 0 0 14px;
+    }
+    .hint { font-size: 13px; line-height: 1.5; color: var(--text-muted); margin: 0 0 16px; }
+    .mes-sub {
+      margin: -6px 0 14px; font-size: 12px; font-weight: 600;
+      letter-spacing: .02em; color: var(--text-muted);
+    }
+
+    .grid-kpi-3 {
+      display: grid; gap: 12px;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .grid-kpi-4 {
+      display: grid; gap: 12px;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+    @media (max-width: 900px) {
+      .grid-kpi-3, .grid-kpi-4 { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 520px) {
+      .grid-kpi-3, .grid-kpi-4 { grid-template-columns: 1fr; }
+    }
+    .kpi-card {
+      border-radius: 14px; border: 1px solid var(--card-border);
+      background: var(--card-bg); overflow: hidden;
+    }
+    .kpi-card .kpi-bar {
+      height: 3px;
+      background: linear-gradient(90deg, var(--brand-primary), transparent);
+    }
+    .kpi-card .kpi-bar.sec { background: linear-gradient(90deg, var(--brand-azul), transparent); }
+    .kpi-card .kpi-bar.warn { background: linear-gradient(90deg, var(--amarelo), transparent); }
+    .kpi-card .kpi-bar.ok { background: linear-gradient(90deg, var(--verde), transparent); }
+    .kpi-card .kpi-body { padding: 14px 16px; }
+    .kpi-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+    .kpi-ic {
+      width: 30px; height: 30px; border-radius: 8px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(124,58,237,.1); border: 1px solid rgba(124,58,237,.22);
+      color: var(--brand-primary);
+    }
+    .kpi-ic.sec { background: rgba(30,54,248,.1); border-color: rgba(30,54,248,.22); color: var(--brand-azul); }
+    .kpi-ic.warn { background: rgba(245,158,11,.12); border-color: rgba(245,158,11,.35); color: #b45309; }
+    .kpi-ic.ok { background: rgba(34,197,94,.12); border-color: rgba(34,197,94,.3); color: #15803d; }
+    .kpi-label {
+      font-size: 10px; font-weight: 600; letter-spacing: .07em;
+      text-transform: uppercase; color: var(--text-muted);
+    }
+    .kpi-value {
+      font-size: 22px; font-weight: 800; line-height: 1.1; color: var(--text);
+      font-variant-numeric: tabular-nums;
+    }
+    .footer-hint {
+      margin: 14px 0 0; font-size: 12px; color: var(--text-muted); line-height: 1.5;
+    }
+    .footer-hint a { font-weight: 700; color: var(--brand-accent); text-decoration: underline; }
+
+    .feed-list { list-style: none; display: flex; flex-direction: column; gap: 12px; }
+    .feed-card {
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: 14px; padding: 16px 18px; box-shadow: var(--box-shadow);
+    }
+    .feed-card h3 { font-size: 15px; font-weight: 800; margin: 0; color: var(--text); }
+    .feed-body { margin-top: 12px; font-size: 13px; line-height: 1.55; color: var(--text); }
+    .feed-body a { font-weight: 700; color: var(--brand-accent); text-decoration: underline; }
+    .feed-footer { font-size: 12px; color: var(--text-muted); margin: 14px 0 0; }
+    .btn-li-ocultar {
+      display: inline-flex; align-items: center; margin-top: 14px;
+      padding: 8px 14px; border-radius: 10px;
+      border: 1px solid var(--card-border);
+      background: rgba(124, 58, 237, 0.12);
+      color: var(--brand-accent); font-size: 12px; font-weight: 700; cursor: pointer;
+      font-family: var(--font);
+    }
+
+    .spin-list { list-style: none; display: flex; flex-direction: column; gap: 12px; }
+    .spin-card {
+      display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-start;
+      padding: 14px 16px; border-radius: 14px;
+      border: 1px solid var(--card-border); background: var(--input-bg);
+    }
+    .spin-thumb {
+      width: 96px; height: 64px; border-radius: 10px; flex-shrink: 0;
+      background: linear-gradient(135deg, var(--brand-roxo), var(--brand-azul));
+      opacity: .85;
+    }
+    .spin-card h3 { font-size: 14px; font-weight: 800; margin: 0 0 6px; }
+    .spin-card p { font-size: 12px; color: var(--text-muted); line-height: 1.5; margin: 0; }
+    .spin-meta { margin-top: 8px; font-size: 11px; color: var(--text-muted); }
+
+    .grid-atalhos {
+      display: grid; gap: 12px;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+    }
+    .atalho {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 16px 18px; border-radius: 12px;
+      border: 1px solid var(--card-border); background: var(--input-bg);
+      color: var(--text); text-decoration: none;
+    }
+    .atalho:hover { border-color: var(--brand-primary); background: rgba(124, 58, 237, 0.08); }
+    .atalho .ic {
+      width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
+      background: rgba(74,32,130,0.2); color: var(--brand-accent);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .atalho .tit { display: flex; align-items: flex-start; gap: 8px; }
+    .atalho .tit span { flex: 1; font-size: 14px; font-weight: 700; line-height: 1.35; }
+    .atalho .tit svg { color: var(--text-muted); flex-shrink: 0; margin-top: 2px; }
+    .atalho p { margin: 8px 0 0; font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+
+    .nota-mock {
+      display: flex; align-items: flex-start; gap: 6px; margin-top: 12px;
+      font-size: 11px; font-weight: 700; padding: 6px 10px; border-radius: 8px;
+      background: rgba(245,158,11,.12); color: #a16207; border: 1px dashed rgba(245,158,11,.55);
+    }
+    body.dark .nota-mock { color: var(--amarelo); }
+
+    .legenda {
+      max-width: 1100px; margin: 0 auto; padding: 0 20px 48px;
+    }
+    .legenda .content-box { font-size: 12px; color: var(--text-muted); }
+    .legenda ul { padding-left: 18px; margin-top: 10px; }
+    .legenda li { margin-bottom: 6px; }
+    .legenda strong { color: var(--text); }
+    .removed { text-decoration: line-through; opacity: .7; }
+  </style>
+</head>
+<body>
+  <div class="mock-banner">
+    <span>Mockup 10/N — Home · perfil <strong>Gestor de RH</strong> · variante da família Gestores</span>
+    <button type="button" id="btn-tema">Alternar tema claro / escuro</button>
+  </div>
+
+  <div class="page-shell">
+
+    <span class="block-tag">Bloco 1 · Boas-vindas</span>
+    <div class="welcome-card">
+      <div class="topbar"></div>
+      <div class="welcome-row">
+        <div class="avatar" aria-hidden="true">B</div>
+        <div style="flex:1;min-width:200px">
+          <h1>Olá, Beatriz Lima!</h1>
+          <p class="role-label">Gestor de RH</p>
+          <p class="welcome-sub">Prestadores, solicitações e gente sob controle.
+O que precisa de revisão ou atendimento, primeiro.</p>
+        </div>
+      </div>
+    </div>
+
+    <span class="block-tag">Bloco 2 · Solicitações de RH em análise (só quando houver)</span>
+    <div class="alert-box">
+      <svg class="alert-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>
+      </svg>
+      <div style="flex:1;min-width:0">
+        <div class="alert-title">AÇÃO NECESSÁRIA</div>
+        <p class="alert-body">
+          Há <strong>8 solicitações</strong> de RH com status <strong>Em análise</strong> (atestados, reuniões, vagas ou feedback). Atenda em Solicitações de RH.
+        </p>
+        <a class="alert-cta" href="#">Ir para Solicitações de RH</a>
+        <p class="nota-mock">Contagem <code>em_analise</code> em todas as abas. Ocultar se zero. Exige Editar para atender.</p>
+      </div>
+    </div>
+
+    <span class="block-tag">Bloco 2b · Denúncias em aberto (Atenção · só quando houver)</span>
+    <div class="alert-box warn">
+      <svg class="alert-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>
+      </svg>
+      <div style="flex:1;min-width:0">
+        <div class="alert-title">ATENÇÃO</div>
+        <p class="alert-body">
+          Há <strong>2 denúncias</strong> em <strong>Relatado</strong> ou <strong>Em avaliação</strong> na Central de Denúncias.
+        </p>
+        <a class="alert-cta" href="#">Ir para Central de Denúncias</a>
+        <p class="nota-mock">Soma dos KPIs Relatado + Em avaliação. Amarelo = fila sensível. Ocultar se zero. Condicional — pode remover se produto achar ruído.</p>
+      </div>
+    </div>
+
+    <span class="block-tag">Bloco 3 · Principais KPIs — Prestadores + Filas</span>
+    <div class="content-box">
+      <h2 class="section-title">Principais KPIs</h2>
+      <p class="mes-sub">Setembro 2026 · Gestão de Prestadores + filas RH</p>
+
+      <p class="mes-sub" style="margin-top:4px">Prestadores</p>
+      <div class="grid-kpi-4" style="margin-bottom:16px">
+        <article class="kpi-card">
+          <div class="kpi-bar"></div>
+          <div class="kpi-body">
+            <div class="kpi-head"><span class="kpi-ic" aria-hidden="true">#</span><span class="kpi-label">Total</span></div>
+            <div class="kpi-value">312</div>
+          </div>
+        </article>
+        <article class="kpi-card">
+          <div class="kpi-bar warn"></div>
+          <div class="kpi-body">
+            <div class="kpi-head"><span class="kpi-ic warn" aria-hidden="true">!</span><span class="kpi-label">Cadastro incompleto</span></div>
+            <div class="kpi-value">23</div>
+          </div>
+        </article>
+        <article class="kpi-card">
+          <div class="kpi-bar warn"></div>
+          <div class="kpi-body">
+            <div class="kpi-head"><span class="kpi-ic warn" aria-hidden="true">↻</span><span class="kpi-label">Revisão pendente</span></div>
+            <div class="kpi-value">14</div>
+          </div>
+        </article>
+        <article class="kpi-card">
+          <div class="kpi-bar ok"></div>
+          <div class="kpi-body">
+            <div class="kpi-head"><span class="kpi-ic ok" aria-hidden="true">✓</span><span class="kpi-label">Cadastro completo</span></div>
+            <div class="kpi-value">275</div>
+          </div>
+        </article>
+      </div>
+
+      <p class="mes-sub">Filas</p>
+      <div class="grid-kpi-4">
+        <article class="kpi-card">
+          <div class="kpi-bar warn"></div>
+          <div class="kpi-body">
+            <div class="kpi-head"><span class="kpi-ic warn" aria-hidden="true">📋</span><span class="kpi-label">Solicitações em análise</span></div>
+            <div class="kpi-value">8</div>
+          </div>
+        </article>
+        <article class="kpi-card">
+          <div class="kpi-bar sec"></div>
+          <div class="kpi-body">
+            <div class="kpi-head"><span class="kpi-ic sec" aria-hidden="true">💼</span><span class="kpi-label">Vagas abertas</span></div>
+            <div class="kpi-value">6</div>
+          </div>
+        </article>
+        <article class="kpi-card">
+          <div class="kpi-bar"></div>
+          <div class="kpi-body">
+            <div class="kpi-head"><span class="kpi-ic" aria-hidden="true">👥</span><span class="kpi-label">Candidaturas ativas</span></div>
+            <div class="kpi-value">41</div>
+          </div>
+        </article>
+        <article class="kpi-card">
+          <div class="kpi-bar warn"></div>
+          <div class="kpi-body">
+            <div class="kpi-head"><span class="kpi-ic warn" aria-hidden="true">⚖</span><span class="kpi-label">Denúncias abertas</span></div>
+            <div class="kpi-value">2</div>
+          </div>
+        </article>
+      </div>
+      <p class="footer-hint">Quer saber mais? Acessa <a href="#">Gestão de Prestadores</a> · <a href="#">Solicitações de RH</a> · <a href="#">Vagas</a> · <a href="#">Portal de RH</a></p>
+      <p class="nota-mock"><strong>Prestadores:</strong> mesmos cards da Gestão de Prestadores (Total / incompleto / revisão; completo = Total − incompleto). <strong>Filas:</strong> Solicitações <code>em_analise</code>; vagas abertas + candidaturas ativas (Vagas); denúncias Relatado + Em avaliação.</p>
+    </div>
+
+    <span class="block-tag">Bloco 4 · Informações — Informativos (perfil gestor_rh · 10 dias)</span>
+    <div class="content-box">
+      <h2 class="section-title">Informações</h2>
+      <ul class="feed-list">
+        <li>
+          <article class="feed-card">
+            <h3>Campanha de atualização cadastral — Q3</h3>
+            <div class="feed-body">
+              <p>Priorize prestadores com revisão pendente em <a href="#">Gestão de Prestadores</a> até o fim do mês.</p>
+            </div>
+            <p class="feed-footer">Equipe RH · 12/09/26 - 14:30</p>
+            <button type="button" class="btn-li-ocultar">Li e Ocultar</button>
+          </article>
+        </li>
+      </ul>
+      <p class="nota-mock">Perfil <code>gestor_rh</code>, 10 dias + «Li e Ocultar». Portal de RH fica nos atalhos (não como Central Academy).</p>
+    </div>
+
+    <span class="block-tag">Bloco 5 · Acesso rápido (curado · RH)</span>
+    <div class="content-box">
+      <h2 class="section-title">Acesso rápido</h2>
+      <p class="hint">Clique em um atalho abaixo para ir diretamente à página desejada.</p>
+      <div class="grid-atalhos">
+        <a class="atalho" href="#">
+          <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
+          <div style="flex:1;min-width:0">
+            <div class="tit"><span>Gestão de Prestadores</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
+            <p>Cadastro, headcount, ações e anotações de RH.</p>
+          </div>
+        </a>
+        <a class="atalho" href="#">
+          <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M15 2H9a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1z"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg></span>
+          <div style="flex:1;min-width:0">
+            <div class="tit"><span>Solicitações de RH</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
+            <p>Atestados, reuniões, vagas e feedback em análise.</p>
+          </div>
+        </a>
+        <a class="atalho" href="#">
+          <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect width="20" height="14" x="2" y="7" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg></span>
+          <div style="flex:1;min-width:0">
+            <div class="tit"><span>Vagas</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
+            <p>Abra vagas e acompanhe candidaturas no funil.</p>
+          </div>
+        </a>
+        <a class="atalho" href="#">
+          <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8V6Z"/></svg></span>
+          <div style="flex:1;min-width:0">
+            <div class="tit"><span>Portal de RH</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
+            <p>Comunicados, políticas, RH Talks e gerenciamento.</p>
+          </div>
+        </a>
+        <a class="atalho" href="#">
+          <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/></svg></span>
+          <div style="flex:1;min-width:0">
+            <div class="tit"><span>Central de Denúncias</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
+            <p>Acompanhe denúncias e o andamento das apurações.</p>
+          </div>
+        </a>
+        <a class="atalho" href="#">
+          <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg></span>
+          <div style="flex:1;min-width:0">
+            <div class="tit"><span>Ajuda</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
+            <p>Conheça as funcionalidades da plataforma, o glossário, tutoriais e soluções para problemas comuns.</p>
+          </div>
+        </a>
+      </div>
+      <p class="nota-mock">Lista curada de RH — só com Ver liberado. <strong>Fora:</strong> <span class="removed">dump do menu / Dados de Cadastro (pessoal) / Escala Estúdio</span>. Organograma e Escala Escritório ficam no menu se liberados.</p>
+    </div>
+
+  </div>
+
+  <div class="legenda">
+    <div class="content-box">
+      <h2 class="section-title">Notas para aprovação — Home Gestor de RH</h2>
+      <ul>
+        <li><strong>Variante</strong> da família Gestores.</li>
+        <li><strong>AÇÃO NECESSÁRIA:</strong> Solicitações Em análise → Solicitações de RH.</li>
+        <li><strong>ATENÇÃO (opcional):</strong> Denúncias Relatado / Em avaliação → Central de Denúncias.</li>
+        <li><strong>Sem alerta</strong> de revisões cadastrais pendentes (permanece só no KPI Prestadores).</li>
+        <li><strong>KPIs — Prestadores:</strong> Total, Cadastro incompleto, Revisão pendente, Cadastro completo.</li>
+        <li><strong>KPIs — Filas:</strong> Solicitações em análise, Vagas abertas, Candidaturas ativas, Denúncias abertas.</li>
+        <li><strong>Atalhos:</strong> Prestadores → Solicitações → Vagas → Portal de RH → Central de Denúncias → Ajuda.</li>
+        <li><strong>Fluxo:</strong> só mockups — implantação em lote depois. Próximo: <strong>Admin</strong>.</li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById("btn-tema").addEventListener("click", function () {
+      document.body.classList.toggle("dark");
+    });
+  </script>
+</body>
+</html>
+

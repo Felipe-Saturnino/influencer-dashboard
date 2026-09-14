@@ -14,8 +14,6 @@ export const BRAND = {
 export const PRESTADOR_TIPOS: { slug: PrestadorTipoSlug; label: string }[] = [
   { slug: "escritorio", label: "Escritório" },
   { slug: "estudio", label: "Estúdio" },
-  { slug: "facilities", label: "Facilities" },
-  { slug: "ti", label: "TI" },
 ];
 
 /** Ordem fixa em filtros da aba Usuários e no select «Perfil» do modal (aba Permissões usa `ROLES_PERMISSOES`). */
@@ -28,9 +26,13 @@ export const ROLES: { value: Role; label: string }[] = [
   { value: "gestor_tech_ops", label: "Gestor de Tech Ops" },
   { value: "gestor_academy", label: "Gestor de Academy" },
   { value: "gestor_rh", label: "Gestor de RH" },
+  { value: "gestor_facilities", label: "Gestor de Facilities" },
+  { value: "gestor_ti", label: "Gestor de TI" },
   { value: "rh", label: "RH" },
   { value: "figurino", label: "Figurino" },
   { value: "comunicacao", label: "Comunicação" },
+  { value: "facilities", label: "Facilities" },
+  { value: "ti", label: "TI" },
   { value: "performance_coach", label: "Performance Coach" },
   { value: "service_manager", label: "Service Manager" },
   { value: "customer_service", label: "Customer Service" },
@@ -41,7 +43,7 @@ export const ROLES: { value: Role; label: string }[] = [
   { value: "prestador", label: "Prestadores" },
   { value: "operador", label: "Operador" },
   { value: "agencia", label: "Agência" },
-  { value: "influencer", label: "Influenciador" },
+  { value: "influencer", label: "Influencer" },
   { value: "afiliado", label: "Afiliado" },
   { value: "investidor", label: "Investidor" },
 ];
@@ -57,7 +59,15 @@ export const ROLES_PERFIS_ESTUDIO: Role[] = [
 ];
 
 /** Perfis internos — escritório e suporte (filtros Usuários, Permissões, Simulador). */
-export const ROLES_PERFIS_ESCRITORIO: Role[] = ["rh", "figurino", "comunicacao", "tech_ops", "prestador"];
+export const ROLES_PERFIS_ESCRITORIO: Role[] = [
+  "rh",
+  "figurino",
+  "comunicacao",
+  "facilities",
+  "ti",
+  "tech_ops",
+  "prestador",
+];
 
 /** Linha Gerenciais — admin, executivo e gestores de departamento (atribuição manual). */
 export const ROLES_PERFIS_GERENCIAIS: Role[] = [
@@ -148,7 +158,7 @@ const PAGES_META: {
   },
   // Escala (ordem = menu.ts)
   { key: "rh_staff", label: "Gestão de Staff", secao: "Escala", hasCriar: false, hasEditar: true, hasExcluir: false },
-  { key: "escala_solicitacoes", label: "Solicitações", secao: "Escala", hasCriar: true, hasEditar: true, hasExcluir: false },
+  { key: "escala_solicitacoes", label: "Solicitações de Cliente", secao: "Escala", hasCriar: true, hasEditar: true, hasExcluir: false },
   { key: "rh_gestao_escala", label: "Escala Estúdio", secao: "Escala", hasCriar: true, hasEditar: true, hasExcluir: false },
   { key: "rh_calendario", label: "Calendário", secao: "Escala", hasCriar: false, hasEditar: true, hasExcluir: false },
   {
@@ -165,7 +175,7 @@ const PAGES_META: {
   { key: "rh_organograma", label: "Organograma", secao: "RH", hasCriar: true, hasEditar: true, hasExcluir: true },
   { key: "escala_escritorio", label: "Escala Escritório", secao: "RH", hasCriar: true, hasEditar: true, hasExcluir: false },
   { key: "rh_vagas", label: "Vagas", secao: "RH", hasCriar: true, hasEditar: true, hasExcluir: true },
-  { key: "rh_solicitacoes", label: "Solicitações", secao: "RH", hasCriar: false, hasEditar: true, hasExcluir: false },
+  { key: "rh_solicitacoes", label: "Solicitações de RH", secao: "RH", hasCriar: false, hasEditar: true, hasExcluir: false },
   {
     key: "rh_central_denuncias",
     label: "Central de Denúncias",
@@ -200,6 +210,7 @@ const PAGES_META: {
     hasExcluir: false,
   },
   { key: "ajuda", label: "Ajuda", secao: "Geral", hasCriar: false, hasEditar: false, hasExcluir: false },
+  { key: "versionamento", label: "Versionamento", secao: "Geral", hasCriar: false, hasEditar: false, hasExcluir: false },
 ];
 
 export const PAGES = sortPagesLikeMenu(PAGES_META);
@@ -226,6 +237,8 @@ export const ROLES_PERMISSOES: Role[] = [
   "rh",
   "figurino",
   "comunicacao",
+  "facilities",
+  "ti",
   "performance_coach",
   "service_manager",
   "customer_service",
@@ -299,6 +312,8 @@ export function roleBadgeColor(role: Role): string {
     gestor_tech_ops: BRAND.ciano,
     gestor_academy: BRAND.roxoVivo,
     gestor_rh: BRAND.roxo,
+    gestor_facilities: BRAND.amarelo,
+    gestor_ti: BRAND.ciano,
     prestador: BRAND.roxo,
     executivo: BRAND.ciano,
     shift_leader: BRAND.amarelo,
@@ -309,6 +324,8 @@ export function roleBadgeColor(role: Role): string {
     tech_ops: BRAND.ciano,
     figurino: BRAND.roxoVivo,
     comunicacao: BRAND.ciano,
+    facilities: BRAND.amarelo,
+    ti: BRAND.ciano,
     performance_coach: BRAND.verde,
     rh: BRAND.roxo,
     influencer: BRAND.verde,

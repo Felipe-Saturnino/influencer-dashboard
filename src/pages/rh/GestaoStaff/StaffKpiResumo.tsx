@@ -122,7 +122,7 @@ export function StaffKpiResumo({
         cor="#e84025"
         borda="1px solid rgba(232, 64, 37, 0.25)"
         rows={resumo.semDadosCadastrais}
-        mensagemOk="Todos os Game Presenters filtrados têm Gênero, Bio do Dealer e Fotos."
+        mensagemOk="Todos os Game Presenters filtrados têm Gênero, Bio do Game Presenter e Fotos."
         podeEditar={podeEditar}
         onEditar={onEditarStaff}
       />

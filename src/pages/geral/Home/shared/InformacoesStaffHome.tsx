@@ -3,6 +3,7 @@ import { useMemo, type MouseEvent, type ReactNode } from "react";
 import type { Role } from "../../../../types";
 import { useApp } from "../../../../context/AppContext";
 import { useDashboardBrand } from "../../../../hooks/useDashboardBrand";
+import { useIdentidadeEfetiva } from "../../../../hooks/useIdentidadeEfetiva";
 import { useAppPageNav } from "../../../../hooks/useAppPageNav";
 import { CorpoHtmlInformativo } from "../../../../components/conteudo/CorpoHtmlInformativo";
 import { getHomeStaffFeedNovidadeDesdeIso } from "../../../../lib/homePrestadorGaleriaNovidades";
@@ -135,12 +136,16 @@ export function InformacoesStaffHome({
   perfil: Role;
   sectionIdPrefix: string;
 }) {
-  const { theme: t, user } = useApp();
+  const { theme: t } = useApp();
+  const { userId: userIdEfetivo } = useIdentidadeEfetiva();
   const brand = useDashboardBrand();
   const publicadoDesdeIso = useMemo(() => getHomeStaffFeedNovidadeDesdeIso(), []);
   const info = useHomeInformativos(perfil, { publicadoDesdeIso });
   const portal = useHomePortalRhFeed();
-  const { isRecolhido, isLido, marcarLido, expandir } = useHomeStaffLidoCollapse(user?.id, "informativo");
+  const { isRecolhido, isLido, marcarLido, expandir } = useHomeStaffLidoCollapse(
+    userIdEfetivo ?? undefined,
+    "informativo",
+  );
   const box = getPageContentBoxStyle(brand, t);
   const titleId = `${sectionIdPrefix}-info-title`;
 

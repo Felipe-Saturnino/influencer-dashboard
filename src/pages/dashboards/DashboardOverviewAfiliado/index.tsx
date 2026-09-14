@@ -209,7 +209,7 @@ export default function DashboardOverviewAfiliado() {
           background: t.bg,
         }}
       >
-        Você não tem permissão para visualizar este dashboard.
+        Você não tem permissão para visualizar esta página.
       </div>
     );
   }

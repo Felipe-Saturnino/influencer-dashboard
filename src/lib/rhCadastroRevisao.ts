@@ -9,6 +9,7 @@ export const PAGES_ISENTAS_GATE_REVISAO_CADASTRO: readonly PageKey[] = [
   "rh_dados_cadastro",
   "configuracoes",
   "ajuda",
+  "versionamento",
   "rh_central_denuncias",
 ];
 

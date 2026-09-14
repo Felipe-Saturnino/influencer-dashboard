@@ -17,8 +17,8 @@ import { emptyPerfil, type Influencer, type Perfil } from "./influencerTypes";
 
 type OperadorasFormState = Record<string, { ativo: boolean; id_operadora: string }>;
 
-export function ModalPerfil({ influencer, operadorasList, onClose, onSaved, isDark }: {
-  influencer: Influencer; operadorasList: Operadora[]; onClose: () => void; onSaved: () => void; isDark?: boolean;
+export function ModalPerfil({ influencer, operadorasList, onClose, onSaved, onPedirAtivacao, isDark }: {
+  influencer: Influencer; operadorasList: Operadora[]; onClose: () => void; onSaved: () => void; onPedirAtivacao?: () => void; isDark?: boolean;
 }) {
   const { theme: t, user } = useApp();
   const brand = useDashboardBrand();
@@ -44,7 +44,9 @@ export function ModalPerfil({ influencer, operadorasList, onClose, onSaved, isDa
   });
 
   const [editNomeCompleto, setEditNomeCompleto] = useState(influencer.perfil?.nome_completo ?? "");
-  const [form,           setForm]           = useState<Perfil>(existing ?? emptyPerfil(influencer.id));
+  const [form,           setForm]           = useState<Perfil>(
+    existing ?? { ...emptyPerfil(influencer.id), status: "inativo" },
+  );
   const [operadorasForm, setOperadorasForm] = useState<OperadorasFormState>(inicialOperadoras);
   const [saving,         setSaving]         = useState(false);
   const [error,          setError]          = useState("");
@@ -98,10 +100,19 @@ export function ModalPerfil({ influencer, operadorasList, onClose, onSaved, isDa
     if (existing && podeAlterarStatusCache && form.status !== existing.status) {
       payload.status_alterado_em = new Date().toISOString();
     }
+    if (form.status === "inativo" || form.status === "cancelado") {
+      payload.horas_acordadas = null;
+      payload.horas_ciclo_iniciado_em = null;
+    }
     const { error: err } = existing
       ? await supabase.from("influencer_perfil").update(payload).eq("id", influencer.id)
       : await supabase.from("influencer_perfil").insert(payload);
-    if (err) { setError(err.message); setSaving(false); return; }
+    if (err) {
+      console.error("salvar perfil influencer:", err);
+      setError("Não foi possível salvar o perfil. Se o problema persistir, entre em contato com o suporte.");
+      setSaving(false);
+      return;
+    }
 
     const slugsGeridos = new Set(operadorasList.map((o) => o.slug));
     for (const slug of slugsGeridos) {
@@ -177,7 +188,18 @@ export function ModalPerfil({ influencer, operadorasList, onClose, onSaved, isDa
               <h2 id="modal-perfil-title" style={{ margin: 0, fontSize: 17, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE, letterSpacing: "0.03em" }}>
                 {form.nome_artistico?.trim() || influencer.name}
               </h2>
-              <StatusBadge value={form.status ?? "ativo"} onChange={(v) => set("status", v)} readonly={!podeAlterarStatusCache} />
+              <StatusBadge
+                value={form.status ?? "ativo"}
+                onChange={(v) => {
+                  const atual = existing?.status ?? "inativo";
+                  if (v === "ativo" && atual !== "ativo") {
+                    onPedirAtivacao?.();
+                    return;
+                  }
+                  set("status", v);
+                }}
+                readonly={!podeAlterarStatusCache}
+              />
             </div>
             <div style={{ fontSize: "12px", color: t.textMuted, fontFamily: FONT.body }}>{influencer.email}</div>
           </div>

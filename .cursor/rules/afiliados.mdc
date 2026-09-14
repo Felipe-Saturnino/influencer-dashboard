@@ -8,7 +8,7 @@ alwaysApply: false
 
 # Seção Afiliados
 
-**Antes de implementar:** `global.mdc` → `brand-css-variables.mdc` → este ficheiro.
+**Antes de implementar:** `global.mdc` → `brand-css-variables.mdc` → este ficheiro. Domínio (estúdio vs operadora): `business.mdc` primeiro.
 
 **Marca / filtros / headers:** Brand MDC — tokens **legado** nesta secção (não `--brand-action` em UI nova).
 
@@ -57,7 +57,7 @@ Usar `DashboardPageHeader` (`src/components/dashboard`) — spec **real** do com
 
 ## Filtro de status
 
-- **Afiliados:** chips **`FiltroStatusSemanticoPill`** na barra — toggle valor ativo ↔ agregador `todos`.
+- **Afiliados:** chips **`FiltroStatusSemanticoPill`** na barra — toggle valor ativo ↔ agregador `todos`. Lista inclui contas com `profiles.ativo = false` (pill **Desativado**); ao mudar status do perfil para **Ativo**, a Edge de reativação redefine senha padrão, exige troca no login e envia e-mail de boas-vindas.
 - **Network:** filtro por status nos **cards clicáveis do Funil de Prospecção** (`FunilProspeccaoKpiGrid`) — **sem** chips de Status na barra. Estado inicial `todos`: lista todos os prospectos **exceto Fechados**; clique no card **Fechado** para incluí-los.
 
 ## Estados ativos — tabs e filtros
@@ -94,7 +94,7 @@ Atualizar `geral/Ajuda` (`afiliados`, `afiliados_network`) — ver `geral.mdc` (
 
 - Nunca `CTA_GRADIENT` de módulo com tokens de dashboard
 - Nunca `--brand-action-12` / `--brand-action-border` em tabs ou banner de visualização
-- Nunca `"este dashboard"` na permissão negada
+- Nunca `"este dashboard"` na permissão negada — usar `"esta página"`
 - Nunca texto visível `Carregando…` (ASCII `Carregando...`) no loading principal (só `aria-label` no spinner)
 - Nunca `role="alert"` sem `aria-live="polite"` em erros
 - Nunca tabs sem ARIA completo e teclado

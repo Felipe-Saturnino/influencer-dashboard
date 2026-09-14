@@ -6,6 +6,28 @@
   min-height: 100dvh;
 }
 
+/* Painel de Notícias TV — carrossel vertical (Ciclo 5) */
+@keyframes painelNoticiaSai {
+  from { transform: translateY(0); opacity: 1; }
+  to { transform: translateY(-100%); opacity: 0; }
+}
+@keyframes painelNoticiaEntra {
+  from { transform: translateY(100%); opacity: 0.35; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.painel-noticia-slide-sai {
+  animation: painelNoticiaSai 900ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+.painel-noticia-slide-entra {
+  animation: painelNoticiaEntra 900ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .painel-noticia-slide-sai,
+  .painel-noticia-slide-entra {
+    animation: none;
+  }
+}
+
 @supports (zoom: 1) {
   .app-full-viewport-zoomed {
     min-height: calc(100vh / var(--app-ui-zoom));
@@ -81,6 +103,25 @@
   max-height: min(70dvh, 560px);
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+}
+
+/* Login: evita scroll duplo (página + cartão) — o formulário é curto */
+.app-auth-card-scroll--login {
+  max-height: none;
+  overflow: visible;
+}
+
+.app-auth-card {
+  backdrop-filter: blur(20px);
+}
+
+@media (max-width: 720px) {
+  .app-auth-card {
+    backdrop-filter: none;
+  }
+  .auth-glow {
+    display: none;
+  }
 }
 
 /* Auth: landscape / viewport baixo — menos respiro para evitar scroll desnecessário */
@@ -743,5 +784,18 @@
   .app-academy-portal-card__media {
     min-height: 168px;
     max-height: min(48vw, 220px);
+  }
+}
+
+.app-versionamento-change {
+  display: grid;
+  grid-template-columns: 92px 1fr;
+  gap: 12px;
+  align-items: start;
+}
+@media (max-width: 640px) {
+  .app-versionamento-change {
+    grid-template-columns: 1fr;
+    gap: 8px;
   }
 }

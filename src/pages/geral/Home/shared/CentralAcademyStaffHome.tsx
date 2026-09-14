@@ -2,6 +2,7 @@ import { BookOpen, Loader2, Megaphone, Newspaper } from "lucide-react";
 import { useMemo, type MouseEvent, type ReactNode } from "react";
 import { useApp } from "../../../../context/AppContext";
 import { useDashboardBrand } from "../../../../hooks/useDashboardBrand";
+import { useIdentidadeEfetiva } from "../../../../hooks/useIdentidadeEfetiva";
 import { useAppPageNav } from "../../../../hooks/useAppPageNav";
 import { linhaMetaAutorPortalAcademy } from "../../../../lib/academyPortalAutorMeta";
 import { getPageContentBoxStyle } from "../../../../lib/pageContentBoxStyles";
@@ -105,10 +106,14 @@ function reacoesAcademyHome(
 }
 
 export function CentralAcademyStaffHome({ sectionIdPrefix }: { sectionIdPrefix: string }) {
-  const { theme: t, user } = useApp();
+  const { theme: t } = useApp();
+  const { userId: userIdEfetivo } = useIdentidadeEfetiva();
   const brand = useDashboardBrand();
   const { loading, erro, lista, podeVer } = useHomeCentralAcademyFeed();
-  const { isRecolhido, marcarLido, expandir } = useHomeStaffLidoCollapse(user?.id, "academy");
+  const { isRecolhido, marcarLido, expandir } = useHomeStaffLidoCollapse(
+    userIdEfetivo ?? undefined,
+    "academy",
+  );
   const box = getPageContentBoxStyle(brand, t);
   const titleId = `${sectionIdPrefix}-central-academy-title`;
 

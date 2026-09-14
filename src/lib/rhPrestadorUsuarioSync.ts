@@ -45,6 +45,8 @@ export type PerfilRhOrganogramaSync = Extract<
   | "shuffler"
   | "tech_ops"
   | "gestor_academy"
+  | "facilities"
+  | "ti"
   | "prestador"
 >;
 
@@ -71,9 +73,9 @@ export function resolvePerfilRhDeOrganograma(
   if (gerenciaOrganogramaIndicaCustomerService(gerenciaNome)) {
     return { role: "customer_service", prestadorTipo: null, gestorTipo: null };
   }
-  if (g === "facilities") return { role: "prestador", prestadorTipo: "facilities", gestorTipo: null };
+  if (g === "facilities") return { role: "facilities", prestadorTipo: null, gestorTipo: null };
   if (g === "financeiro") return { role: "prestador", prestadorTipo: "escritorio", gestorTipo: null };
-  if (g === "ti") return { role: "prestador", prestadorTipo: "ti", gestorTipo: null };
+  if (g === "ti") return { role: "ti", prestadorTipo: null, gestorTipo: null };
   if (g === "treinamento") return { role: "gestor_academy", prestadorTipo: null, gestorTipo: null };
 
   const t = normRhOrgRotuloOrganograma(timeNome);
@@ -124,6 +126,8 @@ export type SyncRhPrestadorAuthUserResponse = {
   updated?: boolean;
   role?: string;
   roleChanged?: boolean;
+  /** Perfil gestor de departamento mantido — sync não sobrescreveu o role. */
+  rolePreserved?: boolean;
   /** Usuário da plataforma desativado após encerramento do vínculo. */
   deactivated?: boolean;
   userId?: string;

@@ -127,7 +127,7 @@ const ERRO_SALVAR_ANOTACAO =
 const ERRO_UPLOAD_FOTO =
   "Não foi possível enviar a foto. Se o problema persistir, entre em contato com o suporte.";
 const ERRO_DEALER_APOS_SALVAR =
-  "Cadastro salvo, mas não foi possível atualizar o catálogo de Dealers. Se o problema persistir, entre em contato com o suporte.";
+  "Cadastro salvo, mas não foi possível atualizar o catálogo de Game Presenters. Se o problema persistir, entre em contato com o suporte.";
 
 function StaffSkillRotulo({ skillKey, label }: { skillKey: StaffSkillKey; label: string }) {
   const { theme: t } = useApp();
@@ -287,7 +287,7 @@ const STAFF_EDITAR_TAB_ICONS: Record<EditarAba, ReactNode> = {
 const STAFF_EDITAR_TAB_LABELS: Record<EditarAba, string> = {
   funcao: "Dados de função",
   skills: "Dados de skills",
-  dealer: "Gestão de dealer",
+  dealer: "Gestão de Game Presenter",
 };
 
 const DEALER_GENERO_LABEL: Record<DealerGenero, string> = {
@@ -949,7 +949,7 @@ export default function RhGestaoStaffPage() {
   if (perm.canView === "nao") {
     return (
       <div className="app-page-shell" style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-        Você não tem permissão para visualizar este dashboard.
+        Você não tem permissão para visualizar esta página.
       </div>
     );
   }
@@ -1104,7 +1104,7 @@ export default function RhGestaoStaffPage() {
               })}
               title={!todosTimes && times[idxTime] ? `${times[idxTime]!.gerencia_nome} — ${times[idxTime]!.nome}` : undefined}
             >
-              {todosTimes ? "Todos os times" : timeLabelCentro}
+              {todosTimes ? "Todos Times" : timeLabelCentro}
             </span>
             <button
               type="button"
@@ -1531,7 +1531,7 @@ function ModalStaffVer({
   nomeTimeOrganograma?: string;
   /** Times sem Estúdio na aba Função (serviço, Shuffler, …) — exceto forçados a Todos Estúdios. */
   dadosFuncaoOcultarEstudio?: boolean;
-  /** Shuffler e times de serviço — oculta bio/fotos do dealer. */
+  /** Shuffler e times de serviço — oculta bio/fotos do Game Presenter. */
   dadosFuncaoOcultarBioFotos?: boolean;
   /** Somente com permissão de Editar em Gestão de Staff. */
   exibirAbaHistorico?: boolean;
@@ -1664,7 +1664,7 @@ function ModalStaffVer({
           ) : null}
           {!dadosFuncaoOcultarBioFotos ? (
             <>
-              <CampoLeitura k="Bio do Dealer" v={readStaffDealerBioForUi(row) || "—"} t={t} />
+              <CampoLeitura k="Bio do Game Presenter" v={readStaffDealerBioForUi(row) || "—"} t={t} />
               <div style={{ marginBottom: 12 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, marginBottom: 8, fontFamily: FONT.body }}>Fotos</div>
                 {(() => {
@@ -2035,17 +2035,17 @@ function ModalStaffEditar({
       const fotosDepois = dealerFotos.length + fotosPendentes.length;
       if (generoAntes !== dealerGenero) {
         alteracoes.push({
-          campo: "Gênero (Dealer)",
+          campo: "Gênero (Game Presenter)",
           antes: DEALER_GENERO_LABEL[generoAntes] ?? generoAntes,
           depois: DEALER_GENERO_LABEL[dealerGenero] ?? dealerGenero,
         });
       }
       if (bioAntes !== bioDepois) {
-        alteracoes.push({ campo: "Bio do Dealer", antes: bioAntes || "—", depois: bioDepois || "—" });
+        alteracoes.push({ campo: "Bio do Game Presenter", antes: bioAntes || "—", depois: bioDepois || "—" });
       }
       if (fotosAntes !== fotosDepois) {
         alteracoes.push({
-          campo: "Fotos do Dealer",
+          campo: "Fotos do Game Presenter",
           antes: fotosAntes ? `${fotosAntes} foto(s)` : "—",
           depois: fotosDepois ? `${fotosDepois} foto(s)` : "—",
         });
@@ -2343,7 +2343,7 @@ function ModalStaffEditar({
               value={dealerGenero}
               onChange={(e) => setDealerGenero(e.target.value as DealerGenero)}
               style={inputStyle}
-              aria-label="Gênero do dealer"
+              aria-label="Gênero do Game Presenter"
             >
               {(Object.keys(DEALER_GENERO_LABEL) as DealerGenero[]).map((g) => (
                 <option key={g} value={g}>
@@ -2354,7 +2354,7 @@ function ModalStaffEditar({
           </div>
           <div style={{ marginBottom: 14 }}>
             <label style={labelStyle} htmlFor="staff-dealer-bio">
-              Bio do Dealer
+              Bio do Game Presenter
             </label>
             <textarea
               id="staff-dealer-bio"

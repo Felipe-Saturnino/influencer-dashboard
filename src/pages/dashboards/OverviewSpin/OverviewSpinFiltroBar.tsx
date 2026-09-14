@@ -63,6 +63,7 @@ export function OverviewSpinFiltroBar({
           justifyContent: "center",
           gap: 10,
           flexWrap: "wrap",
+          width: "100%",
           marginBottom: 12,
         }}
       >
@@ -119,6 +120,7 @@ export function OverviewSpinFiltroBar({
               alignItems: "center",
               gap: 6,
             }}
+            aria-live="polite"
           >
             <Clock size={12} aria-hidden />
             Carregando…

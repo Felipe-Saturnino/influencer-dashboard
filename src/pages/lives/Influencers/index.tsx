@@ -42,6 +42,7 @@ import {
 import { PLATAFORMAS, PLAT_COLOR, type Plataforma } from "../../../constants/platforms";
 
 import { StatusBadge } from "./influencerUiComponents";
+import { ModalAtivarHoras } from "./ModalAtivarHoras";
 import {
   emptyPerfil,
   STATUS_COLOR,
@@ -79,6 +80,7 @@ export default function Influencers() {
   );
   const [loading,        setLoading]        = useState(true);
   const [modal,          setModal]          = useState<{ mode: "visualizar" | "editar"; inf?: Influencer } | null>(null);
+  const [modalAtivar,    setModalAtivar]    = useState<Influencer | null>(null);
 
   // Filtros
   const [search,        setSearch]        = useState("");
@@ -99,7 +101,7 @@ export default function Influencers() {
     const opsMap = Object.fromEntries((opsList ?? []).map((o: Operadora) => [o.slug, o.nome]));
 
     const PERFIL_COLS =
-      "id, nome_artistico, nome_completo, status, telefone, cpf, canais, link_twitch, link_youtube, link_kick, link_instagram, link_tiktok, link_discord, link_whatsapp, link_telegram, cache_hora, banco, agencia, conta, chave_pix, created_at, updated_at, status_alterado_em";
+      "id, nome_artistico, nome_completo, status, telefone, cpf, canais, link_twitch, link_youtube, link_kick, link_instagram, link_tiktok, link_discord, link_whatsapp, link_telegram, cache_hora, horas_acordadas, horas_ciclo_iniciado_em, banco, agencia, conta, chave_pix, created_at, updated_at, status_alterado_em";
     const INF_OP_COLS = "influencer_id, operadora_slug, id_operadora, ativo, criado_em, atualizado_em";
 
     if (showManagementUI) {
@@ -166,7 +168,13 @@ export default function Influencers() {
 
   async function handleStatusChange(infId: string, newStatus: StatusInfluencer) {
     if (!podeAlterarStatus) return;
-    const previousStatus = list.find((i) => i.id === infId)?.perfil?.status;
+    const alvoAtual = list.find((i) => i.id === infId);
+    const previousStatus = alvoAtual?.perfil?.status;
+    const previousPerfil = alvoAtual?.perfil;
+    if (newStatus === "ativo" && previousStatus !== "ativo") {
+      if (alvoAtual) setModalAtivar(alvoAtual);
+      return;
+    }
 
     const agoraIso = new Date().toISOString();
     setList((prev) =>
@@ -177,6 +185,8 @@ export default function Influencers() {
               perfil: {
                 ...(i.perfil ?? emptyPerfil(i.id)),
                 status: newStatus,
+                horas_acordadas: null,
+                horas_ciclo_iniciado_em: null,
                 ...(previousStatus !== newStatus ? { status_alterado_em: agoraIso } : {}),
               },
             }
@@ -184,7 +194,12 @@ export default function Influencers() {
       )
     );
 
-    const upsertPatch: Record<string, unknown> = { id: infId, status: newStatus };
+    const upsertPatch: Record<string, unknown> = {
+      id: infId,
+      status: newStatus,
+      horas_acordadas: null,
+      horas_ciclo_iniciado_em: null,
+    };
     if (previousStatus !== newStatus) upsertPatch.status_alterado_em = agoraIso;
 
     const { error } = await supabase
@@ -195,11 +210,17 @@ export default function Influencers() {
       setList((prev) =>
         prev.map((i) =>
           i.id === infId
-            ? { ...i, perfil: { ...(i.perfil ?? emptyPerfil(i.id)), status: previousStatus ?? "ativo" } }
+            ? {
+                ...i,
+                perfil: {
+                  ...(previousPerfil ?? emptyPerfil(i.id)),
+                  status: previousStatus ?? "ativo",
+                },
+              }
             : i
         )
       );
-      setStatusError("Erro ao salvar status. Tente novamente.");
+      setStatusError("Não foi possível salvar o status. Se o problema persistir, entre em contato com o suporte.");
     }
   }
 
@@ -275,7 +296,7 @@ export default function Influencers() {
       <DashboardPageHeader
         icon={<PageMenuIcon pageKey="influencers" />}
         title={getPageMenuLabel("influencers")}
-        subtitle={showManagementUI ? "Gerencie o cadastro completo dos parceiros — perfil, canais e financeiro." : "Seu perfil completo na plataforma."}
+        subtitle={showManagementUI ? "Gerencie o cadastro completo dos influencers — perfil, canais e financeiro." : "Seu perfil completo na plataforma."}
         brand={brand}
         t={t}
         right={showManagementUI ? undefined : <AjudaContextualAcoes pageKey="influencers" />}
@@ -527,6 +548,11 @@ export default function Influencers() {
                       {p?.nome_artistico || inf.name}
                     </span>
                     <StatusBadge value={status} onChange={(v) => handleStatusChange(inf.id, v)} readonly={!podeAlterarStatus} />
+                    {inf.ativo === false ? (
+                      <span style={{ display: "inline-flex", alignItems: "center", fontSize: 11, padding: "3px 9px", borderRadius: 20, background: `${t.textMuted}22`, color: t.textMuted, fontWeight: 600, fontFamily: FONT.body, border: `1px solid ${t.cardBorder}` }}>
+                        Desativado
+                      </span>
+                    ) : null}
                     {incompleto && status === "ativo" && (
                       <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, padding: "3px 9px", borderRadius: 20, background: `${BRAND.vermelho}22`, color: BRAND.vermelho, fontWeight: 600, fontFamily: FONT.body }}>
                         <AlertCircle size={10} aria-hidden="true" /> Perfil incompleto
@@ -632,9 +658,23 @@ export default function Influencers() {
           operadorasList={operadorasNoEscopo}
           onClose={() => setModal(null)}
           onSaved={() => { setModal(null); void loadData(); }}
+          onPedirAtivacao={() => {
+            if (modal.inf) setModalAtivar(modal.inf);
+          }}
           isDark={isDark}
         />
       )}
+      {modalAtivar ? (
+        <ModalAtivarHoras
+          influencer={modalAtivar}
+          onClose={() => setModalAtivar(null)}
+          onSaved={() => {
+            setModalAtivar(null);
+            setModal(null);
+            void loadData();
+          }}
+        />
+      ) : null}
     </div>
   );
 }

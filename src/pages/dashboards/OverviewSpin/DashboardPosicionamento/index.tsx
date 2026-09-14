@@ -481,6 +481,12 @@ function PosicaoAtualMesasBlock({
     return (
       <div style={cardStyle}>
         {header}
+        <TabelaComPaginacao
+          items={mesasOrdenadas}
+          t={t}
+          resetKey={`${titulo}|${mesasOrdenadas.map((m) => m.mesa_identificacao).join(",")}`}
+        >
+          {(mesasPagina, zebraIdx) => (
         <div className="app-table-wrap" style={{ ...getDataTableWrapStyle(), overflowX: "visible" }}>
           <table style={getDataTableStyle({ width: "100%", minWidth: 0, tableLayout: "fixed" })}>
             <caption style={{ display: "none" }}>{`Posição das mesas — ${titulo}`}</caption>
@@ -501,12 +507,13 @@ function PosicaoAtualMesasBlock({
               </tr>
             </thead>
             <tbody>
-              {mesasOrdenadas.map((m, i) => {
+              {mesasPagina.map((m, i) => {
+                const rowIdx = zebraIdx(i);
                 const estudo = m.nome_estudio?.trim() || "—";
                 const mesa = m.nome_mesa?.trim() || "—";
                 const prevDif = prevDiferenteMap?.get(m.mesa_identificacao) ?? null;
                 return (
-                  <tr key={m.mesa_identificacao} style={{ background: dataTable.zebraRow(i) }} {...dataTableRowHoverHandlers(dataTable.zebraRow(i))}>
+                  <tr key={m.mesa_identificacao} style={{ background: dataTable.zebraRow(rowIdx) }} {...dataTableRowHoverHandlers(dataTable.zebraRow(rowIdx))}>
                     <td style={dataTable.tdCenter}>
                       <div style={{ display: "flex", justifyContent: "center" }}>
                         <PosicaoBadge posicao={m.posicao} />
@@ -545,6 +552,8 @@ function PosicaoAtualMesasBlock({
             </tbody>
           </table>
         </div>
+          )}
+        </TabelaComPaginacao>
       </div>
     );
   }
@@ -552,8 +561,14 @@ function PosicaoAtualMesasBlock({
   return (
     <div style={cardStyle}>
       {header}
+      <TabelaComPaginacao
+        items={mesasOrdenadas}
+        t={t}
+        resetKey={mesasOrdenadas.map((m) => m.mesa_identificacao).join(",")}
+      >
+        {(mesasPagina) => (
       <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
-        {mesasOrdenadas.map((m) => {
+        {mesasPagina.map((m) => {
           const pa = prevMap.get(m.mesa_identificacao) ?? null;
           const d = deltaPosicao(m.posicao, pa);
           const labelCompleto = labelMesaPosicionamentoRow(m);
@@ -590,6 +605,8 @@ function PosicaoAtualMesasBlock({
           );
         })}
       </ul>
+        )}
+      </TabelaComPaginacao>
     </div>
   );
 }
@@ -598,11 +615,15 @@ function AlertasPeriodoBlock({
   alertas,
   cardStyle,
   loadingHistorico,
+  erroHistorico,
+  onRetryHistorico,
   sub,
 }: {
   alertas: AlertaPos[];
   cardStyle: CSSProperties;
   loadingHistorico?: boolean;
+  erroHistorico?: string | null;
+  onRetryHistorico?: () => void;
   sub?: string;
 }) {
   const { theme: t } = useApp();
@@ -620,19 +641,61 @@ function AlertasPeriodoBlock({
             fontFamily: FONT.body,
             fontSize: 13,
           }}
+          aria-live="polite"
         >
           <Clock size={12} aria-hidden />
           <span>Carregando…</span>
+        </div>
+      ) : erroHistorico ? (
+        <div
+          role="alert"
+          aria-live="polite"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            flexWrap: "wrap",
+            color: "#e84025",
+            fontFamily: FONT.body,
+            fontSize: 13,
+          }}
+        >
+          <span>{erroHistorico}</span>
+          {onRetryHistorico ? (
+            <button
+              type="button"
+              onClick={onRetryHistorico}
+              style={{
+                fontFamily: FONT.body,
+                fontSize: 13,
+                fontWeight: 700,
+                padding: "8px 14px",
+                borderRadius: 10,
+                border: "1px solid rgba(232,64,37,0.35)",
+                background: "transparent",
+                color: "#e84025",
+                cursor: "pointer",
+              }}
+            >
+              Tentar de novo
+            </button>
+          ) : null}
         </div>
       ) : alertas.length === 0 ? (
         <p style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body, margin: 0 }}>
           Nenhum alerta automático para o período.
         </p>
       ) : (
+        <TabelaComPaginacao
+          items={alertas}
+          t={t}
+          resetKey={alertas.map((a) => `${a.sortTs ?? ""}-${a.texto}`).join("|")}
+        >
+          {(alertasPagina, zebraIdx) => (
         <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
-          {alertas.map((a, i) => (
+          {alertasPagina.map((a, i) => (
             <li
-              key={`${a.sortTs ?? i}-${a.texto}`}
+              key={`${a.sortTs ?? zebraIdx(i)}-${a.texto}`}
               style={{
                 padding: "10px 14px",
                 borderRadius: 10,
@@ -655,6 +718,8 @@ function AlertasPeriodoBlock({
             </li>
           ))}
         </ul>
+          )}
+        </TabelaComPaginacao>
       )}
     </div>
   );
@@ -693,6 +758,29 @@ function DashboardPosicionamentoTodas({
     brx.loadingHistorico ||
     donald.loadingHistorico ||
     betponto.loadingHistorico;
+
+  const erroHistoricoAlertas =
+    blaze.erroHistorico ||
+    cda.erroHistorico ||
+    esportiva.erroHistorico ||
+    jonbet.erroHistorico ||
+    bateu.erroHistorico ||
+    rico.erroHistorico ||
+    brx.erroHistorico ||
+    donald.erroHistorico ||
+    betponto.erroHistorico;
+
+  const recarregarHistoricoTodas = () => {
+    void blaze.recarregar();
+    void cda.recarregar();
+    void esportiva.recarregar();
+    void jonbet.recarregar();
+    void bateu.recarregar();
+    void rico.recarregar();
+    void brx.recarregar();
+    void donald.recarregar();
+    void betponto.recarregar();
+  };
 
   const alertasConsolidados = useMemo(() => {
     const prefix = (slug: string, lista: AlertaPos[]) =>
@@ -849,7 +937,9 @@ function DashboardPosicionamentoTodas({
         alertas={alertasConsolidados}
         cardStyle={card}
         loadingHistorico={loadingHistoricoAlertas}
-        sub="todas as alterações dos últimos 7 dias"
+        erroHistorico={erroHistoricoAlertas}
+        onRetryHistorico={recarregarHistoricoTodas}
+        sub="alteração mais recente por mesa nos últimos 7 dias"
       />
     </>
   );
@@ -883,6 +973,7 @@ function DashboardPosicionamentoOperadora({
     loading,
     loadingHistorico,
     erro,
+    erroHistorico,
     recarregar,
     semDados,
     execucoesAll,
@@ -1219,6 +1310,7 @@ function DashboardPosicionamentoOperadora({
                   fontSize: 12,
                   fontFamily: FONT.body,
                 }}
+                aria-live="polite"
               >
                 <Clock size={12} aria-hidden />
                 Carregando…
@@ -1253,6 +1345,42 @@ function DashboardPosicionamentoOperadora({
             })}
           </div>
         </div>
+        {erroHistorico && historicoModo !== "dia" ? (
+          <div
+            role="alert"
+            aria-live="polite"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 12,
+              flexWrap: "wrap",
+              padding: "24px 0",
+              color: "#e84025",
+              fontSize: 13,
+              fontFamily: FONT.body,
+            }}
+          >
+            <span>{erroHistorico}</span>
+            <button
+              type="button"
+              onClick={() => void recarregar()}
+              style={{
+                fontFamily: FONT.body,
+                fontSize: 13,
+                fontWeight: 700,
+                padding: "8px 14px",
+                borderRadius: 10,
+                border: "1px solid rgba(232,64,37,0.35)",
+                background: "transparent",
+                color: "#e84025",
+                cursor: "pointer",
+              }}
+            >
+              Tentar de novo
+            </button>
+          </div>
+        ) : (
         <TabelaComPaginacao
           items={heatMesasOrdenadas}
           t={t}
@@ -1319,6 +1447,7 @@ function DashboardPosicionamentoOperadora({
         </div>
           )}
         </TabelaComPaginacao>
+        )}
       </div>
 
       <div className="app-grid-2" style={getPageKpiSectionGapStyle()}>
@@ -1335,8 +1464,14 @@ function DashboardPosicionamentoOperadora({
               Sem dados para o período selecionado.
             </p>
           ) : (
+            <TabelaComPaginacao
+              items={rankingJogosFiltrados}
+              t={t}
+              resetKey={`${canalFiltro}|${operadoraSlug}|${rankingJogosFiltrados.length}`}
+            >
+              {(jogosPagina) => (
             <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
-              {rankingJogosFiltrados.map((j) => (
+              {jogosPagina.map((j) => (
                 <li
                   key={j.game_id}
                   style={{
@@ -1384,6 +1519,8 @@ function DashboardPosicionamentoOperadora({
                 </li>
               ))}
             </ul>
+              )}
+            </TabelaComPaginacao>
           )}
         </div>
 

@@ -268,6 +268,12 @@ export default function DashboardFinanceiro() {
             {MSG_SEM_DADOS_FILTRO}
           </div>
         ) : (
+          <TabelaComPaginacao
+            items={investPorAfiliado}
+            t={t}
+            resetKey={`${historico}|${sf?.idxMes ?? ""}|${sf?.filtroAfiliado ?? ""}|${sf?.filtroOperadora ?? ""}`}
+          >
+            {(linhas, zebraIdx) => (
           <div className="app-table-wrap" style={getDataTableWrapStyle()}>
             <table style={getDataTableStyle({ minWidth: 480 })}>
               <caption style={{ display: "none" }}>Investimento pago por afiliado</caption>
@@ -280,8 +286,8 @@ export default function DashboardFinanceiro() {
                 </tr>
               </thead>
               <tbody>
-                {investPorAfiliado.map((r, i) => (
-                  <tr key={r.afiliado_id} style={{ background: dataTable.zebraRow(i) }}>
+                {linhas.map((r, i) => (
+                  <tr key={r.afiliado_id} style={{ background: dataTable.zebraRow(zebraIdx(i)) }}>
                     <td style={dataTable.tdCenter}>{r.nome}</td>
                     <td style={dataTable.tdCenter}>{fmtBRL(r.investimento)}</td>
                     <td style={dataTable.tdCenter}>{fmtBRL(r.ggr)}</td>
@@ -293,6 +299,8 @@ export default function DashboardFinanceiro() {
               </tbody>
             </table>
           </div>
+            )}
+          </TabelaComPaginacao>
         )}
       </div>
 

@@ -1,13 +1,12 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, lazy, Suspense, type ReactNode } from "react";
 import { useApp } from "../../../context/AppContext";
 import { usePermission } from "../../../hooks/usePermission";
 import { useRouteTab } from "../../../hooks/useRouteTab";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { BRAND_SEMANTIC, FONT, FONT_TITLE } from "../../../constants/theme";
 import { buildMenuAjudaVisivel } from "../../../lib/ajudaVisibilidade";
-import { AbaGlossario } from "./GlossarioPanel";
 import type { PageKey, Role } from "../../../types";
-import { HelpCircle, BookOpen, LifeBuoy, BookMarked, GraduationCap } from "lucide-react";
+import { HelpCircle, BookOpen, LifeBuoy, BookMarked, GraduationCap, Loader2 } from "lucide-react";
 import { FiltroBarTabButton, FILTRO_BAR_TAB_ICON_PROPS, onFiltroBarTabsKeyDown } from "../../../components/dashboard";
 import { PageHeader } from "../../../components/PageHeader";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
@@ -17,12 +16,18 @@ import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { textoContemBusca } from "../../../lib/searchText";
 import { AjudaPaginaAcessoLink } from "../../../components/AppPageLink";
 import { renderAjudaTexto } from "../../../lib/ajudaInlineText";
-import { temAlgumTutorialVisivel } from "./tutoriais/catalog";
+import { temAlgumTutorialVisivel } from "./tutoriais/temAlgumTutorialVisivel";
 import { getAppRouteByPageKey, getAppRouteByPageSlug } from "../../../lib/appRoutes";
 import { CONTEUDO_CONHECA } from "./conteudo/conheca";
 import { CONTEUDO_TROUBLE, TROUBLESHOOTING_TRANSVERSAL } from "./conteudo/troubleshooting";
-import { TutoriaisPanel } from "./TutoriaisPanel";
 import { AjudaBlocoRecolhivel } from "./AjudaBlocoRecolhivel";
+
+const AbaGlossario = lazy(() =>
+  import("./GlossarioPanel").then((m) => ({ default: m.AbaGlossario })),
+);
+const TutoriaisPanel = lazy(() =>
+  import("./TutoriaisPanel").then((m) => ({ default: m.TutoriaisPanel })),
+);
 
 type Aba = "conheca" | "troubleshooting" | "glossario" | "tutoriais";
 
@@ -331,7 +336,16 @@ export default function Ajuda() {
               boxShadow: cardShadow,
             }}
           >
-            <AbaGlossario dark={isDark} t={t} permissions={permissions} />
+            <Suspense
+              fallback={
+                <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 0" }}>
+                  <Loader2 className="app-lucide-spin" size={20} color="var(--brand-primary, #7c3aed)" aria-hidden />
+                  <span style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>Carregando…</span>
+                </div>
+              }
+            >
+              <AbaGlossario dark={isDark} t={t} permissions={permissions} />
+            </Suspense>
           </div>
         </div>
       ) : aba === "tutoriais" ? (
@@ -340,14 +354,52 @@ export default function Ajuda() {
           id="panel-ajuda-tutoriais"
           aria-labelledby="tab-ajuda-tutoriais"
         >
-          <TutoriaisPanel
-            t={t}
-            cardShadow={cardShadow}
-            role={roleEfetivo}
-            isAdmin={isAdmin}
-            visibility={visibility}
-            onVisibilityChange={atualizarTutorialVisibilidadeLocal}
-          />
+          {!visibilityLoaded ? (
+            <div
+              style={{
+                background: t.cardBg,
+                border: `1px solid ${t.cardBorder}`,
+                borderRadius: 18,
+                padding: "28px 32px",
+                boxShadow: cardShadow,
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+              }}
+            >
+              <Loader2 className="app-lucide-spin" size={20} color="var(--brand-primary, #7c3aed)" aria-hidden />
+              <span style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>Carregando…</span>
+            </div>
+          ) : (
+            <Suspense
+              fallback={
+                <div
+                  style={{
+                    background: t.cardBg,
+                    border: `1px solid ${t.cardBorder}`,
+                    borderRadius: 18,
+                    padding: "28px 32px",
+                    boxShadow: cardShadow,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                  }}
+                >
+                  <Loader2 className="app-lucide-spin" size={20} color="var(--brand-primary, #7c3aed)" aria-hidden />
+                  <span style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>Carregando…</span>
+                </div>
+              }
+            >
+              <TutoriaisPanel
+                t={t}
+                cardShadow={cardShadow}
+                role={roleEfetivo}
+                isAdmin={isAdmin}
+                visibility={visibility}
+                onVisibilityChange={atualizarTutorialVisibilidadeLocal}
+              />
+            </Suspense>
+          )}
         </div>
       ) : menuAjudaVisivel.length === 0 ? (
         <div
@@ -399,7 +451,7 @@ export default function Ajuda() {
               maxWidth: 420,
             }}
           >
-            Procure o administrador para solicitar as permissões necessárias em Gestão de Usuários.
+            Solicite ao suporte as permissões necessárias em Gestão de Usuários.
           </p>
         </div>
       ) : (

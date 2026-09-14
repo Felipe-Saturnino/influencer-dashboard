@@ -2,6 +2,7 @@ import { Loader2 } from "lucide-react";
 import type { MouseEvent } from "react";
 import { useApp } from "../../../../context/AppContext";
 import { useDashboardBrand } from "../../../../hooks/useDashboardBrand";
+import { useIdentidadeEfetiva } from "../../../../hooks/useIdentidadeEfetiva";
 import { useAppPageNav } from "../../../../hooks/useAppPageNav";
 import { fmtDataColunaGerenciamento } from "../../../../lib/informativosWorkflow";
 import { setHomeGaleriaFocus } from "../../../../lib/homeGaleriaDeepLink";
@@ -82,10 +83,14 @@ function rodapeItem(item: HomeBlogueiroSpinItem): string | undefined {
 }
 
 export function BlogueiroSpinStaffHome({ sectionIdPrefix }: { sectionIdPrefix: string }) {
-  const { theme: t, user } = useApp();
+  const { theme: t } = useApp();
+  const { userId: userIdEfetivo } = useIdentidadeEfetiva();
   const brand = useDashboardBrand();
   const { loading, erro, lista } = useHomeBlogueiroSpinFeed();
-  const { isRecolhido, marcarLido, expandir } = useHomeStaffLidoCollapse(user?.id, "blogueiro");
+  const { isRecolhido, marcarLido, expandir } = useHomeStaffLidoCollapse(
+    userIdEfetivo ?? undefined,
+    "blogueiro",
+  );
   const box = getPageContentBoxStyle(brand, t);
   const titleId = `${sectionIdPrefix}-blogueiro-title`;
 

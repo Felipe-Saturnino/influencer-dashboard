@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../../../../lib/supabase";
 import {
   fetchAllPages,
@@ -32,6 +32,7 @@ import {
   rankingConcorrentesFromPosicoes,
   ultimaPosicaoDiferenteNaJanela,
 } from "../../../../lib/lobbyMonitorHelpers";
+import { fetchMesasSpinMetadadosCached } from "../mesasSpinMetadadosQuery";
 
 export const LOBBY_POS_SLUGS_CONSOLIDADOS = [
   "blaze",
@@ -60,82 +61,14 @@ export const POS_COMPARACAO_DIFERENTE_DIAS = 6;
 /** Concorrência dos lotes de posições do histórico (carga em background). */
 const POS_HISTORICO_CONCORRENCIA = 4;
 
-type MetadadosMesaSpinMaps = {
-  nomeEstudioPorMesa: Map<string, string>;
-  canalPorMesa: Map<string, "dedicado" | "network">;
-  nomeMesaPorId: Map<string, string>;
-  tipoJogoPorId: Map<string, string>;
-};
-
-function mapsMetadadosMesasSpin(
-  mesasCad: { mesa_identificacao?: unknown; nome_mesa?: unknown; tipo_jogo?: unknown; estudio_slug?: unknown }[],
-  estudiosCad: { slug?: unknown; nome?: unknown; tipo?: unknown }[],
-): MetadadosMesaSpinMaps {
-  const nomeEstudioPorSlug = new Map<string, string>();
-  const tipoPorEstudio = new Map<string, "dedicado" | "network">();
-  for (const e of estudiosCad) {
-    const slug = typeof e.slug === "string" ? e.slug.trim() : "";
-    const nome = typeof e.nome === "string" ? e.nome.trim() : "";
-    if (slug && nome) nomeEstudioPorSlug.set(slug, nome);
-    if (slug && (e.tipo === "dedicado" || e.tipo === "network")) {
-      tipoPorEstudio.set(slug, e.tipo);
-    }
-  }
-
-  const nomeEstudioPorMesa = new Map<string, string>();
-  const canalPorMesa = new Map<string, "dedicado" | "network">();
-  const nomeMesaPorId = new Map<string, string>();
-  const tipoJogoPorId = new Map<string, string>();
-
-  for (const m of mesasCad) {
-    const mid = typeof m.mesa_identificacao === "string" ? m.mesa_identificacao.trim() : "";
-    if (!mid) continue;
-    const nomeMesa = typeof m.nome_mesa === "string" ? m.nome_mesa.trim() : "";
-    const tipoJogo = typeof m.tipo_jogo === "string" ? m.tipo_jogo.trim() : "";
-    if (nomeMesa) nomeMesaPorId.set(mid, nomeMesa);
-    if (tipoJogo) tipoJogoPorId.set(mid, tipoJogo);
-    const estSlug = typeof m.estudio_slug === "string" ? m.estudio_slug.trim() : "";
-    if (!estSlug) continue;
-    const nomeEst = nomeEstudioPorSlug.get(estSlug);
-    if (nomeEst) nomeEstudioPorMesa.set(mid, nomeEst);
-    const canal = tipoPorEstudio.get(estSlug);
-    if (canal) canalPorMesa.set(mid, canal);
-  }
-
-  return { nomeEstudioPorMesa, canalPorMesa, nomeMesaPorId, tipoJogoPorId };
-}
-
-const METADADOS_MESAS_SPIN_VAZIO: MetadadosMesaSpinMaps = {
-  nomeEstudioPorMesa: new Map(),
-  canalPorMesa: new Map(),
-  nomeMesaPorId: new Map(),
-  tipoJogoPorId: new Map(),
-};
-
-/** Catálogo opcional — falha não bloqueia posições históricas (fallback de rótulo usa mesa_identificacao). */
-async function carregarMetadadosMesasSpinCatalogo(): Promise<MetadadosMesaSpinMaps> {
-  try {
-    const [mesasCad, estudiosCad] = await Promise.all([
-      fetchAllPages(async (from, to) =>
-        supabase
-          .from("mesas_spin_cadastro")
-          .select("mesa_identificacao, nome_mesa, tipo_jogo, estudio_slug")
-          .range(from, to),
-      ),
-      fetchAllPages(async (from, to) =>
-        supabase.from("estudios_spin").select("slug, nome, tipo").range(from, to),
-      ),
-    ]);
-    return mapsMetadadosMesasSpin(mesasCad, estudiosCad);
-  } catch (err) {
-    console.error("[useLobbyPosicionamentoData:metadados]", err);
-    return METADADOS_MESAS_SPIN_VAZIO;
-  }
-}
+const MSG_ERRO_POSICIONAMENTO =
+  "Não foi possível carregar o posicionamento. Se o problema persistir, entre em contato com o suporte.";
+const MSG_ERRO_HISTORICO_POS =
+  "Não foi possível carregar o histórico de posicionamento. Se o problema persistir, entre em contato com o suporte.";
 
 interface UseLobbyPosicionamentoDataOpts {
   /**
-   * Quando `false`, não busca a janela de 35 dias usada pelo heatmap 7d/30d —
+   * Quando `false`, não busca a janela histórica usada pelo heatmap 7d/30d —
    * só hoje + ontem (KPIs, snapshot, alertas, heatmap Dia). Default `true`.
    */
   historico?: boolean;
@@ -156,10 +89,12 @@ export function useLobbyPosicionamentoData(
   const [loading, setLoading] = useState(true);
   const [loadingHistorico, setLoadingHistorico] = useState(comHistorico);
   const [erro, setErro] = useState<string | null>(null);
+  const [erroHistorico, setErroHistorico] = useState<string | null>(null);
   const [execRecentes, setExecRecentes] = useState<LobbyExecucaoRow[]>([]);
   const [posRecentes, setPosRecentes] = useState<LobbyPosicaoRow[]>([]);
   const [execHist, setExecHist] = useState<LobbyExecucaoRow[]>([]);
   const [posHist, setPosHist] = useState<LobbyPosicaoRow[]>([]);
+  const cargaGenRef = useRef(0);
 
   const dayKey = useMemo(() => {
     const y = refDate.getFullYear();
@@ -170,18 +105,24 @@ export function useLobbyPosicionamentoData(
   const skip = !operadoraSlug || operadoraSlug === "todas";
 
   const carregar = useCallback(async () => {
+    const gen = ++cargaGenRef.current;
+    const stale = () => gen !== cargaGenRef.current;
+
     if (skip) {
+      if (stale()) return;
       setExecRecentes([]);
       setPosRecentes([]);
       setExecHist([]);
       setPosHist([]);
       setErro(null);
+      setErroHistorico(null);
       setLoading(false);
       setLoadingHistorico(false);
       return;
     }
     setLoading(true);
     setErro(null);
+    setErroHistorico(null);
     setLoadingHistorico(comHistorico);
     setExecHist([]);
     setPosHist([]);
@@ -208,6 +149,7 @@ export function useLobbyPosicionamentoData(
           .order("executado_em", { ascending: true })
           .range(from, to),
       );
+      if (stale()) return;
 
       let execucoes = execRows as LobbyExecucaoRow[];
       if (execucoes.length === 0) {
@@ -221,14 +163,16 @@ export function useLobbyPosicionamentoData(
           .order("executado_em", { ascending: false })
           .limit(1);
         if (lastErr) throw lastErr;
+        if (stale()) return;
         execucoes = (lastRows ?? []) as LobbyExecucaoRow[];
       }
       if (execucoes.length === 0) {
+        if (stale()) return;
         setExecRecentes([]);
         setPosRecentes([]);
       } else {
         const ids = execucoes.map((e) => e.id);
-        const [posRows, mesasCad, estudiosCad] = await Promise.all([
+        const [posRows, meta] = await Promise.all([
           fetchInBatched(ids, LOBBY_MONITOR_EXECUCAO_IN_CHUNK, async (slice) =>
             fetchAllPages(async (from, to) =>
               supabase
@@ -240,20 +184,9 @@ export function useLobbyPosicionamentoData(
                 .range(from, to),
             ),
           ),
-          fetchAllPages(async (from, to) =>
-            supabase
-              .from("mesas_spin_cadastro")
-              .select("mesa_identificacao, nome_mesa, tipo_jogo, estudio_slug")
-              .range(from, to),
-          ),
-          fetchAllPages(async (from, to) =>
-            supabase.from("estudios_spin").select("slug, nome, tipo").range(from, to),
-          ),
+          fetchMesasSpinMetadadosCached(),
         ]);
-
-        const { nomeEstudioPorMesa, canalPorMesa } = mapsMetadadosMesasSpin(mesasCad, estudiosCad);
-        const nomeEstudioPorMesaSpin = nomeEstudioPorMesa;
-        const canalPorMesaSpin = canalPorMesa;
+        if (stale()) return;
 
         setExecRecentes(
           execucoes.map((e) => ({
@@ -268,8 +201,8 @@ export function useLobbyPosicionamentoData(
             const mid = p.mesa_identificacao.trim();
             return {
               ...p,
-              nome_estudio: nomeEstudioPorMesaSpin.get(mid) ?? null,
-              canal_estudio: canalPorMesaSpin.get(mid) ?? null,
+              nome_estudio: meta.nomeEstudioPorMesa.get(mid) ?? null,
+              canal_estudio: meta.canalPorMesa.get(mid) ?? null,
               concorrentes_a_frente: Array.isArray(p.concorrentes_a_frente)
                 ? p.concorrentes_a_frente
                 : [],
@@ -280,24 +213,26 @@ export function useLobbyPosicionamentoData(
       }
     } catch (err) {
       console.error("[useLobbyPosicionamentoData]", operadoraSlug, err);
+      if (stale()) return;
       setExecRecentes([]);
       setPosRecentes([]);
-      setErro(
-        "Não foi possível carregar o posicionamento. Se o problema persistir, entre em contato com o suporte.",
-      );
+      setErro(MSG_ERRO_POSICIONAMENTO);
     } finally {
-      setLoading(false);
+      if (!stale()) setLoading(false);
     }
 
     // Fase 2 — histórico (heatmap 7d/30d) em background, colunas mínimas.
     if (!comHistorico || !temDadosRecentes) {
-      setLoadingHistorico(false);
+      if (!stale()) setLoadingHistorico(false);
       return;
     }
     try {
       const fetchStartKey = subDiasIso(dayKey, historicoDias);
       const fetchInicioKey = fetchStartKey < minKey ? minKey : fetchStartKey;
-      if (fetchInicioKey >= inicioRecenteKey) return;
+      if (fetchInicioKey >= inicioRecenteKey) {
+        if (!stale()) setLoadingHistorico(false);
+        return;
+      }
 
       const execHistRows = await fetchAllPages(async (from, to) =>
         supabase
@@ -309,24 +244,30 @@ export function useLobbyPosicionamentoData(
           .order("executado_em", { ascending: true })
           .range(from, to),
       );
-      if (execHistRows.length === 0) return;
+      if (stale()) return;
+      if (execHistRows.length === 0) {
+        if (!stale()) setLoadingHistorico(false);
+        return;
+      }
 
       const idsHist = execHistRows.map((e) => e.id as string);
-      const posHistRows = await fetchInBatched(
-        idsHist,
-        LOBBY_MONITOR_EXECUCAO_IN_CHUNK,
-        async (slice) =>
-          fetchAllPages(async (from, to) =>
-            supabase
-              .from("lobby_monitor_posicao")
-              .select("execucao_id, mesa_identificacao, posicao")
-              .in("execucao_id", slice)
-              .range(from, to),
-          ),
-        POS_HISTORICO_CONCORRENCIA,
-      );
-
-      const metaHist = await carregarMetadadosMesasSpinCatalogo();
+      const [posHistRows, metaHist] = await Promise.all([
+        fetchInBatched(
+          idsHist,
+          LOBBY_MONITOR_EXECUCAO_IN_CHUNK,
+          async (slice) =>
+            fetchAllPages(async (from, to) =>
+              supabase
+                .from("lobby_monitor_posicao")
+                .select("execucao_id, mesa_identificacao, posicao")
+                .in("execucao_id", slice)
+                .range(from, to),
+            ),
+          POS_HISTORICO_CONCORRENCIA,
+        ),
+        fetchMesasSpinMetadadosCached(),
+      ]);
+      if (stale()) return;
 
       setExecHist(
         execHistRows.map((e) => ({
@@ -355,13 +296,17 @@ export function useLobbyPosicionamentoData(
       );
     } catch (err) {
       console.error("[useLobbyPosicionamentoData:historico]", operadoraSlug, err);
+      if (!stale()) setErroHistorico(MSG_ERRO_HISTORICO_POS);
     } finally {
-      setLoadingHistorico(false);
+      if (!stale()) setLoadingHistorico(false);
     }
   }, [operadoraSlug, dayKey, skip, comHistorico, historicoDias]);
 
   useEffect(() => {
     void carregar();
+    return () => {
+      cargaGenRef.current += 1;
+    };
   }, [carregar]);
 
   const execucoesAll = useMemo(
@@ -482,6 +427,7 @@ export function useLobbyPosicionamentoData(
     loading: skip ? false : loading,
     loadingHistorico: skip ? false : loadingHistorico,
     erro: skip ? null : erro,
+    erroHistorico: skip ? null : erroHistorico,
     recarregar: carregar,
     semDados,
     execucoesAll,

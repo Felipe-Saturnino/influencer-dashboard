@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { ShieldCheck, AlertCircle } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -12,18 +12,40 @@ import {
 } from "./constants";
 import { Checkbox } from "./Checkbox";
 import { GestaoUsuariosLoading, SalvarCtaContent } from "./gestaoUsuariosUi";
-import { brandTintBg, ctaGradientSalvar } from "./gestaoUsuariosHelpers";
+import {
+  brandTintBg,
+  ctaGradientSalvar,
+  MSG_ERRO_CARREGAR_GESTAO,
+  MSG_ERRO_SALVAR_GESTAO,
+  MSG_ERRO_SALVAR_RECARREGAR,
+  sincronizarLinhasTabela,
+} from "./gestaoUsuariosHelpers";
 import type { Role } from "../../../types";
 
 interface Props {
   viewerRole: Role;
+  onDirtyChange?: (dirty: boolean) => void;
 }
 
-export function AbaSimuladorLogin({ viewerRole }: Props) {
+type SimRow = { viewer_role: string; simulavel_role: string };
+
+function setFromRoles(roles: Iterable<Role>): Set<Role> {
+  return new Set(roles);
+}
+
+function sameRoleSet(a: Set<Role>, b: Set<Role>): boolean {
+  if (a.size !== b.size) return false;
+  for (const r of a) if (!b.has(r)) return false;
+  return true;
+}
+
+export function AbaSimuladorLogin({ viewerRole, onDirtyChange }: Props) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
   const [marcados, setMarcados] = useState<Set<Role>>(() => new Set());
+  const baselineRef = useRef<Set<Role>>(new Set());
   const [loading, setLoading] = useState(true);
+  const [erroCarregar, setErroCarregar] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
   const [salvoOk, setSalvoOk] = useState(false);
   const [erroSalvar, setErroSalvar] = useState<string | null>(null);
@@ -31,6 +53,7 @@ export function AbaSimuladorLogin({ viewerRole }: Props) {
   const carregar = useCallback(async () => {
     setLoading(true);
     setErroSalvar(null);
+    setErroCarregar(null);
     const { data, error } = await supabase
       .from("simulador_login_roles")
       .select("simulavel_role")
@@ -38,6 +61,9 @@ export function AbaSimuladorLogin({ viewerRole }: Props) {
     if (error) {
       console.error("Erro ao carregar simulador_login_roles:", error);
       setMarcados(new Set());
+      baselineRef.current = new Set();
+      setErroCarregar(MSG_ERRO_CARREGAR_GESTAO);
+      onDirtyChange?.(false);
       setLoading(false);
       return;
     }
@@ -47,8 +73,10 @@ export function AbaSimuladorLogin({ viewerRole }: Props) {
       if (ROLES_SIMULAVEIS.includes(role)) set.add(role);
     });
     setMarcados(set);
+    baselineRef.current = setFromRoles(set);
+    onDirtyChange?.(false);
     setLoading(false);
-  }, [viewerRole]);
+  }, [viewerRole, onDirtyChange]);
 
   useEffect(() => {
     void carregar();
@@ -59,46 +87,98 @@ export function AbaSimuladorLogin({ viewerRole }: Props) {
       const next = new Set(prev);
       if (next.has(simulavel)) next.delete(simulavel);
       else next.add(simulavel);
+      onDirtyChange?.(!sameRoleSet(next, baselineRef.current));
       return next;
     });
   };
 
   const salvar = async () => {
+    if (erroCarregar) return;
     setSalvando(true);
     setSalvoOk(false);
     setErroSalvar(null);
 
-    const { error: delErr } = await supabase
-      .from("simulador_login_roles")
-      .delete()
-      .eq("viewer_role", viewerRole);
-    if (delErr) {
-      setSalvando(false);
-      setErroSalvar("Não foi possível salvar. Se o problema persistir, entre em contato com o suporte.");
-      return;
-    }
-
-    const toInsert = [...marcados].map((simulavel_role) => ({
+    const desired: SimRow[] = [...marcados].map((simulavel_role) => ({
       viewer_role: viewerRole,
       simulavel_role,
     }));
 
-    if (toInsert.length > 0) {
-      const { error: insErr } = await supabase.from("simulador_login_roles").insert(toInsert);
-      if (insErr) {
+    try {
+      const { data: existingRaw, error: loadErr } = await supabase
+        .from("simulador_login_roles")
+        .select("viewer_role, simulavel_role")
+        .eq("viewer_role", viewerRole);
+      if (loadErr) {
+        setErroSalvar(MSG_ERRO_SALVAR_GESTAO);
         setSalvando(false);
-        setErroSalvar("Não foi possível salvar. Recarregue a página para verificar o estado atual.");
         return;
       }
-    }
+      const existing = (existingRaw ?? []) as SimRow[];
 
-    setSalvando(false);
-    setSalvoOk(true);
-    setTimeout(() => setSalvoOk(false), 2500);
+      const result = await sincronizarLinhasTabela({
+        table: "simulador_login_roles",
+        existing,
+        desired,
+        keyOf: (r) => `${r.viewer_role}::${r.simulavel_role}`,
+        deleteEq: (r) =>
+          supabase
+            .from("simulador_login_roles")
+            .delete()
+            .eq("viewer_role", r.viewer_role)
+            .eq("simulavel_role", r.simulavel_role),
+      });
+
+      if (result === "insert") {
+        setErroSalvar(MSG_ERRO_SALVAR_GESTAO);
+        setSalvando(false);
+        return;
+      }
+      if (result === "delete") {
+        setErroSalvar(MSG_ERRO_SALVAR_RECARREGAR);
+        setSalvando(false);
+        return;
+      }
+
+      baselineRef.current = setFromRoles(marcados);
+      onDirtyChange?.(false);
+      setSalvoOk(true);
+      setTimeout(() => setSalvoOk(false), 2500);
+    } catch (err) {
+      console.error("[GestaoUsuarios] salvar Simulador de Login:", err);
+      setErroSalvar(MSG_ERRO_SALVAR_GESTAO);
+    } finally {
+      setSalvando(false);
+    }
   };
 
   if (loading) {
     return <GestaoUsuariosLoading />;
+  }
+
+  if (erroCarregar) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 12, alignItems: "center", padding: 24 }}>
+        <div role="alert" style={{ color: "#e84025", fontFamily: FONT.body, fontSize: 13, textAlign: "center" }}>
+          {erroCarregar}
+        </div>
+        <button
+          type="button"
+          onClick={() => void carregar()}
+          style={{
+            border: `1px solid ${t.cardBorder}`,
+            background: t.inputBg,
+            color: t.text,
+            borderRadius: 10,
+            padding: "8px 16px",
+            cursor: "pointer",
+            fontFamily: FONT.body,
+            fontSize: 13,
+          }}
+        >
+          Tentar novamente
+        </button>
+      </div>
+    );
   }
 
   return (
@@ -230,7 +310,7 @@ export function AbaSimuladorLogin({ viewerRole }: Props) {
           <button
             type="button"
             onClick={() => void salvar()}
-            disabled={salvando}
+            disabled={salvando || !!erroCarregar}
             style={{
               background: ctaGradientSalvar(brand, salvando, BRAND.cinza),
               color: "#fff",

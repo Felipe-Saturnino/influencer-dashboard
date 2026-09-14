@@ -7,7 +7,7 @@
  */
 
 export const STAGING_LOGIN_BLOQUEADO_MSG =
-  "Você não tem acesso a este ambiente de staging. Se precisar entrar, entre em contato com o administrador.";
+  "Você não tem acesso a este ambiente de staging. Se precisar entrar, entre em contato com o suporte.";
 
 /** Hostname do site (browser). Em SSR/testes sem `window`, não trata como staging. */
 export function isStagingPagesHostname(hostname?: string): boolean {

@@ -229,7 +229,7 @@ export default function StatusTecnico() {
     col: "ultimoSync",
     dir: "desc",
   });
-  const [logFiltro, setLogFiltro] = useState<"1h" | "24h" | "48h">("24h");
+  const [logFiltro, setLogFiltro] = useState<"48h" | "72h" | "96h">("48h");
   type LogSortCol = "hora" | "integracao" | "tipo" | "descricao";
   const [sortLog, setSortLog] = useState<{ col: LogSortCol; dir: SortDir }>({ col: "hora", dir: "desc" });
   const [fluxoHover, setFluxoHover] = useState<string | null>(null);
@@ -296,6 +296,8 @@ export default function StatusTecnico() {
           "bateu_bet",
           "rico_bet",
           "brx_bet",
+          "donald_bet",
+          "betponto_bet",
         ])
         .gte("executado_em", syncDesdeUtc)
         .order("executado_em", { ascending: false })
@@ -310,15 +312,15 @@ export default function StatusTecnico() {
     );
     setLobbyExecucoes((lobbyExecRes.data ?? []) as LobbyExecucaoMonitorRow[]);
 
-    // Tech logs — sempre buscar 48h para alertas; exibir conforme logFiltro
+    // Tech logs — sempre buscar 96h (maior faixa da UI); exibir conforme logFiltro
     const desde = new Date();
-    desde.setHours(desde.getHours() - 48);
+    desde.setHours(desde.getHours() - 96);
     const { data: techData } = await supabase
       .from("tech_logs")
       .select("*")
       .gte("created_at", desde.toISOString())
       .order("created_at", { ascending: false })
-      .limit(100);
+      .limit(200);
     setTechLogs(techData ?? []);
 
     // Pipeline runs (Social Media) — últimos 7 dias
@@ -1326,7 +1328,7 @@ export default function StatusTecnico() {
           resData.resumo ??
           `Diagnóstico gravado (${resData.inseridos ?? 0} entradas). Confira Logs Recentes.`,
       });
-      setLogFiltro("1h");
+      setLogFiltro("48h");
       void carregar();
     } catch (e) {
       console.error(e);
@@ -2701,7 +2703,7 @@ export default function StatusTecnico() {
   );
 
   const techLogsFiltrados = useMemo(() => {
-    const horasDisplay = logFiltro === "1h" ? 1 : logFiltro === "24h" ? 24 : 48;
+    const horasDisplay = logFiltro === "48h" ? 48 : logFiltro === "72h" ? 72 : 96;
     const desdeDisplay = new Date();
     desdeDisplay.setHours(desdeDisplay.getHours() - horasDisplay);
     return techLogs.filter((l) => new Date(l.created_at) >= desdeDisplay);
@@ -3438,7 +3440,7 @@ export default function StatusTecnico() {
         >
           <SectionTitle compact>Logs Recentes</SectionTitle>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {(["1h", "24h", "48h"] as const).map((f) => {
+            {(["48h", "72h", "96h"] as const).map((f) => {
               const ativo = logFiltro === f;
               const chip = tabAtivaPrincipalStyle(ativo, t.cardBorder, t.inputBg ?? t.bg);
               return (
@@ -3446,7 +3448,13 @@ export default function StatusTecnico() {
                 key={f}
                 type="button"
                 aria-pressed={ativo}
-                aria-label={f === "1h" ? "Filtrar logs da última hora" : f === "24h" ? "Filtrar logs das últimas 24 horas" : "Filtrar logs das últimas 48 horas"}
+                aria-label={
+                  f === "48h"
+                    ? "Filtrar logs das últimas 48 horas"
+                    : f === "72h"
+                      ? "Filtrar logs das últimas 72 horas"
+                      : "Filtrar logs das últimas 96 horas"
+                }
                 onClick={() => setLogFiltro(f)}
                 style={{
                   padding: "6px 12px",
@@ -3460,7 +3468,7 @@ export default function StatusTecnico() {
                   fontWeight: chip.fontWeight,
                 }}
               >
-                {f === "1h" ? "Última 1 hora" : f === "24h" ? "Últimas 24h" : "Últimas 48h"}
+                {f === "48h" ? "Últimas 48h" : f === "72h" ? "Últimas 72h" : "Últimas 96h"}
               </button>
             );
             })}
@@ -3656,119 +3664,6 @@ export default function StatusTecnico() {
         )}
       </div>
 
-      <div style={pageBox}>
-        <SectionTitle sub="Condições monitoradas automaticamente">
-          Configuração de Alertas
-        </SectionTitle>
-        {loading ? (
-          <StatusTecnicoLoadingBlock />
-        ) : (
-          <div className="app-table-wrap" style={getDataTableWrapStyle()}>
-            <table style={getDataTableStyle()}>
-              <caption style={{ display: "none" }}>Condições monitoradas para alertas automáticos</caption>
-              <thead>
-                <tr>
-                  <th scope="col" style={dataTable.thHeader}>Alerta</th>
-                  <th scope="col" style={dataTable.thHeader}>Condição</th>
-                </tr>
-              </thead>
-              <tbody>
-                {[
-                  ["Nenhum Sync CDA Influencers com sucesso", "Último sync com falha, nenhum OK (slug casa_apostas)"],
-                  ["Sync CDA Influencers não executou hoje (agendado 4h)", "Após 8h BRT, sem sync_logs OK na data civil de hoje (SP); cron 4h"],
-                  ["Taxa de erro alta no Sync CDA Influencers", "> 5% (slug casa_apostas)"],
-                  ["Nenhum Sync CDA Afiliados com sucesso", "Último sync com falha, nenhum OK (slug casa_apostas_afiliados)"],
-                  ["Sync CDA Afiliados não executou hoje (agendado 4h)", "Após 8h BRT, sem sync_logs OK na data civil de hoje (SP); cron 4h"],
-                  ["Taxa de erro alta no Sync CDA Afiliados", "> 5% (slug casa_apostas_afiliados)"],
-                  ["Sync CDA sem dados recentes", "Após 8h BRT, sem influencer_metricas com data = ontem (D-1), com histórico"],
-                  ["Erro no Sync Social Media", "pipeline_runs status=error (24h)"],
-                  ["Sync Social Media com erro", "tech_logs canal (24h)"],
-                  ["Sync Social Media sem dados recentes", "Sem kpi_daily em 3 dias (com histórico)"],
-                  ["Sync Social Media não executou hoje (agendado 6h)", "Após 6h BRT, sem pipeline_runs success na data de hoje (SP)"],
-                  ["Erro ao enviar E-mail - Relatório de Influencers (Resend)", "tech_logs relatorio_diretoria (24h)"],
-                  ["E-mail - Relatório de Influencers (Resend) não enviado hoje (agendado 6h)", "Após 6h BRT, sem email_envios na data civil de hoje (tipo relatorio_diretoria)"],
-                  ["Erro ao enviar E-mail - Agenda do dia (Resend)", "tech_logs email_agenda_diaria (24h)"],
-                  ["E-mail - Agenda do dia (Resend) não enviado hoje (agendado 6h)", "Após 6h BRT, sem email_envios na data civil de hoje (tipo email_agenda_diaria)"],
-                  ["Erro ao enviar E-mail de Boas-vindas (Resend)", "tech_logs boas_vindas (24h)"],
-                  ["Erro ao enviar E-mail de Reset de Senha (Resend)", "tech_logs recuperar_senha (24h)"],
-                  ["Nenhuma ingestão Spin na Rede (RSS) com sucesso", "Último sync_logs com falha, nenhum OK (slug spin_na_rede_rss)"],
-                  ["Ingestão Spin na Rede (RSS) não executou hoje (agendado 6h)", "Após 6h BRT, sem sync_logs OK na data civil de hoje (slug spin_na_rede_rss)"],
-                  ["Taxa de erro alta na ingestão Spin na Rede (RSS)", "> 5% em sync_logs (slug spin_na_rede_rss)"],
-                  ["Nenhum sync Pipeline B2B — Lista SPA/MF com sucesso", "Último sync_logs com falha, nenhum OK (slug comercial_spa_lista)"],
-                  ["Importação Lista SPA/MF não executou hoje (agendado 7h30)", "Após 7h BRT, sem sync_logs OK na data civil de hoje (slug comercial_spa_lista)"],
-                  ["Taxa de erro alta na importação Lista SPA/MF", "> 5% em sync_logs (slug comercial_spa_lista)"],
-                  [
-                    `Nenhuma ${LABEL_UI_COMERCIAL_DOMINIO_VALIDACAO} com sucesso`,
-                    "Último sync_logs com falha, nenhum OK (slug comercial_dominio_validacao)",
-                  ],
-                  [
-                    `${LABEL_UI_COMERCIAL_DOMINIO_VALIDACAO} não executou hoje (agendado 8h)`,
-                    "Após 8h BRT, sem sync_logs OK na data civil de hoje (slug comercial_dominio_validacao)",
-                  ],
-                  [
-                    `Taxa de erro alta em ${LABEL_UI_COMERCIAL_DOMINIO_VALIDACAO}`,
-                    "> 5% em sync_logs (slug comercial_dominio_validacao)",
-                  ],
-                  [
-                    `Nenhum enriquecimento ${LABEL_UI_COMERCIAL_CNPJ_ESTADO_CIDADE} com sucesso`,
-                    "Último sync_logs com falha, nenhum OK (slug comercial_cnpj_enriquecimento)",
-                  ],
-                  [
-                    `${LABEL_UI_COMERCIAL_CNPJ_ESTADO_CIDADE} não executou hoje (agendado 8h30)`,
-                    "Após 9h BRT, sem sync_logs OK na data civil de hoje (slug comercial_cnpj_enriquecimento)",
-                  ],
-                  [
-                    `Taxa de erro alta em ${LABEL_UI_COMERCIAL_CNPJ_ESTADO_CIDADE}`,
-                    "> 5% em sync_logs (slug comercial_cnpj_enriquecimento)",
-                  ],
-                  ["Nenhuma coleta Lobby Blaze com sucesso", "Último sync_logs com falha, nenhum OK (slug lobby_blaze)"],
-                  ["Coleta Lobby Blaze atrasada", "> 24h sem sync_logs OK"],
-                  ["Taxa de erro alta no Lobby Blaze", "> 5% em sync_logs (slug lobby_blaze)"],
-                  ["Nenhuma coleta Lobby CDA com sucesso", "Último sync_logs com falha, nenhum OK (slug lobby_cda)"],
-                  ["Coleta Lobby CDA atrasada", "> 24h sem sync_logs OK"],
-                  ["Taxa de erro alta no Lobby CDA", "> 5% em sync_logs (slug lobby_cda)"],
-                  ["Nenhuma coleta Lobby Esportiva Bet com sucesso", "Último sync_logs com falha, nenhum OK (slug lobby_esportiva)"],
-                  ["Coleta Lobby Esportiva Bet atrasada", "> 24h sem sync_logs OK"],
-                  ["Taxa de erro alta no Lobby Esportiva Bet", "> 5% em sync_logs (slug lobby_esportiva)"],
-                  ["Nenhuma coleta Lobby Jonbet com sucesso", "Último sync_logs com falha, nenhum OK (slug lobby_jonbet)"],
-                  ["Coleta Lobby Jonbet atrasada", "> 24h sem sync_logs OK"],
-                  ["Taxa de erro alta no Lobby Jonbet", "> 5% em sync_logs (slug lobby_jonbet)"],
-                  [`Nenhuma coleta ${LABEL_UI_LOBBY_BATEU} com sucesso`, "Último sync_logs com falha, nenhum OK (slug lobby_bateu)"],
-                  [`Coleta ${LABEL_UI_LOBBY_BATEU} atrasada`, "> 24h sem sync_logs OK"],
-                  [`Taxa de erro alta no ${LABEL_UI_LOBBY_BATEU}`, "> 5% em sync_logs (slug lobby_bateu)"],
-                  [`Nenhuma coleta ${LABEL_UI_LOBBY_RICO} com sucesso`, "Último sync_logs com falha, nenhum OK (slug lobby_rico)"],
-                  [`Coleta ${LABEL_UI_LOBBY_RICO} atrasada`, "> 24h sem sync_logs OK"],
-                  [`Taxa de erro alta no ${LABEL_UI_LOBBY_RICO}`, "> 5% em sync_logs (slug lobby_rico)"],
-                  [`Nenhuma coleta ${LABEL_UI_LOBBY_BRX} com sucesso`, "Último sync_logs com falha, nenhum OK (slug lobby_brx)"],
-                  [`Coleta ${LABEL_UI_LOBBY_BRX} atrasada`, "> 24h sem sync_logs OK"],
-                  [`Taxa de erro alta no ${LABEL_UI_LOBBY_BRX}`, "> 5% em sync_logs (slug lobby_brx)"],
-                  [`Nenhuma coleta ${LABEL_UI_LOBBY_DONALD} com sucesso`, "Último sync_logs com falha, nenhum OK (slug lobby_donald)"],
-                  [`Coleta ${LABEL_UI_LOBBY_DONALD} atrasada`, "> 24h sem sync_logs OK"],
-                  [`Taxa de erro alta no ${LABEL_UI_LOBBY_DONALD}`, "> 5% em sync_logs (slug lobby_donald)"],
-                  [`Nenhuma coleta ${LABEL_UI_LOBBY_BETPONTO} com sucesso`, "Último sync_logs com falha, nenhum OK (slug lobby_betponto)"],
-                  [`Coleta ${LABEL_UI_LOBBY_BETPONTO} atrasada`, "> 24h sem sync_logs OK"],
-                  [`Taxa de erro alta no ${LABEL_UI_LOBBY_BETPONTO}`, "> 5% em sync_logs (slug lobby_betponto)"],
-                ].map(([alerta, condicao], idx) => (
-                  <tr
-                    key={alerta}
-                    style={{ background: dataTable.zebraRow(idx) }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = tableRowHoverBg(t.isDark);
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = dataTable.zebraRow(idx);
-                    }}
-                  >
-                    <td style={dataTable.tdCenter}>{alerta}</td>
-                    <td style={dataTable.tdCenter}>{condicao}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
       {(confirmarSync || confirmarEmail || confirmarDiagnostico) && (
         <div
           role="dialog"
@@ -3822,7 +3717,7 @@ export default function StatusTecnico() {
             </h2>
             <p style={{ fontFamily: FONT.body, fontSize: 14, color: t.textMuted, marginBottom: 0 }}>
               {confirmarDiagnostico
-                ? "Serão verificados jobs recentes, credenciais e integrações. O resultado aparece em Logs Recentes (última 1 hora). Não dispara sync nem e-mails. Continuar?"
+                ? "Serão verificados jobs, credenciais, Edge Functions, Storage e conexões com ferramentas (sem disparar sync nem e-mails). Problemas aparecem em Logs Recentes (últimas 48h). Continuar?"
                 : confirmarSync
                   ? "Esta ação irá sincronizar dados conforme a configuração do período. Continuar?"
                   : "Esta ação irá disparar o envio do e-mail. Continuar?"}

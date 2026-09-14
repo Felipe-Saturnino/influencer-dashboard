@@ -258,7 +258,7 @@ export function ModalFormPoliticaNormativa({
             multiple={false}
             obrigatorio
             hasError={Boolean(fieldErr.pdf)}
-            hint="O colaborador lê este arquivo na plataforma. Máx. 15 MB."
+            hint="O prestador lê este arquivo na plataforma. Máx. 15 MB."
             items={pdfItems}
             onAdd={(files) => onPdfFileChange(files[0] ?? null)}
             onRemove={() => {
@@ -306,7 +306,7 @@ export function ModalFormPoliticaNormativa({
         ) : null}
 
         <div>
-          {lbl("mp-exige-ciencia", "Exige ciência do colaborador?", t, true)}
+          {lbl("mp-exige-ciencia", "Exige ciência do prestador?", t, true)}
           <select
             id="mp-exige-ciencia"
             value={values.exigeCiencia}

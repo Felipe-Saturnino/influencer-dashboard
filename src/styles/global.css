@@ -138,6 +138,27 @@ html, body {
     height: calc(100vh / var(--app-ui-zoom));
     min-height: calc(100vh / var(--app-ui-zoom));
   }
+
+  /* Login / troca de senha / SemAcesso / boot auth: zoom desalinha hit-testing (cliques). */
+  html.app-no-ui-zoom {
+    --app-ui-zoom: 1;
+  }
+  html.app-no-ui-zoom #root {
+    zoom: 1;
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+  html.app-no-ui-zoom .app-layout-shell,
+  html.app-no-ui-zoom .app-main-column,
+  html.app-no-ui-zoom .app-full-viewport-zoomed,
+  html.app-no-ui-zoom .app-auth-screen {
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+  html.app-no-ui-zoom .app-sidebar-fill {
+    height: 100vh;
+    min-height: 100vh;
+  }
 }
 
 /* Scrollbar das células do calendário (Agenda) — track escuro no Dark mode */

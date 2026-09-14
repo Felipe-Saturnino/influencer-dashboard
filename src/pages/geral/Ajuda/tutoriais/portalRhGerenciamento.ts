@@ -29,7 +29,7 @@ export const TUTORIAL_PORTAL_RH_GERENCIAMENTO: TutorialDef = {
     {
       titulo: "2. Criar e publicar",
       texto:
-        "1. Em Tipo de Postagem, escolha Comunicados, Políticas e Normativas ou RH Talks.\n2. Preencha os campos obrigatórios do tipo escolhido (por exemplo, em Comunicados: tipo, assunto e descrição).\n3. Inclua imagem ou anexo se precisar.\n4. Clique em Salvar para guardar rascunho, ou em Publicar para disponibilizar nas abas de leitura.",
+        "1. Em Tipo de Postagem, escolha Comunicados, Políticas e Normativas ou RH Talks.\n2. Preencha os campos obrigatórios do tipo escolhido (por exemplo, em Comunicados: tipo, assunto e descrição).\n3. Inclua imagem ou anexo se precisar.\n4. Clique em Salvar para salvar rascunho, ou em Publicar para disponibilizar nas abas de leitura.",
       imagens: [
         {
           src: `${IMG}/04-criar-postagem.png`,

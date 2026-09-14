@@ -951,7 +951,7 @@ export default function DashboardOverviewInfluencer() {
   const isUltimo = idxMes === mesesDisponiveis.length - 1;
 
   if (perm.canView === "nao") {
-    return <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>Você não tem permissão para visualizar este dashboard.</div>;
+    return <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>Você não tem permissão para visualizar esta página.</div>;
   }
 
   return (
