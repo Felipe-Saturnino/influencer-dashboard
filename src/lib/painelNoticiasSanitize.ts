@@ -288,7 +288,7 @@ export function prepararTextoPainelNoticia(
   titulo = ajuste.titulo;
   corpo = ajuste.corpo;
 
-  if (!tituloUtil(titulo)) titulo = "Notícia";
+  if (!tituloUtil(titulo)) return { titulo: "", corpo };
 
   return { titulo, corpo };
 }

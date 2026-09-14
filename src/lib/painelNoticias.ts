@@ -19,4 +19,10 @@ export const PAINEL_NOTICIAS_POLL_MS = 60_000;
 /** Reload completo opcional para deploy / memória (ms). */
 export const PAINEL_NOTICIAS_RELOAD_MS = 6 * 60 * 60 * 1000;
 
+/**
+ * Teto do fetch PostgREST (ordenado por visivel_desde DESC).
+ * Acima do teto de exibição (15) + margem para completar com vencidas até 5.
+ */
+export const PAINEL_NOTICIAS_FETCH_LIMIT = 40;
+
 export const PAINEL_NOTICIAS_BG = "#0a0a0f";

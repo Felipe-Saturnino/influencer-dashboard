@@ -179,6 +179,11 @@ describe("prepararTextoPainelNoticia", () => {
     expect(titulo).toBe("Primeira frase da matéria.");
     expect(corpo).toBe("Segunda frase com detalhes.");
   });
+
+  it("não usa fallback genérico «Notícia» quando não há título utilizável", () => {
+    const { titulo } = prepararTextoPainelNoticia("http://exemplo.com", null);
+    expect(titulo).toBe("");
+  });
 });
 
 describe("idsPainelNoticiasParaPurga", () => {
