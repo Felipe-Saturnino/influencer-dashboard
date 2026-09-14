@@ -87,9 +87,9 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
           "Confirme o período no carrossel (ou Histórico), o filtro de afiliado e a operadora. As métricas vêm do sync CDA — conta Afiliados (Status Técnico → Casa de Apostas (CDA) — Afiliados). O afiliado precisa ter UTM mapeado (Links e Materiais ou Gestão de Links → Mapear como Afiliado) e o sync precisa ter rodado após o mapeamento. Links só com visita na TAP e ainda não mapeados aparecem em Gestão de Links → Pendentes (Origem = TAP Afiliados). Se o filtro de afiliados estiver vazio, verifique cadastros na página Afiliados.",
       },
       {
-        subtitulo: "Não vejo Overview Afiliados no menu de Dashboards?",
+        subtitulo: "Não vejo Afiliados no menu de Dashboards?",
         texto:
-          "Confirme em Gestão de Usuários se seu perfil tem permissão de Ver para a página **Overview Afiliados** na seção Dashboards. Administradores têm acesso total. Não confunda com a página **Afiliados** da seção de cadastro.",
+          "Confirme em Gestão de Usuários se seu perfil tem permissão de **Ver** para a página **Afiliados** na seção **Dashboards**. Administradores têm acesso total. Não confunda com **Overview Afiliado** (visão do próprio afiliado) nem com a página **Afiliados** da seção de cadastro.",
       },
     ],
   },

@@ -1,0 +1,55 @@
+---
+description: Saúde da plataforma — checklist padrão de laudo, smoke e recheck em todo ciclo recorrente.
+alwaysApply: true
+---
+
+# Saúde da plataforma
+
+MDC **padrão** para checagens recorrentes (Verificação 2.0 e equivalentes): laudo → implementação → recheck staging. **Não** substitui o MDC da secção (`dashboards.mdc`, `lives.mdc`, …) nem `global.mdc` / `business.mdc` — **complementa** com contratos que já falharam em silêncio e não podem passar de novo.
+
+Fluxo: ler MDC da pasta → smoke staging → laudo 4 eixos → implementar só o aprovado → recheck staging. Commit/push **só o usuário**.
+
+## Dois pontos bloqueantes (aprendizado Ciclo 7)
+
+Validar **sempre** que a página do ciclo tiver superfície aplicável. Falha = ciclo **não** fecha OK.
+
+| # | Ponto | Falha se… | Como provar no staging |
+|---|--------|-----------|-------------------------|
+| **P1** | **Paginação de vista = 20** | Bloco que o MDC manda paginar (`TabelaComPaginacao` / `TABELA_PAGE_SIZE`) mostra **>20** itens sem barra «Mostrando X–Y de Z» | Filtro/operadora que gere **>20** itens; contar DOM da **vista**; confirmar barra. Exceção só se o MDC disser que **não** pagina. |
+| **P2** | **Uma linha por período** | Mesma chave temporal (dia `dd/mm` ou mês) repetida na **mesma** tabela com valores diferentes | Selecionar o filtro que ativa o bloco (ex.: operadora na Overview); auditar 1ª coluna do `tbody`. |
+
+### Onde P1/P2 costumam aplicar
+
+- **P1:** qualquer lista/tabela densa do MDC da secção (ex.: Posicionamento → Ranking / Posição atual / Alertas / heatmap; Detalhamento Diário; listagens RH/Escala).
+- **P2:** canais **consolidados** ou merges (ex.: Overview Spin aba Overview = Dedicado + Network → `linhasMesaAgregadasPorDia` / por mês no Histórico).
+
+**Proibido:** smoke só em «Todas Operadoras» / agregador se o bloco denso só estoura com valor específico.
+
+## Checklist transversal (todo ciclo)
+
+1. Listar no laudo os contratos testáveis do MDC da pasta (paginação, P2, filtros canónicos, identidade de jogo, duas fases, strings de vazio).
+2. Smoke: caminho feliz **e** caso especial do MDC (filtro específico, Histórico, Próprios).
+3. Páginas **críticas** (Overview Spin / investidor): smoke mais fundo; regressão P1/P2 no DOM = bloqueante.
+4. Recheck: IDs High/Medium **+** P1/P2 aplicáveis **+** hotfixes do ciclo.
+5. Evidência no DOM contradiz OK → **corrigir o veredito** (não fechar).
+
+## Anti-patterns
+
+- «Aba abriu» = smoke OK.
+- Ignorar evidência já no CDP/snapshot (dias duplicados, lista sem «Mostrando»).
+- Assumir agregador = mesmo risco que filtro específico.
+- Fechar sem recheck staging após hotfix.
+
+## Memória — ciclos 1–7 (P1 / P2)
+
+| Ciclo | Escopo | P1 paginação 20 | P2 uma linha/período |
+|-------|--------|-----------------|----------------------|
+| 1 | Login + Home | N/A | N/A |
+| 2 | Configurações + Ajuda (+ Homes) | N/A | N/A |
+| 3 | Simulador + Gestão de Usuários | **Feito** (lista 20/página) | N/A |
+| 4 | Canal de Denúncias | N/A | N/A |
+| 5 | Painel de Notícias | N/A (TV, não tabela 20) | N/A |
+| 6 | Torneio CDA | Ignorado | Ignorado |
+| 7 | Overview Spin | **Falhou** (Ranking c/ operadora — não coberto no smoke; correção noutro chat) | **Falhou** (Comparativo/Dados dias duplicados; hotfix `e40a4baa`) |
+
+Alimentar esta tabela quando um ciclo novo revelar gap de processo.

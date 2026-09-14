@@ -147,7 +147,7 @@ export const APP_ROUTE_CATALOG: AppRouteDef[] = [
     { tabId: "conversao", slug: "Conversao", label: "Conversão", access: "always" },
     { tabId: "financeiro", slug: "Financeiro", label: "Financeiro", access: "always" },
   ]),
-  page("Overview Afiliados", "dash_afiliados", "DashAfiliados", [
+  page("Afiliados", "dash_afiliados", "DashAfiliados", [
     { tabId: "overview", slug: "Overview", label: "Overview", access: "always" },
     { tabId: "conversao", slug: "Conversao", label: "Conversão", access: "always" },
     { tabId: "financeiro", slug: "Financeiro", label: "Financeiro", access: "always" },

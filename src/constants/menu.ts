@@ -68,7 +68,7 @@ export const MENU: MenuSection[] = [
     items: [
       { key: "mesas_spin", label: "Overview Spin", icon: Dices },
       { key: "streamers", label: "Streamers", icon: Tv },
-      { key: "dash_afiliados", label: "Overview Afiliados", icon: Handshake },
+      { key: "dash_afiliados", label: "Afiliados", icon: Handshake },
       { key: "dash_midias_sociais", label: "Mídias Sociais", icon: Share2 },
       { key: "dash_overview_influencer", label: "Overview Influencer", icon: Mic },
       { key: "dash_overview_afiliado", label: "Overview Afiliado", icon: Users },

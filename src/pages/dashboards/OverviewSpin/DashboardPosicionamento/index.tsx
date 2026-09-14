@@ -481,6 +481,12 @@ function PosicaoAtualMesasBlock({
     return (
       <div style={cardStyle}>
         {header}
+        <TabelaComPaginacao
+          items={mesasOrdenadas}
+          t={t}
+          resetKey={`${titulo}|${mesasOrdenadas.map((m) => m.mesa_identificacao).join(",")}`}
+        >
+          {(mesasPagina, zebraIdx) => (
         <div className="app-table-wrap" style={{ ...getDataTableWrapStyle(), overflowX: "visible" }}>
           <table style={getDataTableStyle({ width: "100%", minWidth: 0, tableLayout: "fixed" })}>
             <caption style={{ display: "none" }}>{`Posição das mesas — ${titulo}`}</caption>
@@ -501,12 +507,13 @@ function PosicaoAtualMesasBlock({
               </tr>
             </thead>
             <tbody>
-              {mesasOrdenadas.map((m, i) => {
+              {mesasPagina.map((m, i) => {
+                const rowIdx = zebraIdx(i);
                 const estudo = m.nome_estudio?.trim() || "—";
                 const mesa = m.nome_mesa?.trim() || "—";
                 const prevDif = prevDiferenteMap?.get(m.mesa_identificacao) ?? null;
                 return (
-                  <tr key={m.mesa_identificacao} style={{ background: dataTable.zebraRow(i) }} {...dataTableRowHoverHandlers(dataTable.zebraRow(i))}>
+                  <tr key={m.mesa_identificacao} style={{ background: dataTable.zebraRow(rowIdx) }} {...dataTableRowHoverHandlers(dataTable.zebraRow(rowIdx))}>
                     <td style={dataTable.tdCenter}>
                       <div style={{ display: "flex", justifyContent: "center" }}>
                         <PosicaoBadge posicao={m.posicao} />
@@ -545,6 +552,8 @@ function PosicaoAtualMesasBlock({
             </tbody>
           </table>
         </div>
+          )}
+        </TabelaComPaginacao>
       </div>
     );
   }
@@ -552,8 +561,14 @@ function PosicaoAtualMesasBlock({
   return (
     <div style={cardStyle}>
       {header}
+      <TabelaComPaginacao
+        items={mesasOrdenadas}
+        t={t}
+        resetKey={mesasOrdenadas.map((m) => m.mesa_identificacao).join(",")}
+      >
+        {(mesasPagina) => (
       <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
-        {mesasOrdenadas.map((m) => {
+        {mesasPagina.map((m) => {
           const pa = prevMap.get(m.mesa_identificacao) ?? null;
           const d = deltaPosicao(m.posicao, pa);
           const labelCompleto = labelMesaPosicionamentoRow(m);
@@ -590,6 +605,8 @@ function PosicaoAtualMesasBlock({
           );
         })}
       </ul>
+        )}
+      </TabelaComPaginacao>
     </div>
   );
 }
@@ -669,10 +686,16 @@ function AlertasPeriodoBlock({
           Nenhum alerta automático para o período.
         </p>
       ) : (
+        <TabelaComPaginacao
+          items={alertas}
+          t={t}
+          resetKey={alertas.map((a) => `${a.sortTs ?? ""}-${a.texto}`).join("|")}
+        >
+          {(alertasPagina, zebraIdx) => (
         <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
-          {alertas.map((a, i) => (
+          {alertasPagina.map((a, i) => (
             <li
-              key={`${a.sortTs ?? i}-${a.texto}`}
+              key={`${a.sortTs ?? zebraIdx(i)}-${a.texto}`}
               style={{
                 padding: "10px 14px",
                 borderRadius: 10,
@@ -695,6 +718,8 @@ function AlertasPeriodoBlock({
             </li>
           ))}
         </ul>
+          )}
+        </TabelaComPaginacao>
       )}
     </div>
   );
@@ -1439,8 +1464,14 @@ function DashboardPosicionamentoOperadora({
               Sem dados para o período selecionado.
             </p>
           ) : (
+            <TabelaComPaginacao
+              items={rankingJogosFiltrados}
+              t={t}
+              resetKey={`${canalFiltro}|${operadoraSlug}|${rankingJogosFiltrados.length}`}
+            >
+              {(jogosPagina) => (
             <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
-              {rankingJogosFiltrados.map((j) => (
+              {jogosPagina.map((j) => (
                 <li
                   key={j.game_id}
                   style={{
@@ -1488,6 +1519,8 @@ function DashboardPosicionamentoOperadora({
                 </li>
               ))}
             </ul>
+              )}
+            </TabelaComPaginacao>
           )}
         </div>
 

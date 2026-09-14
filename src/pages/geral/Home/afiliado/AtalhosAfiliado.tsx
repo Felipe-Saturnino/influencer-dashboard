@@ -17,7 +17,7 @@ import type { PageKey } from "../../../../types";
 import { HomeAtalhoCard } from "../shared/HomeAtalhoCard";
 import { homeSectionTitleStyle, HOME_BODY_MUTED } from "../shared/homeSharedUi";
 
-/** Curado do perfil Afiliado — sem lives / Network / Overview Afiliados. */
+/** Curado do perfil Afiliado — sem lives / Network / dashboard Afiliados (`dash_afiliados`). */
 const ATALHOS_AFILIADO: { key: PageKey; icon: LucideIcon }[] = [
   { key: "dash_overview_afiliado", icon: Users },
   { key: "afiliados", icon: Handshake },

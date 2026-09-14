@@ -96,7 +96,7 @@ const PAGES_META: {
   // Dashboards
   { key: "mesas_spin", label: "Overview Spin", secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
   { key: "streamers", label: "Streamers", secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
-  { key: "dash_afiliados", label: "Overview Afiliados", secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
+  { key: "dash_afiliados", label: "Afiliados", secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
   { key: "dash_midias_sociais", label: "Mídias Sociais", secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
   { key: "dash_overview_influencer", label: "Overview Influencer", secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
   { key: "dash_overview_afiliado", label: "Overview Afiliado", secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },

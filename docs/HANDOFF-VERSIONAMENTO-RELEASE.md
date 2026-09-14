@@ -109,7 +109,7 @@ O chip mostra o **label**. O campo `paginas` é `"*"` ou a **PageKey**. Home (fo
 | Geral | Versionamento | `versionamento` |
 | Dashboards | Overview Spin | `mesas_spin` |
 | Dashboards | Streamers | `streamers` |
-| Dashboards | Overview Afiliados | `dash_afiliados` |
+| Dashboards | Afiliados | `dash_afiliados` |
 | Dashboards | Mídias Sociais | `dash_midias_sociais` |
 | Dashboards | Overview Influencer | `dash_overview_influencer` |
 | Dashboards | Overview Afiliado | `dash_overview_afiliado` |
