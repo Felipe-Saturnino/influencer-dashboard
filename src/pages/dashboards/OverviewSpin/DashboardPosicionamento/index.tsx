@@ -46,6 +46,7 @@ import {
   visibilidadePorCategoriaDia,
 } from "../../../../lib/lobbyMonitorHelpers";
 import { useLobbyPosicionamentoData, POS_COMPARACAO_DIFERENTE_DIAS } from "./useLobbyPosicionamentoData";
+import { RankingConcorrentesLista } from "./RankingConcorrentesLista";
 import {
   operadoraTemCanaisDedicadoENetwork,
   type OverviewSpinCatalogoCanais,
@@ -1464,63 +1465,11 @@ function DashboardPosicionamentoOperadora({
               Sem dados para o período selecionado.
             </p>
           ) : (
-            <TabelaComPaginacao
+            <RankingConcorrentesLista
               items={rankingJogosFiltrados}
               t={t}
               resetKey={`${canalFiltro}|${operadoraSlug}|${rankingJogosFiltrados.length}`}
-            >
-              {(jogosPagina) => (
-            <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
-              {jogosPagina.map((j) => (
-                <li
-                  key={j.game_id}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                    padding: "8px 0",
-                    borderBottom: `1px solid ${t.cardBorder}`,
-                    fontFamily: FONT.body,
-                    fontSize: 13,
-                  }}
-                >
-                  <span
-                    style={{
-                      minWidth: 40,
-                      padding: "4px 8px",
-                      borderRadius: 8,
-                      textAlign: "center",
-                      fontWeight: 700,
-                      fontSize: 12,
-                      background: posicaoBgColor(j.posicao),
-                      color: posicaoTextColor(j.posicao),
-                    }}
-                  >
-                    {fmtPosicao(j.posicao)}
-                  </span>
-                  <span
-                    style={{ flex: 1, color: t.text, overflow: "hidden", textOverflow: "ellipsis" }}
-                    title={j.name}
-                  >
-                    {j.name}
-                  </span>
-                  <span
-                    style={{
-                      color: t.textMuted,
-                      fontSize: 12,
-                      maxWidth: 120,
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                    }}
-                    title={j.provider_name}
-                  >
-                    {j.provider_name}
-                  </span>
-                </li>
-              ))}
-            </ul>
-              )}
-            </TabelaComPaginacao>
+            />
           )}
         </div>
 

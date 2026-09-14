@@ -1,13 +1,21 @@
 import { useEffect, useState } from "react";
-import { supabase } from "../../../../lib/supabase";
-import { getHomeKpiPeriodosComparativoMoM } from "../../../../lib/homeInvestidorMtd";
+import {
+  buildMesesOrdemSaida,
+  fetchOrdensSaida,
+  ordemVisivelNoMes,
+} from "../../../../lib/techOpsOrdemSaida";
+import {
+  estoqueDisponivelItem,
+  fetchEstoqueEquipamentos,
+  fetchEstoqueItens,
+} from "../../../../lib/techOpsEstoque";
 
 export type HomeGestorTechOpsAlertas = { osSolicitadas: number };
 
 export type HomeGestorTechOpsKpis = {
   mesLabel: string;
   pendencias: { solicitadas: number; abertas: number; concluidasMes: number; totalMes: number };
-  estoque: { itensEmUso: number; eqManutencao: number; eqEstoque: number; itensSet: number };
+  estoque: { itensEmUso: number; eqManutencao: number; eqEstoque: number; itensTotais: number };
 };
 
 export function useHomeGestorTechOpsData() {
@@ -22,58 +30,44 @@ export function useHomeGestorTechOpsData() {
       setReady(false);
       setErro(false);
       try {
-        const { referencia, atual } = getHomeKpiPeriodosComparativoMoM();
-        const mesKey = atual.inicio.slice(0, 7);
+        const meses = buildMesesOrdemSaida();
+        const mesAtual = meses[meses.length - 1]!;
+        const mesKey = mesAtual.key;
 
-        const [osRes, itensRes, eqRes, setOsRes] = await Promise.all([
-          supabase
-            .from("tech_ops_ordem_saida")
-            .select("id, status, competencia")
-            .or(`competencia.gte.${mesKey}-01,status.in.(solicitada,aberta)`),
-          supabase.from("tech_ops_estoque_itens").select("quantidade_em_uso"),
-          supabase.from("tech_ops_estoque_equipamentos").select("status"),
-          supabase
-            .from("tech_ops_ordem_saida")
-            .select("id, tech_ops_ordem_saida_itens(id)")
-            .eq("tipo", "interna")
-            .eq("status", "aberta")
-            .eq("ativo", true),
+        const [osRows, itens, equips] = await Promise.all([
+          fetchOrdensSaida(),
+          fetchEstoqueItens(),
+          fetchEstoqueEquipamentos(),
         ]);
 
         if (cancelled) return;
-        if (osRes.error || itensRes.error || eqRes.error) {
-          console.error("[HomeGestorTechOps]", osRes.error || itensRes.error || eqRes.error);
-          setErro(true);
-          return;
-        }
 
-        const os = (osRes.data ?? []) as { id: string; status: string; competencia: string }[];
-        const solicitadas = os.filter((r) => r.status === "solicitada").length;
-        const abertas = os.filter((r) => r.status === "aberta").length;
-        const doMes = os.filter((r) => (r.competencia ?? "").startsWith(mesKey));
-        const concluidasMes = doMes.filter((r) => r.status === "concluida").length;
-        const totalMes = doMes.length;
+        const noMes = osRows.filter((r) => ordemVisivelNoMes(r, mesKey, false));
+        const solicitadas = noMes.filter((r) => r.status === "solicitada").length;
+        const abertas = noMes.filter((r) => r.status === "aberta").length;
+        const concluidasMes = noMes.filter((r) => r.status === "concluida").length;
+        const totalMes = noMes.length;
 
-        const itensEmUso = (itensRes.data ?? []).reduce(
-          (s, r: { quantidade_em_uso?: number }) => s + (Number(r.quantidade_em_uso) || 0),
-          0,
-        );
-        const eqs = (eqRes.data ?? []) as { status: string }[];
-        const eqManutencao = eqs.filter((e) => e.status === "manutencao").length;
-        const eqEstoque = eqs.filter((e) => e.status === "estoque").length;
+        const itensEmUso =
+          itens.reduce((s, r) => s + (Number(r.quantidade_em_uso) || 0), 0) +
+          equips.filter((e) => e.status === "em_uso").length;
 
-        let itensSet = 0;
-        if (!setOsRes.error && setOsRes.data) {
-          for (const row of setOsRes.data as { tech_ops_ordem_saida_itens?: { id: string }[] | null }[]) {
-            itensSet += row.tech_ops_ordem_saida_itens?.length ?? 0;
-          }
-        }
+        const eqManutencao =
+          itens.reduce((s, r) => s + (Number(r.quantidade_manutencao) || 0), 0) +
+          equips.filter((e) => e.status === "manutencao").length;
+
+        const eqEstoque =
+          itens.reduce((s, r) => s + estoqueDisponivelItem(r), 0) +
+          equips.filter((e) => e.status === "estoque").length;
+
+        const itensTotais =
+          itens.reduce((s, r) => s + (Number(r.quantidade_total) || 0), 0) + equips.length;
 
         setAlertas({ osSolicitadas: solicitadas });
         setKpis({
-          mesLabel: referencia.label,
+          mesLabel: mesAtual.label,
           pendencias: { solicitadas, abertas, concluidasMes, totalMes },
-          estoque: { itensEmUso, eqManutencao, eqEstoque, itensSet },
+          estoque: { itensEmUso, eqManutencao, eqEstoque, itensTotais },
         });
       } catch (e) {
         console.error("[HomeGestorTechOps] carga:", e);

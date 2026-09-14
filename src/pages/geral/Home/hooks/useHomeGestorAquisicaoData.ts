@@ -4,10 +4,17 @@ import { supabase } from "../../../../lib/supabase";
 import { fetchAllPages, fetchLiveResultadosBatched } from "../../../../lib/supabasePaginate";
 import { horasDeResultado, horasPendentesCota } from "../../../../lib/influencerHorasCota";
 import { isoDateBrasilFromInstant } from "../../../../lib/dateBrasil";
-import { getHomeKpiPeriodosComparativoMoM } from "../../../../lib/homeInvestidorMtd";
 import { fetchInfluencerAnalyticsPeriodoCached } from "../../../../lib/influencerAnalyticsQuery";
-import { fmtBRL } from "../../../../lib/dashboardHelpers";
-import { podeVerPagamentosAgenteFinanceiro } from "../../../aquisicao/Financeiro/financeiroCiclos";
+import { fmtBRL, fmtHorasTotal, getPeriodoComparativoMoM } from "../../../../lib/dashboardHelpers";
+import { MESES_PT } from "../../../../lib/dashboardConstants";
+import { loadFinanceiroMesData } from "../../../aquisicao/Financeiro/financeiroMesData";
+import {
+  mesCalendarioDeHoje,
+  podeVerPagamentosAgenteFinanceiro,
+} from "../../../aquisicao/Financeiro/financeiroCiclos";
+import type { BlocoFiltros } from "../../../aquisicao/Financeiro/financeiroFiltros";
+import { periodoDoMes, rowNoMesSolicitacao } from "../../../aquisicao/BancaJogo/bancaJogoHelpers";
+import type { BancaRowDb } from "../../../aquisicao/BancaJogo/bancaJogoTypes";
 
 export type HomeGestorAquisicaoAlertas = {
   horasPendentesSemAgenda: number;
@@ -50,56 +57,32 @@ function pctMoM(atual: number, anterior: number): { pctLabel: string; up: boolea
   return { pctLabel: `${Math.abs(pct).toFixed(1)}%`, up: pct >= 0 };
 }
 
-function fmtHoras(n: number): string {
-  return n.toLocaleString("pt-BR", { maximumFractionDigits: 1, minimumFractionDigits: 0 });
+function mesYmAnterior(mesYm: string): string {
+  const [y, m] = mesYm.split("-").map(Number);
+  const d = new Date(y!, (m ?? 1) - 2, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
-function kpisDePagamentos(pags: PagRow[], agentes: PagRow[]): {
-  totalPago: number;
-  pendente: number;
-  horas: number;
-} {
-  const pagos = [...pags, ...agentes].filter((p) => p.status === "pago");
-  const pend = [...pags, ...agentes].filter((p) => p.status === "em_analise" || p.status === "a_pagar");
-  return {
-    totalPago: pagos.reduce((a, p) => a + (Number(p.total) || 0), 0),
-    pendente: pend.reduce((a, p) => a + (Number(p.total) || 0), 0),
-    horas: pags.reduce((a, p) => a + (Number(p.horas_realizadas) || 0), 0),
-  };
+function labelMesYm(mesYm: string): string {
+  const [y, m] = mesYm.split("-").map(Number);
+  return `${MESES_PT[(m ?? 1) - 1] ?? mesYm} ${y}`;
 }
 
-async function carregarPagamentosPeriodo(
-  inicio: string,
-  fim: string,
-  incluirAgentes: boolean,
+function filtrosFinanceiroMes(
+  mesFiltro: string,
   podeVerInf: (id: string) => boolean,
-): Promise<{ pags: PagRow[]; agentes: PagRow[] }> {
-  const { data: ciclos } = await supabase
-    .from("ciclos_pagamento")
-    .select("id")
-    .gte("data_fim", inicio)
-    .lte("data_fim", fim);
-  const cicloIds = (ciclos ?? []).map((c: { id: string }) => c.id);
-  if (cicloIds.length === 0) return { pags: [], agentes: [] };
-
-  const [pagsRes, agRes] = await Promise.all([
-    supabase
-      .from("pagamentos")
-      .select("total, status, horas_realizadas, influencer_id, updated_at, created_at")
-      .in("ciclo_id", cicloIds),
-    incluirAgentes
-      ? supabase
-          .from("pagamentos_agentes")
-          .select("total, status, updated_at, created_at")
-          .in("ciclo_id", cicloIds)
-      : Promise.resolve({ data: [] as PagRow[], error: null }),
-  ]);
-
-  const pags = ((pagsRes.data ?? []) as PagRow[]).filter(
-    (p) => !p.influencer_id || podeVerInf(p.influencer_id),
-  );
-  const agentes = agRes.error ? [] : ((agRes.data ?? []) as PagRow[]);
-  return { pags, agentes };
+): BlocoFiltros {
+  return {
+    podeVerInfluencer: podeVerInf,
+    podeVerOperadora: () => true,
+    filterInfluencers: [],
+    filterOperadora: "todas",
+    filtroOp: null,
+    operadoraInfMap: {},
+    operadorasList: [],
+    mesFiltro,
+    historico: false,
+  };
 }
 
 export function useHomeGestorAquisicaoData() {
@@ -142,13 +125,22 @@ export function useHomeGestorAquisicaoData() {
         const limiar48Ms = Date.now() - 48 * 60 * 60 * 1000;
         const incluirAgentes = podeVerPagamentosAgenteFinanceiro(user?.role);
 
+        const mesAtualYm = mesCalendarioDeHoje();
+        const mesAntYm = mesYmAnterior(mesAtualYm);
+        const [anoAtual, mesAtualNum] = mesAtualYm.split("-").map(Number);
+        const periodoStreamers = getPeriodoComparativoMoM(anoAtual!, (mesAtualNum ?? 1) - 1);
+        const periodoBanca = periodoDoMes(mesAtualYm);
+
         const [
           perfisRes,
           livesFuturasRes,
           livesRealizadasRes,
           pagsPendRes,
           pagsAgPendRes,
-          bancasRes,
+          finAtual,
+          finAnt,
+          analytics,
+          bancasRows,
         ] = await Promise.all([
           fetchAllPages<{
             id: string;
@@ -188,10 +180,39 @@ export function useHomeGestorAquisicaoData() {
                 .select("id, status, updated_at, created_at")
                 .in("status", ["em_analise", "a_pagar"])
             : Promise.resolve({ data: [] as PagRow[], error: null }),
-          supabase
-            .from("banca_jogo_solicitacoes")
-            .select("id", { count: "exact", head: true })
-            .in("status", ["solicitado", "aprovado"]),
+          loadFinanceiroMesData({
+            filtros: filtrosFinanceiroMes(mesAtualYm, podeVerInf),
+            userRole: user?.role,
+            podeVerInfluencer: podeVerInf,
+          }),
+          loadFinanceiroMesData({
+            filtros: filtrosFinanceiroMes(mesAntYm, podeVerInf),
+            userRole: user?.role,
+            podeVerInfluencer: podeVerInf,
+          }),
+          fetchInfluencerAnalyticsPeriodoCached({
+            inicio: periodoStreamers.atual.inicio,
+            fim: periodoStreamers.atual.fim,
+            influencerIds: veTodos ? null : idsEscopo,
+          }),
+          fetchAllPages<Pick<BancaRowDb, "id" | "influencer_id" | "solicitado_em" | "status">>(
+            async (from, to) => {
+              let q = supabase
+                .from("banca_jogo_solicitacoes")
+                .select("id, influencer_id, solicitado_em, status")
+                .eq("status", "solicitado")
+                .order("id")
+                .range(from, to);
+              if (!veTodos) {
+                if (idsEscopo.length === 0) {
+                  q = q.eq("id", "00000000-0000-0000-0000-000000000000");
+                } else {
+                  q = q.in("influencer_id", idsEscopo);
+                }
+              }
+              return q;
+            },
+          ),
         ]);
 
         if (cancelled) return;
@@ -276,34 +297,21 @@ export function useHomeGestorAquisicaoData() {
           countPagAntigos(pagsPendRes.data as PagRow[] | null) +
           (pagsAgPendRes.error ? 0 : countPagAntigos(pagsAgPendRes.data as PagRow[] | null));
 
-        const { referencia, atual, anterior } = getHomeKpiPeriodosComparativoMoM();
-        const mesKey = `${referencia.ano}-${String(referencia.mes + 1).padStart(2, "0")}`;
-        const mesAntKey = anterior.inicio.slice(0, 7);
+        const pagoMom = pctMoM(finAtual.kpis.totalPago, finAnt.kpis.totalPago);
+        const pendMom = pctMoM(finAtual.kpis.pendente, finAnt.kpis.pendente);
+        const horasMom = pctMoM(finAtual.kpis.horas, finAnt.kpis.horas);
 
-        const [finAtualRaw, finAntRaw, analytics] = await Promise.all([
-          carregarPagamentosPeriodo(atual.inicio, atual.fim, incluirAgentes, podeVerInf),
-          carregarPagamentosPeriodo(anterior.inicio, anterior.fim, incluirAgentes, podeVerInf),
-          fetchInfluencerAnalyticsPeriodoCached({
-            inicio: atual.inicio,
-            fim: atual.fim,
-            influencerIds: veTodos ? null : idsEscopo,
-          }),
-        ]);
+        const metricasVisiveis = analytics.metricas.filter((m) => podeVerInf(m.influencer_id));
+        const livesVisiveis = analytics.lives.filter((l) => podeVerInf(l.influencer_id));
+        const ggr = metricasVisiveis.reduce((a, m) => a + (Number(m.ggr) || 0), 0);
+        const ftds = metricasVisiveis.reduce((a, m) => a + (Number(m.ftd_count) || 0), 0);
+        const lives = livesVisiveis.length;
+
+        const bancasAbertas = bancasRows.filter((r) =>
+          rowNoMesSolicitacao(r as BancaRowDb, periodoBanca, false),
+        ).length;
 
         if (cancelled) return;
-
-        const finAtual = kpisDePagamentos(finAtualRaw.pags, finAtualRaw.agentes);
-        const finAnt = kpisDePagamentos(finAntRaw.pags, finAntRaw.agentes);
-        const pagoMom = pctMoM(finAtual.totalPago, finAnt.totalPago);
-        const pendMom = pctMoM(finAtual.pendente, finAnt.pendente);
-        const horasMom = pctMoM(finAtual.horas, finAnt.horas);
-
-        const ggr = analytics.metricas.reduce((a, m) => a + (Number(m.ggr) || 0), 0);
-        const ftds = analytics.metricas.reduce((a, m) => a + (Number(m.ftd_count) || 0), 0);
-        const lives = analytics.lives.filter((l) => l.status === "realizada").length;
-
-        void mesKey;
-        void mesAntKey;
 
         setAlertas({
           horasPendentesSemAgenda,
@@ -311,26 +319,26 @@ export function useHomeGestorAquisicaoData() {
           pagamentosAguardando7d,
         });
         setKpis({
-          mesLabel: referencia.label,
+          mesLabel: labelMesYm(mesAtualYm),
           financeiro: {
-            pagoFmt: fmtBRL(finAtual.totalPago),
-            pendenteFmt: fmtBRL(finAtual.pendente),
-            horasFmt: fmtHoras(finAtual.horas),
+            pagoFmt: fmtBRL(finAtual.kpis.totalPago),
+            pendenteFmt: fmtBRL(finAtual.kpis.pendente),
+            horasFmt: fmtHorasTotal(finAtual.kpis.horas),
           },
           canal: {
             lives,
             ggrFmt: fmtBRL(ggr),
             ftds,
-            bancasAbertas: bancasRes.count ?? 0,
+            bancasAbertas,
           },
           mom: {
-            pagoAntFmt: fmtBRL(finAnt.totalPago),
+            pagoAntFmt: fmtBRL(finAnt.kpis.totalPago),
             pagoPct: pagoMom.pctLabel,
             pagoUp: pagoMom.up,
-            pendenteAntFmt: fmtBRL(finAnt.pendente),
+            pendenteAntFmt: fmtBRL(finAnt.kpis.pendente),
             pendentePct: pendMom.pctLabel,
             pendenteUp: pendMom.up,
-            horasAntFmt: fmtHoras(finAnt.horas),
+            horasAntFmt: fmtHorasTotal(finAnt.kpis.horas),
             horasPct: horasMom.pctLabel,
             horasUp: horasMom.up,
           },

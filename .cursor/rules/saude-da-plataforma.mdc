@@ -62,6 +62,6 @@ Validar **sempre** que a página do ciclo tiver superfície aplicável. Falha = 
 | 4 | Canal de Denúncias | N/A | N/A |
 | 5 | Painel de Notícias | N/A (TV, não tabela 20) | N/A |
 | 6 | Torneio CDA | Ignorado | Ignorado |
-| 7 | Overview Spin | **Falhou** (Ranking c/ operadora — não coberto no smoke; correção noutro chat) | **Falhou** (Comparativo/Dados dias duplicados; hotfix `e40a4baa`) |
+| 7 | Overview Spin | **Falhou** (Ranking c/ operadora — ainda reportado após `9322366d`; reforço com `RankingConcorrentesLista` + teste) | **Falhou** (Comparativo/Dados dias duplicados; hotfix `e40a4baa`) |
 
 Alimentar esta tabela quando um ciclo novo revelar gap de processo.
