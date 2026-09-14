@@ -1372,7 +1372,7 @@ function BlocoRotacaoEstudio({
               <TabelaComPaginacao
                 items={gradeLinhas}
                 t={t}
-                resetKey={`${bloco.fase}|${gradeLinhas.map((x) => x.g.funcionarioId).join(",")}|${slotAtual}`}
+                resetKey={`${bloco.fase}|${[...gradeLinhas.map((x) => x.g.funcionarioId)].sort().join(",")}`}
               >
                 {(linhas, zebraIdx) => (
               <div className="app-table-wrap app-table-wrap--sticky-col" style={getDataTableWrapStyle()}>
