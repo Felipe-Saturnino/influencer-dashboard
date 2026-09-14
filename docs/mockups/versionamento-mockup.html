@@ -13,7 +13,8 @@
       --vermelho: #e84025;
       --amarelo: #f59e0b;
       --verde: #22c55e;
-      --roxo-item: #a78bfa;
+      --azul-melhoria: #1e36f8;
+      --vermelho-correcao: #c45c5c;
       --page-bg: #f4f4f8;
       --card-bg: #ffffff;
       --card-border: #e8e8f0;
@@ -150,19 +151,19 @@
       color: var(--brand-primary);
     }
     .tab-btn[data-tipo="novo"].active {
-      border-color: var(--roxo-item);
-      background: color-mix(in srgb, var(--roxo-item) 15%, transparent);
-      color: var(--roxo-item);
-    }
-    .tab-btn[data-tipo="melhoria"].active {
-      border-color: var(--brand-azul);
-      background: color-mix(in srgb, var(--brand-azul) 15%, transparent);
-      color: var(--brand-azul);
-    }
-    .tab-btn[data-tipo="correcao"].active {
       border-color: var(--verde);
       background: color-mix(in srgb, var(--verde) 15%, transparent);
       color: var(--verde);
+    }
+    .tab-btn[data-tipo="melhoria"].active {
+      border-color: var(--azul-melhoria);
+      background: color-mix(in srgb, var(--azul-melhoria) 15%, transparent);
+      color: var(--azul-melhoria);
+    }
+    .tab-btn[data-tipo="correcao"].active {
+      border-color: var(--vermelho-correcao);
+      background: color-mix(in srgb, var(--vermelho-correcao) 15%, transparent);
+      color: var(--vermelho-correcao);
     }
 
     .pill-select {
@@ -246,9 +247,9 @@
       font-size: 10px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase;
       padding: 4px 8px; border-radius: 20px; margin-top: 2px; width: fit-content;
     }
-    .tipo-novo { background: #a78bfa22; color: var(--roxo-item); border: 1px solid #a78bfa44; }
-    .tipo-melhoria { background: #1e36f822; color: var(--brand-azul); border: 1px solid #1e36f844; }
-    .tipo-correcao { background: #22c55e22; color: var(--verde); border: 1px solid #22c55e44; }
+    .tipo-novo { background: #22c55e22; color: var(--verde); border: 1px solid #22c55e44; }
+    .tipo-melhoria { background: #1e36f822; color: var(--azul-melhoria); border: 1px solid #1e36f844; }
+    .tipo-correcao { background: #c45c5c22; color: var(--vermelho-correcao); border: 1px solid #c45c5c44; }
 
     .content-box { padding: 20px; }
     .block-title {
@@ -396,9 +397,9 @@
     <div class="filter-box">
       <div class="filter-row" role="tablist" aria-label="Tipo de mudança">
         <button type="button" class="tab-btn active" data-tipo="todos">Todos</button>
-        <button type="button" class="tab-btn" data-tipo="novo"><span class="dot" style="color:#a78bfa"></span>Novo</button>
+        <button type="button" class="tab-btn" data-tipo="novo"><span class="dot" style="color:#22c55e"></span>Novo</button>
         <button type="button" class="tab-btn" data-tipo="melhoria"><span class="dot" style="color:#1e36f8"></span>Melhoria</button>
-        <button type="button" class="tab-btn" data-tipo="correcao"><span class="dot" style="color:#22c55e"></span>Correção</button>
+        <button type="button" class="tab-btn" data-tipo="correcao"><span class="dot" style="color:#c45c5c"></span>Correção</button>
       </div>
       <div class="filter-row">
         <button type="button" class="pill-select" id="filtro-secao" aria-pressed="false">

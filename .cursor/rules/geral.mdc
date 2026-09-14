@@ -202,7 +202,7 @@ Páginas fora do menu lateral (`configuracoes`, `simulador_login`, `versionament
 - **Inclusão de release:** só via chat Cursor + `docs/HANDOFF-VERSIONAMENTO-RELEASE.md` → `src/pages/geral/Versionamento/releases.ts`. **Sem** CTA «Nova Release» e **sem** modal de cadastro.
 - **Catálogo vazio:** `Nenhuma release publicada.` Filtro sem resultado: `Nenhuma release encontrada para os filtros selecionados.`
 - **Destaque:** tag verde **Recente** + `Release #N` + data `DD/MM/AAAA`; título no `h2`. Histórico em acordeão **recolhido por padrão**.
-- **Cards:** Novo `#a78bfa` · Melhoria `#1e36f8` · Correção `#22c55e`.
+- **Cards / abas de tipo:** Novo `#22c55e` · Melhoria `#1e36f8` · Correção `#c45c5c` (vermelho sóbrio — não `#e84025`).
 - **Busca:** `PAGE_SEARCH.versionamento` — palavras-chave (AND, sem acentos) em título, resumo, data, tipo, seção e texto dos cards.
 - **Filtro de seção:** `FiltroBarCampoSelect` com ícone **`LayoutGrid`** 15px (`FILTRO_BAR_ICON_PROPS`) — exceção de domínio (não está no catálogo Brand de Operadora/Status). Agregadora **Todas Seções** (inclui **Toda Plataforma** quando houver card `*`).
 - **Ajuda contextual:** não usar `AjudaContextualAcoes` nesta página (igual Configurações / Ajuda).

@@ -39,9 +39,10 @@ export const VERSIONAMENTO_TIPO_LABEL: Record<VersionamentoTipo, string> = {
 };
 
 export const VERSIONAMENTO_TIPO_COR: Record<VersionamentoTipo, string> = {
-  novo: "#a78bfa",
+  novo: "#22c55e",
   melhoria: "#1e36f8",
-  correcao: "#22c55e",
+  /** Vermelho sóbrio (não o vermelho semântico de perigo `#e84025`). */
+  correcao: "#c45c5c",
 };
 
 export const VERSIONAMENTO_TIPOS: VersionamentoTipo[] = ["novo", "melhoria", "correcao"];
