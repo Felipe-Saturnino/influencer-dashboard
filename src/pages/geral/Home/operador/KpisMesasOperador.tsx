@@ -8,8 +8,10 @@ import { getPageContentBoxStyle } from "../../../../lib/pageContentBoxStyles";
 import { FONT } from "../../../../constants/theme";
 import { getHomeKpiReferenciaMes } from "../../../../lib/homeInvestidorMtd";
 import { useHomeKpisMesasOperadora } from "../hooks/useHomeKpisMesasOperadora";
+import { useHomeTopMesasOperadora } from "../hooks/useHomeTopMesasOperadora";
 import { HomeKpiCard } from "../shared/HomeKpiCard";
 import { HomeSectionMesSubtitle } from "../shared/HomeSectionMesSubtitle";
+import { TopMesasOperador } from "./TopMesasOperador";
 import { homeSectionTitleStyle, HOME_BODY_MUTED, HOME_FOOTER_HINT, HOME_LINK_BUTTON } from "../shared/homeSharedUi";
 
 function comparativoCard(
@@ -31,6 +33,7 @@ export function KpisMesasOperador() {
   const { propsFor } = useAppPageNav();
   const brand = useDashboardBrand();
   const { loading, erro, data, semOperadora } = useHomeKpisMesasOperadora();
+  const topMesas = useHomeTopMesasOperadora();
   const box = getPageContentBoxStyle(brand, t);
 
   const fmtApostas = (n: number) => n.toLocaleString("pt-BR");
@@ -81,11 +84,13 @@ export function KpisMesasOperador() {
               comparativoMensal={comparativoCard(data.atual.apostas, data.anterior.apostas, fmtApostas)}
             />
           </div>
+          <TopMesasOperador items={topMesas.items} loading={topMesas.loading} />
           <p style={{ ...HOME_FOOTER_HINT, color: t.textMuted }}>
             Quer saber mais? Acessa o Dashboard de{" "}
             <a {...propsFor("mesas_spin")} style={HOME_LINK_BUTTON}>
               Overview Spin
-            </a>
+            </a>{" "}
+            (aba Posicionamento e Dados por mesa).
           </p>
         </>
       )}

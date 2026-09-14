@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { fetchInfluencerAnalyticsPeriodoCached } from "../../../../lib/influencerAnalyticsQuery";
 import { buscarInvestimentoPago } from "../../../../lib/investimentoPago";
 import { getHomeKpiPeriodosComparativoMoM } from "../../../../lib/homeInvestidorMtd";
@@ -10,13 +10,14 @@ import {
 
 export type { HomeCanalKpisTotais };
 
-async function carregarPeriodo(
+async function carregarPeriodoEscopo(
   influencerIds: string[],
   inicio: string,
   fim: string,
   comInvestimento: boolean,
 ): Promise<HomeCanalKpisTotais> {
-  if (influencerIds.length === 0) return { ...ZERO_HOME_CANAL_KPIS };
+  if (influencerIds.length === 0) return ZERO_HOME_CANAL_KPIS;
+
   const analytics = await fetchInfluencerAnalyticsPeriodoCached({
     inicio,
     fim,
@@ -33,12 +34,20 @@ async function carregarPeriodo(
   return agregarHomeCanalPeriodo(analytics, investimento);
 }
 
-function useHomeCanalKpisBase(
+/**
+ * KPIs de canal agregados por lista de influencers (Home Agência / gestores).
+ * Mês D-1 + MoM — mesmo contrato de `useHomeCanalKpisProprios`.
+ */
+export function useHomeCanalKpisEscopo(
   influencerIds: string[] | undefined,
-  opts: { comInvestimento: boolean; logTag: string },
+  opts?: { comInvestimento?: boolean },
 ) {
-  const { comInvestimento, logTag } = opts;
-  const idsKey = (influencerIds ?? []).slice().sort().join("|");
+  const comInvestimento = opts?.comInvestimento === true;
+  const idsKey = useMemo(
+    () => (influencerIds && influencerIds.length > 0 ? [...influencerIds].sort().join("|") : ""),
+    [influencerIds],
+  );
+
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState(false);
   const [atual, setAtual] = useState<HomeCanalKpisTotais | null>(null);
@@ -46,16 +55,16 @@ function useHomeCanalKpisBase(
   const [mesLabel, setMesLabel] = useState("");
 
   useEffect(() => {
-    const ids = idsKey ? idsKey.split("|").filter(Boolean) : [];
-    if (ids.length === 0) {
+    if (!idsKey) {
       setLoading(false);
       setErro(false);
-      setAtual(null);
-      setAnterior(null);
-      setMesLabel("");
+      setAtual(ZERO_HOME_CANAL_KPIS);
+      setAnterior(ZERO_HOME_CANAL_KPIS);
+      setMesLabel(getHomeKpiPeriodosComparativoMoM().referencia.label);
       return;
     }
 
+    const ids = idsKey.split("|");
     let cancelled = false;
     void (async () => {
       setLoading(true);
@@ -63,15 +72,15 @@ function useHomeCanalKpisBase(
       try {
         const { referencia, atual: perAtual, anterior: perAnt } = getHomeKpiPeriodosComparativoMoM();
         const [totAtual, totAnt] = await Promise.all([
-          carregarPeriodo(ids, perAtual.inicio, perAtual.fim, comInvestimento),
-          carregarPeriodo(ids, perAnt.inicio, perAnt.fim, comInvestimento),
+          carregarPeriodoEscopo(ids, perAtual.inicio, perAtual.fim, comInvestimento),
+          carregarPeriodoEscopo(ids, perAnt.inicio, perAnt.fim, comInvestimento),
         ]);
         if (cancelled) return;
         setAtual(totAtual);
         setAnterior(totAnt);
         setMesLabel(referencia.label);
       } catch (e) {
-        console.error(`${logTag}:`, e);
+        console.error("useHomeCanalKpisEscopo:", e);
         if (!cancelled) {
           setErro(true);
           setAtual(null);
@@ -85,32 +94,7 @@ function useHomeCanalKpisBase(
     return () => {
       cancelled = true;
     };
-  }, [idsKey, comInvestimento, logTag]);
+  }, [idsKey, comInvestimento]);
 
   return { loading, erro, atual, anterior, mesLabel, zero: ZERO_HOME_CANAL_KPIS };
-}
-
-/**
- * KPIs do Overview (próprios) para Home Influencer / Afiliado — mês D-1 + MoM.
- * `comInvestimento`: true para Afiliado (GGR/ROI); Influencer Home não precisa.
- */
-export function useHomeCanalKpisProprios(userId: string | undefined, opts?: { comInvestimento?: boolean }) {
-  return useHomeCanalKpisBase(userId ? [userId] : undefined, {
-    comInvestimento: opts?.comInvestimento === true,
-    logTag: "useHomeCanalKpisProprios",
-  });
-}
-
-/**
- * KPIs agregados do escopo (ex.: Agência) — soma analytics + investimento pago
- * com `includeAgentes: false`. IDs vazios → sem fetch (atual/anterior null).
- */
-export function useHomeCanalKpisEscopo(
-  influencerIds: string[] | undefined,
-  opts?: { comInvestimento?: boolean },
-) {
-  return useHomeCanalKpisBase(influencerIds, {
-    comInvestimento: opts?.comInvestimento !== false,
-    logTag: "useHomeCanalKpisEscopo",
-  });
 }

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { History, KeyRound, Loader2, Shield, UserCog } from "lucide-react";
+import { KeyRound, Loader2, Shield, UserCog } from "lucide-react";
 import { ModalBase, ModalHeader, MODAL_SCROLL_FOCUS_SAFE_PAD } from "../../../components/OperacoesModal";
 import { ModalTabPanel } from "../../../components/ModalTabPanel";
 import {
@@ -471,20 +471,6 @@ export function ModalHistoricoUsuario({
             </ModalTabPanel>
           </>
         )}
-
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            marginTop: 14,
-            fontSize: 11,
-            color: t.textMuted,
-          }}
-        >
-          <History size={12} aria-hidden />
-          Eventos passam a ser registrados a partir desta versão da plataforma.
-        </div>
       </div>
     </ModalBase>
   );

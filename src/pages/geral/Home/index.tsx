@@ -58,6 +58,14 @@ const HomeRh = lazy(() => import("./HomeRh"));
 const HomeOperadorRouter = lazy(() => import("./operador/HomeOperadorRouter"));
 const HomeAfiliado = lazy(() => import("./HomeAfiliado"));
 const HomeInfluencer = lazy(() => import("./HomeInfluencer"));
+const HomeAgencia = lazy(() => import("./HomeAgencia"));
+const HomeGestorAquisicao = lazy(() => import("./HomeGestorAquisicao"));
+const HomeGestorMarketing = lazy(() => import("./HomeGestorMarketing"));
+const HomeGestorOperacoes = lazy(() => import("./HomeGestorOperacoes"));
+const HomeGestorTechOps = lazy(() => import("./HomeGestorTechOps"));
+const HomeGestorAcademy = lazy(() => import("./HomeGestorAcademy"));
+const HomeGestorRh = lazy(() => import("./HomeGestorRh"));
+const HomeAdmin = lazy(() => import("./HomeAdmin"));
 
 function HomeChunkFallback() {
   const { theme: t } = useApp();
@@ -328,6 +336,7 @@ export default function Home() {
       "shift_leader",
       "rh",
       "operador",
+      "agencia",
     ];
     if (roleGate && (homesDedicadas.includes(roleGate) || roleParidadeInfluencer(roleGate))) {
       setRevisaoCadastralPendenteHome(false);
@@ -436,6 +445,38 @@ export default function Home() {
     return withHomeSuspense(<HomeInfluencer />);
   }
 
+  if (roleHome === "agencia") {
+    return withHomeSuspense(<HomeAgencia />);
+  }
+
+  if (roleHome === "gestor_aquisicao") {
+    return withHomeSuspense(<HomeGestorAquisicao />);
+  }
+
+  if (roleHome === "gestor_marketing") {
+    return withHomeSuspense(<HomeGestorMarketing />);
+  }
+
+  if (roleHome === "gestor_operacoes") {
+    return withHomeSuspense(<HomeGestorOperacoes />);
+  }
+
+  if (roleHome === "gestor_tech_ops") {
+    return withHomeSuspense(<HomeGestorTechOps />);
+  }
+
+  if (roleHome === "gestor_academy") {
+    return withHomeSuspense(<HomeGestorAcademy />);
+  }
+
+  if (roleHome === "gestor_rh") {
+    return withHomeSuspense(<HomeGestorRh />);
+  }
+
+  if (roleHome === "admin") {
+    return withHomeSuspense(<HomeAdmin />);
+  }
+
   const role = roleHome;
   const welcome = ROLE_WELCOME[role];
   const useBrand = false;
@@ -454,13 +495,6 @@ export default function Home() {
   }
 
   const atalhosOrdenados = [...atalhos];
-  if (role === "agencia") {
-    const idxOverview = atalhosOrdenados.findIndex((a) => a.key === "dash_overview_influencer");
-    if (idxOverview > 0) {
-      const [item] = atalhosOrdenados.splice(idxOverview, 1);
-      atalhosOrdenados.unshift(item);
-    }
-  }
   const atalhosVisiveis = buscaAtalho.trim()
     ? atalhosOrdenados.filter((a) => textoContemBusca(a.label, buscaAtalho))
     : atalhosOrdenados;
