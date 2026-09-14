@@ -72,6 +72,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
           "O PVI (Player Value Index) é calculado com base em três componentes: ticket médio de depósito, GGR por jogador e WD Ratio. Se qualquer um desses dados for zero (ex.: influencer sem depósitos registrados), o PVI não pode ser calculado corretamente e pode aparecer baixo ou zerado. Isso é esperado para influencers com poucos FTDs no período.",
       },
       {
+        subtitulo: "Por que vejo 'Sem dados para o período selecionado.' nos KPIs ou no ranking?",
+        texto:
+          "Quando não há influencers com lives ou métricas no período (e filtros de Influencer/Operadora), os blocos de KPI, Funil e Ranking mostram a mensagem canónica de período vazio — não R$ 0,00. Se o período tem dados mas um chip de status/ação zera a tabela, a mensagem passa a ser 'Sem dados para o filtro selecionado'. Troque o mês, ative Histórico ou limpe o chip.",
+      },
+      {
         subtitulo: "Os KPIs mostram valores diferentes entre Overview e Financeiro?",
         texto:
           "As três abas usam a mesma busca linha a linha de métricas e lives do período. Diferenças entre Overview e Financeiro costumam vir do recorte exibido (ex.: investimento de agentes no Overview, PVI e perfil de jogador no Financeiro), não de um procedimento especial do banco. Se a divergência parecer inconsistente para o mesmo filtro e mês, entre em contato com o suporte informando o mês e os valores observados.",

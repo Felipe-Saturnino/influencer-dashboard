@@ -227,8 +227,12 @@ export default function Streamers() {
           minHeight: "100vh",
           fontFamily: FONT.body,
           display: "flex",
+          flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
+          gap: 12,
+          color: t.textMuted,
+          fontSize: 13,
         }}
       >
         <Loader2
@@ -237,6 +241,7 @@ export default function Streamers() {
           color="var(--brand-action, #7c3aed)"
           aria-hidden="true"
         />
+        Carregando…
       </div>
     );
   }

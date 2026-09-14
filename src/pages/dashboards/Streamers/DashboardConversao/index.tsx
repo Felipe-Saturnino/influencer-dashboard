@@ -15,7 +15,7 @@ import {
   getPageContentBoxStyle,
   getPageFilterBoxStyle,
 } from "../../../../lib/pageContentBoxStyles";
-import { BRAND, FUNIL_COLORS, MSG_SEM_DADOS_FILTRO } from "../../../../lib/dashboardConstants";
+import { BRAND, FUNIL_COLORS, MSG_SEM_DADOS_FILTRO, MSG_SEM_DADOS_PERIODO } from "../../../../lib/dashboardConstants";
 import { FiltroHistoricoButton, FiltroInfluencerSelect, FiltroOperadoraSelect, SectionTitle, SortTableTh, type SortDir } from "../../../../components/dashboard";
 import { useDataTableBlock } from "../../../../hooks/useDataTableBlock";
 import { getDataTableWrapStyle, getDataTableStyle } from "../../../../lib/dataTableStyles";
@@ -311,7 +311,7 @@ function PodioFTDHora({ ranking }: { ranking: ConversaoRow[] }) {
 
   if (!ranking.length) {
     return (
-      <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13 }}>{MSG_SEM_DADOS_FILTRO}</div>
+      <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13 }}>{MSG_SEM_DADOS_PERIODO}</div>
     );
   }
 
@@ -435,7 +435,6 @@ export default function DashboardConversao() {
   const {
     perfis,
     operadoras,
-    operadoraInfluencers,
     isPending: catalogosPending,
     error: catalogosError,
   } = useDashboardCatalogos();
@@ -471,7 +470,6 @@ export default function DashboardConversao() {
   const filtroOperadora = embed ? sf.filtroOperadora : filtroOperadoraLocal;
   const setFiltroOperadora = embed ? sf.setFiltroOperadora : setFiltroOperadoraLocal;
   const operadorasList = embed ? sf.operadorasList : operadorasListStandalone;
-  const operadoraInfMap = embed ? sf.operadoraInfMap : operadoraInfluencers;
   const idxInicial = embed ? sf.idxInicial : idxStartLocal;
 
   useEffect(() => {
@@ -621,16 +619,9 @@ export default function DashboardConversao() {
   const rowsFiltradosEscopo = useMemo(() => {
     let r = rows;
     if (filtroInfluencer !== "todos") r = r.filter((row) => row.influencer_id === filtroInfluencer);
-    if (operadoraSlugsForcado?.length) {
-      const ids = new Set<string>();
-      operadoraSlugsForcado.forEach((slug) => (operadoraInfMap[slug] ?? []).forEach((id) => ids.add(id)));
-      r = r.filter((row) => ids.has(row.influencer_id));
-    } else if (filtroOperadora !== "todas") {
-      const ids = operadoraInfMap[filtroOperadora] ?? [];
-      r = r.filter((row) => ids.includes(row.influencer_id));
-    }
+    // SQL já filtra por operadora_slug — sem refiltro pela junction.
     return r;
-  }, [rows, filtroInfluencer, filtroOperadora, operadoraInfMap, operadoraSlugsForcado]);
+  }, [rows, filtroInfluencer]);
 
   const rowA = rowsFiltradosEscopo.find((r) => r.influencer_id === compA) || null;
   const rowB = rowsFiltradosEscopo.find((r) => r.influencer_id === compB) || null;
@@ -839,7 +830,7 @@ export default function DashboardConversao() {
       {/* ══ BLOCO 2: COMPARATIVO DE FUNIL ═══════════════════════════════════════ */}
       <div style={card}>
         <SectionTitle
-          sub={historico ? "acumulado" : "comparativo MTD vs mesmo período do mês anterior"}
+          sub={historico ? "acumulado" : "comparativo entre dois influencers no período"}
         >
           Comparativo de Funil
         </SectionTitle>
@@ -990,7 +981,9 @@ export default function DashboardConversao() {
         {loading ? (
           <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted }}>Carregando…</div>
         ) : rowsFiltrados.length === 0 ? (
-          <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted }}>{MSG_SEM_DADOS_FILTRO}</div>
+          <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted }}>
+            {rowsFiltradosEscopo.length === 0 ? MSG_SEM_DADOS_PERIODO : MSG_SEM_DADOS_FILTRO}
+          </div>
         ) : (
           <>
           <div className="app-table-wrap" style={getDataTableWrapStyle()}>

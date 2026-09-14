@@ -129,7 +129,7 @@ Recados, Tarefas, Horas Extras, Admin/Telemetria, PIN. (Baixa de estoque na apro
 | `ModalRegistrarManutencao.tsx` | Mesa (estúdio/Academy) ou Máquina de Cartas (Shuffler/OCR) + tipo + observação (+ evidência nivelamento) |
 | `ModalChecklist.tsx` | Abas Itens (status) + Anotações (tipo + observação) |
 | `ModalVerItem.tsx` | Dados do Item + Alocação (cards por OS) |
-| `ModalHistorico.tsx` | Filtro Checklist / Manutenção / Movimentação |
+| `ModalHistorico.tsx` | Filtro Checklist / Manutenção / Movimentação (`SelectComIcone` `pill={false}` — portal no modal, Global § Lista pesquisável em modal) |
 | `itensAlocadosUi.tsx` | Badge status, KPI card, campos card |
 
 ## Regras

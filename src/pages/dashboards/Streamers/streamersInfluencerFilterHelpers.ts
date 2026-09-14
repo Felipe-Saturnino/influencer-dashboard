@@ -2,8 +2,7 @@ import {
   getDatasDoMes,
   getPeriodoHistoricoCompetencias,
 } from "../../../lib/dashboardHelpers";
-import { fetchAllPages } from "../../../lib/supabasePaginate";
-import { supabase } from "../../../lib/supabase";
+import { fetchInfluencerAnalyticsPeriodoCached } from "../../../lib/influencerAnalyticsQuery";
 
 export type PerfilInfluencerMin = { id: string; nome_artistico: string | null };
 
@@ -21,8 +20,9 @@ export function periodoStreamersFiltro(
 }
 
 /**
- * IDs com métrica ou live realizada no período (colunas mínimas).
- * Não inclui utm_aliases all-time — evita opção vazia no filtro do mês.
+ * IDs com métrica ou live realizada no período.
+ * Reutiliza `fetchInfluencerAnalyticsPeriodoCached` (mesma queryKey das abas) —
+ * evita segundo fetchAllPages só-IDs em paralelo com o analytics completo.
  */
 export async function fetchInfluencerIdsComDadosNoPeriodo(params: {
   inicio: string;
@@ -33,39 +33,24 @@ export async function fetchInfluencerIdsComDadosNoPeriodo(params: {
 }): Promise<string[]> {
   const { inicio, fim, filtroOperadora, operadoraSlugsForcado, podeVerInfluencer } = params;
 
-  const [metricas, lives] = await Promise.all([
-    fetchAllPages<{ influencer_id: string }>(async (from, to) => {
-      let q = supabase
-        .from("influencer_metricas")
-        .select("influencer_id")
-        .gte("data", inicio)
-        .lte("data", fim)
-        .order("influencer_id", { ascending: true })
-        .range(from, to);
-      if (operadoraSlugsForcado?.length) q = q.in("operadora_slug", operadoraSlugsForcado);
-      else if (filtroOperadora !== "todas") q = q.eq("operadora_slug", filtroOperadora);
-      return q;
-    }),
-    fetchAllPages<{ influencer_id: string }>(async (from, to) => {
-      let q = supabase
-        .from("lives")
-        .select("influencer_id")
-        .eq("status", "realizada")
-        .gte("data", inicio)
-        .lte("data", fim)
-        .order("influencer_id", { ascending: true })
-        .range(from, to);
-      if (operadoraSlugsForcado?.length) q = q.in("operadora_slug", operadoraSlugsForcado);
-      else if (filtroOperadora !== "todas") q = q.eq("operadora_slug", filtroOperadora);
-      return q;
-    }),
-  ]);
+  const operadoraSlugs = operadoraSlugsForcado?.length
+    ? operadoraSlugsForcado
+    : filtroOperadora !== "todas"
+      ? [filtroOperadora]
+      : null;
+
+  const analytics = await fetchInfluencerAnalyticsPeriodoCached({
+    inicio,
+    fim,
+    operadoraSlugs,
+    influencerIds: null,
+  });
 
   const ids = new Set<string>();
-  for (const m of metricas) {
+  for (const m of analytics.metricas) {
     if (podeVerInfluencer(m.influencer_id)) ids.add(m.influencer_id);
   }
-  for (const l of lives) {
+  for (const l of analytics.lives) {
     if (podeVerInfluencer(l.influencer_id)) ids.add(l.influencer_id);
   }
 

@@ -16,6 +16,7 @@ import { buscarInvestimentoPago, filtrosInvestimentoPorEscopo } from "../../../.
 import {
   BRAND,
   MSG_SEM_DADOS_FILTRO,
+  MSG_SEM_DADOS_PERIODO,
   STATUS_ORDEM,
   type StatusLabel,
 } from "../../../../lib/dashboardConstants";
@@ -210,7 +211,6 @@ export default function DashboardOverview() {
   const {
     perfis,
     operadoras,
-    operadoraInfluencers,
     isPending: catalogosPending,
     error: catalogosError,
   } = useDashboardCatalogos();
@@ -243,7 +243,6 @@ export default function DashboardOverview() {
   const filtroOperadora = embed ? sf.filtroOperadora : filtroOperadoraLocal;
   const setFiltroOperadora = embed ? sf.setFiltroOperadora : setFiltroOperadoraLocal;
   const operadorasList = embed ? sf.operadorasList : operadorasListStandalone;
-  const operadoraInfMap = embed ? sf.operadoraInfMap : operadoraInfluencers;
   const idxInicial = embed ? sf.idxInicial : idxStartLocal;
 
   const operadoraSlugParaApi = operadoraSlugsForcado?.[0] ?? (filtroOperadora !== "todas" ? filtroOperadora : undefined);
@@ -356,12 +355,31 @@ export default function DashboardOverview() {
         let mom: ReturnType<typeof getPeriodoComparativoMoM> | null = null;
         if (historico) {
           periodo = getPeriodoHistoricoCompetencias();
-          const analytics = await fetchInfluencerAnalyticsPeriodoCached({
+        } else {
+          mom = getPeriodoComparativoMoM(mesSelecionado.ano, mesSelecionado.mes);
+          periodo = mom.atual;
+        }
+
+        const filtrosInvest = filtrosInvestimentoPorEscopo(
+          {
+            semRestricaoEscopo: escoposVisiveis.semRestricaoEscopo,
+            vêTodosInfluencers: escoposVisiveis.vêTodosInfluencers,
+            influencersVisiveis: escoposVisiveis.influencersVisiveis,
+          },
+          { operadora_slug: operadoraSlugParaApi, filtroInfluencer }
+        );
+
+        const [analytics, investimentoPago] = await Promise.all([
+          fetchInfluencerAnalyticsPeriodoCached({
             inicio: periodo.inicio,
             fim: periodo.fim,
             operadoraSlugs: operadoraSlugsQuery,
             influencerIds: influencerIdsQuery,
-          });
+          }),
+          buscarInvestimentoPago(periodo, filtrosInvest),
+        ]);
+
+        if (historico) {
           const { buscarMetricasDeAliases, mesclarMetricasComAliases } = await import("../../../../lib/metricasAliases");
           const aliasesSinteticas = await buscarMetricasDeAliases({
             operadora_slug: operadoraSlugParaApi,
@@ -372,30 +390,10 @@ export default function DashboardOverview() {
           lives = analytics.lives;
           resultados = analytics.resultados;
         } else {
-          mom = getPeriodoComparativoMoM(mesSelecionado.ano, mesSelecionado.mes);
-          periodo = mom.atual;
-          const analytics = await fetchInfluencerAnalyticsPeriodoCached({
-            inicio: periodo.inicio,
-            fim: periodo.fim,
-            operadoraSlugs: operadoraSlugsQuery,
-            influencerIds: influencerIdsQuery,
-          });
           metricas = analytics.metricas;
           lives = analytics.lives;
           resultados = analytics.resultados;
         }
-
-        const investimentoPago = await buscarInvestimentoPago(
-          periodo,
-          filtrosInvestimentoPorEscopo(
-            {
-              semRestricaoEscopo: escoposVisiveis.semRestricaoEscopo,
-              vêTodosInfluencers: escoposVisiveis.vêTodosInfluencers,
-              influencersVisiveis: escoposVisiveis.influencersVisiveis,
-            },
-            { operadora_slug: operadoraSlugParaApi, filtroInfluencer }
-          )
-        );
         if (cancelled) return;
         const rows = montaRanking(metricas, lives, resultados, investimentoPago.porInfluencer);
         const rowsVisiveis = rows.filter((r) => podeVerInfluencer(r.influencer_id));
@@ -470,22 +468,12 @@ export default function DashboardOverview() {
     reloadTick,
   ]);
 
-  const idsOperadoraEfetiva = useMemo(() => {
-    if (operadoraSlugsForcado?.length) {
-      const set = new Set<string>();
-      operadoraSlugsForcado.forEach(slug => (operadoraInfMap[slug] ?? []).forEach(id => set.add(id)));
-      return set;
-    }
-    if (filtroOperadora !== "todas") return new Set(operadoraInfMap[filtroOperadora] ?? []);
-    return null;
-  }, [operadoraSlugsForcado, filtroOperadora, operadoraInfMap]);
-
   const rankingBaseFiltro = useMemo(() => {
     let r = ranking;
     if (filtroInfluencer !== "todos") r = r.filter((row) => row.influencer_id === filtroInfluencer);
-    if (idsOperadoraEfetiva) r = r.filter((row) => idsOperadoraEfetiva.has(row.influencer_id));
+    // SQL já filtra por operadora_slug — não refiltrar pela junction.
     return r;
-  }, [ranking, filtroInfluencer, idsOperadoraEfetiva]);
+  }, [ranking, filtroInfluencer]);
 
   const rankingFiltrado = useMemo(() => {
     let r = rankingBaseFiltro;
@@ -533,10 +521,9 @@ export default function DashboardOverview() {
   const rankingAntFiltrado = useMemo(() => {
     let r = rankingAnt;
     if (filtroInfluencer !== "todos") r = r.filter((row) => row.influencer_id === filtroInfluencer);
-    if (idsOperadoraEfetiva) r = r.filter((row) => idsOperadoraEfetiva.has(row.influencer_id));
     if (statusFiltro) r = r.filter((row) => row.statusLabel === statusFiltro);
     return r;
-  }, [rankingAnt, filtroInfluencer, idsOperadoraEfetiva, statusFiltro]);
+  }, [rankingAnt, filtroInfluencer, statusFiltro]);
 
   // Totais exibidos nos KPIs e Funil (respeitam filtros de influencer/operadora/status)
   // Com filtro por influencer: desconsiderar Agentes (soma só das rows). Sem filtro: usar totais (inclui Agentes)
@@ -548,6 +535,8 @@ export default function DashboardOverview() {
     const totalAnt = filtroInfluencer === "todos" ? totaisAnt.investimento : undefined;
     return calculaTotais(rankingAntFiltrado, totalAnt);
   }, [rankingAntFiltrado, filtroInfluencer, totaisAnt.investimento]);
+
+  const semDadosPeriodo = !loading && !erroCarga && rankingBaseFiltro.length === 0;
 
   // ── TAXAS DO FUNIL ────────────────────────────────────────────────────────────
   const pctViewAcesso  = totaisExibidos.views > 0    ? ((totaisExibidos.acessos   / totaisExibidos.views)    * 100).toFixed(1) + "%" : "—";
@@ -699,6 +688,8 @@ export default function DashboardOverview() {
               {[0, 1, 2, 3].map((i) => <SkeletonKpiCard key={`cv-${i}`} />)}
             </div>
           </>
+        ) : semDadosPeriodo ? (
+          <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted }}>{MSG_SEM_DADOS_PERIODO}</div>
         ) : (
           <>
             <div
@@ -772,10 +763,14 @@ export default function DashboardOverview() {
         <SectionTitle sub={historico ? "acumulado" : undefined}>
           Funil de Conversão
         </SectionTitle>
-        <FunilVisual
-          values={[totaisExibidos.views, totaisExibidos.acessos, totaisExibidos.registros, totaisExibidos.ftds]}
-          taxas={[pctViewAcesso, pctAcessoReg, pctRegFTD, pctAcessoFTD, pctViewFTD]}
-        />
+        {semDadosPeriodo ? (
+          <div style={{ padding: "24px 0", textAlign: "center", color: t.textMuted }}>{MSG_SEM_DADOS_PERIODO}</div>
+        ) : (
+          <FunilVisual
+            values={[totaisExibidos.views, totaisExibidos.acessos, totaisExibidos.registros, totaisExibidos.ftds]}
+            taxas={[pctViewAcesso, pctAcessoReg, pctRegFTD, pctAcessoFTD, pctViewFTD]}
+          />
+        )}
       </div>
 
       {/* ══ BLOCO 4: RANKING ═════════════════════════════════════════════════ */}
@@ -789,7 +784,7 @@ export default function DashboardOverview() {
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
             {statusBadges.map((s) => {
               const ativo = statusFiltro === s.label;
-              const qtd = ranking.filter((r) => r.statusLabel === s.label).length;
+              const qtd = rankingBaseFiltro.filter((r) => r.statusLabel === s.label).length;
               return (
                 <button
                   type="button"
@@ -833,7 +828,9 @@ export default function DashboardOverview() {
         {loading ? (
           <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted }}>Carregando…</div>
         ) : rankingFiltrado.length === 0 ? (
-          <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted }}>{MSG_SEM_DADOS_FILTRO}</div>
+          <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted }}>
+            {rankingBaseFiltro.length === 0 ? MSG_SEM_DADOS_PERIODO : MSG_SEM_DADOS_FILTRO}
+          </div>
         ) : (
           <>
           <div className="app-table-wrap" style={getDataTableWrapStyle()}>

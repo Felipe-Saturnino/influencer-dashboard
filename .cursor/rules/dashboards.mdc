@@ -38,6 +38,11 @@ alwaysApply: false
 
 ## Streamers — página unificada
 
+- **Empty de período:** `MSG_SEM_DADOS_PERIODO` nos KPIs/Funil/Ranking quando não há linhas no período; `MSG_SEM_DADOS_FILTRO` só quando chip de status/ação zera a vista.
+- **Fetch fase 1:** `Promise.all` analytics ∥ investimento; IDs do filtro de influencers via cache `fetchInfluencerAnalyticsPeriodoCached` (sem fetchAllPages duplicado).
+- **Filtro operadora:** fonte da verdade = SQL (`operadora_slug`); sem refiltro cliente pela junction `influencer_operadoras`.
+
+
 - Uma permissão/rota; **três abas** (Overview, Conversão, Financeiro) com **filtros partilhados** (mês, Histórico, influencer, operadora). Alterações nos filtros aplicam-se à aba visível e mantêm-se ao mudar de aba.
 - **Catálogos e analytics:** `useDashboardCatalogos` partilha perfis, operadoras ativas e vínculos; `fetchInfluencerAnalyticsPeriodoCached` partilha métricas, lives e resultados por período/escopo entre Overview, Conversão, Financeiro e Overview Influencer. A chave deve incluir período, operadoras e influencers efetivamente permitidos.
 - **Loading na FilterBar (modo embed):** cada aba chama `setIsLoading(true/false)` no `StreamersFiltrosContext` durante o fetch; o container (`Streamers/index.tsx`) mostra o indicador quando `sf.isLoading`.
@@ -708,12 +713,12 @@ Quando um handoff desta seção pedir atualização de Ajuda: **fundir** conteú
 - Nunca usar `width` fixo em px em SVGs de funil
 - Nunca colocar `<defs>` dentro de `.map()`
 - Nunca usar `"%"` para PVI
-- Nunca deixar estado vazio sem mensagem — usar `MSG_SEM_DADOS_FILTRO` de `dashboardConstants`
+- Nunca deixar estado vazio sem mensagem — período: `MSG_SEM_DADOS_PERIODO`; chip/status: `MSG_SEM_DADOS_FILTRO`
 - Nunca mostrar KPIs com zeros iniciais durante `loading` — usar `SkeletonKpiCard`
 - Nunca usar `Clock` como spinner em **seções de conteúdo** — usar `Loader2` + `app-lucide-spin`
 - Nunca esconder bloco silenciosamente em modo histórico
 - Nunca listas densas de tabela sem paginação de vista **20** (`TabelaComPaginacao` / Global § Eficiência de fetch §6). Virtualização (`react-virtual` etc.) **só** com pedido explícito de produto.
-- Nunca `"Nenhum dado encontrado"` / `"N/A"` / `"Loading..."` — mensagens canónicas e `MSG_SEM_DADOS_FILTRO`
+- Nunca `"Nenhum dado encontrado"` / `"N/A"` / `"Loading..."` — mensagens canónicas (`MSG_SEM_DADOS_PERIODO` / `MSG_SEM_DADOS_FILTRO`)
 - Nunca `rgba(124,58,237,0.15)` em estados ativos — usar `color-mix` com `var(--brand-action, #7c3aed)`
 - Nunca botão Histórico na FilterBar sem **`FiltroHistoricoButton`** (markup inline / `GiCalendar`)
 - Nunca `"Comparativo Diário"` / `"Comparativo Mensal"` para série temporal

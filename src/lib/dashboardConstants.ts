@@ -27,10 +27,10 @@ export const MESES_PT = [
 export const STATUS_ORDEM = ["Rentável", "Atenção", "Não Rentável", "Bônus", "Sem dados"] as const;
 export type StatusLabel = (typeof STATUS_ORDEM)[number];
 
-/** Empty state quando não há dados para o período e filtros atuais (tabelas, gráficos, KPIs). */
+/** Empty state quando um chip/filtro de status ou ação zera a vista (não usar para período vazio). */
 export const MSG_SEM_DADOS_FILTRO = "Sem dados para o filtro selecionado";
 
-/** Empty state canónico (Global) — período sem linhas. Preferir em dashboards novos. */
+/** Empty state canónico (Global) — período sem linhas (KPIs, funil, ranking). */
 export const MSG_SEM_DADOS_PERIODO = "Sem dados para o período selecionado.";
 
 /**
