@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mockup — Streamers · Jogadores | Spin Gaming</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --brand-action: #7c3aed;
+      --brand-contrast: #1e36f8;
+      --brand-primary: #4a2082;
+      --brand-success: #22c55e;
+      --brand-danger: #e84025;
+      --text: #1f2937;
+      --text-muted: #6b7280;
+      --card-border: #e5e7eb;
+      --input-bg: #f9fafb;
+      --card-bg: #ffffff;
+      --page-bg: #f3f4f6;
+      --shadow: 0 2px 8px rgba(0,0,0,.07);
+      --radius: 14px;
+      --font: Inter, "Helvetica Neue", Arial, sans-serif;
+      --font-title: "Barlow Condensed", Impact, "Arial Black", sans-serif;
+      --cor-a: #7c3aed;
+      --cor-b: #1e36f8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font);
+      background: var(--page-bg);
+      color: var(--text);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+    .mock-banner {
+      background: linear-gradient(135deg, #4a2082, #1e36f8);
+      color: #fff;
+      text-align: center;
+      padding: 8px 16px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .page-shell { max-width: 1360px; margin: 0 auto; padding: 24px 20px 64px; }
+
+    .page-header { margin-bottom: 18px; }
+    .page-header-row { display: flex; align-items: center; gap: 8px; }
+    .page-header-icon {
+      width: 32px; height: 32px; border-radius: 9px;
+      background: color-mix(in srgb, var(--brand-primary) 12%, #fff);
+      border: 1px solid color-mix(in srgb, var(--brand-primary) 25%, transparent);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--brand-primary); flex-shrink: 0;
+    }
+    .page-header h1 {
+      font-family: var(--font-title); font-size: 18px; font-weight: 800;
+      text-transform: uppercase; color: var(--brand-primary); letter-spacing: .05em; margin: 0;
+    }
+    .page-header p {
+      font-size: 13px; color: var(--text-muted); margin: 5px 0 0; padding-left: 40px;
+    }
+
+    .filter-box {
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: var(--radius); box-shadow: var(--shadow);
+      padding: 12px 20px; margin-bottom: 14px;
+    }
+    .filter-row {
+      display: flex; flex-wrap: wrap; align-items: center; justify-content: center;
+      gap: 10px; width: 100%;
+    }
+    .carousel-btn {
+      width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--card-border);
+      background: var(--input-bg); color: var(--text);
+      display: inline-flex; align-items: center; justify-content: center;
+    }
+    .carousel-label { min-width: 180px; text-align: center; font-size: 18px; font-weight: 800; }
+    .pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 14px; border-radius: 999px;
+      border: 1px solid var(--card-border); background: var(--input-bg);
+      font-size: 13px; font-weight: 500; color: var(--text);
+    }
+    .pill.active {
+      border-color: color-mix(in srgb, var(--brand-action) 40%, transparent);
+      background: color-mix(in srgb, var(--brand-action) 15%, #fff);
+      color: var(--brand-action); font-weight: 700;
+    }
+    .chip {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 18px; min-height: 44px; border-radius: 10px;
+      border: 1px solid var(--card-border); background: var(--input-bg);
+      font-size: 13px; font-weight: 500; color: var(--text-muted);
+    }
+    .chip.active {
+      border-color: var(--brand-contrast);
+      background: color-mix(in srgb, var(--brand-action) 15%, transparent);
+      color: var(--brand-contrast); font-weight: 700;
+    }
+    .tabs-row {
+      display: grid; grid-template-columns: 1fr auto 1fr;
+      align-items: center; margin-top: 12px; gap: 10px;
+    }
+    .tabs { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+
+    .content-box {
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: var(--radius); box-shadow: var(--shadow);
+      padding: 20px; margin-bottom: 14px;
+    }
+    .section-title {
+      font-family: var(--font-title); font-size: 14px; font-weight: 800;
+      text-transform: uppercase; color: var(--brand-primary);
+    }
+    .section-head { display: flex; align-items: baseline; flex-wrap: wrap; margin-bottom: 16px; }
+    .section-sub { font-size: 11px; font-weight: 400; color: var(--text-muted); }
+    .section-dash { font-size: 12px; margin: 0 6px; color: var(--text-muted); }
+
+    .kpi-grid-4 {
+      display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px;
+    }
+    .kpi-grid-4 + .kpi-grid-4 { margin-top: 12px; }
+    @media (max-width: 900px) { .kpi-grid-4 { grid-template-columns: repeat(2, 1fr); } }
+    .kpi {
+      border: 1px solid var(--card-border); border-radius: 14px; overflow: hidden; background: var(--card-bg);
+    }
+    .kpi-bar { height: 3px; }
+    .kpi-body { padding: 14px 16px; }
+    .kpi-top { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+    .kpi-ico {
+      width: 30px; height: 30px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .kpi-label {
+      font-size: 10px; font-weight: 600; letter-spacing: .07em;
+      text-transform: uppercase; color: var(--text-muted);
+    }
+    .kpi-value { font-size: 22px; font-weight: 800; line-height: 1.1; margin-bottom: 6px; font-variant-numeric: tabular-nums; }
+    .kpi-mom { font-size: 11px; font-weight: 700; }
+    .kpi-mom span { font-weight: 400; color: var(--text-muted); }
+
+    .vs-row {
+      display: grid; grid-template-columns: 1fr auto 1fr;
+      gap: 8px; align-items: center; margin-bottom: 16px;
+    }
+    @media (max-width: 640px) { .vs-row { grid-template-columns: 1fr; } }
+    .sel {
+      width: 100%; padding: 7px 12px; border-radius: 10px;
+      border: 1px solid var(--card-border); background: var(--input-bg);
+      font-size: 13px; font-family: var(--font); color: var(--text);
+    }
+    .sel-a { border-color: color-mix(in srgb, var(--cor-a) 35%, transparent); }
+    .sel-b { border-color: color-mix(in srgb, var(--cor-b) 35%, transparent); }
+    .vs-badge {
+      padding: 5px 12px; border-radius: 999px;
+      border: 1px solid color-mix(in srgb, var(--brand-action) 35%, transparent);
+      background: color-mix(in srgb, var(--brand-action) 10%, transparent);
+      font-size: 12px; font-weight: 800; color: var(--brand-action);
+      letter-spacing: .05em; text-align: center;
+    }
+    .name-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 14px; }
+    @media (max-width: 640px) { .name-row { grid-template-columns: 1fr; } }
+    .name-a, .name-b {
+      padding: 6px 12px; border-radius: 10px; text-align: center;
+      font-size: 13px; font-weight: 700;
+    }
+    .name-a {
+      background: color-mix(in srgb, var(--cor-a) 10%, transparent);
+      border: 1px solid color-mix(in srgb, var(--cor-a) 35%, transparent);
+      color: var(--cor-a);
+    }
+    .name-b {
+      background: color-mix(in srgb, var(--cor-b) 10%, transparent);
+      border: 1px solid color-mix(in srgb, var(--cor-b) 35%, transparent);
+      color: var(--cor-b);
+    }
+    .funil-duo { display: flex; gap: 16px; align-items: stretch; }
+    .funil-divider { width: 1px; background: var(--card-border); flex-shrink: 0; }
+    @media (max-width: 900px) {
+      .funil-duo { flex-direction: column; }
+      .funil-divider { display: none; }
+    }
+    .painel { flex: 1; display: flex; gap: 12px; align-items: flex-start; flex-wrap: wrap; }
+    .taxas-col { display: flex; flex-direction: column; gap: 6px; padding-top: 4px; flex: 1; min-width: 140px; }
+    .taxas-title {
+      font-size: 9px; color: var(--text-muted); letter-spacing: .1em;
+      text-transform: uppercase; font-weight: 600; margin-bottom: 2px;
+    }
+    .taxa { padding: 8px 10px; border-radius: 10px; border: 1px solid var(--card-border); }
+    .taxa-l { font-size: 9px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .07em; margin-bottom: 2px; }
+    .taxa-v { font-size: 16px; font-weight: 800; }
+    .hl-a {
+      border-color: color-mix(in srgb, var(--cor-a) 40%, transparent);
+      background: color-mix(in srgb, var(--cor-a) 13%, transparent);
+    }
+    .hl-a .taxa-v { color: var(--cor-a); }
+    .hl-b {
+      border-color: color-mix(in srgb, var(--cor-b) 40%, transparent);
+      background: color-mix(in srgb, var(--cor-b) 13%, transparent);
+    }
+    .hl-b .taxa-v { color: var(--cor-b); }
+
+    .game-row { display: flex; flex-direction: column; gap: 12px; max-width: 720px; }
+    .game-item { display: grid; grid-template-columns: 140px 1fr 72px; gap: 12px; align-items: center; }
+    .game-tag {
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 700;
+    }
+    .bar { height: 8px; border-radius: 999px; background: var(--input-bg); overflow: hidden; }
+    .bar > i { display: block; height: 100%; border-radius: 999px; }
+    .game-n { text-align: right; font-variant-numeric: tabular-nums; font-weight: 700; font-size: 12px; }
+
+    .table-wrap { border-radius: 14px; overflow-x: auto; }
+    table.data { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 880px; }
+    table.data th {
+      font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+      text-align: center; padding: 9px 12px;
+      background: color-mix(in srgb, #fff 86%, var(--brand-action) 14%);
+      color: var(--text-muted);
+    }
+    table.data td {
+      font-size: 13px; text-align: center; padding: 9px 12px;
+      font-variant-numeric: tabular-nums;
+    }
+    table.data tbody tr:nth-child(odd) { background: #fff; }
+    table.data tbody tr:nth-child(even) { background: color-mix(in srgb, #fff 92%, var(--brand-primary) 8%); }
+    table.data td.left { text-align: left; }
+    .ggr-pos { color: #22c55e; font-weight: 700; }
+    .pager { margin-top: 12px; font-size: 12px; color: var(--text-muted); }
+    .note { font-size: 12px; color: var(--text-muted); margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <div class="mock-banner">MOCKUP — Streamers · aba Jogadores · números ilustrativos (Casa de Apostas · ago/2026) · não é a página em produção</div>
+
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="page-header-row">
+        <div class="page-header-icon" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 16l4-8 4 5 4-7"/></svg>
+        </div>
+        <h1>Streamers</h1>
+      </div>
+      <p>Acompanhe performance, conversão e financeiro do canal de influencers.</p>
+    </header>
+
+    <div class="filter-box">
+      <div class="filter-row">
+        <button class="carousel-btn" type="button" aria-label="Mês anterior">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <span class="carousel-label">Agosto 2026</span>
+        <button class="carousel-btn" type="button" aria-label="Próximo mês">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+        </button>
+        <span class="pill">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+          Histórico
+        </span>
+        <span class="pill">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          Todos Influencers
+        </span>
+        <span class="pill active">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          Casa de Apostas
+        </span>
+      </div>
+
+      <div class="tabs-row">
+        <span></span>
+        <div class="tabs" role="tablist" aria-label="Seções Streamers">
+          <span class="chip" role="tab" aria-selected="false">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 16l4-8 4 5 4-7"/></svg>
+            Overview
+          </span>
+          <span class="chip" role="tab" aria-selected="false">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 3h5v5M8 3H3v5M21 16v5h-5M3 16v5h5M21 3l-7 7M3 21l7-7"/></svg>
+            Conversão
+          </span>
+          <span class="chip" role="tab" aria-selected="false">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>
+            Financeiro
+          </span>
+          <span class="chip active" role="tab" aria-selected="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            Jogadores
+          </span>
+        </div>
+        <span></span>
+      </div>
+    </div>
+
+    <section class="content-box">
+      <div class="section-head">
+        <div class="section-title">Ativação em mesa Spin</div>
+        <span class="section-dash">—</span>
+        <div class="section-sub">comparativo MTD vs mesmo período do mês anterior</div>
+      </div>
+
+      <div class="kpi-grid-4">
+        <article class="kpi">
+          <div class="kpi-bar" style="background: linear-gradient(90deg, #70cae4, transparent)"></div>
+          <div class="kpi-body">
+            <div class="kpi-top">
+              <span class="kpi-ico" style="background:#70cae418;border:1px solid #70cae435;color:#70cae4">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+              </span>
+              <span class="kpi-label">Registros</span>
+            </div>
+            <div class="kpi-value">1.842</div>
+            <div class="kpi-mom" style="color:#22c55e">+14,4% <span>vs jul · IDs únicos TAP</span></div>
+          </div>
+        </article>
+        <article class="kpi">
+          <div class="kpi-bar" style="background: linear-gradient(90deg, #22c55e, transparent)"></div>
+          <div class="kpi-body">
+            <div class="kpi-top">
+              <span class="kpi-ico" style="background:#22c55e18;border:1px solid #22c55e35;color:#22c55e">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 12l3 3 5-6"/></svg>
+              </span>
+              <span class="kpi-label">Jogaram Spin</span>
+            </div>
+            <div class="kpi-value">611</div>
+            <div class="kpi-mom" style="color:#22c55e">+22,7% <span>vs jul</span></div>
+          </div>
+        </article>
+        <article class="kpi">
+          <div class="kpi-bar" style="background: linear-gradient(90deg, #f59e0b, transparent)"></div>
+          <div class="kpi-body">
+            <div class="kpi-top">
+              <span class="kpi-ico" style="background:#f59e0b18;border:1px solid #f59e0b35;color:#f59e0b">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/></svg>
+              </span>
+              <span class="kpi-label">Jogaram Outros</span>
+            </div>
+            <div class="kpi-value">428</div>
+            <div class="kpi-mom" style="color:#e84025">+8,1% <span>vs jul · GGR TAP, sem Spin</span></div>
+          </div>
+        </article>
+        <article class="kpi">
+          <div class="kpi-bar" style="background: linear-gradient(90deg, #7c3aed, transparent)"></div>
+          <div class="kpi-body">
+            <div class="kpi-top">
+              <span class="kpi-ico" style="background:#7c3aed18;border:1px solid #7c3aed35;color:#7c3aed">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>
+              </span>
+              <span class="kpi-label">Taxa de ativação</span>
+            </div>
+            <div class="kpi-value">58,8%</div>
+            <div class="kpi-mom" style="color:#22c55e">+4,1 pp <span>vs jul · Spin ÷ (Spin + Outros)</span></div>
+          </div>
+        </article>
+      </div>
+
+      <div class="kpi-grid-4">
+        <article class="kpi">
+          <div class="kpi-bar" style="background: linear-gradient(90deg, #1e36f8, transparent)"></div>
+          <div class="kpi-body">
+            <div class="kpi-top">
+              <span class="kpi-ico" style="background:#1e36f818;border:1px solid #1e36f835;color:#1e36f8">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+              </span>
+              <span class="kpi-label">Rodadas</span>
+            </div>
+            <div class="kpi-value">48.220</div>
+            <div class="kpi-mom" style="color:#22c55e">+20,2% <span>vs jul · origem influencer</span></div>
+          </div>
+        </article>
+        <article class="kpi">
+          <div class="kpi-bar" style="background: linear-gradient(90deg, #70cae4, transparent)"></div>
+          <div class="kpi-body">
+            <div class="kpi-top">
+              <span class="kpi-ico" style="background:#70cae418;border:1px solid #70cae435;color:#70cae4">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+              </span>
+              <span class="kpi-label">Média de Rodadas</span>
+            </div>
+            <div class="kpi-value">78,9</div>
+            <div class="kpi-mom" style="color:#e84025">−2,0% <span>vs jul · rodadas ÷ Jogaram Spin</span></div>
+          </div>
+        </article>
+        <article class="kpi">
+          <div class="kpi-bar" style="background: linear-gradient(90deg, #22c55e, transparent)"></div>
+          <div class="kpi-body">
+            <div class="kpi-top">
+              <span class="kpi-ico" style="background:#22c55e18;border:1px solid #22c55e35;color:#22c55e">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+              </span>
+              <span class="kpi-label">GGR</span>
+            </div>
+            <div class="kpi-value">R$ 187.000</div>
+            <div class="kpi-mom" style="color:#22c55e">+23,0% <span>vs jul · origem influencer · Spin</span></div>
+          </div>
+        </article>
+        <article class="kpi">
+          <div class="kpi-bar" style="background: linear-gradient(90deg, #4a2082, transparent)"></div>
+          <div class="kpi-body">
+            <div class="kpi-top">
+              <span class="kpi-ico" style="background:#4a208218;border:1px solid #4a208235;color:#4a2082">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+              </span>
+              <span class="kpi-label">Turnover</span>
+            </div>
+            <div class="kpi-value">R$ 2.140.000</div>
+            <div class="kpi-mom" style="color:#22c55e">+18,6% <span>vs jul · origem influencer · Spin</span></div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="content-box">
+      <div class="section-head">
+        <div class="section-title">Comparativo de Funil</div>
+        <span class="section-dash">—</span>
+        <div class="section-sub">comparativo entre dois influencers no período</div>
+      </div>
+
+      <div class="vs-row">
+        <select class="sel sel-a" id="sel-a" aria-label="Influencer A no comparativo de funil">
+          <option value="gabs" selected>Gabs Live</option>
+          <option value="lua">Lua Cassino</option>
+          <option value="rico">Rico Play</option>
+          <option value="nanda">Nanda Bet</option>
+        </select>
+        <div class="vs-badge">VS</div>
+        <select class="sel sel-b" id="sel-b" aria-label="Influencer B no comparativo de funil">
+          <option value="gabs">Gabs Live</option>
+          <option value="lua" selected>Lua Cassino</option>
+          <option value="rico">Rico Play</option>
+          <option value="nanda">Nanda Bet</option>
+        </select>
+      </div>
+
+      <div class="name-row">
+        <div class="name-a" id="name-a">Gabs Live</div>
+        <div class="name-b" id="name-b">Lua Cassino</div>
+      </div>
+
+      <div class="funil-duo">
+        <div class="painel" id="painel-a"></div>
+        <div class="funil-divider" aria-hidden="true"></div>
+        <div class="painel" id="painel-b"></div>
+      </div>
+    </section>
+
+    <section class="content-box">
+      <div class="section-head">
+        <div class="section-title">Rodadas por jogo</div>
+        <span class="section-dash">—</span>
+        <div class="section-sub">quem jogou mesa Spin · origem influencer</div>
+      </div>
+      <div class="game-row">
+        <div class="game-item">
+          <span class="game-tag" style="background:#22c55e22;color:#15803d;border:1px solid #22c55e44">Blackjack</span>
+          <div class="bar"><i style="width:44%;background:#22c55e"></i></div>
+          <span class="game-n">21.400</span>
+        </div>
+        <div class="game-item">
+          <span class="game-tag" style="background:#1e36f822;color:#1631c4;border:1px solid #1e36f844">Baccarat</span>
+          <div class="bar"><i style="width:27%;background:#1e36f8"></i></div>
+          <span class="game-n">12.800</span>
+        </div>
+        <div class="game-item">
+          <span class="game-tag" style="background:#eab30822;color:#a16207;border:1px solid #eab30844">Roleta</span>
+          <div class="bar"><i style="width:19%;background:#eab308"></i></div>
+          <span class="game-n">9.100</span>
+        </div>
+        <div class="game-item">
+          <span class="game-tag" style="background:#ea580c22;color:#c2410c;border:1px solid #ea580c44">Futebol BR</span>
+          <div class="bar"><i style="width:10%;background:#ea580c"></i></div>
+          <span class="game-n">4.920</span>
+        </div>
+      </div>
+      <p class="note">Identidade de jogo canônica (não whitelabel). Fonte: rodadas BKO agregadas no Revenue Sentinel.</p>
+    </section>
+
+    <section class="content-box">
+      <div class="section-head">
+        <div class="section-title">Comparativo de Taxas</div>
+        <span class="section-dash">—</span>
+        <div class="section-sub">ordenado por rodadas Spin (quem trouxe mais volume em mesa)</div>
+      </div>
+      <div class="table-wrap">
+        <table class="data">
+          <caption style="display:none">Comparativo de taxas TAP → mesa Spin por influencer</caption>
+          <thead>
+            <tr>
+              <th scope="col">Influencer</th>
+              <th scope="col">Registros</th>
+              <th scope="col">Reg&gt;Jog</th>
+              <th scope="col">Jogaram</th>
+              <th scope="col">Jog&gt;Spin</th>
+              <th scope="col">Spin</th>
+              <th scope="col">Turnover Spin</th>
+              <th scope="col">GGR</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="left">Gabs Live</td><td>412</td><td>62,6%</td><td>258</td><td>65,1%</td><td>168</td>
+              <td>R$ 712.000</td><td class="ggr-pos">R$ 62.400</td>
+            </tr>
+            <tr>
+              <td class="left">Lua Cassino</td><td>298</td><td>64,1%</td><td>191</td><td>63,4%</td><td>121</td>
+              <td>R$ 468.000</td><td class="ggr-pos">R$ 41.100</td>
+            </tr>
+            <tr>
+              <td class="left">Rico Play</td><td>221</td><td>61,5%</td><td>136</td><td>64,7%</td><td>88</td>
+              <td>R$ 330.000</td><td class="ggr-pos">R$ 28.900</td>
+            </tr>
+            <tr>
+              <td class="left">Nanda Bet</td><td>256</td><td>52,0%</td><td>133</td><td>53,4%</td><td>71</td>
+              <td>R$ 207.000</td><td class="ggr-pos">R$ 18.200</td>
+            </tr>
+            <tr>
+              <td class="left">Bia Night</td><td>174</td><td>53,4%</td><td>93</td><td>59,1%</td><td>55</td>
+              <td>R$ 162.000</td><td class="ggr-pos">R$ 14.200</td>
+            </tr>
+            <tr>
+              <td class="left">Kaio Slots</td><td>189</td><td>51,3%</td><td>97</td><td>43,3%</td><td>42</td>
+              <td>R$ 96.000</td><td class="ggr-pos">R$ 8.400</td>
+            </tr>
+            <tr>
+              <td class="left">Theo Stream</td><td>156</td><td>44,9%</td><td>70</td><td>54,3%</td><td>38</td>
+              <td>R$ 81.000</td><td class="ggr-pos">R$ 7.100</td>
+            </tr>
+            <tr>
+              <td class="left">Demais</td><td>136</td><td>44,9%</td><td>61</td><td>45,9%</td><td>28</td>
+              <td>R$ 76.000</td><td class="ggr-pos">R$ 6.700</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="pager">Mostrando 1–8 de 8</div>
+    </section>
+  </div>
+
+  <script>
+    const DATA = {
+      gabs:  { nome: "Gabs Live",    reg: 412, jog: 258, spin: 168, r2j: "62,6%", j2s: "65,1%", r2s: "40,8%" },
+      lua:   { nome: "Lua Cassino",  reg: 298, jog: 191, spin: 121, r2j: "64,1%", j2s: "63,4%", r2s: "40,6%" },
+      rico:  { nome: "Rico Play",    reg: 221, jog: 136, spin: 88,  r2j: "61,5%", j2s: "64,7%", r2s: "39,8%" },
+      nanda: { nome: "Nanda Bet",    reg: 256, jog: 133, spin: 71,  r2j: "52,0%", j2s: "53,4%", r2s: "27,7%" },
+    };
+
+    function funnelSvg(d, prefix) {
+      var W = 220, H = 230, stepH = H / 3;
+      var widths = [220, 167, 106];
+      var values = [d.reg, d.jog, d.spin];
+      var labels = ["Registros", "Jogaram", "Jogaram Spin"];
+      var colors = ["#7c3aed", "#1e36f8", "#22c55e"];
+      var taxas = [null, d.r2j, d.j2s];
+      var parts = ["<svg viewBox='0 0 " + W + " " + H + "' width='100%' style='max-width:220px;flex-shrink:0;display:block' role='img' aria-label='Funil de " + d.nome + "'><defs>"];
+      for (var i = 0; i < 3; i++) {
+        parts.push("<linearGradient id='" + prefix + i + "' x1='0' y1='0' x2='0' y2='1'><stop offset='0%' stop-color='" + colors[i] + "' stop-opacity='0.88'/><stop offset='100%' stop-color='" + colors[i] + "' stop-opacity='0.58'/></linearGradient>");
+      }
+      parts.push("</defs>");
+      for (var i = 0; i < 3; i++) {
+        var wTop = widths[i];
+        var wBot = widths[i + 1] || widths[i] * 0.72;
+        var xTop = (W - wTop) / 2;
+        var xBot = (W - wBot) / 2;
+        var yTop = i * stepH;
+        var yBot = yTop + stepH - 2;
+        var path = "M " + xTop + " " + yTop + " L " + (xTop + wTop) + " " + yTop + " L " + (xBot + wBot) + " " + yBot + " L " + xBot + " " + yBot + " Z";
+        parts.push("<path d='" + path + "' fill='url(#" + prefix + i + ")'/>");
+        parts.push("<text x='" + (W/2) + "' y='" + (yTop + stepH/2 - 6) + "' text-anchor='middle' fill='#fff' font-size='9' font-weight='600' letter-spacing='0.08em' font-family='Inter,sans-serif'>" + labels[i].toUpperCase() + "</text>");
+        parts.push("<text x='" + (W/2) + "' y='" + (yTop + stepH/2 + 10) + "' text-anchor='middle' fill='#fff' font-size='15' font-weight='800' font-family='Inter,sans-serif'>" + values[i].toLocaleString("pt-BR") + "</text>");
+        if (taxas[i]) {
+          parts.push("<text x='" + (W/2) + "' y='" + (yTop + stepH/2 + 22) + "' text-anchor='middle' fill='rgba(255,255,255,0.72)' font-size='8' font-family='Inter,sans-serif'>↓ " + taxas[i] + "</text>");
+        }
+      }
+      parts.push("</svg>");
+      return parts.join("");
+    }
+
+    function taxasHtml(d, hlClass) {
+      return (
+        "<div class='taxas-col'><div class='taxas-title'>Taxas de Conversão</div>" +
+        "<div class='taxa'><div class='taxa-l'>Registro → Jogaram</div><div class='taxa-v'>" + d.r2j + "</div></div>" +
+        "<div class='taxa'><div class='taxa-l'>Jogaram → Jogaram Spin</div><div class='taxa-v'>" + d.j2s + "</div></div>" +
+        "<div class='taxa " + hlClass + "'><div class='taxa-l'>Registros → Jogaram Spin</div><div class='taxa-v'>" + d.r2s + "</div></div>" +
+        "</div>"
+      );
+    }
+
+    function renderPainel(el, key, prefix, hl) {
+      var d = DATA[key];
+      el.innerHTML = funnelSvg(d, prefix) + taxasHtml(d, hl);
+    }
+
+    function sync() {
+      var a = document.getElementById("sel-a").value;
+      var b = document.getElementById("sel-b").value;
+      if (a === b) {
+        b = a === "gabs" ? "lua" : "gabs";
+        document.getElementById("sel-b").value = b;
+      }
+      document.getElementById("name-a").textContent = DATA[a].nome;
+      document.getElementById("name-b").textContent = DATA[b].nome;
+      renderPainel(document.getElementById("painel-a"), a, "fa", "hl-a");
+      renderPainel(document.getElementById("painel-b"), b, "fb", "hl-b");
+    }
+
+    document.getElementById("sel-a").addEventListener("change", sync);
+    document.getElementById("sel-b").addEventListener("change", sync);
+    sync();
+  </script>
+</body>
+</html>

@@ -242,6 +242,8 @@ Nenhuma exceção documentada. Comparativo de Jogo, Comparativo de mesa e Dados 
   **Impulsionamento** (KPIs Meta Ads + tabela por anúncio),
   Alcance (KPIs sociais orgânicos + Posts).
 - **Fetch por aba:** Overview e Conversão carregam somente RPCs de campanha; Impulsionamento carrega somente Meta Ads; Alcance carrega somente KPIs e posts orgânicos. Não voltar a executar os três grupos ao abrir a página.
+- **Duas fases (MoM):** período atual libera o first paint; MoM (`campanhasPerfPrev` / `kpiAntRows` / `metaAdsDailyPrev`) em background com `momPronto`. Falha do MoM não apaga o mês já pintado. Indicador secundário `Clock` + `Carregando…` na barra enquanto `!momPronto`.
+- **Carga resiliente:** `try/catch` + `erroCarga` canónico + «Tentar de novo» (`reloadTick`). Colunas explícitas (sem `select("*")`); posts/anúncios via `fetchAllPages` (sem `.limit(500)`).
 - **Filtro operadora:** `FiltroOperadoraSelect` + `useDashboardFiltros()` na barra (padrão Streamers).
   Afeta **Overview** e **Conversão** (RPCs `get_campanha_*` com `p_operadora_slug`).
   Perfil **operador:** escopo fixo via `operadoraSlugsForcado` — sem dropdown.
