@@ -2,11 +2,29 @@ import { describe, expect, it } from "vitest";
 import {
   getMesesDisponiveis,
   jogoComparativoKeysFromPorTabelaRows,
+  linhasMesaAgregadasPorDia,
   momAnteriorComparavel,
   montarKpiAnteriorMoM,
   type DailyRow,
   type PorTabelaRow,
 } from "./overviewSpinLogic";
+
+function rowPorTabelaStub(partial: Partial<PorTabelaRow> & Pick<PorTabelaRow, "data_relatorio" | "nome_tabela">): PorTabelaRow {
+  return {
+    mesaRaw: partial.mesaRaw ?? partial.nome_tabela,
+    operadora: partial.operadora ?? "blaze",
+    ggr_d1: partial.ggr_d1 ?? 0,
+    turnover_d1: partial.turnover_d1 ?? 0,
+    bets_d1: partial.bets_d1 ?? 0,
+    ggr_d2: null,
+    turnover_d2: null,
+    bets_d2: null,
+    ggr_mtd: null,
+    turnover_mtd: null,
+    bets_mtd: null,
+    ...partial,
+  };
+}
 
 describe("getMesesDisponiveis do Overview Spin", () => {
   it("limita o carrossel ao mês atual e aos dois anteriores", () => {
@@ -94,5 +112,41 @@ describe("jogoComparativoKeysFromPorTabelaRows", () => {
     };
     const keys = jogoComparativoKeysFromPorTabelaRows([row], [{ slug: "blaze", nome: "Blaze" }]);
     expect([...keys]).toEqual(["futebol_brasileiro"]);
+  });
+});
+
+describe("linhasMesaAgregadasPorDia", () => {
+  it("soma Dedicado + Network da mesma mesa no mesmo dia (aba Overview)", () => {
+    const rows = [
+      rowPorTabelaStub({
+        data_relatorio: "2026-09-13",
+        nome_tabela: "Blackjack 1",
+        ggr_d1: 6303,
+        turnover_d1: 16950,
+        bets_d1: 100,
+      }),
+      rowPorTabelaStub({
+        data_relatorio: "2026-09-13",
+        nome_tabela: "Blackjack 1",
+        ggr_d1: -515,
+        turnover_d1: 4263,
+        bets_d1: 50,
+      }),
+      rowPorTabelaStub({
+        data_relatorio: "2026-09-12",
+        nome_tabela: "Blackjack 1",
+        ggr_d1: 100,
+        turnover_d1: 1000,
+        bets_d1: 10,
+      }),
+    ];
+    const out = linhasMesaAgregadasPorDia(rows, (r) => r.nome_tabela.trim() === "Blackjack 1");
+    expect(out).toHaveLength(2);
+    expect(out[0]!.dataIso).toBe("2026-09-13");
+    expect(out[0]!.ggr).toBe(5788);
+    expect(out[0]!.turnover).toBe(21213);
+    expect(out[0]!.bets).toBe(150);
+    expect(out[1]!.dataIso).toBe("2026-09-12");
+    expect(out[1]!.ggr).toBe(100);
   });
 });

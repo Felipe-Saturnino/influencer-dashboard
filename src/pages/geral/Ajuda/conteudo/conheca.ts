@@ -63,12 +63,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Comparativo de mesa (Blackjack)",
         texto:
-          "Disponível nas abas Overview e Estúdio Dedicado. Com **Todas Operadoras**, o bloco pede para selecionar uma operadora. Com uma operadora escolhida, compare duas mesas de Blackjack lado a lado pelos seletores A e B.\n\nNa aba Estúdio Network o bloco não aparece — o inventário network não tem par de mesas Blackjack para comparar.",
+          "Disponível nas abas Overview e Estúdio Dedicado. Com **Todas Operadoras**, o bloco pede para selecionar uma operadora. Com uma operadora escolhida, compare duas mesas de Blackjack lado a lado pelos seletores A e B.\n\nNa aba **Overview**, cada dia (ou mês no Histórico) soma Dedicado e Network da mesma mesa — aparece **uma linha** por período. Em Estúdio Dedicado, só o canal dedicado.\n\nNa aba Estúdio Network o bloco não aparece — o inventário network não tem par de mesas Blackjack para comparar.",
       },
       {
         subtitulo: "Dados por mesa",
         texto:
-          "Exibe o desempenho diário (ou mensal no Histórico) das mesas em painéis paralelos. Com **Todas Operadoras**, o bloco pede para selecionar uma operadora. Nas abas Overview e Estúdio Dedicado: Speed Baccarat e Roleta na primeira linha; Futebol Brasileiro abaixo quando aplicável.\n\nNa aba Estúdio Network a ordem é Blackjack e Roleta na primeira linha, e Speed Baccarat e Futebol Brasileiro na segunda.\n\nCada tabela de mesa mostra até **20 linhas** por vez (a linha Total continua no conjunto completo).",
+          "Exibe o desempenho diário (ou mensal no Histórico) das mesas em painéis paralelos. Com **Todas Operadoras**, o bloco pede para selecionar uma operadora. Nas abas Overview e Estúdio Dedicado: Speed Baccarat e Roleta na primeira linha; Futebol Brasileiro abaixo quando aplicável.\n\nNa aba **Overview**, cada dia (ou mês no Histórico) soma Dedicado e Network da mesma mesa — **uma linha** por período, alinhado aos KPIs consolidados.\n\nNa aba Estúdio Network a ordem é Blackjack e Roleta na primeira linha, e Speed Baccarat e Futebol Brasileiro na segunda.\n\nCada tabela de mesa mostra até **20 linhas** por vez (a linha Total continua no conjunto completo).",
       },
       {
         subtitulo: "Aba Posicionamento",
