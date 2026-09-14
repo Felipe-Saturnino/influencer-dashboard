@@ -24,6 +24,7 @@ export const PAGE_CANONICAL_SUBTITLE: Partial<Record<PageKey, string>> = {
     "Leia as diretrizes obrigatórias e registre sua ciência antes de transmitir.",
   financeiro: "Gerencie os ciclos de pagamento dos influencers e afiliados, do rascunho ao pago.",
   afiliados: "Seu perfil de afiliado na plataforma.",
+  links_materiais: "Gere seu link rastreado exclusivo e exporte QR Codes prontos para divulgação.",
   ajuda: "Conheça as funcionalidades da plataforma, o glossário, tutoriais passo a passo e soluções para problemas comuns.",
   versionamento:
     "Acompanhe as novidades, melhorias e correções publicadas a cada semana na plataforma.",

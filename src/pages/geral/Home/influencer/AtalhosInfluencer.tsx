@@ -4,6 +4,7 @@ import {
   HelpCircle,
   MessageCircle,
   Mic,
+  Share2,
   Star,
   Trophy,
   Wallet,
@@ -19,7 +20,7 @@ import type { PageKey } from "../../../../types";
 import { HomeAtalhoCard } from "../shared/HomeAtalhoCard";
 import { homeSectionTitleStyle, HOME_BODY_MUTED } from "../shared/homeSharedUi";
 
-/** Ordem curada — só entra se permissão Ver = sim | proprios. */
+/** Ordem curada — só entra se permissão Ver = sim | proprios. Sem páginas de gestão/afiliados. */
 const ATALHOS_INFLUENCER: { key: PageKey; icon: LucideIcon }[] = [
   { key: "dash_overview_influencer", icon: Mic },
   { key: "agenda", icon: Calendar },
@@ -27,6 +28,7 @@ const ATALHOS_INFLUENCER: { key: PageKey; icon: LucideIcon }[] = [
   { key: "feedback", icon: MessageCircle },
   { key: "influencers", icon: Star },
   { key: "playbook_influencers", icon: BookOpen },
+  { key: "links_materiais", icon: Share2 },
   { key: "financeiro", icon: Wallet },
   { key: "ajuda", icon: HelpCircle },
 ];
