@@ -17,8 +17,6 @@ import type {
   PerformanceHubTimeSlug,
 } from "../../../lib/academyPerformanceHubTypes";
 import { scoringConfigParaTime } from "../../../lib/academyPerformanceHubScoring";
-import { normalizarTextoBusca } from "../../../lib/searchText";
-import { getPeriodoHistoricoCompetencias } from "../../../lib/dashboardHelpers";
 import { usePerformanceHubCadastro } from "../../../hooks/usePerformanceHubCadastro";
 import { usePerformanceHubAvaliacoes } from "../../../hooks/usePerformanceHubAvaliacoes";
 import { usePerformanceHubScoringConfig } from "../../../hooks/usePerformanceHubScoringConfig";
@@ -44,7 +42,7 @@ import { PerformanceHubAbaConfiguracao } from "./PerformanceHubAbaConfiguracao";
 import { ModalAvaliarPerformanceHub, type PerformanceHubAvaliacaoFormPayload } from "./ModalAvaliarPerformanceHub";
 import { ModalAnalisarFeedbackPerformanceHub } from "./ModalAnalisarFeedbackPerformanceHub";
 import { ModalHistoricoPerformanceHub } from "./ModalHistoricoPerformanceHub";
-import { registrarHistoricoAvaliacaoPerformanceHub } from "../../../lib/academyPerformanceHubAvaliacoesFetch";
+import { registrarHistoricoAvaliacaoPerformanceHub, dataAvaliacaoHojeBr, periodoHistoricoPerformanceHub } from "../../../lib/academyPerformanceHubAvaliacoesFetch";
 
 type MesCarrossel = {
   ano: number;
@@ -96,10 +94,6 @@ function idxMesCorrenteCarrossel(meses: MesCarrossel[], ref: Date = new Date()):
   return i >= 0 ? i : meses.length - 1;
 }
 
-function nomeCoincideUsuario(nomeAvaliado: string, nomeUsuario: string): boolean {
-  return normalizarTextoBusca(nomeAvaliado) === normalizarTextoBusca(nomeUsuario);
-}
-
 function isAvaliacaoNoMes(row: PerformanceHubAvaliacao, mes: MesCarrossel | undefined): boolean {
   if (!mes) return false;
   const parsed = parseDateBr(row.data);
@@ -111,7 +105,7 @@ function isAvaliacaoNoHistorico(row: PerformanceHubAvaliacao): boolean {
   const parsed = parseDateBr(row.data);
   if (!parsed) return false;
   const dataIso = `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, "0")}-${String(parsed.getDate()).padStart(2, "0")}`;
-  const { inicio, fim } = getPeriodoHistoricoCompetencias();
+  const { inicio, fim } = periodoHistoricoPerformanceHub();
   return dataIso >= inicio && dataIso <= fim;
 }
 
@@ -153,6 +147,7 @@ export default function PerformanceHubPage() {
   const { avaliacoes, setAvaliacoes, persistirAvaliacao } = avaliacoesDb;
   const [avaliacaoEmEdicao, setAvaliacaoEmEdicao] = useState<PerformanceHubAvaliacao | null>(null);
   const [modalModo, setModalModo] = useState<PerformanceHubModalModo>("ver");
+  const [erroPersistencia, setErroPersistencia] = useState("");
   const [escopoProprios, setEscopoProprios] = useState<EscopoPropriosPerformanceHub>({
     staffIds: new Set(),
     nomes: [],
@@ -254,9 +249,8 @@ export default function PerformanceHubPage() {
         if (!avaliacaoPertenceAoEscopoProprios(row, escopoProprios)) return false;
       } else {
         if (row.time !== timeSelecionado) return false;
-        if (perm.canView === "proprios" && nomeEfetivo && !nomeCoincideUsuario(row.avaliadoNome, nomeEfetivo)) {
-          return false;
-        }
+        // Ver=Próprios com Editar/Criar (ex.: coach mal configurado) não deve restringir
+        // a lista ao próprio nome — só o escopo `soProprios` (Ver sem Editar) faz isso.
       }
       if (historico && !isAvaliacaoNoHistorico(row)) return false;
       if (!historico && !isAvaliacaoNoMes(row, mesSelecionado)) return false;
@@ -270,8 +264,6 @@ export default function PerformanceHubPage() {
     mesSelecionado,
     staffSelecionado,
     cadastro,
-    perm.canView,
-    nomeEfetivo,
     soProprios,
     escopoProprios,
   ]);
@@ -345,7 +337,7 @@ export default function PerformanceHubPage() {
     const staffId = cadastro.resolveStaffId(nome);
     const nova: PerformanceHubAvaliacao = {
       id: `novo-${Date.now()}`,
-      data: new Date().toLocaleDateString("pt-BR"),
+      data: dataAvaliacaoHojeBr(),
       time: timeSelecionado,
       avaliadoNome: nome,
       avaliadoStaffId: staffId,
@@ -369,9 +361,18 @@ export default function PerformanceHubPage() {
     };
     setAvaliacoes((prev) => [nova, ...prev]);
     handleAbrirAvaliacao(nova);
-    void persistirAvaliacao(nova).then((salvo) => {
-      if (salvo) setAvaliacaoEmEdicao(salvo);
-    });
+    void (async () => {
+      const salvo = await persistirAvaliacao(nova);
+      if (salvo) {
+        setAvaliacaoEmEdicao(salvo);
+        return;
+      }
+      setAvaliacoes((prev) => prev.filter((item) => item.id !== nova.id));
+      setAvaliacaoEmEdicao(null);
+      setErroPersistencia(
+        "Não foi possível criar a avaliação. Se o problema persistir, entre em contato com o suporte.",
+      );
+    })();
   }
 
   const nomeUsuarioAcao = nomeEfetivo ?? user?.name ?? "Usuário";
@@ -405,6 +406,25 @@ export default function PerformanceHubPage() {
         title={getPageMenuLabel("academy_performance_hub")}
         subtitle="Portal de avaliação de desempenho dos Prestadores."
       />
+
+      {erroPersistencia ? (
+        <div
+          role="alert"
+          aria-live="polite"
+          style={{
+            marginBottom: 14,
+            padding: "12px 16px",
+            borderRadius: 12,
+            border: "1px solid rgba(232,64,37,0.35)",
+            background: "color-mix(in srgb, #e84025 10%, transparent)",
+            color: "#e84025",
+            fontSize: 13,
+            fontFamily: FONT.body,
+          }}
+        >
+          {erroPersistencia}
+        </div>
+      ) : null}
 
       <PerformanceHubFiltroBar
         brand={brand}
@@ -577,32 +597,35 @@ export default function PerformanceHubPage() {
           mesas={cadastro.mesas}
           getPrefill={cadastro.getPrefill}
           onClose={() => setAvaliacaoEmEdicao(null)}
-          onSalvar={(payload) => {
-            void (async () => {
-              const atualizado = {
-                ...aplicarPayload(avaliacaoEmEdicao, payload),
-                status: statusAposSalvarRascunho(avaliacaoEmEdicao),
-              };
-              const salvo = await persistirAvaliacao(atualizado);
-              if (salvo) setAvaliacaoEmEdicao(salvo);
-            })();
+          onSalvar={async (payload) => {
+            const atualizado = {
+              ...aplicarPayload(avaliacaoEmEdicao, payload),
+              status: statusAposSalvarRascunho(avaliacaoEmEdicao),
+            };
+            const salvo = await persistirAvaliacao(atualizado);
+            if (!salvo) {
+              throw new Error("persist_rascunho");
+            }
+            setAvaliacaoEmEdicao(salvo);
+            setErroPersistencia("");
           }}
-          onConcluir={(payload) => {
-            void (async () => {
-              const publicada = {
-                ...aplicarPayload(avaliacaoEmEdicao, payload),
-                status: statusAposConcluirModal(avaliacaoEmEdicao.time),
-              };
-              const salvo = await persistirAvaliacao(publicada);
-              if (salvo) {
-                await registrarHistoricoAvaliacaoPerformanceHub({
-                  avaliacaoId: salvo.id,
-                  acao: "publicada",
-                  usuarioNome: nomeUsuarioAcao,
-                });
-                setAvaliacaoEmEdicao(null);
-              }
-            })();
+          onConcluir={async (payload) => {
+            const publicada = {
+              ...aplicarPayload(avaliacaoEmEdicao, payload),
+              status: statusAposConcluirModal(avaliacaoEmEdicao.time),
+            };
+            const salvo = await persistirAvaliacao(publicada);
+            if (!salvo) {
+              throw new Error("persist_concluir");
+            }
+            await registrarHistoricoAvaliacaoPerformanceHub({
+              avaliacaoId: salvo.id,
+              acao: "publicada",
+              usuarioNome: nomeUsuarioAcao,
+            });
+            setAvaliacaoEmEdicao(null);
+            setErroPersistencia("");
+            setAba("avaliacoes");
           }}
         />
       ) : null}

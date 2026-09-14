@@ -66,7 +66,7 @@ export function KpisGestorAcademy({
       </div>
 
       <p style={{ ...HOME_BODY_MUTED, color: t.textMuted, marginTop: 14, fontSize: 12 }}>
-        Quer saber mais? Acessa o{" "}
+        Quer saber mais? Acesse o{" "}
         <a {...propsFor("academy_performance_hub")} style={HOME_LINK_BUTTON}>
           Performance Hub
         </a>

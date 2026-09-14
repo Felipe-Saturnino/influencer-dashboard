@@ -15,7 +15,7 @@ import { PAGE_CONTENT_BOX_GAP } from "../../../lib/pageContentBoxStyles";
 import { HOME_GESTOR_OPERACOES_ROLE, HOME_GESTOR_OPERACOES_SUB } from "../../../lib/homePerfisCopy";
 import { BoasVindasPerfilHome } from "./shared/BoasVindasPerfilHome";
 import { AtalhosCuradosHome } from "./shared/AtalhosCuradosHome";
-import { InformativosHome } from "./shared/InformativosHome";
+import { InformacoesStaffHome } from "./shared/InformacoesStaffHome";
 import { HomePageLoading } from "./shared/HomePageLoading";
 import { useHomeGestorOperacoesData } from "./hooks/useHomeGestorOperacoesData";
 import { AlertasGestorOperacoes } from "./gestorOperacoes/AlertasGestorOperacoes";
@@ -65,7 +65,7 @@ export default function HomeGestorOperacoes() {
         simulacaoNota={simulacaoNota}
       />
       <AlertasGestorOperacoes alerta={alerta} />
-      <InformativosHome perfil="gestor_operacoes" sectionIdPrefix={PREFIX} />
+      <InformacoesStaffHome perfil="gestor_operacoes" sectionIdPrefix={PREFIX} />
       <AtalhosCuradosHome sectionIdPrefix={PREFIX} atalhos={ATALHOS} />
     </div>
   );

@@ -3,6 +3,7 @@ import {
   clearIdleSessionLastActivity,
   idleSessionMsUntilExpiry,
   IDLE_SESSION_ACTIVITY_THROTTLE_MS,
+  IDLE_SESSION_BUMP_EVENT,
   IDLE_SESSION_LAST_ACTIVITY_KEY,
   markIdleSessionLogout,
   readIdleSessionLastActivityOrNull,
@@ -85,6 +86,7 @@ export function useIdleSessionTimeout(enabled: boolean, onTimeout: () => void | 
     for (const ev of ACTIVITY_EVENTS) {
       window.addEventListener(ev, bumpActivity, { passive: true });
     }
+    window.addEventListener(IDLE_SESSION_BUMP_EVENT, bumpActivity);
     window.addEventListener("storage", onStorage);
 
     return () => {
@@ -92,6 +94,7 @@ export function useIdleSessionTimeout(enabled: boolean, onTimeout: () => void | 
       for (const ev of ACTIVITY_EVENTS) {
         window.removeEventListener(ev, bumpActivity);
       }
+      window.removeEventListener(IDLE_SESSION_BUMP_EVENT, bumpActivity);
       window.removeEventListener("storage", onStorage);
       clearIdleSessionLastActivity();
     };

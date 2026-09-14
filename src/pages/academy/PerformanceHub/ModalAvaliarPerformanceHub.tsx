@@ -88,8 +88,8 @@ type Props = {
   mesas: PerformanceHubMesaCadastro[];
   getPrefill: (staffId?: string | null, nome?: string | null) => PerformanceHubDadosPrefill | null;
   onClose: () => void;
-  onSalvar: (payload: PerformanceHubAvaliacaoFormPayload) => void;
-  onConcluir: (payload: PerformanceHubAvaliacaoFormPayload) => void;
+  onSalvar: (payload: PerformanceHubAvaliacaoFormPayload) => void | Promise<void>;
+  onConcluir: (payload: PerformanceHubAvaliacaoFormPayload) => void | Promise<void>;
 };
 
 type RespostasPorSlug = Record<string, PerformanceHubCriterioResposta>;
@@ -423,8 +423,15 @@ export function ModalAvaliarPerformanceHub({
         setStatusRascunho("");
         return;
       }
-      onSalvar(montarPayload(resolved.url));
-      setStatusRascunho(`Rascunho salvo às ${horaFormatada()} — você pode continuar depois.`);
+      try {
+        await onSalvar(montarPayload(resolved.url));
+        setStatusRascunho(`Rascunho salvo às ${horaFormatada()} — você pode continuar depois.`);
+      } catch {
+        setErros([
+          "Não foi possível salvar o rascunho. Se o problema persistir, entre em contato com o suporte.",
+        ]);
+        setStatusRascunho("");
+      }
     } finally {
       setEnviandoVideo(false);
       setProgressoVideo(null);
@@ -432,6 +439,13 @@ export function ModalAvaliarPerformanceHub({
   }
 
   async function handleConcluir() {
+    if (avaliacao.id.startsWith("novo-")) {
+      setErros([
+        "Aguarde a avaliação ser criada no servidor antes de publicar. Se o problema persistir, entre em contato com o suporte.",
+      ]);
+      setStatusRascunho("");
+      return;
+    }
     const lista = validarConcluir();
     if (lista.length > 0) {
       setErros(lista);
@@ -452,7 +466,13 @@ export function ModalAvaliarPerformanceHub({
         setInvalidFields(new Set(["video"]));
         return;
       }
-      onConcluir(montarPayload(resolved.url));
+      try {
+        await onConcluir(montarPayload(resolved.url));
+      } catch {
+        setErros([
+          "Não foi possível publicar a avaliação. Se o problema persistir, entre em contato com o suporte.",
+        ]);
+      }
     } finally {
       setEnviandoVideo(false);
       setProgressoVideo(null);

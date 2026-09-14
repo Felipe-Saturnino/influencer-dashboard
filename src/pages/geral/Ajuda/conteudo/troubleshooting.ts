@@ -792,6 +792,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
           "Com **Ver = Próprios**, só entram avaliações publicadas (**Aguardando**, **Feedback** ou **Aprovado**) do **seu** cadastro — o filtro de Time some e a lista não depende do nome do perfil coincidir letra a letra com o avaliado: a plataforma usa o prestador ligado ao e-mail de login (e-mail pessoal ou E-mail Spin) e o `staff` da avaliação.\n\nSe a lista continuar vazia: confira o mês/Histórico; se o login não estiver vinculado a um prestador em Gestão de Prestadores, ou o e-mail não bater com o cadastro, peça ajuste ao RH. Rascunhos não aparecem nesta aba.",
       },
       {
+        subtitulo: "Publiquei a avaliação e ela sumiu?",
+        texto:
+          "Ao **Concluir**, a avaliação **sai dos rascunhos** (aba Gerenciamento) e passa a constar na aba **Avaliações** com status **Aguardando** — isso é esperado. A página agora abre a aba Avaliações após publicar.\n\nSe não aparecer: confira o **mês** no carrossel (a data da avaliação precisa estar no mês filtrado) ou ative **Histórico**; confira o filtro de **Time** e de **Staff**. Se a gravação falhar, a mensagem de erro permanece no modal — nesse caso a avaliação **não** foi publicada; tente de novo. Se o problema persistir, entre em contato com o suporte.",
+      },
+      {
         subtitulo: "Alguns prestadores não aparecem para avaliar?",
         texto:
           "A lista inclui só prestadores **ativos** ou **indisponíveis** do time **Game Presenter** ou **Shuffler** no Organograma (Gestão de Prestadores). Encerrados não entram.\n\nNa **Agenda de Avaliações**, quem ainda não chegou na data de go-live / início no mês selecionado fica de fora até essa competência — use o carrossel para o mês em que a pessoa já está no estúdio.\n\nSe o prestador aparece em **Gestão de Staff** no time certo e mesmo assim falta no Performance Hub, entre em contato com o suporte.",
@@ -804,7 +809,12 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Erro ao enviar o vídeo da avaliação?",
         texto:
-          "O limite da página é **500 MB** por arquivo. Um vídeo de ~126 MB ou **300.000 KB** está **dentro** desse teto.\n\nSe a mensagem disser que o armazenamento recusou o tamanho, o envio chegou ao servidor e foi barrado lá — não é a internet. Grave em **720p** ou envie um trecho mais curto; se o arquivo já estiver abaixo de 500 MB, entre em contato com o suporte.\n\nArquivos grandes sobem em partes (progresso **Enviando X%…**). Mantenha a aba aberta até 100%. Se aparecer falha de conexão, tente de novo.\n\nSe a mensagem falar de permissão, confirme em **Gestão de Usuários → Permissões** se o perfil tem permissão de **Criar = Sim** em Performance Hub (Gerenciamento). Use **MP4** ou **MOV (H.264)** — WebM não funciona no iPhone.",
+          "O limite da página é **500 MB** por arquivo. Um vídeo de ~126 MB ou **300.000 KB** está **dentro** desse teto.\n\nSe a mensagem disser que o armazenamento recusou o tamanho, o envio chegou ao servidor e foi barrado lá — não é a internet. Grave em **720p** ou envie um trecho mais curto; se o arquivo já estiver abaixo de 500 MB, entre em contato com o suporte.\n\nArquivos grandes sobem em partes (progresso **Enviando X%…**). Mantenha a aba aberta até 100%. Se aparecer falha de conexão, tente de novo.\n\nSe a mensagem falar de sessão expirada, faça login novamente e reenvie. Se a mensagem falar de permissão, confirme em **Gestão de Usuários → Permissões** se o perfil tem permissão de **Criar = Sim** em Performance Hub (Gerenciamento). Use **MP4** ou **MOV (H.264)** — WebM não funciona no iPhone.",
+      },
+      {
+        subtitulo: "Fui deslogado ao publicar a avaliação com vídeo?",
+        texto:
+          "Uploads longos usam a sessão ativa e marcam atividade no temporizador de idle (60 min) a cada progresso do envio. Se a sessão já estava inválida, o envio falha com mensagem para fazer login de novo — a plataforma não deve forçar logout só por tentar renovar o token no upload. Faça login novamente, reabra o rascunho e conclua. Se o deslogue se repetir com a sessão ainda válida, entre em contato com o suporte.",
       },
       {
         subtitulo: "Toque em Assistir e o vídeo não abre no iPhone?",

@@ -13,7 +13,7 @@ import { PAGE_CONTENT_BOX_GAP } from "../../../lib/pageContentBoxStyles";
 import { HOME_GESTOR_MARKETING_ROLE, HOME_GESTOR_MARKETING_SUB } from "../../../lib/homePerfisCopy";
 import { BoasVindasPerfilHome } from "./shared/BoasVindasPerfilHome";
 import { AtalhosCuradosHome } from "./shared/AtalhosCuradosHome";
-import { InformativosHome } from "./shared/InformativosHome";
+import { InformacoesStaffHome } from "./shared/InformacoesStaffHome";
 import { BlogueiroSpinStaffHome } from "./shared/BlogueiroSpinStaffHome";
 import { HomePageLoading } from "./shared/HomePageLoading";
 import { useHomeGestorMarketingData } from "./hooks/useHomeGestorMarketingData";
@@ -65,7 +65,7 @@ export default function HomeGestorMarketing() {
       />
       <AlertasGestorMarketing utmsPendentes={alertas.utmsPendentes} />
       <KpisGestorMarketing kpis={kpis} sectionIdPrefix={PREFIX} />
-      <InformativosHome perfil="gestor_marketing" sectionIdPrefix={PREFIX} />
+      <InformacoesStaffHome perfil="gestor_marketing" sectionIdPrefix={PREFIX} />
       <BlogueiroSpinStaffHome sectionIdPrefix={PREFIX} />
       <AtalhosCuradosHome sectionIdPrefix={PREFIX} atalhos={ATALHOS} />
     </div>

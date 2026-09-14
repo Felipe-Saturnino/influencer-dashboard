@@ -6,7 +6,7 @@ import { PAGE_CONTENT_BOX_GAP } from "../../../lib/pageContentBoxStyles";
 import { HOME_GESTOR_ACADEMY_ROLE, HOME_GESTOR_ACADEMY_SUB } from "../../../lib/homePerfisCopy";
 import { BoasVindasPerfilHome } from "./shared/BoasVindasPerfilHome";
 import { AtalhosCuradosHome } from "./shared/AtalhosCuradosHome";
-import { InformativosHome } from "./shared/InformativosHome";
+import { InformacoesStaffHome } from "./shared/InformacoesStaffHome";
 import { HomePageLoading } from "./shared/HomePageLoading";
 import { useHomeGestorAcademyData } from "./hooks/useHomeGestorAcademyData";
 import { AlertasGestorAcademy } from "./gestorAcademy/AlertasGestorAcademy";
@@ -54,7 +54,7 @@ export default function HomeGestorAcademy() {
       />
       <AlertasGestorAcademy alertas={alertas} />
       <KpisGestorAcademy kpis={kpis} erro={erro} sectionIdPrefix={PREFIX} />
-      <InformativosHome perfil="gestor_academy" sectionIdPrefix={PREFIX} />
+      <InformacoesStaffHome perfil="gestor_academy" sectionIdPrefix={PREFIX} />
       <AtalhosCuradosHome sectionIdPrefix={PREFIX} atalhos={ATALHOS} />
     </div>
   );

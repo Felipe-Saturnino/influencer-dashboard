@@ -1,4 +1,5 @@
 import { supabase, supabaseAnonKey, supabaseUrl } from "./supabase";
+import { bumpIdleSessionActivity } from "./idleSessionConstants";
 
 export const ACADEMY_PERFORMANCE_HUB_VIDEOS_BUCKET = "academy-performance-hub-videos";
 
@@ -281,16 +282,19 @@ function jwtCompactDaSessao(token: string): string {
   return token.replace(/^Bearer\s+/i, "").trim();
 }
 
+/**
+ * JWT atual da sessão — sem `refreshSession()` forçado.
+ * Refresh falho no cliente Supabase limpa a sessão (SIGNED_OUT) e desloga o usuário
+ * no meio do upload TUS; o auto-refresh do client já renova em background.
+ */
 async function tokenSessaoVideo(): Promise<string | null> {
   const atual = await supabase.auth.getSession();
-  let session = atual.data.session;
-  const expiraEmMs = (session?.expires_at ?? 0) * 1000;
-  if (!session?.access_token || expiraEmMs < Date.now() + 5 * 60 * 1000) {
-    const refreshed = await supabase.auth.refreshSession();
-    session = refreshed.data.session ?? session;
-  }
+  const session = atual.data.session;
   const jwt = jwtCompactDaSessao(session?.access_token ?? "");
-  return tokenJwtCompactValido(jwt) ? jwt : null;
+  if (!tokenJwtCompactValido(jwt)) return null;
+  const expiraEmMs = (session?.expires_at ?? 0) * 1000;
+  if (expiraEmMs > 0 && expiraEmMs <= Date.now()) return null;
+  return jwt;
 }
 
 async function uploadVideoSimples(
@@ -300,6 +304,7 @@ async function uploadVideoSimples(
   onProgress?: UploadVideoPerformanceHubProgress,
 ): Promise<{ path: string; error: string | null }> {
   onProgress?.(0);
+  bumpIdleSessionActivity();
   const { error } = await supabase.storage.from(ACADEMY_PERFORMANCE_HUB_VIDEOS_BUCKET).upload(path, file, {
     upsert: false,
     contentType,
@@ -308,6 +313,7 @@ async function uploadVideoSimples(
     console.error("Performance Hub: falha ao enviar vídeo (simples)", error);
     return { path: "", error: mensagemErroUploadVideo(error) };
   }
+  bumpIdleSessionActivity();
   onProgress?.(100);
   return { path, error: null };
 }
@@ -382,6 +388,7 @@ async function uploadVideoResumavelEm(
       onProgress(bytesUploaded, bytesTotal) {
         if (!bytesTotal || !onProgress) return;
         const pct = Math.min(100, Math.round((bytesUploaded / bytesTotal) * 100));
+        bumpIdleSessionActivity();
         onProgress(pct);
       },
       onSuccess() {

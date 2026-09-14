@@ -56,6 +56,23 @@ export function writeIdleSessionLastActivity(timestamp: number): void {
   }
 }
 
+/** Evento para o hook de idle rearmar o timer sem depender de mouse/teclado (ex.: upload longo). */
+export const IDLE_SESSION_BUMP_EVENT = "spin-idle-session-bump";
+
+/**
+ * Marca atividade e notifica `useIdleSessionTimeout` (mesma aba).
+ * Usar em uploads/progressos longos sem interação do usuário.
+ */
+export function bumpIdleSessionActivity(now = Date.now()): void {
+  writeIdleSessionLastActivity(now);
+  if (typeof window === "undefined") return;
+  try {
+    window.dispatchEvent(new CustomEvent(IDLE_SESSION_BUMP_EVENT));
+  } catch {
+    /* ignore */
+  }
+}
+
 export function clearIdleSessionLastActivity(): void {
   try {
     localStorage.removeItem(IDLE_SESSION_LAST_ACTIVITY_KEY);

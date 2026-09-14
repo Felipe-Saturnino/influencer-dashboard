@@ -382,6 +382,7 @@ export function ModalUsuario({ editando, operadoras, onClose, onSalvo }: ModalUs
         <div style={field}>
           <SelectListaComBusca
             variant="campo"
+            panelStrategy="portal"
             label="Perfil"
             value={role}
             onChange={(v) => handleRoleChange(v as Role)}

@@ -9,6 +9,7 @@ import {
   type CSSProperties,
   type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 import { Check, ChevronDown, ChevronUp } from "lucide-react";
 import { FONT } from "../constants/theme";
 import { useApp } from "../context/AppContext";
@@ -42,7 +43,56 @@ export type SelectListaComBuscaProps = {
   wrapperStyle?: CSSProperties;
   id?: string;
   listboxAriaLabel?: string;
+  /**
+   * `inline` (default) — painel absoluto no campo (barra de filtros).
+   * `portal` — painel `position:fixed` em `document.body` (modais com overflow).
+   */
+  panelStrategy?: "inline" | "portal";
 };
+
+type PainelPortalPos = {
+  left: number;
+  width: number;
+  maxHeight: number;
+  top?: number;
+  bottom?: number;
+};
+
+const PAINEL_PORTAL_GAP = 6;
+const PAINEL_PORTAL_PAD = 8;
+const PAINEL_PORTAL_CAP = 320;
+const PAINEL_PORTAL_Z = 1200;
+
+function posicaoPainelPortal(
+  trigger: DOMRect,
+  opts: { minWidth: number; matchTriggerWidth: boolean },
+): PainelPortalPos {
+  const width = opts.matchTriggerWidth ? Math.max(trigger.width, 160) : Math.max(opts.minWidth, 240);
+  let left = trigger.left;
+  if (left + width > window.innerWidth - PAINEL_PORTAL_PAD) {
+    left = Math.max(PAINEL_PORTAL_PAD, window.innerWidth - PAINEL_PORTAL_PAD - width);
+  }
+  if (left < PAINEL_PORTAL_PAD) left = PAINEL_PORTAL_PAD;
+
+  const spaceBelow = window.innerHeight - trigger.bottom - PAINEL_PORTAL_PAD;
+  const spaceAbove = trigger.top - PAINEL_PORTAL_PAD;
+  const placeBelow = spaceBelow >= Math.min(PAINEL_PORTAL_CAP, 180) || spaceBelow >= spaceAbove;
+
+  if (placeBelow) {
+    return {
+      top: trigger.bottom + PAINEL_PORTAL_GAP,
+      left,
+      width,
+      maxHeight: Math.min(PAINEL_PORTAL_CAP, Math.max(140, spaceBelow)),
+    };
+  }
+  return {
+    bottom: window.innerHeight - trigger.top + PAINEL_PORTAL_GAP,
+    left,
+    width,
+    maxHeight: Math.min(PAINEL_PORTAL_CAP, Math.max(140, spaceAbove)),
+  };
+}
 
 /**
  * Seleção única com painel e barra de pesquisa — mesmo contrato visual do Staff/Time no Calendário.
@@ -61,6 +111,7 @@ export function SelectListaComBusca({
   wrapperStyle,
   id,
   listboxAriaLabel,
+  panelStrategy = "inline",
 }: SelectListaComBuscaProps) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
@@ -70,6 +121,9 @@ export function SelectListaComBusca({
   const [searchQuery, setSearchQuery] = useState("");
   const ref = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const [portalPos, setPortalPos] = useState<PainelPortalPos | null>(null);
+  const usePortal = panelStrategy === "portal";
   const uid = useId();
   const listboxId = `select-busca-${(id ?? uid).replace(/:/g, "")}`;
   const placeholder = searchPlaceholder ?? placeholderPesquisaFiltro(label);
@@ -100,14 +154,19 @@ export function SelectListaComBusca({
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) closePanel();
+      const n = e.target as Node;
+      if (ref.current?.contains(n) || panelRef.current?.contains(n)) return;
+      closePanel();
     }
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, [closePanel]);
 
   useEffect(() => {
-    if (!open) setSearchQuery("");
+    if (!open) {
+      setSearchQuery("");
+      setPortalPos(null);
+    }
   }, [open]);
 
   const [alignRight, setAlignRight] = useState(false);
@@ -118,6 +177,22 @@ export function SelectListaComBusca({
     const spaceRight = window.innerWidth - r.right;
     setAlignRight(spaceRight < margin && r.left > Math.max(minWidth, 240));
   }, [open, minWidth]);
+
+  useLayoutEffect(() => {
+    if (!open || !usePortal) return;
+    const update = () => {
+      const el = triggerRef.current;
+      if (!el) return;
+      setPortalPos(posicaoPainelPortal(el.getBoundingClientRect(), { minWidth, matchTriggerWidth: !isPill }));
+    };
+    update();
+    window.addEventListener("resize", update);
+    window.addEventListener("scroll", update, true);
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("scroll", update, true);
+    };
+  }, [open, usePortal, minWidth, isPill]);
 
   const { activeIndex, optionRefs, onKeyDown } = useListboxKeyboardNavigation({
     items: filtered,
@@ -169,24 +244,42 @@ export function SelectListaComBusca({
         ...style,
       };
 
-  const panelStyle: CSSProperties = {
-    position: "absolute",
-    top: "calc(100% + 6px)",
-    left: alignRight ? "auto" : 0,
-    right: alignRight ? 0 : "auto",
-    zIndex: isPill ? 200 : 1100,
-    background: t.cardBg,
-    border: `1px solid ${t.cardBorder}`,
-    borderRadius: 12,
-    padding: 8,
-    minWidth: isPill ? Math.max(minWidth, 240) : "100%",
-    width: isPill ? undefined : "100%",
-    boxShadow: "0 8px 24px rgba(0,0,0,0.3)",
-    maxHeight: "min(320px, 55vh)",
-    display: "flex",
-    flexDirection: "column",
-    boxSizing: "border-box",
-  };
+  const panelStyle: CSSProperties = usePortal && portalPos
+    ? {
+        position: "fixed",
+        top: portalPos.top,
+        bottom: portalPos.bottom,
+        left: portalPos.left,
+        width: portalPos.width,
+        maxHeight: portalPos.maxHeight,
+        zIndex: PAINEL_PORTAL_Z,
+        background: t.cardBg,
+        border: `1px solid ${t.cardBorder}`,
+        borderRadius: 12,
+        padding: 8,
+        boxShadow: "0 8px 24px rgba(0,0,0,0.3)",
+        display: "flex",
+        flexDirection: "column",
+        boxSizing: "border-box",
+      }
+    : {
+        position: "absolute",
+        top: "calc(100% + 6px)",
+        left: alignRight ? "auto" : 0,
+        right: alignRight ? 0 : "auto",
+        zIndex: isPill ? 200 : 1100,
+        background: t.cardBg,
+        border: `1px solid ${t.cardBorder}`,
+        borderRadius: 12,
+        padding: 8,
+        minWidth: isPill ? Math.max(minWidth, 240) : "100%",
+        width: isPill ? undefined : "100%",
+        boxShadow: "0 8px 24px rgba(0,0,0,0.3)",
+        maxHeight: "min(320px, 55vh)",
+        display: "flex",
+        flexDirection: "column",
+        boxSizing: "border-box",
+      };
 
   function pick(opt: SelectListaComBuscaOption) {
     if (opt.disabled) return;
@@ -196,27 +289,9 @@ export function SelectListaComBusca({
 
   let flatIndex = 0;
 
-  return (
-    <div ref={ref} style={{ position: "relative", display: isPill ? "inline-flex" : "block", width: isPill ? undefined : "100%", ...wrapperStyle }}>
-      <button
-        ref={triggerRef}
-        type="button"
-        id={id}
-        disabled={disabled}
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        aria-controls={listboxId}
-        aria-label={label}
-        onClick={() => !disabled && setOpen((o) => !o)}
-        style={triggerStyle}
-      >
-        {icon}
-        <span style={{ flex: isPill ? undefined : 1, overflow: "hidden", textOverflow: "ellipsis" }}>{triggerLabel}</span>
-        {open ? <ChevronUp size={isPill ? 9 : 14} aria-hidden="true" /> : <ChevronDown size={isPill ? 9 : 14} aria-hidden="true" />}
-      </button>
-
-      {open ? (
-        <div style={panelStyle}>
+  const panelNode =
+    open && (!usePortal || portalPos) ? (
+        <div ref={panelRef} style={panelStyle}>
           <BarraPesquisaFiltroPainel
             value={searchQuery}
             onChange={setSearchQuery}
@@ -324,7 +399,27 @@ export function SelectListaComBusca({
             )}
           </div>
         </div>
-      ) : null}
+    ) : null;
+
+  return (
+    <div ref={ref} style={{ position: "relative", display: isPill ? "inline-flex" : "block", width: isPill ? undefined : "100%", ...wrapperStyle }}>
+      <button
+        ref={triggerRef}
+        type="button"
+        id={id}
+        disabled={disabled}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-controls={listboxId}
+        aria-label={label}
+        onClick={() => !disabled && setOpen((o) => !o)}
+        style={triggerStyle}
+      >
+        {icon}
+        <span style={{ flex: isPill ? undefined : 1, overflow: "hidden", textOverflow: "ellipsis" }}>{triggerLabel}</span>
+        {open ? <ChevronUp size={isPill ? 9 : 14} aria-hidden="true" /> : <ChevronDown size={isPill ? 9 : 14} aria-hidden="true" />}
+      </button>
+      {usePortal && panelNode ? createPortal(panelNode, document.body) : panelNode}
     </div>
   );
 }
