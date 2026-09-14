@@ -1143,7 +1143,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         definicao:
           "Formulário em URL pública da Spin (`/canal-denuncias-spin`), fora do menu lateral — envio anônimo ou identificado sem login na plataforma. Não substitui a Central de Denúncias interna.",
         nota:
-          "Quem relata recebe um protocolo imprevisível para consultar o andamento. Se se identificar, a consulta pede também o e-mail do envio. Quem já tem acesso logado usa a Central de Denúncias no menu RH.",
+          "Quem relata recebe um protocolo imprevisível para consultar o andamento (e pode copiá-lo na confirmação). Se se identificar, a consulta pede também o e-mail do envio. Na consulta, o status formal (ex.: Procedente / Não procedente) aparece na linha do tempo; anexos enviados pela equipe RH mostram só o nome. Quem já tem acesso logado usa a Central de Denúncias no menu RH.",
         referencia: "Canal público Spin (fora do menu lateral)",
       },
     ],

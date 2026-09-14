@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mockup — Home Operador Padrão (whitelabel · proposta)</title>
+  <style>
+    /* Whitelabel fictício — «Casa Aurora» (não Spin). Alternar tema claro/escuro mantém a marca. */
+    :root {
+      --brand-primary: #c2410c;
+      --brand-secondary: #ea580c;
+      --brand-accent: #f97316;
+      --brand-contrast: #fff7ed;
+      --brand-roxo-spin: #4a2082;
+
+      --vermelho: #e84025;
+      --amarelo: #f59e0b;
+      --verde: #22c55e;
+      --jogo-bj: #22c55e;
+      --jogo-roleta: #eab308;
+      --jogo-baccarat: #1e36f8;
+
+      --page-bg: #fff7ed;
+      --card-bg: #ffffff;
+      --card-border: #fed7aa;
+      --input-bg: #fffbeb;
+      --text: #1c1917;
+      --text-muted: #78716c;
+      --section-title: #1c1917;
+      --box-radius: 14px;
+      --box-shadow: 0 2px 8px rgba(194, 65, 12, 0.08);
+
+      --font: "Segoe UI", system-ui, -apple-system, sans-serif;
+      --font-title: "Segoe UI Semibold", "Segoe UI", system-ui, sans-serif;
+    }
+
+    body.dark {
+      --page-bg: #1c0a00;
+      --card-bg: #292524;
+      --card-border: #44403c;
+      --input-bg: rgba(249, 115, 22, 0.08);
+      --text: #fafaf9;
+      --text-muted: #d6d3d1;
+      --section-title: #fafaf9;
+      --box-radius: 18px;
+      --box-shadow: 0 4px 20px rgba(0,0,0,0.35);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font);
+      background: var(--page-bg);
+      color: var(--text);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .mock-banner {
+      background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
+      color: #fff; padding: 10px 16px; font-size: 12px; font-weight: 600;
+      display: flex; align-items: center; justify-content: center; gap: 16px; flex-wrap: wrap;
+    }
+    .mock-banner button {
+      border: 1px solid rgba(255,255,255,.5); background: rgba(255,255,255,.12); color: #fff;
+      padding: 5px 12px; border-radius: 999px; font-size: 11px; font-weight: 700; cursor: pointer;
+      font-family: var(--font);
+    }
+
+    .page-shell {
+      max-width: 1100px; margin: 0 auto; padding: 24px 20px 40px;
+      display: flex; flex-direction: column; gap: 14px;
+    }
+
+    .block-tag {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+      color: var(--brand-primary); background: color-mix(in srgb, var(--brand-primary) 12%, transparent);
+      border: 1px dashed color-mix(in srgb, var(--brand-primary) 45%, transparent);
+      padding: 3px 8px; border-radius: 999px; margin-bottom: -6px; width: max-content;
+    }
+    body.dark .block-tag { color: var(--brand-accent); }
+
+    .welcome-card {
+      position: relative; overflow: hidden;
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: 20px; padding: 28px; box-shadow: var(--box-shadow);
+    }
+    .welcome-card .topbar {
+      position: absolute; top: 0; left: 0; right: 0; height: 4px;
+      background: linear-gradient(90deg, var(--brand-primary), var(--brand-accent));
+    }
+    .welcome-row { display: flex; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+    .brand-mark {
+      width: 56px; height: 56px; border-radius: 14px; flex-shrink: 0;
+      background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-weight: 800; font-size: 14px; letter-spacing: .04em;
+      border: 2px solid color-mix(in srgb, var(--brand-accent) 55%, transparent);
+    }
+    .welcome-card h1 {
+      font-family: var(--font-title); font-size: 22px; font-weight: 800;
+      letter-spacing: .02em; margin: 0 0 6px;
+    }
+    .role-label { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; }
+    .op-chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 999px;
+      background: color-mix(in srgb, var(--brand-primary) 14%, transparent);
+      color: var(--brand-primary); border: 1px solid color-mix(in srgb, var(--brand-primary) 30%, transparent);
+      margin-bottom: 10px;
+    }
+    body.dark .op-chip { color: var(--brand-accent); }
+    .welcome-sub { font-size: 14px; color: var(--text-muted); line-height: 1.55; white-space: pre-line; }
+
+    .content-box {
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: var(--box-radius); box-shadow: var(--box-shadow); padding: 20px;
+    }
+    .section-title {
+      font-family: var(--font-title); font-size: 13px; font-weight: 800;
+      letter-spacing: .08em; text-transform: uppercase; color: var(--section-title);
+      margin: 0 0 14px;
+    }
+    .hint { font-size: 13px; line-height: 1.5; color: var(--text-muted); margin: 0 0 16px; }
+
+    .mes-sub {
+      margin: -6px 0 14px; font-size: 12px; font-weight: 600;
+      letter-spacing: .02em; color: var(--text-muted);
+    }
+    .grid-kpi-3 {
+      display: grid; gap: 12px;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    @media (max-width: 720px) {
+      .grid-kpi-3 { grid-template-columns: 1fr; }
+    }
+    .kpi-card {
+      border-radius: 14px; border: 1px solid var(--card-border);
+      background: var(--card-bg); overflow: hidden;
+    }
+    .kpi-card .kpi-bar {
+      height: 3px;
+      background: linear-gradient(90deg, var(--brand-primary), transparent);
+    }
+    .kpi-card .kpi-bar.sec { background: linear-gradient(90deg, var(--brand-secondary), transparent); }
+    .kpi-card .kpi-bar.accent { background: linear-gradient(90deg, var(--brand-accent), transparent); }
+    .kpi-card .kpi-body { padding: 14px 16px; }
+    .kpi-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+    .kpi-ic {
+      width: 30px; height: 30px; border-radius: 8px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: color-mix(in srgb, var(--brand-primary) 12%, transparent);
+      border: 1px solid color-mix(in srgb, var(--brand-primary) 28%, transparent);
+      color: var(--brand-primary);
+    }
+    .kpi-ic.sec {
+      background: color-mix(in srgb, var(--brand-secondary) 12%, transparent);
+      border-color: color-mix(in srgb, var(--brand-secondary) 28%, transparent);
+      color: var(--brand-secondary);
+    }
+    .kpi-ic.accent {
+      background: color-mix(in srgb, var(--brand-accent) 14%, transparent);
+      border-color: color-mix(in srgb, var(--brand-accent) 32%, transparent);
+      color: var(--brand-accent);
+    }
+    .kpi-label {
+      font-size: 10px; font-weight: 600; letter-spacing: .07em;
+      text-transform: uppercase; color: var(--text-muted);
+    }
+    .kpi-value {
+      font-size: 22px; font-weight: 800; line-height: 1.1; color: var(--text);
+      font-variant-numeric: tabular-nums;
+    }
+    .kpi-mom {
+      margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--card-border);
+      font-size: 11px;
+    }
+    .kpi-mom .row { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+    .kpi-mom .up { color: var(--verde); font-weight: 700; font-size: 12px; }
+    .footer-hint {
+      margin: 14px 0 0; font-size: 12px; color: var(--text-muted); line-height: 1.5;
+    }
+    .footer-hint a { font-weight: 700; color: var(--brand-primary); text-decoration: underline; }
+    body.dark .footer-hint a { color: var(--brand-accent); }
+
+    /* Identidade por jogo (Global) — não whitelabel */
+    .mesa-sub {
+      margin: 18px 0 10px; font-size: 11px; font-weight: 700;
+      letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted);
+    }
+    .grid-mesa-3 {
+      display: grid; gap: 12px;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    @media (max-width: 720px) {
+      .grid-mesa-3 { grid-template-columns: 1fr; }
+    }
+    .mesa-card {
+      border-radius: 14px; border: 1px solid var(--card-border);
+      background: var(--card-bg); overflow: hidden;
+    }
+    .mesa-card .mesa-strip { height: 4px; }
+    .mesa-card .mesa-strip.bj { background: var(--jogo-bj); }
+    .mesa-card .mesa-strip.roleta { background: var(--jogo-roleta); }
+    .mesa-card .mesa-strip.baccarat { background: var(--jogo-baccarat); }
+    .mesa-card .mesa-body { padding: 14px 16px; }
+    .mesa-top {
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 10px;
+    }
+    .mesa-nome { font-size: 14px; font-weight: 800; line-height: 1.3; color: var(--text); }
+    .mesa-meta { margin-top: 4px; font-size: 11px; color: var(--text-muted); }
+    .pos-badge {
+      flex-shrink: 0; font-size: 11px; font-weight: 800; padding: 4px 9px; border-radius: 999px;
+      font-variant-numeric: tabular-nums;
+    }
+    .pos-badge.top { background: rgba(34,197,94,.18); color: #15803d; border: 1px solid rgba(34,197,94,.35); }
+    .pos-badge.mid { background: rgba(245,158,11,.18); color: #b45309; border: 1px solid rgba(245,158,11,.4); }
+    body.dark .pos-badge.top { color: #86efac; }
+    body.dark .pos-badge.mid { color: #fcd34d; }
+    .mesa-metrics {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px;
+      margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--card-border);
+    }
+    .mesa-metrics .lab {
+      font-size: 10px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted);
+    }
+    .mesa-metrics .val {
+      margin-top: 2px; font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--text);
+    }
+    .canal-pill {
+      display: inline-block; margin-top: 10px; font-size: 10px; font-weight: 700;
+      padding: 3px 8px; border-radius: 999px;
+      background: color-mix(in srgb, var(--brand-primary) 12%, transparent);
+      color: var(--brand-primary); border: 1px solid color-mix(in srgb, var(--brand-primary) 28%, transparent);
+    }
+    body.dark .canal-pill { color: var(--brand-accent); }
+
+    .feed-list { list-style: none; display: flex; flex-direction: column; gap: 12px; }
+    .feed-card {
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: 14px; padding: 16px 18px; box-shadow: var(--box-shadow);
+    }
+    .feed-card h3 {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 15px; font-weight: 800; margin: 0; color: var(--text);
+    }
+    .feed-body { margin-top: 12px; font-size: 13px; line-height: 1.55; color: var(--text); }
+    .feed-body a { font-weight: 700; color: var(--brand-primary); text-decoration: underline; }
+    body.dark .feed-body a { color: var(--brand-accent); }
+    .feed-footer { font-size: 12px; color: var(--text-muted); margin: 14px 0 0; }
+
+    .spin-list { list-style: none; display: flex; flex-direction: column; gap: 12px; }
+    .spin-card {
+      display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-start;
+      padding: 14px 16px; border-radius: 14px;
+      border: 1px solid var(--card-border); background: var(--input-bg);
+    }
+    .spin-thumb {
+      width: 96px; height: 64px; border-radius: 10px; flex-shrink: 0;
+      background: linear-gradient(135deg, var(--brand-primary), var(--brand-accent));
+      opacity: .85;
+    }
+    .spin-card h3 { font-size: 14px; font-weight: 800; margin: 0 0 6px; }
+    .spin-card p { font-size: 12px; color: var(--text-muted); line-height: 1.5; margin: 0; }
+    .spin-meta { margin-top: 8px; font-size: 11px; color: var(--text-muted); }
+
+    .grid-atalhos {
+      display: grid; gap: 12px;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+    }
+    .atalho {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 16px 18px; border-radius: 12px;
+      border: 1px solid var(--card-border); background: var(--input-bg);
+      color: var(--text); text-decoration: none;
+    }
+    .atalho:hover {
+      border-color: var(--brand-primary);
+      background: color-mix(in srgb, var(--brand-primary) 10%, transparent);
+    }
+    .atalho .ic {
+      width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
+      background: color-mix(in srgb, var(--brand-primary) 18%, transparent);
+      color: var(--brand-primary);
+      display: flex; align-items: center; justify-content: center;
+    }
+    body.dark .atalho .ic { color: var(--brand-accent); }
+    .atalho .tit { display: flex; align-items: flex-start; gap: 8px; }
+    .atalho .tit span { flex: 1; font-size: 14px; font-weight: 700; line-height: 1.35; }
+    .atalho .tit svg { color: var(--text-muted); flex-shrink: 0; margin-top: 2px; }
+    .atalho p { margin: 8px 0 0; font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+
+    .nota-mock {
+      display: flex; align-items: flex-start; gap: 6px; margin-top: 12px;
+      font-size: 11px; font-weight: 700; padding: 6px 10px; border-radius: 8px;
+      background: rgba(245,158,11,.12); color: #a16207; border: 1px dashed rgba(245,158,11,.55);
+    }
+    body.dark .nota-mock { color: var(--amarelo); }
+
+    .legenda {
+      max-width: 1100px; margin: 0 auto; padding: 0 20px 48px;
+    }
+    .legenda .content-box { font-size: 12px; color: var(--text-muted); }
+    .legenda ul { padding-left: 18px; margin-top: 10px; }
+    .legenda li { margin-bottom: 6px; }
+    .legenda strong { color: var(--text); }
+    .removed { text-decoration: line-through; opacity: .7; }
+  </style>
+</head>
+<body>
+  <div class="mock-banner">
+    <span>Mockup 4/N — Home · perfil <strong>Operador</strong> · template <strong>Padrão</strong> · whitelabel fictício «Casa Aurora»</span>
+    <button type="button" id="btn-tema">Alternar tema claro / escuro</button>
+  </div>
+
+  <div class="page-shell">
+
+    <!-- 1 — Boas-vindas -->
+    <span class="block-tag">Bloco 1 · Boas-vindas (whitelabel)</span>
+    <div class="welcome-card">
+      <div class="topbar"></div>
+      <div class="welcome-row">
+        <div class="brand-mark" aria-hidden="true">CA</div>
+        <div style="flex:1;min-width:200px">
+          <h1>Olá, Marina Souza!</h1>
+          <p class="role-label">Operador</p>
+          <span class="op-chip">Casa Aurora</span>
+          <p class="welcome-sub">Sua operação, seus dados.
+A inteligência que a Spin construiu para a sua necessidade. Tudo que você precisa para ver, decidir e transformar gestão em resultado.</p>
+        </div>
+      </div>
+      <p class="nota-mock">Cores / logo / fundo = <code>operadoraBrand</code> (não paleta Spin). Chip = <strong>só o nome da operadora</strong> do escopo. Subtítulo canónico do Padrão.</p>
+    </div>
+
+    <!-- 2 — KPIs -->
+    <span class="block-tag">Bloco 2 · Principais KPIs — mesas da operadora (MTD + MoM)</span>
+    <div class="content-box">
+      <h2 class="section-title">Principais KPIs</h2>
+      <p class="mes-sub">Setembro 2026 · só Casa Aurora</p>
+      <div class="grid-kpi-3">
+        <article class="kpi-card">
+          <div class="kpi-bar"></div>
+          <div class="kpi-body">
+            <div class="kpi-head">
+              <span class="kpi-ic" aria-hidden="true">↑</span>
+              <span class="kpi-label">GGR do mês</span>
+            </div>
+            <div class="kpi-value">R$ 1.284.500,00</div>
+            <div class="kpi-mom">
+              <div class="row"><span style="color:var(--text-muted)">Mês anterior</span><span style="font-weight:600">R$ 1.102.300,00</span></div>
+              <div><span class="up">↑ +16,5%</span> <span style="color:var(--text-muted);font-size:10px">vs mês anterior</span></div>
+            </div>
+          </div>
+        </article>
+        <article class="kpi-card">
+          <div class="kpi-bar sec"></div>
+          <div class="kpi-body">
+            <div class="kpi-head">
+              <span class="kpi-ic sec" aria-hidden="true">⇅</span>
+              <span class="kpi-label">Turnover do mês</span>
+            </div>
+            <div class="kpi-value">R$ 18.420.000,00</div>
+            <div class="kpi-mom">
+              <div class="row"><span style="color:var(--text-muted)">Mês anterior</span><span style="font-weight:600">R$ 16.880.000,00</span></div>
+              <div><span class="up">↑ +9,1%</span> <span style="color:var(--text-muted);font-size:10px">vs mês anterior</span></div>
+            </div>
+          </div>
+        </article>
+        <article class="kpi-card">
+          <div class="kpi-bar accent"></div>
+          <div class="kpi-body">
+            <div class="kpi-head">
+              <span class="kpi-ic accent" aria-hidden="true">#</span>
+              <span class="kpi-label">Apostas do mês</span>
+            </div>
+            <div class="kpi-value">2.145.820</div>
+            <div class="kpi-mom">
+              <div class="row"><span style="color:var(--text-muted)">Mês anterior</span><span style="font-weight:600">1.980.110</span></div>
+              <div><span class="up">↑ +8,4%</span> <span style="color:var(--text-muted);font-size:10px">vs mês anterior</span></div>
+            </div>
+          </div>
+        </article>
+      </div>
+
+      <p class="mesa-sub">Top 3 mesas · resultado do mês + posição no lobby</p>
+      <div class="grid-mesa-3">
+        <article class="mesa-card">
+          <div class="mesa-strip bj" aria-hidden="true"></div>
+          <div class="mesa-body">
+            <div class="mesa-top">
+              <div>
+                <div class="mesa-nome">Blackjack 1</div>
+                <div class="mesa-meta">Casa Aurora</div>
+              </div>
+              <span class="canal-pill" style="margin-top:0">Dedicada</span>
+            </div>
+            <div class="mesa-metrics">
+              <div>
+                <div class="lab">GGR do mês</div>
+                <div class="val">R$ 412.800</div>
+              </div>
+              <div>
+                <div class="lab">UAP</div>
+                <div class="val">1.284</div>
+              </div>
+              <div>
+                <div class="lab">Turnover</div>
+                <div class="val">R$ 5,2 mi</div>
+              </div>
+              <div>
+                <div class="lab">Posicionamento</div>
+                <div class="val"><span class="pos-badge top">#2</span></div>
+              </div>
+            </div>
+          </div>
+        </article>
+        <article class="mesa-card">
+          <div class="mesa-strip roleta" aria-hidden="true"></div>
+          <div class="mesa-body">
+            <div class="mesa-top">
+              <div>
+                <div class="mesa-nome">Roleta Speed</div>
+                <div class="mesa-meta">Casa Aurora</div>
+              </div>
+              <span class="canal-pill" style="margin-top:0">Dedicada</span>
+            </div>
+            <div class="mesa-metrics">
+              <div>
+                <div class="lab">GGR do mês</div>
+                <div class="val">R$ 298.150</div>
+              </div>
+              <div>
+                <div class="lab">UAP</div>
+                <div class="val">962</div>
+              </div>
+              <div>
+                <div class="lab">Turnover</div>
+                <div class="val">R$ 3,8 mi</div>
+              </div>
+              <div>
+                <div class="lab">Posicionamento</div>
+                <div class="val"><span class="pos-badge top">#5</span></div>
+              </div>
+            </div>
+          </div>
+        </article>
+        <article class="mesa-card">
+          <div class="mesa-strip baccarat" aria-hidden="true"></div>
+          <div class="mesa-body">
+            <div class="mesa-top">
+              <div>
+                <div class="mesa-nome">Speed Baccarat</div>
+                <div class="mesa-meta">Sports Club</div>
+              </div>
+              <span class="canal-pill" style="margin-top:0">Network</span>
+            </div>
+            <div class="mesa-metrics">
+              <div>
+                <div class="lab">GGR do mês</div>
+                <div class="val">R$ 186.420</div>
+              </div>
+              <div>
+                <div class="lab">UAP</div>
+                <div class="val">741</div>
+              </div>
+              <div>
+                <div class="lab">Turnover</div>
+                <div class="val">R$ 2,4 mi</div>
+              </div>
+              <div>
+                <div class="lab">Posicionamento</div>
+                <div class="val"><span class="pos-badge mid">#11</span></div>
+              </div>
+            </div>
+          </div>
+        </article>
+      </div>
+
+      <p class="footer-hint">Quer saber mais? Acessa o Dashboard de <a href="#">Overview Spin</a> (aba Posicionamento e Dados por mesa).</p>
+      <p class="nota-mock"><strong>Top 3</strong> = maior GGR do mês. Abaixo do título: <strong>só o nome do estúdio</strong> (sem prefixo Dedicado/Network — o pill lateral já indica o canal). <strong>Posicionamento</strong> = só a posição mais recente. Faixa = identidade de jogo.</p>
+    </div>
+
+    <!-- 3 — Spin na Rede -->
+    <span class="block-tag">Bloco 3 · Spin na Rede (oculto se vazio no mês)</span>
+    <div class="content-box">
+      <h2 class="section-title">Spin na Rede</h2>
+      <ul class="spin-list">
+        <li class="spin-card">
+          <div class="spin-thumb" aria-hidden="true"></div>
+          <div style="flex:1;min-width:180px">
+            <h3>Casa Aurora em alta nas redes</h3>
+            <p>Menções recentes sobre as mesas ao vivo da operadora no período. Abra a reportagem completa no link externo.</p>
+            <p class="spin-meta">exemplo.com · 10 de setembro de 2026</p>
+          </div>
+        </li>
+      </ul>
+      <p class="nota-mock">Mesmo bloco do Investidor/Operador atual — some se não houver menções no mês de referência.</p>
+    </div>
+
+    <!-- 4 — Informações -->
+    <span class="block-tag">Bloco 4 · Informações — Informativos (perfil operador + escopo da casa)</span>
+    <div class="content-box">
+      <h2 class="section-title">Informações</h2>
+      <ul class="feed-list">
+        <li>
+          <article class="feed-card">
+            <h3>Manutenção programada — lobby Casa Aurora</h3>
+            <div class="feed-body">
+              <p>Janela de manutenção no domingo, 02:00–04:00. Em dúvida, abra o <a href="#">Overview Spin</a> ou fale com o suporte Spin.</p>
+            </div>
+            <p class="feed-footer">Equipe Spin · 12/09/26 - 09:00</p>
+          </article>
+        </li>
+        <li>
+          <article class="feed-card">
+            <h3>Novo relatório de mesas Network</h3>
+            <div class="feed-body">
+              <p>Confira o detalhamento diário das mesas Network atribuídas à sua casa no Overview Spin.</p>
+            </div>
+            <p class="feed-footer">Equipe Spin · 05/09/26 - 14:30</p>
+          </article>
+        </li>
+      </ul>
+      <p class="nota-mock">Perfil <code>operador</code> + filtro <code>operador_escopo</code> da operadora. Sem Portal RH / Academy. Código atual: lista completa do mês (sem «Li e Ocultar» staff) — confirmar se quer migrar para janela 10 dias + «Li e Ocultar» como canal externo.</p>
+    </div>
+
+    <!-- 5 — Acesso rápido -->
+    <span class="block-tag">Bloco 5 · Acesso rápido (curado · não dump do menu)</span>
+    <div class="content-box">
+      <h2 class="section-title">Acesso rápido</h2>
+      <p class="hint">Clique em um atalho abaixo para ir diretamente à página desejada.</p>
+      <div class="grid-atalhos">
+        <a class="atalho" href="#">
+          <span class="ic">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="12" height="12" x="2" y="10" rx="2"/><path d="m17.92 14 3.5-3.5a2.12 2.12 0 0 0 0-3l-5-4.92a2.12 2.12 0 0 0-3 0L10 6.8"/><path d="M6 18h.01"/><circle cx="6" cy="14" r="2"/></svg>
+          </span>
+          <div style="flex:1;min-width:0">
+            <div class="tit">
+              <span>Overview Spin</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </div>
+            <p>Resultados das mesas ao vivo da sua operadora.</p>
+          </div>
+        </a>
+        <a class="atalho" href="#">
+          <span class="ic">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+          </span>
+          <div style="flex:1;min-width:0">
+            <div class="tit">
+              <span>Ajuda</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </div>
+            <p>Conheça as funcionalidades da plataforma, o glossário, tutoriais e soluções para problemas comuns.</p>
+          </div>
+        </a>
+      </div>
+      <p class="nota-mock">Lista curada do Padrão (já no código). <strong>Fora:</strong> <span class="removed">dump do menu</span>. Páginas extras só entram se produto liberar na matriz <strong>e</strong> forem adicionadas à lista curada (não automáticas).</p>
+    </div>
+
+  </div>
+
+  <div class="legenda">
+    <div class="content-box">
+      <h2 class="section-title">Notas para aprovação — Home Operador Padrão</h2>
+      <ul>
+        <li><strong>Estado no código:</strong> esta Home <strong>já existe</strong> (<code>HomeOperadorPadrao</code>). O mockup valida visual whitelabel + escopo antes de templates por marca (Blaze, CDA…).</li>
+        <li><strong>Brand obrigatório:</strong> tokens da operadora no fundo, faixa, KPIs e atalhos — não usar roxo Spin quando <code>useBrand</code>.</li>
+        <li><strong>Escopo:</strong> KPIs e informativos só da(s) operadora(s) do usuário (regra atual: 1 operadora por Operador).</li>
+        <li><strong>Blocos:</strong> boas-vindas (chip só com nome da operadora) → KPIs MTD/MoM + <strong>Top 3 mesas</strong> (GGR do mês + posição no lobby) → Spin na Rede → Informações → Acesso rápido.</li>
+        <li><strong>Top 3 mesas (novo):</strong> ranking por GGR do mês; subtítulo = <strong>estúdio</strong>; métrica <strong>Posicionamento</strong> = só valor mais recente (sem vs ontem). Identidade de jogo na faixa; Dedicada/Network no pill.</li>
+        <li><strong>Fora deste mockup:</strong> templates dedicados por marca; cadastro/playbook/lives de canal; dump do menu.</li>
+        <li><strong>Decisão opcional:</strong> Informativos com «Li e Ocultar» + 10 dias (como Influencer/Afiliado) ou manter lista atual do Operador?</li>
+        <li><strong>Fluxo:</strong> só aprovação de mockups agora — implantação em lote depois (Agência + ajustes Operador, se houver).</li>
+        <li><strong>Como abrir:</strong> duplo clique / navegador. Botão no topo alterna claro/escuro.</li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById("btn-tema").addEventListener("click", function () {
+      document.body.classList.toggle("dark");
+    });
+  </script>
+</body>
+</html>

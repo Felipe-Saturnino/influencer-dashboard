@@ -36,7 +36,7 @@ O Agent **não** redesenha a página. Só insere conteúdo.
 | **Data** | Sempre `DD/MM/AAAA` (dia da publicação da release, em geral a sexta da semana). |
 | **Cards** | Tipo **Novo** (roxo) · **Melhoria** (azul) · **Correção** (verde). Título curto + 1–2 frases. Chip com o **label do menu** da página. Link «Acesse a página AQUI» só quando houver página clara. |
 | **Permissão** | Cada card tem `paginas: "*" \| PageKey[]`. Quem **não** tem permissão de Ver ou Próprios nessa página **não vê o card**. Se todos os cards de uma release ficarem ocultos, a release some para aquele perfil. |
-| **Transversal** | Feature de toda a plataforma: `paginas: "*"`. Visível para quem acessa Versionamento. Várias páginas: `paginas: ["agenda", "resultados"]` (vê o card se tiver Ver em **pelo menos uma**). |
+| **Transversal** | Feature de toda a plataforma: `paginas: "*"`. Chip e seção do filtro = **Toda Plataforma**. Visível para quem acessa Versionamento. Várias páginas: `paginas: ["agenda", "resultados"]` (vê o card se tiver Ver em **pelo menos uma**). |
 | **Busca** | Palavras-chave em título da release, resumo, data (`13/09/2026` e `13092026`), `Release #N`, tipo, seção, título e texto dos cards. Várias palavras = **E** (todas). Ignorar acentos. Campo opcional `palavrasChave` no release e no item. |
 | **Histórico após inserir** | Continua recolhido (estado inicial da página). Não forçar acordeões abertos. |
 
@@ -165,7 +165,7 @@ O chip mostra o **label**. O campo `paginas` é `"*"` ou a **PageKey**. Home (fo
 | Plataforma | Gestão de Estúdios | `gestao_mesas` |
 | Plataforma | Status Técnico | `status_tecnico` |
 
-A seção do chip vem do menu (`secaoPaginaVersionamento`); transversal = **Geral**.
+A seção do chip vem do menu (`secaoPaginaVersionamento`); transversal (`paginas: "*"`) = **Toda Plataforma**.
 
 ---
 

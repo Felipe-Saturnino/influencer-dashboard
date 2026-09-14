@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, type CSSProperties, type ReactNode } from "react";
-import { Loader2, Search, Lock, CircleCheckBig, VenetianMask, ShieldBan, Info, Megaphone } from "lucide-react";
+import { Copy, Loader2, Search, Lock, CircleCheckBig, VenetianMask, ShieldBan, Info, Megaphone } from "lucide-react";
 import { FiltroBarTabButton, FILTRO_BAR_TAB_ICON_PROPS, onFiltroBarTabsKeyDown } from "../../components/dashboard";
 import { supabase } from "../../lib/supabase";
 import { FONT, BASE_COLORS } from "../../constants/theme";
@@ -11,16 +11,28 @@ import {
   labelAutorMensagemPublica,
   arquivoCanalDenunciaPermitido,
   CANAL_DENUNCIA_ANEXO_ACCEPT,
+  CANAL_DENUNCIA_ANEXO_MAX_COUNT,
   MSG_CANAL_PROTOCOLO_NAO_ENCONTRADO,
+  MSG_CANAL_PROTOCOLO_FORMATO,
   MSG_CANAL_RATE_LIMITED,
+  MSG_CANAL_ANEXO_FALHA_ENVIO,
+  MSG_CANAL_ANEXO_RH_SO_NOME,
+  MSG_CANAL_TEXTO_INVALIDO,
   PROTOCOLO_CANAL_PLACEHOLDER,
   normalizarProtocoloCanal,
+  isProtocoloCanalFormatoValido,
+  emailCanalDenunciaValido,
+  mapComConcurrency,
+  statusLabel,
+  type DenunciaStatusDb,
   type TipoDenunciaKey,
   type CanalDenunciaMensagemPublica,
 } from "../../lib/canalDenunciasSpin";
 import { buildLoginPath } from "../../lib/appRoutes";
 import { CampoUploadArquivos } from "../../components/CampoUploadArquivos";
 import { formatarTelefoneBr } from "../../lib/rhFuncionarioValidators";
+
+const UPLOAD_CONCURRENCY = 3;
 
 const BADGES: {
   Icon: typeof Lock;
@@ -126,6 +138,7 @@ export default function CanalDenunciasSpinPage() {
   const [erroEnvio, setErroEnvio] = useState<string | null>(null);
   const [protocoloOk, setProtocoloOk] = useState<string | null>(null);
   const [avisoAnexoEnvio, setAvisoAnexoEnvio] = useState<string | null>(null);
+  const [protocoloCopiado, setProtocoloCopiado] = useState(false);
 
   const [protocoloConsulta, setProtocoloConsulta] = useState("");
   const [emailConsulta, setEmailConsulta] = useState("");
@@ -160,12 +173,15 @@ export default function CanalDenunciasSpinPage() {
     if (desejaIdentificar === "sim") {
       if (!nome.trim()) return setErroEnvio("Informe o nome.");
       if (!email.trim()) return setErroEnvio("Informe o e-mail.");
-      if (!/\S+@\S+\.\S+/.test(email)) return setErroEnvio("E-mail inválido.");
+      if (!emailCanalDenunciaValido(email)) return setErroEnvio("E-mail inválido.");
       if (!telefone.trim()) return setErroEnvio("Informe o telefone.");
     }
     if (tiposSel.size === 0) return setErroEnvio("Selecione ao menos um tipo de relato.");
     if (tiposSel.has("outro") && !outroTexto.trim()) return setErroEnvio("Descreva o motivo em «Outro».");
     if (!relato.trim()) return setErroEnvio("Preencha o relato do ocorrido.");
+    if (arquivosEnvio.length > CANAL_DENUNCIA_ANEXO_MAX_COUNT) {
+      return setErroEnvio(`No máximo ${CANAL_DENUNCIA_ANEXO_MAX_COUNT} anexos por envio.`);
+    }
 
     for (const nf of arquivosEnvio) {
       if (!arquivoCanalDenunciaPermitido(nf.file)) {
@@ -175,6 +191,7 @@ export default function CanalDenunciasSpinPage() {
 
     setEnviando(true);
     setAvisoAnexoEnvio(null);
+    setProtocoloCopiado(false);
     try {
       const tiposArr = [...tiposSel];
       const row = {
@@ -209,15 +226,17 @@ export default function CanalDenunciasSpinPage() {
             ? MSG_CANAL_RATE_LIMITED
             : code === "identificacao_incompleta"
               ? "Preencha nome, e-mail e telefone para se identificar."
-              : code === "outro_sem_descricao"
-                ? "Descreva o motivo em «Outro»."
-                : code === "tipos_vazio"
-                  ? "Selecione ao menos um tipo de relato."
-                  : code === "relato_vazio"
-                    ? "Preencha o relato do ocorrido."
-                    : code === "tipo_invalido"
-                      ? "Tipo de relato inválido. Atualize a página e tente novamente."
-                      : "Não foi possível registrar a denúncia. Tente novamente.";
+              : code === "email_invalido"
+                ? "E-mail inválido."
+                : code === "outro_sem_descricao"
+                  ? "Descreva o motivo em «Outro»."
+                  : code === "tipos_vazio"
+                    ? "Selecione ao menos um tipo de relato."
+                    : code === "relato_vazio"
+                      ? "Preencha o relato do ocorrido."
+                      : code === "tipo_invalido"
+                        ? "Tipo de relato inválido. Atualize a página e tente novamente."
+                        : "Não foi possível registrar a denúncia. Tente novamente.";
         setErroEnvio(msg);
         setEnviando(false);
         return;
@@ -225,42 +244,45 @@ export default function CanalDenunciasSpinPage() {
       const denunciaId = ins.id;
       const prot = ins.protocolo;
 
-      let falhaAnexo = false;
-      if (arquivosEnvio.length > 0) {
-        for (let i = 0; i < arquivosEnvio.length; i++) {
-          const f = arquivosEnvio[i].file;
-          const safe = sanitizeStorageFileName(f.name);
-          const path = `${denunciaId}/${Date.now()}_${i}_${safe}`;
-          const { error: upErr } = await supabase.storage.from(STORAGE_BUCKET).upload(path, f, {
-            contentType: f.type || undefined,
-            upsert: false,
-          });
-          if (upErr) {
-            falhaAnexo = true;
-            continue;
-          }
-          const { error: insAnexoErr } = await supabase.from("canal_denuncia_anexos").insert({
-            denuncia_id: denunciaId,
-            anotacao_id: null,
-            storage_path: path,
-            file_name: f.name,
-            content_type: f.type || null,
-            file_size: f.size,
-          });
-          if (insAnexoErr) falhaAnexo = true;
-        }
-      }
+      const falhaAnexo = await mapComConcurrency(arquivosEnvio, UPLOAD_CONCURRENCY, async (nf, i) => {
+        const f = nf.file;
+        const safe = sanitizeStorageFileName(f.name);
+        const path = `${denunciaId}/${Date.now()}_${i}_${safe}`;
+        const { error: upErr } = await supabase.storage.from(STORAGE_BUCKET).upload(path, f, {
+          contentType: f.type || undefined,
+          upsert: false,
+        });
+        if (upErr) return false;
+        const { error: insAnexoErr } = await supabase.from("canal_denuncia_anexos").insert({
+          denuncia_id: denunciaId,
+          anotacao_id: null,
+          storage_path: path,
+          file_name: f.name,
+          content_type: f.type || null,
+          file_size: f.size,
+        });
+        return !insAnexoErr;
+      });
 
       if (falhaAnexo) {
-        setAvisoAnexoEnvio(
-          "A denúncia foi registrada, mas um ou mais anexos não acompanharam o protocolo. Guarde o número e, se precisar, envie as evidências na aba «Consultar denúncia».",
-        );
+        setAvisoAnexoEnvio(MSG_CANAL_ANEXO_FALHA_ENVIO);
       }
       setProtocoloOk(prot);
     } catch {
       setErroEnvio("Erro inesperado. Tente novamente.");
     } finally {
       setEnviando(false);
+    }
+  }
+
+  async function handleCopiarProtocolo() {
+    if (!protocoloOk) return;
+    try {
+      await navigator.clipboard.writeText(protocoloOk);
+      setProtocoloCopiado(true);
+      window.setTimeout(() => setProtocoloCopiado(false), 2500);
+    } catch {
+      setProtocoloCopiado(false);
     }
   }
 
@@ -279,6 +301,10 @@ export default function CanalDenunciasSpinPage() {
     const p = normalizarProtocoloCanal(protocoloConsulta);
     if (!p) {
       setConsultaErro("Informe o protocolo.");
+      return;
+    }
+    if (!isProtocoloCanalFormatoValido(p)) {
+      setConsultaErro(MSG_CANAL_PROTOCOLO_FORMATO);
       return;
     }
     setConsultando(true);
@@ -316,8 +342,20 @@ export default function CanalDenunciasSpinPage() {
       setRespostaErro("Informe o protocolo.");
       return;
     }
+    if (!isProtocoloCanalFormatoValido(p)) {
+      setRespostaErro(MSG_CANAL_PROTOCOLO_FORMATO);
+      return;
+    }
     if (!txt) {
       setRespostaErro("Digite sua mensagem.");
+      return;
+    }
+    if (txt.length > 8000) {
+      setRespostaErro(MSG_CANAL_TEXTO_INVALIDO);
+      return;
+    }
+    if (respostaFiles.length > CANAL_DENUNCIA_ANEXO_MAX_COUNT) {
+      setRespostaErro(`No máximo ${CANAL_DENUNCIA_ANEXO_MAX_COUNT} anexos por mensagem.`);
       return;
     }
     for (const nf of respostaFiles) {
@@ -345,6 +383,8 @@ export default function CanalDenunciasSpinPage() {
           setRespostaErro("Esta denúncia já foi encerrada. Não é possível enviar novas mensagens.");
         } else if (res?.error === "not_found") {
           setRespostaErro(MSG_CANAL_PROTOCOLO_NAO_ENCONTRADO);
+        } else if (res?.error === "invalid_text") {
+          setRespostaErro(MSG_CANAL_TEXTO_INVALIDO);
         } else {
           setRespostaErro("Não foi possível enviar a mensagem. Tente novamente.");
         }
@@ -354,17 +394,14 @@ export default function CanalDenunciasSpinPage() {
       const denunciaId = res.denuncia_id;
       let falhaAnexo = false;
       if (anotacaoId && denunciaId && respostaFiles.length > 0) {
-        for (let i = 0; i < respostaFiles.length; i++) {
-          const f = respostaFiles[i].file;
+        falhaAnexo = await mapComConcurrency(respostaFiles, UPLOAD_CONCURRENCY, async (nf, i) => {
+          const f = nf.file;
           const safe = sanitizeStorageFileName(f.name);
           const path = `${denunciaId}/${anotacaoId}/${Date.now()}_${i}_${safe}`;
           const { error: upErr } = await supabase.storage
             .from(STORAGE_BUCKET)
             .upload(path, f, { contentType: f.type || undefined });
-          if (upErr) {
-            falhaAnexo = true;
-            continue;
-          }
+          if (upErr) return false;
           const { error: insAnexoErr } = await supabase.from("canal_denuncia_anexos").insert({
             denuncia_id: denunciaId,
             anotacao_id: anotacaoId,
@@ -373,8 +410,8 @@ export default function CanalDenunciasSpinPage() {
             content_type: f.type || null,
             file_size: f.size,
           });
-          if (insAnexoErr) falhaAnexo = true;
-        }
+          return !insAnexoErr;
+        });
       }
       setRespostaTexto("");
       setRespostaFiles([]);
@@ -383,7 +420,7 @@ export default function CanalDenunciasSpinPage() {
           "Mensagem enviada, mas um ou mais anexos não acompanharam. A equipe RH já pode ver o texto.",
         );
       } else {
-        setRespostaOk("Mensagem enviada. A equipe RH receberá sua resposta na Central de Denúncias.");
+        setRespostaOk("Mensagem enviada. A equipe RH receberá sua resposta.");
       }
       const { data: refreshed } = await supabase.rpc("consultar_denuncia_spin", {
         p_protocolo: p,
@@ -401,6 +438,44 @@ export default function CanalDenunciasSpinPage() {
     } finally {
       setEnviandoResposta(false);
     }
+  }
+
+  function adicionarAnexosEnvio(files: File[]) {
+    const ok = files.filter((f) => arquivoCanalDenunciaPermitido(f));
+    if (ok.length < files.length) {
+      setErroEnvio("Anexe apenas PDF, JPG, PNG ou MP4, com no máximo 20MB por arquivo.");
+    }
+    if (ok.length === 0) return;
+    setArquivosEnvio((prev) => {
+      const room = CANAL_DENUNCIA_ANEXO_MAX_COUNT - prev.length;
+      if (room <= 0) {
+        setErroEnvio(`No máximo ${CANAL_DENUNCIA_ANEXO_MAX_COUNT} anexos por envio.`);
+        return prev;
+      }
+      if (ok.length > room) {
+        setErroEnvio(`No máximo ${CANAL_DENUNCIA_ANEXO_MAX_COUNT} anexos por envio.`);
+      }
+      return [...prev, ...ok.slice(0, room).map((file) => ({ id: crypto.randomUUID(), file }))];
+    });
+  }
+
+  function adicionarAnexosResposta(files: File[]) {
+    const ok = files.filter((f) => arquivoCanalDenunciaPermitido(f));
+    if (ok.length < files.length) {
+      setRespostaErro("Anexe apenas PDF, JPG, PNG ou MP4, com no máximo 20MB por arquivo.");
+    }
+    if (ok.length === 0) return;
+    setRespostaFiles((prev) => {
+      const room = CANAL_DENUNCIA_ANEXO_MAX_COUNT - prev.length;
+      if (room <= 0) {
+        setRespostaErro(`No máximo ${CANAL_DENUNCIA_ANEXO_MAX_COUNT} anexos por mensagem.`);
+        return prev;
+      }
+      if (ok.length > room) {
+        setRespostaErro(`No máximo ${CANAL_DENUNCIA_ANEXO_MAX_COUNT} anexos por mensagem.`);
+      }
+      return [...prev, ...ok.slice(0, room).map((file) => ({ id: crypto.randomUUID(), file }))];
+    });
   }
 
   return (
@@ -540,6 +615,29 @@ export default function CanalDenunciasSpinPage() {
                 >
                   Protocolo: {protocoloOk}
                 </p>
+                <div style={{ display: "flex", justifyContent: "center", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
+                  <button
+                    type="button"
+                    onClick={() => void handleCopiarProtocolo()}
+                    style={{
+                      padding: "10px 16px",
+                      borderRadius: 10,
+                      border: "1px solid rgba(112,202,228,0.45)",
+                      background: "rgba(112,202,228,0.12)",
+                      color: "#e5dce1",
+                      fontWeight: 700,
+                      fontSize: 13,
+                      cursor: "pointer",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 8,
+                      fontFamily: FONT.body,
+                    }}
+                  >
+                    <Copy size={15} aria-hidden />
+                    {protocoloCopiado ? "Protocolo copiado" : "Copiar protocolo"}
+                  </button>
+                </div>
                 <p style={{ fontSize: 13, color: "#a89bc4", lineHeight: 1.55, maxWidth: 420, margin: "0 auto 20px" }}>
                   Guarde este protocolo. Na aba «Consultar denúncia», informe o número
                   {desejaIdentificar === "sim"
@@ -550,7 +648,27 @@ export default function CanalDenunciasSpinPage() {
                 </p>
                 {avisoAnexoEnvio ? (
                   <div role="alert" style={{ ...alertBox, margin: "0 auto 20px", maxWidth: 480, textAlign: "left" }}>
-                    {avisoAnexoEnvio}
+                    <p style={{ margin: "0 0 10px" }}>{avisoAnexoEnvio}</p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (protocoloOk) setProtocoloConsulta(protocoloOk);
+                        setAba("consultar");
+                      }}
+                      style={{
+                        padding: "8px 14px",
+                        borderRadius: 10,
+                        border: "1px solid rgba(245,158,11,0.45)",
+                        background: "rgba(245,158,11,0.12)",
+                        color: "#fbbf24",
+                        fontWeight: 700,
+                        fontSize: 12,
+                        cursor: "pointer",
+                        fontFamily: FONT.body,
+                      }}
+                    >
+                      Ir para Consultar
+                    </button>
                   </div>
                 ) : null}
                 <button
@@ -558,6 +676,7 @@ export default function CanalDenunciasSpinPage() {
                   onClick={() => {
                     setProtocoloOk(null);
                     setAvisoAnexoEnvio(null);
+                    setProtocoloCopiado(false);
                     setDesejaIdentificar("");
                     setNome("");
                     setTelefone("");
@@ -740,21 +859,11 @@ export default function CanalDenunciasSpinPage() {
                       label: nf.file.name,
                       pendente: true,
                     }))}
-                    onAdd={(files) => {
-                      const ok = files.filter((f) => arquivoCanalDenunciaPermitido(f));
-                      if (ok.length < files.length) {
-                        setErroEnvio("Anexe apenas PDF, JPG, PNG ou MP4, com no máximo 20MB por arquivo.");
-                      }
-                      if (ok.length === 0) return;
-                      setArquivosEnvio((prev) => [
-                        ...prev,
-                        ...ok.map((file) => ({ id: crypto.randomUUID(), file })),
-                      ]);
-                    }}
+                    onAdd={adicionarAnexosEnvio}
                     onRemove={(key) => setArquivosEnvio((prev) => prev.filter((nf) => nf.id !== key))}
                     disabled={enviando}
                     t={uploadTheme}
-                    hint="PDF, JPG, PNG ou MP4 · até 20MB por arquivo"
+                    hint={`PDF, JPG, PNG ou MP4 · até 20MB · máx. ${CANAL_DENUNCIA_ANEXO_MAX_COUNT} arquivos`}
                     pendingHint="Anexos serão enviados junto com a denúncia."
                   />
                 </div>
@@ -870,7 +979,7 @@ export default function CanalDenunciasSpinPage() {
                 }}
               >
                 {consultando ? <Loader2 className="app-lucide-spin" size={18} color="#fff" aria-hidden /> : <Search size={18} aria-hidden />}
-                Pesquisar
+                {consultando ? "Pesquisando…" : "Pesquisar"}
               </button>
             </div>
             <label
@@ -905,7 +1014,40 @@ export default function CanalDenunciasSpinPage() {
             )}
             {consultaData && (
               <div style={{ marginTop: 24 }}>
-                <h2 style={{ fontSize: 14, fontWeight: 700, color: "#fff", marginBottom: 16 }}>Linha do tempo</h2>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 12,
+                    flexWrap: "wrap",
+                    marginBottom: 16,
+                  }}
+                >
+                  <h2 style={{ fontSize: 14, fontWeight: 700, color: "#fff", margin: 0 }}>Linha do tempo</h2>
+                  <span
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      fontSize: 11,
+                      fontWeight: 700,
+                      padding: "4px 10px",
+                      borderRadius: 20,
+                      background: "rgba(112,202,228,0.15)",
+                      color: "var(--brand-icon, #70cae4)",
+                      border: "1px solid rgba(112,202,228,0.35)",
+                    }}
+                  >
+                    {statusLabel(
+                      (consultaData.status === "procedente" ||
+                      consultaData.status === "nao_procedente" ||
+                      consultaData.status === "em_avaliacao" ||
+                      consultaData.status === "relatado"
+                        ? consultaData.status
+                        : "relatado") as DenunciaStatusDb,
+                    )}
+                  </span>
+                </div>
                 <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 18 }}>
                   <TimelineItem titulo="Relatado" subtitulo={fmtDataHora(consultaData.relatado_em as string)} />
                   {(consultaData.status === "em_avaliacao" ||
@@ -916,7 +1058,10 @@ export default function CanalDenunciasSpinPage() {
                     )}
                   {(consultaData.status === "procedente" || consultaData.status === "nao_procedente") && (
                     <>
-                      <TimelineItem titulo="Denúncia atendida" subtitulo={fmtDataHora(consultaData.atendida_em as string)} />
+                      <TimelineItem
+                        titulo={statusLabel(consultaData.status as DenunciaStatusDb)}
+                        subtitulo={fmtDataHora(consultaData.atendida_em as string)}
+                      />
                       {typeof consultaData.descricao_resolucao === "string" && consultaData.descricao_resolucao && (
                         <li
                           style={{
@@ -990,11 +1135,18 @@ export default function CanalDenunciasSpinPage() {
                             {m.texto}
                           </div>
                           {(m.anexos ?? []).length > 0 ? (
-                            <ul style={{ margin: "10px 0 0", paddingLeft: 18, fontSize: 12, color: "#b8a8d4" }}>
-                              {(m.anexos ?? []).map((ax) => (
-                                <li key={ax.id}>{ax.file_name}</li>
-                              ))}
-                            </ul>
+                            <div style={{ marginTop: 10 }}>
+                              <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12, color: "#b8a8d4" }}>
+                                {(m.anexos ?? []).map((ax) => (
+                                  <li key={ax.id}>{ax.file_name}</li>
+                                ))}
+                              </ul>
+                              {!doRelator ? (
+                                <p style={{ margin: "8px 0 0", fontSize: 11, color: "#9b8ab8", lineHeight: 1.45 }}>
+                                  {MSG_CANAL_ANEXO_RH_SO_NOME}
+                                </p>
+                              ) : null}
+                            </div>
                           ) : null}
                         </li>
                       );
@@ -1044,21 +1196,11 @@ export default function CanalDenunciasSpinPage() {
                           label: nf.file.name,
                           pendente: true,
                         }))}
-                        onAdd={(files) => {
-                          const ok = files.filter((f) => arquivoCanalDenunciaPermitido(f));
-                          if (ok.length < files.length) {
-                            setRespostaErro("Anexe apenas PDF, JPG, PNG ou MP4, com no máximo 20MB por arquivo.");
-                          }
-                          if (ok.length === 0) return;
-                          setRespostaFiles((prev) => [
-                            ...prev,
-                            ...ok.map((file) => ({ id: crypto.randomUUID(), file })),
-                          ]);
-                        }}
+                        onAdd={adicionarAnexosResposta}
                         onRemove={(key) => setRespostaFiles((prev) => prev.filter((nf) => nf.id !== key))}
                         disabled={enviandoResposta}
                         t={uploadTheme}
-                        hint="Opcional · PDF, JPG, PNG ou MP4 · até 20MB por arquivo"
+                        hint={`Opcional · PDF, JPG, PNG ou MP4 · até 20MB · máx. ${CANAL_DENUNCIA_ANEXO_MAX_COUNT} arquivos`}
                         pendingHint="Anexos serão enviados junto com a mensagem."
                       />
                     </div>

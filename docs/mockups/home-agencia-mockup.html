@@ -266,7 +266,7 @@
 </head>
 <body>
   <div class="mock-banner">
-    <span>Mockup 3/N — Home · perfil <strong>Agência</strong> · proposta · portfólio (escopo) · KPIs + lives + Informativos</span>
+    <span>Mockup 3/N — Home · perfil <strong>Agência</strong> · proposta · portfólio · KPIs + lives + alertas (cadastro + horas pendentes)</span>
     <button type="button" id="btn-tema">Alternar tema claro / escuro</button>
   </div>
 
@@ -300,6 +300,22 @@ Acompanhe os influencers vinculados à sua agência.</p>
         </p>
         <a class="alert-cta" href="#">Ir para Influencers</a>
         <p class="nota-mock">Agência <strong>não</strong> tem cadastro próprio de influencer — alerta é do <strong>portfólio</strong> (escopo). Contagem ilustrativa.</p>
+      </div>
+    </div>
+
+    <!-- 2b — Horas pendentes sem live agendada (portfólio) -->
+    <span class="block-tag">Bloco 2b · Horas pendentes sem live agendada (só quando houver no escopo)</span>
+    <div class="alert-box">
+      <svg class="alert-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>
+      </svg>
+      <div style="flex:1;min-width:0">
+        <div class="alert-title">AÇÃO NECESSÁRIA</div>
+        <p class="alert-body">
+          Há <strong>3 influencers</strong> no seu escopo com horas pendentes e sem live futura agendada (total de <strong>18,5 horas</strong>). Realize o agendamento na página de Agenda.
+        </p>
+        <a class="alert-cta" href="#">Ir para Agenda</a>
+        <p class="nota-mock">Mesma regra da Home Influencer, aplicada ao <strong>portfólio</strong>: cota com saldo (<code>horas_acordadas</code> − realizadas no ciclo) <strong>e</strong> nenhuma live futura. CTA → <strong>Agenda</strong>. Contagem e horas ilustrativas — na implantação pode listar nomes ou só o total.</p>
       </div>
     </div>
 
@@ -603,6 +619,7 @@ Acompanhe os influencers vinculados à sua agência.</p>
       <ul>
         <li><strong>Eixo:</strong> gestão de <strong>portfólio</strong> (escopo de influencers), não “minha jornada” pessoal como Influencer/Afiliado.</li>
         <li><strong>Bloco 2:</strong> alerta opcional de cadastros incompletos no escopo → Influencers. Sem alerta de Playbook próprio da agência.</li>
+        <li><strong>Bloco 2b (pedido):</strong> AÇÃO NECESSÁRIA quando houver influencers do escopo com <strong>horas pendentes</strong> da cota e <strong>sem live futura agendada</strong> → CTA <strong>Ir para Agenda</strong> (paridade com Home Influencer, visão portfólio).</li>
         <li><strong>Bloco 3:</strong> KPIs agregados do escopo (GGR / Investimento / ROI + conversão + lives), MoM, link Overview Influencer.</li>
         <li><strong>Bloco 4:</strong> próximas lives do portfólio (não pessoais). Sem bloco Feedbacks recentes na Home.</li>
         <li><strong>Bloco 5:</strong> Informativos perfil <code>agencia</code> (10 dias + «Li e Ocultar»).</li>

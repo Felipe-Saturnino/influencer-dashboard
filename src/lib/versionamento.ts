@@ -8,7 +8,11 @@ export type VersionamentoTipo = "novo" | "melhoria" | "correcao";
 
 export type VersionamentoItem = {
   tipo: VersionamentoTipo;
-  /** Página da feature. `"*"` = transversal (visível a quem acessa Versionamento). */
+  /**
+   * Página da feature.
+   * `"*"` = transversal (**Toda Plataforma**): visível a quem acessa Versionamento;
+   * chip e seção do filtro = `VERSIONAMENTO_SECAO_TODA_PLATAFORMA`.
+   */
   paginas: "*" | PageKey[];
   titulo: string;
   descricao: string;
@@ -45,6 +49,9 @@ export const VERSIONAMENTO_TIPOS: VersionamentoTipo[] = ["novo", "melhoria", "co
 export const MSG_VERSIONAMENTO_VAZIO = "Nenhuma release publicada.";
 export const MSG_VERSIONAMENTO_FILTRO = "Nenhuma release encontrada para os filtros selecionados.";
 
+/** Seção e chip quando `paginas: "*"` (transversal). */
+export const VERSIONAMENTO_SECAO_TODA_PLATAFORMA = "Toda Plataforma";
+
 const PAGINAS_GERAL: PageKey[] = ["home", "configuracoes", "simulador_login", "ajuda", "versionamento"];
 
 const LABEL_PAGINA_FORA_MENU: Partial<Record<PageKey, string>> = {
@@ -69,15 +76,15 @@ export function secaoPaginaVersionamento(pageKey: PageKey): string {
 }
 
 export function secaoDoItemVersionamento(item: VersionamentoItem): string {
-  if (item.paginas === "*") return "Geral";
+  if (item.paginas === "*") return VERSIONAMENTO_SECAO_TODA_PLATAFORMA;
   const primeira = item.paginas[0];
-  return primeira ? secaoPaginaVersionamento(primeira) : "Geral";
+  return primeira ? secaoPaginaVersionamento(primeira) : VERSIONAMENTO_SECAO_TODA_PLATAFORMA;
 }
 
 export function chipPaginaVersionamento(item: VersionamentoItem): string {
-  if (item.paginas === "*") return "Geral";
+  if (item.paginas === "*") return VERSIONAMENTO_SECAO_TODA_PLATAFORMA;
   const primeira = item.paginas[0];
-  return primeira ? labelPaginaVersionamento(primeira) : "Geral";
+  return primeira ? labelPaginaVersionamento(primeira) : VERSIONAMENTO_SECAO_TODA_PLATAFORMA;
 }
 
 export function pageKeyLinkVersionamento(item: VersionamentoItem): PageKey | null {
@@ -120,7 +127,7 @@ export function haystackRelease(release: VersionamentoRelease): string {
 export function haystackItem(item: VersionamentoItem, release: VersionamentoRelease): string {
   const paginasTxt =
     item.paginas === "*"
-      ? "Geral transversal plataforma"
+      ? `${VERSIONAMENTO_SECAO_TODA_PLATAFORMA} transversal`
       : item.paginas.map((k) => `${labelPaginaVersionamento(k)} ${secaoPaginaVersionamento(k)}`).join(" ");
   return [
     haystackRelease(release),

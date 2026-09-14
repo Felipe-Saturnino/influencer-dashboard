@@ -197,14 +197,14 @@ Páginas fora do menu lateral (`configuracoes`, `simulador_login`, `versionament
 ## Versionamento (`geral/Versionamento/`)
 
 - **PageKey:** `versionamento` — menu do avatar, **abaixo de Ajuda** e acima de Sair; **não** no menu lateral.
-- **Utilitária:** qualquer autenticado vê a página (`PAGES_SEM_MATRIZ_ESCOPO_TIPO` + seed `can_view='sim'`). Cards filtram por permissão de Ver/Próprios da página da feature (`paginas: "*" | PageKey[]`).
+- **Utilitária:** qualquer autenticado vê a página (`PAGES_SEM_MATRIZ_ESCOPO_TIPO` + seed `can_view='sim'`). Cards filtram por permissão de Ver/Próprios da página da feature (`paginas: "*" | PageKey[]`). `paginas: "*"` = chip e seção **Toda Plataforma** (visível a quem acessa Versionamento).
 - **Subtítulo:** `Acompanhe as novidades, melhorias e correções publicadas a cada semana na plataforma.`
 - **Inclusão de release:** só via chat Cursor + `docs/HANDOFF-VERSIONAMENTO-RELEASE.md` → `src/pages/geral/Versionamento/releases.ts`. **Sem** CTA «Nova Release» e **sem** modal de cadastro.
 - **Catálogo vazio:** `Nenhuma release publicada.` Filtro sem resultado: `Nenhuma release encontrada para os filtros selecionados.`
 - **Destaque:** tag verde **Recente** + `Release #N` + data `DD/MM/AAAA`; título no `h2`. Histórico em acordeão **recolhido por padrão**.
 - **Cards:** Novo `#a78bfa` · Melhoria `#1e36f8` · Correção `#22c55e`.
 - **Busca:** `PAGE_SEARCH.versionamento` — palavras-chave (AND, sem acentos) em título, resumo, data, tipo, seção e texto dos cards.
-- **Filtro de seção:** `FiltroBarCampoSelect` com ícone **`LayoutGrid`** 15px (`FILTRO_BAR_ICON_PROPS`) — exceção de domínio (não está no catálogo Brand de Operadora/Status). Agregadora **Todas Seções**.
+- **Filtro de seção:** `FiltroBarCampoSelect` com ícone **`LayoutGrid`** 15px (`FILTRO_BAR_ICON_PROPS`) — exceção de domínio (não está no catálogo Brand de Operadora/Status). Agregadora **Todas Seções** (inclui **Toda Plataforma** quando houver card `*`).
 - **Ajuda contextual:** não usar `AjudaContextualAcoes` nesta página (igual Configurações / Ajuda).
 
 ## Simulador de Login (`geral/SimuladorLogin/`)
@@ -267,9 +267,11 @@ Páginas fora do menu lateral (`configuracoes`, `simulador_login`, `versionament
 
 **Protocolo:** novos registros usam código imprevisível (`CDSPIN-` + 16 hex). Protocolos legados `CDSPIN00001…` continuam válidos. Consulta e resposta (`consultar_denuncia_spin` / `responder_denuncia_spin`) exigem o **mesmo e-mail do envio** quando o relato foi identificado; anônimo consulta só com o protocolo. Erro genérico «não encontrado» (não revelar se o protocolo existe).
 
-**Limite de tentativas:** RPCs públicos com rate limit por IP (hash) + honeypot `p_hp` no registro. Insert da denúncia **só via RPC** (sem política INSERT anon/auth na tabela).
+**Limite de tentativas:** RPCs públicos com rate limit por IP (hash). Sem IP no request → **nega** (fail-closed). Protocolo legado `CDSPIN#####` tem teto mais baixo na consulta/resposta. Honeypot `p_hp` no registro. Insert da denúncia **só via RPC** (sem política INSERT anon/auth na tabela).
 
-**Consulta por protocolo:** status + linha do tempo + **Comunicação com o RH** (anotações com `visivel_externo`) + formulário de resposta com anexos opcionais (`CampoUploadArquivos`, PDF/JPG/PNG/MP4, 20MB) enquanto o status não estiver encerrado (Procedente / Não procedente). Enter no protocolo/e-mail dispara a pesquisa.
+**Anexos (envio/resposta):** máx. **5** por denúncia (abertura) ou por mensagem; janela **1 h**; helpers em schema `canal_internal` (não exposto no PostgREST). Bucket alinhado à UI: 20 MB, PDF/JPG/PNG/MP4.
+
+**Consulta por protocolo:** badge/status com `statusLabel` (Procedente / Não procedente); linha do tempo + **Comunicação com o RH** (anotações com `visivel_externo`) + formulário de resposta com anexos opcionais (`CampoUploadArquivos`) enquanto o status não estiver encerrado. Anexos do RH na thread pública mostram só o nome (sem download). Validar formato do protocolo no cliente antes do RPC. Enter no protocolo/e-mail dispara a pesquisa.
 
 **Upload no envio:** `CampoUploadArquivos` (exceção Global — canal público usa o componente por pedido de produto).
 

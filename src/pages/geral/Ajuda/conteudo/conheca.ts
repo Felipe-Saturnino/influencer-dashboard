@@ -626,7 +626,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "Canal interno (logado) para registrar, acompanhar e tratar protocolos de denúncia. KPIs, filtros por período, tipo e status, e atendimento pelos perfis autorizados — distinto do formulário público anônimo da Spin.\n\nPara encaminhar o canal a quem **não** tem login, use a página pública **/canal-denuncias-spin** no mesmo endereço da plataforma (sem menu). Quem relata recebe um protocolo para consultar o andamento; se se identificar, precisa do mesmo e-mail na consulta.",
+          "Canal interno (logado) para registrar, acompanhar e tratar protocolos de denúncia. KPIs, filtros por período, tipo e status, e atendimento pelos perfis autorizados — distinto do formulário público anônimo da Spin.\n\nPara encaminhar o canal a quem **não** tem login, use a página pública **/canal-denuncias-spin** no mesmo endereço da plataforma (sem menu). Quem relata recebe um protocolo para consultar o andamento (pode copiá-lo na confirmação); se se identificar, precisa do mesmo e-mail na consulta. Na consulta pública, o desfecho formal (Procedente / Não procedente) aparece na linha do tempo.",
       },
       {
         subtitulo: "Período",

@@ -80,11 +80,11 @@ describe("versionamento", () => {
     expect(tituloHistoricoRelease(catalogo[0])).toBe("Release #1 - Primeira semana - 06/09/2026");
   });
 
-  it("transversal é visível para quem acessa Versionamento", () => {
+  it("transversal é Toda Plataforma e visível para quem acessa Versionamento", () => {
     const item = catalogo[1].itens[0];
     expect(podeVerItemVersionamento(item, perms({}))).toBe(true);
-    expect(secaoDoItemVersionamento(item)).toBe("Geral");
-    expect(chipPaginaVersionamento(item)).toBe("Geral");
+    expect(secaoDoItemVersionamento(item)).toBe("Toda Plataforma");
+    expect(chipPaginaVersionamento(item)).toBe("Toda Plataforma");
   });
 
   it("esconde card sem Ver/Próprios na página da feature", () => {
