@@ -1,15 +1,18 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { Ban, Check, Eye, Loader2, Pencil } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
 import { usePermission } from "../../../hooks/usePermission";
+import { usePainelSelectPortal } from "../../../hooks/usePainelSelectPortal";
 import { FONT } from "../../../constants/theme";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
 import { TabelaComPaginacao } from "../../../components/TabelaPaginacaoBar";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { BarraPesquisaFiltroPainel } from "../../../components/BarraPesquisaFiltroPainel";
+import { SelectListaComBusca } from "../../../components/SelectListaComBusca";
 import {
   ModalBase,
   ModalHeader,
@@ -24,6 +27,7 @@ import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
 import { compareLocaleTexto } from "../../../lib/classificacaoSort";
 import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
 import { textoContemBusca, textoContemBuscaEmAlgum } from "../../../lib/searchText";
+import { estiloPainelPortalFixed } from "../../../lib/selectPainelPortal";
 import { placeholderPesquisaFiltro } from "../../../lib/searchBarConstants";
 import {
   MSG_ERRO_CT,
@@ -239,121 +243,25 @@ function PrestadorSelect({
   prestadores: CtPrestadorOpt[];
   disabled?: boolean;
 }) {
-  const { theme: t } = useApp();
-  const [open, setOpen] = useState(false);
-  const [buscaPainel, setBuscaPainel] = useState("");
-
-  const filtrados = useMemo(
-    () => prestadores.filter((p) => textoContemBuscaEmAlgum(buscaPainel, p.nome, p.time)),
-    [buscaPainel, prestadores],
-  );
-  const selecionado = prestadores.find((p) => p.id === value);
-
   return (
-    <div style={{ position: "relative" }}>
-      <button
-        type="button"
-        disabled={disabled}
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        aria-label="Prestador"
-        onClick={() => {
-          if (disabled) return;
-          setOpen((v) => !v);
-          setBuscaPainel("");
-        }}
-        style={{
-          ...inputStyle(t),
-          textAlign: "left",
-          cursor: disabled ? "not-allowed" : "pointer",
-          opacity: disabled ? 0.6 : 1,
-        }}
-      >
-        {selecionado ? (
-          <span>
-            {selecionado.nome}
-            <span style={{ color: t.textMuted, fontSize: 11 }}> · {selecionado.time}</span>
-          </span>
-        ) : (
-          <span style={{ color: t.textMuted }}>
-            {disabled ? "Selecione o Time primeiro..." : "Selecionar prestador..."}
-          </span>
-        )}
-      </button>
-      {open ? (
-        <div
-          role="listbox"
-          style={{
-            position: "absolute",
-            zIndex: 20,
-            left: 0,
-            right: 0,
-            top: "calc(100% + 4px)",
-            borderRadius: 12,
-            border: `1px solid ${t.cardBorder}`,
-            background: t.inputBg,
-            boxShadow: t.isDark ? "0 8px 24px rgba(0,0,0,0.35)" : "0 8px 24px rgba(0,0,0,0.12)",
-            padding: 8,
-            maxHeight: 280,
-            overflow: "auto",
-          }}
-        >
-          <BarraPesquisaFiltroPainel
-            value={buscaPainel}
-            onChange={setBuscaPainel}
-            placeholder={placeholderPesquisaFiltro("Prestador")}
-            aria-label="Pesquisar Prestador"
-          />
-          <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 2 }}>
-            {filtrados.length === 0 ? (
-              <div style={{ padding: 12, color: t.textMuted, fontSize: 12, fontFamily: FONT.body }}>
-                Nenhum prestador encontrado.
-              </div>
-            ) : (
-              filtrados.map((p) => {
-                const on = p.id === value;
-                return (
-                  <button
-                    key={p.id}
-                    type="button"
-                    role="option"
-                    aria-selected={on}
-                    tabIndex={-1}
-                    onClick={() => {
-                      onChange(p.id);
-                      setOpen(false);
-                    }}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      gap: 8,
-                      padding: "8px 10px",
-                      borderRadius: 8,
-                      border: "none",
-                      background: on
-                        ? "color-mix(in srgb, var(--brand-primary, #7c3aed) 12%, transparent)"
-                        : "transparent",
-                      color: t.text,
-                      fontSize: 13,
-                      fontFamily: FONT.body,
-                      cursor: "pointer",
-                      textAlign: "left",
-                    }}
-                  >
-                    <span>
-                      {p.nome}
-                      <span style={{ color: t.textMuted, fontSize: 11 }}> · {p.time}</span>
-                    </span>
-                    {on ? <Check size={14} aria-hidden /> : null}
-                  </button>
-                );
-              })
-            )}
-          </div>
-        </div>
-      ) : null}
-    </div>
+    <SelectListaComBusca
+      variant="campo"
+      label="Prestador"
+      searchPlaceholder={placeholderPesquisaFiltro("Prestador")}
+      value={value}
+      onChange={onChange}
+      disabled={disabled}
+      options={[
+        {
+          value: "",
+          label: disabled ? "Selecione o Time primeiro..." : "Selecionar prestador...",
+        },
+        ...prestadores.map((p) => ({
+          value: p.id,
+          label: `${p.nome} · ${p.time}`,
+        })),
+      ]}
+    />
   );
 }
 
@@ -373,6 +281,12 @@ function MesaMultiSelect({
   const { theme: t } = useApp();
   const [open, setOpen] = useState(false);
   const [buscaPainel, setBuscaPainel] = useState("");
+  const closePanel = useCallback(() => setOpen(false), []);
+  const { triggerRef, panelRef, pos } = usePainelSelectPortal({
+    open: open && !locked,
+    onClose: closePanel,
+    matchTriggerWidth: true,
+  });
   const ids = Object.keys(selected);
 
   const filtrados = useMemo(
@@ -380,9 +294,70 @@ function MesaMultiSelect({
     [buscaPainel, mesas],
   );
 
+  const panelNode =
+    open && !locked && pos ? (
+      <div
+        ref={panelRef}
+        role="listbox"
+        aria-multiselectable
+        style={estiloPainelPortalFixed(pos, { background: t.inputBg, border: t.cardBorder })}
+      >
+        <div style={{ flexShrink: 0, marginBottom: 8 }}>
+          <BarraPesquisaFiltroPainel
+            value={buscaPainel}
+            onChange={setBuscaPainel}
+            placeholder={placeholderPesquisaFiltro("Mesa")}
+            aria-label="Pesquisar Mesa"
+          />
+        </div>
+        <div style={{ overflowY: "auto", flex: 1, minHeight: 0, display: "flex", flexDirection: "column", gap: 2 }}>
+          {filtrados.length === 0 ? (
+            <div style={{ padding: 12, color: t.textMuted, fontSize: 12, fontFamily: FONT.body }}>
+              Nenhuma mesa encontrada.
+            </div>
+          ) : (
+            filtrados.map((m) => {
+              const on = !!selected[m.id];
+              return (
+                <button
+                  key={m.id}
+                  type="button"
+                  role="option"
+                  aria-selected={on}
+                  tabIndex={-1}
+                  onClick={() => onToggle(m.id)}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 8,
+                    padding: "8px 10px",
+                    borderRadius: 8,
+                    border: "none",
+                    background: on
+                      ? "color-mix(in srgb, var(--brand-primary, #7c3aed) 12%, transparent)"
+                      : "transparent",
+                    color: t.text,
+                    fontSize: 13,
+                    fontFamily: FONT.body,
+                    cursor: "pointer",
+                    textAlign: "left",
+                  }}
+                >
+                  {m.label}
+                  {on ? <Check size={14} aria-hidden /> : null}
+                </button>
+              );
+            })
+          )}
+        </div>
+      </div>
+    ) : null;
+
   return (
     <div style={{ position: "relative" }}>
       <button
+        ref={triggerRef}
         type="button"
         disabled={locked}
         aria-haspopup="listbox"
@@ -449,74 +424,7 @@ function MesaMultiSelect({
           ))
         )}
       </button>
-      {open && !locked ? (
-        <div
-          role="listbox"
-          aria-multiselectable
-          style={{
-            position: "absolute",
-            zIndex: 20,
-            left: 0,
-            right: 0,
-            top: "calc(100% + 4px)",
-            borderRadius: 12,
-            border: `1px solid ${t.cardBorder}`,
-            background: t.inputBg,
-            boxShadow: t.isDark ? "0 8px 24px rgba(0,0,0,0.35)" : "0 8px 24px rgba(0,0,0,0.12)",
-            padding: 8,
-            maxHeight: 220,
-            overflow: "auto",
-          }}
-        >
-          <BarraPesquisaFiltroPainel
-            value={buscaPainel}
-            onChange={setBuscaPainel}
-            placeholder={placeholderPesquisaFiltro("Mesa")}
-            aria-label="Pesquisar Mesa"
-          />
-          <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 2 }}>
-            {filtrados.length === 0 ? (
-              <div style={{ padding: 12, color: t.textMuted, fontSize: 12, fontFamily: FONT.body }}>
-                Nenhuma mesa encontrada.
-              </div>
-            ) : (
-              filtrados.map((m) => {
-                const on = !!selected[m.id];
-                return (
-                  <button
-                    key={m.id}
-                    type="button"
-                    role="option"
-                    aria-selected={on}
-                    tabIndex={-1}
-                    onClick={() => onToggle(m.id)}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      gap: 8,
-                      padding: "8px 10px",
-                      borderRadius: 8,
-                      border: "none",
-                      background: on
-                        ? "color-mix(in srgb, var(--brand-primary, #7c3aed) 12%, transparent)"
-                        : "transparent",
-                      color: t.text,
-                      fontSize: 13,
-                      fontFamily: FONT.body,
-                      cursor: "pointer",
-                      textAlign: "left",
-                    }}
-                  >
-                    {m.label}
-                    {on ? <Check size={14} aria-hidden /> : null}
-                  </button>
-                );
-              })
-            )}
-          </div>
-        </div>
-      ) : null}
+      {panelNode ? createPortal(panelNode, document.body) : null}
     </div>
   );
 }

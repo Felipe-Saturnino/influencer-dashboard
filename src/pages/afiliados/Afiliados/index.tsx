@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef, useCallback, type CSSProperties, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { useIdentidadeEfetiva } from "../../../hooks/useIdentidadeEfetiva";
+import { usePainelSelectPortal } from "../../../hooks/usePainelSelectPortal";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE, BRAND } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
@@ -21,6 +23,7 @@ import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { textoContemBuscaEmAlgum } from "../../../lib/searchText";
+import { estiloPainelPortalFixed } from "../../../lib/selectPainelPortal";
 import { ROLES_STAFF_OPERACOES_LIVES } from "../../../lib/staffRoles";
 import {
   getPageFilterBoxStyle,
@@ -99,22 +102,68 @@ const emptyPerfil = (id: string): Perfil => ({
 function StatusBadge({ value, onChange, readonly }: { value: StatusAfiliado; onChange: (v: StatusAfiliado) => void; readonly?: boolean }) {
   const { theme: t } = useApp();
   const [open, setOpen] = useState(false);
+  const closePanel = useCallback(() => setOpen(false), []);
+  const { triggerRef, panelRef, pos } = usePainelSelectPortal({
+    open: open && !readonly,
+    onClose: closePanel,
+    minWidth: 140,
+    matchTriggerWidth: false,
+  });
   const color = STATUS_COLOR[value] ?? "#888";
+  const menuNode =
+    open && !readonly && pos ? (
+      <div
+        ref={panelRef}
+        role="menu"
+        style={estiloPainelPortalFixed(pos, { background: t.cardBg, border: t.cardBorder }, {
+          padding: 0,
+          minWidth: 140,
+          overflow: "hidden",
+          borderRadius: 10,
+        })}
+      >
+        {STATUS_OPTS.map((s) => (
+          <button
+            key={s}
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              onChange(s);
+              closePanel();
+            }}
+            style={{
+              display: "block",
+              width: "100%",
+              padding: "9px 14px",
+              border: "none",
+              background: s === value ? `${STATUS_COLOR[s]}18` : "transparent",
+              color: STATUS_COLOR[s],
+              fontSize: 12,
+              fontWeight: 700,
+              cursor: "pointer",
+              textAlign: "left",
+              fontFamily: FONT.body,
+            }}
+          >
+            {STATUS_LABEL[s]}
+          </button>
+        ))}
+      </div>
+    ) : null;
   return (
     <div style={{ position: "relative", display: "inline-block" }}>
-      <button type="button" onClick={() => { if (!readonly) setOpen((o) => !o); }} {...(!readonly ? { "aria-haspopup": "menu" as const, "aria-expanded": open } : {})} aria-label={`Status: ${STATUS_LABEL[value]}`} style={{ padding: "4px 12px", borderRadius: 20, border: `1.5px solid ${color}`, background: `${color}18`, color, fontSize: 12, fontWeight: 700, fontFamily: FONT.body, cursor: readonly ? "default" : "pointer", display: "flex", alignItems: "center", gap: 5 }}>
+      <button
+        ref={triggerRef}
+        type="button"
+        onClick={() => { if (!readonly) setOpen((o) => !o); }}
+        {...(!readonly ? { "aria-haspopup": "menu" as const, "aria-expanded": open } : {})}
+        aria-label={`Status: ${STATUS_LABEL[value]}`}
+        style={{ padding: "4px 12px", borderRadius: 20, border: `1.5px solid ${color}`, background: `${color}18`, color, fontSize: 12, fontWeight: 700, fontFamily: FONT.body, cursor: readonly ? "default" : "pointer", display: "flex", alignItems: "center", gap: 5 }}
+      >
         {STATUS_LABEL[value]}
         {!readonly && <ChevronDown size={9} style={{ opacity: 0.7 }} aria-hidden="true" />}
       </button>
-      {open && (
-        <div role="menu" style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.3)", zIndex: 200, minWidth: 140, overflow: "hidden" }}>
-          {STATUS_OPTS.map((s) => (
-            <button key={s} type="button" role="menuitem" onClick={() => { onChange(s); setOpen(false); }} style={{ display: "block", width: "100%", padding: "9px 14px", border: "none", background: s === value ? `${STATUS_COLOR[s]}18` : "transparent", color: STATUS_COLOR[s], fontSize: 12, fontWeight: 700, cursor: "pointer", textAlign: "left", fontFamily: FONT.body }}>
-              {STATUS_LABEL[s]}
-            </button>
-          ))}
-        </div>
-      )}
+      {menuNode ? createPortal(menuNode, document.body) : null}
     </div>
   );
 }

@@ -1,12 +1,13 @@
-import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { ChevronDown, Package } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { FONT } from "../../../constants/theme";
 import { BarraPesquisaFiltroPainel } from "../../../components/BarraPesquisaFiltroPainel";
 import { useListboxKeyboardNavigation } from "../../../hooks/useListboxKeyboardNavigation";
+import { usePainelSelectPortal } from "../../../hooks/usePainelSelectPortal";
 import { placeholderPesquisaFiltro } from "../../../lib/searchBarConstants";
-import { PAINEL_PORTAL_Z, posicaoPainelPortal, type PainelPortalPos } from "../../../lib/selectPainelPortal";
+import { estiloPainelPortalFixed } from "../../../lib/selectPainelPortal";
 import { textoContemBusca } from "../../../lib/searchText";
 import type { OsItemDisponivel } from "../../../lib/techOpsOrdemSaida";
 import { getOsInputStyle } from "./ordemSaidaUi";
@@ -49,10 +50,13 @@ export function SelectItemOs({
   const inputStyle = getOsInputStyle(t);
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [portalPos, setPortalPos] = useState<PainelPortalPos | null>(null);
-  const ref = useRef<HTMLDivElement>(null);
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const panelRef = useRef<HTMLDivElement>(null);
+  const closePanel = useCallback(() => setOpen(false), []);
+  const { triggerRef, panelRef, pos: portalPos } = usePainelSelectPortal({
+    open,
+    onClose: closePanel,
+    minWidth: 240,
+    matchTriggerWidth: true,
+  });
   const uid = useId();
   const listboxId = `os-item-${(id ?? uid).replace(/:/g, "")}`;
 
@@ -75,36 +79,7 @@ export function SelectItemOs({
   }, [filtered]);
 
   useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      const n = e.target as Node;
-      if (ref.current?.contains(n) || panelRef.current?.contains(n)) return;
-      setOpen(false);
-    }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
-
-  useEffect(() => {
-    if (!open) {
-      setSearchQuery("");
-      setPortalPos(null);
-    }
-  }, [open]);
-
-  useLayoutEffect(() => {
-    if (!open) return;
-    const update = () => {
-      const el = triggerRef.current;
-      if (!el) return;
-      setPortalPos(posicaoPainelPortal(el.getBoundingClientRect(), { minWidth: 240, matchTriggerWidth: true }));
-    };
-    update();
-    window.addEventListener("resize", update);
-    window.addEventListener("scroll", update, true);
-    return () => {
-      window.removeEventListener("resize", update);
-      window.removeEventListener("scroll", update, true);
-    };
+    if (!open) setSearchQuery("");
   }, [open]);
 
   const listboxKeyboard = useListboxKeyboardNavigation({
@@ -113,31 +88,14 @@ export function SelectItemOs({
       onChange(opt.key);
       setOpen(false);
     },
-    onEscape: () => setOpen(false),
+    onEscape: closePanel,
   });
 
   const panelNode =
     open && portalPos ? (
         <div
           ref={panelRef}
-          style={{
-            position: "fixed",
-            top: portalPos.top,
-            bottom: portalPos.bottom,
-            left: portalPos.left,
-            width: portalPos.width,
-            maxHeight: portalPos.maxHeight,
-            zIndex: PAINEL_PORTAL_Z,
-            background: t.cardBg,
-            border: `1px solid ${t.cardBorder}`,
-            borderRadius: 12,
-            padding: 8,
-            boxShadow: "0 8px 24px rgba(0,0,0,0.28)",
-            display: "flex",
-            flexDirection: "column",
-            gap: 8,
-            boxSizing: "border-box",
-          }}
+          style={estiloPainelPortalFixed(portalPos, { background: t.cardBg, border: t.cardBorder }, { gap: 8 })}
         >
           {enableSearch ? (
             <BarraPesquisaFiltroPainel
@@ -230,7 +188,7 @@ export function SelectItemOs({
     ) : null;
 
   return (
-    <div ref={ref} style={{ position: "relative", width: "100%", minWidth: 0 }}>
+    <div style={{ position: "relative", width: "100%", minWidth: 0 }}>
       <button
         ref={triggerRef}
         type="button"

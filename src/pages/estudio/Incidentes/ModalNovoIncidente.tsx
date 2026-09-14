@@ -1,8 +1,11 @@
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { ChevronDown, FileText, Paperclip, Shuffle, UserRound } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { useListboxKeyboardNavigation } from "../../../hooks/useListboxKeyboardNavigation";
+import { usePainelSelectPortal } from "../../../hooks/usePainelSelectPortal";
+import { estiloPainelPortalFixed } from "../../../lib/selectPainelPortal";
 import { FONT } from "../../../constants/theme";
 import { ModalBase, ModalConfirmDelete, ModalHeader } from "../../../components/OperacoesModal";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
@@ -109,26 +112,28 @@ function ComboBuscavel({
   const brand = useDashboardBrand();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const ref = useRef<HTMLDivElement>(null);
-  const triggerRef = useRef<HTMLButtonElement>(null);
+  const closePanel = useCallback(() => setOpen(false), []);
+  const { triggerRef, panelRef, pos } = usePainelSelectPortal({
+    open,
+    onClose: closePanel,
+    matchTriggerWidth: true,
+  });
   const listboxId = useId();
 
-  useEffect(() => {
-    function onClickFora(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener("mousedown", onClickFora);
-    return () => document.removeEventListener("mousedown", onClickFora);
-  }, []);
-
   const selecionado = options.find((o) => o.id === value);
-  const showSearch = true;
   const filtered = useMemo(() => {
     if (!query.trim()) return options;
     return options.filter((o) =>
       textoContemBuscaEmAlgum(query, o.label, ...(o.buscaExtras ?? [])),
     );
   }, [options, query]);
+
+  function selecionarOpcao(option: ComboOption) {
+    onChange(option.id);
+    setOpen(false);
+    requestAnimationFrame(() => triggerRef.current?.focus());
+  }
+
   const {
     activeIndex,
     setActiveIndex,
@@ -138,7 +143,7 @@ function ComboBuscavel({
     items: filtered,
     onSelect: selecionarOpcao,
     onEscape: () => {
-      setOpen(false);
+      closePanel();
       requestAnimationFrame(() => triggerRef.current?.focus());
     },
   });
@@ -152,103 +157,38 @@ function ComboBuscavel({
     setActiveIndex(selectedIndex >= 0 ? selectedIndex : 0);
   }, [open, query, filtered, value, setActiveIndex]);
 
-  function selecionarOpcao(option: ComboOption) {
-    onChange(option.id);
-    setOpen(false);
-    requestAnimationFrame(() => triggerRef.current?.focus());
-  }
-
-  return (
-    <div ref={ref} style={{ position: "relative" }}>
-      <button
-        ref={triggerRef}
-        type="button"
-        id={id}
-        disabled={disabled}
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        aria-controls={open ? listboxId : undefined}
+  const panelNode =
+    open && pos ? (
+      <div
+        ref={panelRef}
+        id={listboxId}
+        role="listbox"
         aria-label={label}
-        className={CAMPO_FOCO_CLASS}
-        onClick={() => !disabled && setOpen((o) => !o)}
-        onKeyDown={(e) => {
-          if (disabled) return;
-          if (e.key === "ArrowDown" || e.key === "ArrowUp") {
-            e.preventDefault();
-            if (!open) setOpen(true);
-            else onListboxKeyDown(e);
-          }
-        }}
-        style={{
-          width: "100%",
-          textAlign: "left",
-          padding: "9px 12px",
-          borderRadius: 10,
-          border: `1px solid ${t.cardBorder}`,
-          background: disabled ? t.cardBg : (t.inputBg ?? t.cardBg),
-          color: selecionado ? t.text : t.textMuted,
-          fontSize: 13,
-          fontFamily: FONT.body,
-          cursor: disabled ? "not-allowed" : "pointer",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 8,
-          opacity: disabled ? 0.6 : 1,
-        }}
+        style={estiloPainelPortalFixed(pos, { background: t.cardBg, border: t.cardBorder })}
       >
-        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-          {selecionado?.label ?? placeholder}
-        </span>
-        <ChevronDown size={13} aria-hidden="true" style={{ flexShrink: 0, opacity: 0.6 }} />
-      </button>
-
-      {open ? (
-        <div
-          id={listboxId}
-          role="listbox"
-          aria-label={label}
-          style={{
-            position: "absolute",
-            top: "calc(100% + 4px)",
-            left: 0,
-            right: 0,
-            zIndex: 1200,
-            background: t.cardBg,
-            border: `1px solid ${t.cardBorder}`,
-            borderRadius: 12,
-            padding: 8,
-            maxHeight: 280,
-            overflowY: "auto",
-            boxShadow: "0 8px 24px rgba(0,0,0,0.3)",
-          }}
-        >
-          {showSearch ? (
-            <div style={{ marginBottom: 6 }}>
-              <BarraPesquisaFiltroPainel
-                value={query}
-                onChange={setQuery}
-                placeholder={searchPlaceholder ?? placeholderPesquisaFiltro(label)}
-                aria-activedescendant={
-                  filtered[activeIndex]
-                    ? `${listboxId}-option-${activeIndex}`
-                    : undefined
-                }
-                onKeyDown={(e) => {
-                  if (
-                    e.key === "ArrowDown" ||
-                    e.key === "ArrowUp" ||
-                    e.key === "Home" ||
-                    e.key === "End" ||
-                    e.key === "Enter" ||
-                    e.key === "Escape"
-                  ) {
-                    onListboxKeyDown(e);
-                  }
-                }}
-              />
-            </div>
-          ) : null}
+        <div style={{ marginBottom: 6, flexShrink: 0 }}>
+          <BarraPesquisaFiltroPainel
+            value={query}
+            onChange={setQuery}
+            placeholder={searchPlaceholder ?? placeholderPesquisaFiltro(label)}
+            aria-activedescendant={
+              filtered[activeIndex] ? `${listboxId}-option-${activeIndex}` : undefined
+            }
+            onKeyDown={(e) => {
+              if (
+                e.key === "ArrowDown" ||
+                e.key === "ArrowUp" ||
+                e.key === "Home" ||
+                e.key === "End" ||
+                e.key === "Enter" ||
+                e.key === "Escape"
+              ) {
+                onListboxKeyDown(e);
+              }
+            }}
+          />
+        </div>
+        <div style={{ overflowY: "auto", flex: 1, minHeight: 0 }}>
           {filtered.length === 0 ? (
             <div
               style={{
@@ -299,7 +239,54 @@ function ComboBuscavel({
             ))
           )}
         </div>
-      ) : null}
+      </div>
+    ) : null;
+
+  return (
+    <div style={{ position: "relative" }}>
+      <button
+        ref={triggerRef}
+        type="button"
+        id={id}
+        disabled={disabled}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-controls={open ? listboxId : undefined}
+        aria-label={label}
+        className={CAMPO_FOCO_CLASS}
+        onClick={() => !disabled && setOpen((o) => !o)}
+        onKeyDown={(e) => {
+          if (disabled) return;
+          if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+            e.preventDefault();
+            if (!open) setOpen(true);
+            else onListboxKeyDown(e);
+          }
+        }}
+        style={{
+          width: "100%",
+          textAlign: "left",
+          padding: "9px 12px",
+          borderRadius: 10,
+          border: `1px solid ${t.cardBorder}`,
+          background: disabled ? t.cardBg : (t.inputBg ?? t.cardBg),
+          color: selecionado ? t.text : t.textMuted,
+          fontSize: 13,
+          fontFamily: FONT.body,
+          cursor: disabled ? "not-allowed" : "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 8,
+          opacity: disabled ? 0.6 : 1,
+        }}
+      >
+        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {selecionado?.label ?? placeholder}
+        </span>
+        <ChevronDown size={13} aria-hidden="true" style={{ flexShrink: 0, opacity: 0.6 }} />
+      </button>
+      {panelNode ? createPortal(panelNode, document.body) : null}
     </div>
   );
 }

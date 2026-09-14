@@ -1,3 +1,5 @@
+import type { CSSProperties } from "react";
+
 export type PainelPortalPos = {
   left: number;
   width: number;
@@ -40,5 +42,31 @@ export function posicaoPainelPortal(
     left,
     width,
     maxHeight: Math.min(PAINEL_PORTAL_CAP, Math.max(140, spaceAbove)),
+  };
+}
+
+/** Estilo base do painel em portal (`createPortal` → `document.body`). */
+export function estiloPainelPortalFixed(
+  pos: PainelPortalPos,
+  cores: { background: string; border: string },
+  extra?: CSSProperties,
+): CSSProperties {
+  return {
+    position: "fixed",
+    top: pos.top,
+    bottom: pos.bottom,
+    left: pos.left,
+    width: pos.width,
+    maxHeight: pos.maxHeight,
+    zIndex: PAINEL_PORTAL_Z,
+    background: cores.background,
+    border: `1px solid ${cores.border}`,
+    borderRadius: 12,
+    padding: 8,
+    boxShadow: "0 8px 24px rgba(0,0,0,0.3)",
+    display: "flex",
+    flexDirection: "column",
+    boxSizing: "border-box",
+    ...extra,
   };
 }

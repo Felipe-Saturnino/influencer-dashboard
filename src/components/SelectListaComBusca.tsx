@@ -23,7 +23,7 @@ import {
 import { placeholderPesquisaFiltro } from "../lib/searchBarConstants";
 import { textoContemBusca } from "../lib/searchText";
 import type { SelectListaComBuscaOption } from "../lib/selectListaComBuscaOptions";
-import { PAINEL_PORTAL_Z, posicaoPainelPortal, type PainelPortalPos } from "../lib/selectPainelPortal";
+import { estiloPainelPortalFixed, posicaoPainelPortal, type PainelPortalPos } from "../lib/selectPainelPortal";
 import { BarraPesquisaFiltroPainel } from "./BarraPesquisaFiltroPainel";
 
 export type { SelectListaComBuscaOption };
@@ -45,8 +45,8 @@ export type SelectListaComBuscaProps = {
   id?: string;
   listboxAriaLabel?: string;
   /**
-   * `inline` (default) — painel absoluto no campo (barra de filtros).
-   * `portal` — painel `position:fixed` em `document.body` (modais com overflow).
+   * Default: `portal` em `variant="campo"` (modais/formulários); `inline` em `pill` (barra).
+   * `portal` — `position:fixed` em `document.body` (não corta no overflow do `ModalBase`).
    */
   panelStrategy?: "inline" | "portal";
 };
@@ -68,11 +68,12 @@ export function SelectListaComBusca({
   wrapperStyle,
   id,
   listboxAriaLabel,
-  panelStrategy = "inline",
+  panelStrategy,
 }: SelectListaComBuscaProps) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
   const isPill = variant === "pill";
+  const resolvedStrategy = panelStrategy ?? (isPill ? "inline" : "portal");
   const accentColor = brand.useBrand ? "var(--brand-action, #7c3aed)" : brand.accent;
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -80,7 +81,7 @@ export function SelectListaComBusca({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const [portalPos, setPortalPos] = useState<PainelPortalPos | null>(null);
-  const usePortal = panelStrategy === "portal";
+  const usePortal = resolvedStrategy === "portal";
   const uid = useId();
   const listboxId = `select-busca-${(id ?? uid).replace(/:/g, "")}`;
   const placeholder = searchPlaceholder ?? placeholderPesquisaFiltro(label);
@@ -202,23 +203,7 @@ export function SelectListaComBusca({
       };
 
   const panelStyle: CSSProperties = usePortal && portalPos
-    ? {
-        position: "fixed",
-        top: portalPos.top,
-        bottom: portalPos.bottom,
-        left: portalPos.left,
-        width: portalPos.width,
-        maxHeight: portalPos.maxHeight,
-        zIndex: PAINEL_PORTAL_Z,
-        background: t.cardBg,
-        border: `1px solid ${t.cardBorder}`,
-        borderRadius: 12,
-        padding: 8,
-        boxShadow: "0 8px 24px rgba(0,0,0,0.3)",
-        display: "flex",
-        flexDirection: "column",
-        boxSizing: "border-box",
-      }
+    ? estiloPainelPortalFixed(portalPos, { background: t.cardBg, border: t.cardBorder })
     : {
         position: "absolute",
         top: "calc(100% + 6px)",

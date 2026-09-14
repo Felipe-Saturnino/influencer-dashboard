@@ -219,7 +219,7 @@ Filtros e toggles repetíveis na **barra de filtros** usam pill **999** por padr
 
 - **Exceção — chips semânticos Status / Plataforma:** `borderRadius: **10**`, `padding: 10px 18px`, `minHeight: 44` — **`FiltroStatusSemanticoPill`**, **`FiltroPlataformaSemanticoPill`** (Global § Filtros semânticos; referência visual: abas Overview Spin). Ativo na cor do domínio, não `brand.accent`.
 - **Não** usar `borderRadius: 20` na barra salvo exceção documentada na secção.
-- `SelectComIcone` / `SelectListaComBusca` **sem** `pill` permanece válido **fora** da barra (formulários, modais, comparativos A/B) — o painel **sempre** tem busca (Global § Pesquisa dentro do filtro).
+- `SelectComIcone` / `SelectListaComBusca` **sem** `pill` permanece válido **fora** da barra (formulários, modais, comparativos A/B) — o painel **sempre** tem busca (Global § Pesquisa dentro do filtro). Em **modal**, `variant="campo"` usa portal `fixed` (Global § Lista pesquisável em modal) — **não** `absolute` no overflow do diálogo.
 
 Wrapper obrigatório — moldura de página + **gap 14px** até o próximo bloco (**Global** § Blocos de página):
 
@@ -286,7 +286,7 @@ Quando a página usar **`AjudaContextualAcoes`**, posicionar o grupo no bloco de
 | **`FiltroPlataformaSemanticoPill`** | `src/components/FiltroPlataformaSemanticoPill.tsx` | Chips de **plataforma** (`PlatLogo` + cor ativa; `count` opcional) — Agenda, Influencers, Scout |
 | **`FiltroSemanticoTabPill`** | `src/components/dashboard/FiltroSemanticoTabPill.tsx` | Chips **sem** bolinha — domínio (ex.: **Jogo** / Tipo no Roteiro de Mesa); ativo na cor do domínio, **não** marca |
 | **`FiltroBarTabButton`** | `src/components/dashboard/FiltroBarTabButton.tsx` | **Único** padrão para botões de **aba** (`role="tab"`) — página, barra de filtros ou modal |
-| **`SelectListaComBusca`** | `src/components/SelectListaComBusca.tsx` | Seleção única com painel + **`BarraPesquisaFiltroPainel`** (padrão Staff/Time). `variant="pill"` na barra; `campo` em modal/formulário |
+| **`SelectListaComBusca`** | `src/components/SelectListaComBusca.tsx` | Seleção única com painel + **`BarraPesquisaFiltroPainel`** (padrão Staff/Time). `variant="pill"` na barra (**inline**); `campo` em modal/formulário (**portal `fixed`** — Global § Lista pesquisável em modal) |
 | `SelectComIcone` | `src/components/dashboard/SelectComIcone.tsx` | Wrapper de `SelectListaComBusca` com filhos `<option>` (**não** para operadora, influencer nem modo Mês/Semana/Dia na barra) |
 | **`FiltroBarCampoSelect`** | `src/components/FiltroBarCampoSelect.tsx` | Pill na barra (domínios RH, Vagas, Portal RH, Denúncias) — ícone via catálogo; busca no painel |
 | **`FiltroEntidadeBarSelect`** | `src/components/FiltroEntidadeBarSelect.tsx` | Single/multi na barra (ex.: tipos de denúncia, Staff/Time) — busca **sempre** no painel |
@@ -622,6 +622,7 @@ import { BtnExcluirComTexto } from "../components/BtnExcluirComTexto";
 - `FiltroSemanticoTabPill` de **jogo** ativo em cor de marca ou pill única para todos os jogos.
 - Painel de filtro/select com `BarraPesquisaFiltroPainel` sem foco automático ao abrir (Global § Pesquisa dentro do filtro — `autoFocusOnMount`).
 - Filtro de lista na barra ou em modal com `<select>` nativo (sem painel pesquisável).
+- Lista pesquisável em **modal** com painel `absolute` (cortado pelo overflow) — usar `SelectListaComBusca` `variant="campo"` ou `usePainelSelectPortal` (Global § Lista pesquisável em modal).
 
 ---
 
@@ -636,6 +637,7 @@ import { BtnExcluirComTexto } from "../components/BtnExcluirComTexto";
 - [ ] Histórico: `FiltroHistoricoButton` + `aria-pressed` + rótulo carrossel `Todo o período`
 - [ ] Abas de módulo: `FiltroBarTabButton` + ícone Lucide 16px **por aba** + `onFiltroBarTabsKeyDown` no `tablist`
 - [ ] Filtro/select com busca no painel **sempre**: `BarraPesquisaFiltroPainel` / `SelectListaComBusca` (foco automático ao abrir — Global § Pesquisa dentro do filtro)
+- [ ] Lista em **modal**: `SelectListaComBusca` `variant="campo"` (portal) — não `absolute` no overflow do diálogo (Global § Lista pesquisável em modal)
 - [ ] Toolbar com texto; ações de **linha** em ícone + `aria-label` + `title`
 - [ ] CTA de criação na barra ou toolbar: **`CtaCriarButton`** (`borderRadius` 10, `10px 20px`, `Plus` 14) — não confundir com pills filtro `999` / `6px 14px`
 - [ ] CTA primário com gradiente canónico; spinner `#fff` dentro do CTA

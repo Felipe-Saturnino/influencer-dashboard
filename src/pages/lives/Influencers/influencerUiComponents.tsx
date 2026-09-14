@@ -1,6 +1,9 @@
-import { useState, useRef, useEffect, type CSSProperties, type ReactNode } from "react";
+import { useState, useRef, useEffect, useCallback, type CSSProperties, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { ChevronDown, Eye, EyeOff, Contact, Share2, Coins, Building2, History, Clock } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
+import { usePainelSelectPortal } from "../../../hooks/usePainelSelectPortal";
+import { estiloPainelPortalFixed } from "../../../lib/selectPainelPortal";
 import { FONT } from "../../../constants/theme";
 import { FiltroBarTabButton, FILTRO_BAR_TAB_ICON_PROPS, onFiltroBarTabsKeyDown } from "../../../components/dashboard";
 import {
@@ -124,10 +127,58 @@ interface StatusBadgeProps {
 export function StatusBadge({ value, onChange, readonly }: StatusBadgeProps) {
   const { theme: t } = useApp();
   const [open, setOpen] = useState(false);
+  const closePanel = useCallback(() => setOpen(false), []);
+  const { triggerRef, panelRef, pos } = usePainelSelectPortal({
+    open: open && !readonly,
+    onClose: closePanel,
+    minWidth: 140,
+    matchTriggerWidth: false,
+  });
   const color = STATUS_COLOR[value] ?? "#888";
+  const menuNode =
+    open && !readonly && pos ? (
+      <div
+        ref={panelRef}
+        role="menu"
+        style={estiloPainelPortalFixed(pos, { background: t.cardBg, border: t.cardBorder }, {
+          padding: 0,
+          minWidth: 140,
+          overflow: "hidden",
+          borderRadius: 10,
+        })}
+      >
+        {STATUS_OPTS.map((s) => (
+          <button
+            key={s}
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              onChange(s);
+              closePanel();
+            }}
+            style={{
+              display: "block",
+              width: "100%",
+              padding: "9px 14px",
+              border: "none",
+              background: s === value ? `${STATUS_COLOR[s]}18` : "transparent",
+              color: STATUS_COLOR[s],
+              fontSize: "12px",
+              fontWeight: 700,
+              cursor: "pointer",
+              textAlign: "left",
+              fontFamily: FONT.body,
+            }}
+          >
+            {STATUS_LABEL[s]}
+          </button>
+        ))}
+      </div>
+    ) : null;
   return (
     <div style={{ position: "relative", display: "inline-block" }}>
       <button
+        ref={triggerRef}
         type="button"
         onClick={() => { if (!readonly) setOpen((o) => !o); }}
         {...(!readonly ? { "aria-haspopup": "menu" as const, "aria-expanded": open } : {})}
@@ -143,30 +194,7 @@ export function StatusBadge({ value, onChange, readonly }: StatusBadgeProps) {
         {STATUS_LABEL[value]}
         {!readonly && <ChevronDown size={9} style={{ opacity: 0.7 }} aria-hidden="true" />}
       </button>
-      {open && (
-        <div
-          role="menu"
-          style={{
-          position: "absolute", top: "calc(100% + 4px)", left: 0,
-          background: t.cardBg, border: `1px solid ${t.cardBorder}`,
-          borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.3)",
-          zIndex: 200, minWidth: 140, overflow: "hidden",
-        }}
-        >
-          {STATUS_OPTS.map((s) => (
-            <button key={s} type="button" role="menuitem" onClick={() => { onChange(s); setOpen(false); }}
-              style={{
-                display: "block", width: "100%", padding: "9px 14px", border: "none",
-                background: s === value ? `${STATUS_COLOR[s]}18` : "transparent",
-                color: STATUS_COLOR[s], fontSize: "12px", fontWeight: 700,
-                cursor: "pointer", textAlign: "left", fontFamily: FONT.body,
-              }}
-            >
-              {STATUS_LABEL[s]}
-            </button>
-          ))}
-        </div>
-      )}
+      {menuNode ? createPortal(menuNode, document.body) : null}
     </div>
   );
 }

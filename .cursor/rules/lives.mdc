@@ -250,7 +250,7 @@ Todos os ícones decorativos (dentro de badges, células) devem ter `aria-hidden
 ## Dropdowns de Status — ARIA Obrigatório
 
 Padrão para `StatusBadge` (Influencers), `StatusScoutBadge` (Scout) e qualquer
-dropdown de seleção inline:
+dropdown de seleção inline. Em **modal**, o menu usa portal `fixed` (Global § Lista pesquisável em modal) — `StatusBadge` de Influencers/Afiliados já segue esse contrato.
 
 ```tsx
 // Trigger:
