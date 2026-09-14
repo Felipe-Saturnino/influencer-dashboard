@@ -16,7 +16,7 @@ function AlertBox({
 }: {
   children: React.ReactNode;
 }) {
-  const { theme: t, isDark } = useApp();
+  const { isDark } = useApp();
   return (
     <div
       style={{
