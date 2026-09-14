@@ -33,7 +33,10 @@ export function useOverviewSpinFiltrosAcesso(opts: {
     staleTime: 10 * 60 * 1000,
   });
 
-  const operadorasAtivas = operadorasQuery.data ?? [];
+  const operadorasAtivas = useMemo(
+    () => operadorasQuery.data ?? [],
+    [operadorasQuery.data],
+  );
   const erroOperadoras = operadorasQuery.isError
     ? "Não foi possível carregar as operadoras. Se o problema persistir, entre em contato com o suporte."
     : null;

@@ -1,4 +1,5 @@
-import { HomeAlertaBox, homeAlertaCtaStyle } from "../shared/HomeAlertaBox";
+import { HomeAlertaBox } from "../shared/HomeAlertaBox";
+import { homeAlertaCtaStyle } from "../shared/homeAlertaStyles";
 import { useAppPageNav } from "../../../../hooks/useAppPageNav";
 import { mensagemEscalaNaoAprovada } from "../../../../lib/homeGestorAlertasCopy";
 import type { HomeGestorOperacoesAlerta } from "../hooks/useHomeGestorOperacoesData";
