@@ -429,6 +429,12 @@ function OverviewPrestadorAbaKpisOcrConteudo({
           {estudiosOrdenados.length === 0 ? (
             vazio
           ) : (
+            <TabelaComPaginacao
+              items={estudiosOrdenados}
+              t={t}
+              resetKey={`${sortEst.col}|${sortEst.dir}`}
+            >
+              {(linhas, zebraIdx) => (
             <div className="app-table-wrap app-table-wrap--sticky-col" style={getDataTableWrapStyle()}>
               <table style={getDataTableStyle({ minWidth: 720 })}>
                 <caption style={{ display: "none" }}>KPIs de OCR por estúdio e mesa</caption>
@@ -455,9 +461,10 @@ function OverviewPrestadorAbaKpisOcrConteudo({
                   </tr>
                 </thead>
                 <tbody>
-                  {estudiosOrdenados.map((est, i) => {
+                  {linhas.map((est, i) => {
                     const aberto = estudiosAbertos.has(est.key);
-                    const zebra = dataTable.zebraRow(i);
+                    const z = zebraIdx(i);
+                    const zebra = dataTable.zebraRow(z);
                     return (
                       <Fragment key={est.key}>
                         <tr
@@ -472,7 +479,7 @@ function OverviewPrestadorAbaKpisOcrConteudo({
                             }
                           }}
                         >
-                          <td style={dataTable.tdSticky({ rowIndex: i })}>
+                          <td style={dataTable.tdSticky({ rowIndex: z })}>
                             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
                               <ChevronRight
                                 size={14}
@@ -494,8 +501,8 @@ function OverviewPrestadorAbaKpisOcrConteudo({
                         </tr>
                         {aberto
                           ? est.mesas.map((mesa, mi) => (
-                              <tr key={`${est.key}-${mesa.key}`} style={{ background: dataTable.zebraRow(i + mi + 1) }}>
-                                <td style={dataTable.tdSticky({ rowIndex: i + mi + 1 })}>
+                              <tr key={`${est.key}-${mesa.key}`} style={{ background: dataTable.zebraRow(z + mi + 1) }}>
+                                <td style={dataTable.tdSticky({ rowIndex: z + mi + 1 })}>
                                   <span style={{ fontSize: 12, color: t.textMuted }}>{mesa.label}</span>
                                 </td>
                                 <td style={dataTable.tdCenter}>{mesa.total.toLocaleString("pt-BR")}</td>
@@ -512,6 +519,8 @@ function OverviewPrestadorAbaKpisOcrConteudo({
                 </tbody>
               </table>
             </div>
+              )}
+            </TabelaComPaginacao>
           )}
         </div>
       ) : null}
@@ -522,6 +531,12 @@ function OverviewPrestadorAbaKpisOcrConteudo({
           {atencaoOrdenados.length === 0 ? (
             vazio
           ) : (
+            <TabelaComPaginacao
+              items={atencaoOrdenados}
+              t={t}
+              resetKey={`${sortAtencao.col}|${sortAtencao.dir}`}
+            >
+              {(linhas, zebraIdx) => (
             <div className="app-table-wrap" style={getDataTableWrapStyle()}>
               <table style={getDataTableStyle({ minWidth: 780 })}>
                 <caption style={{ display: "none" }}>KPIs de OCR por prestador da equipe</caption>
@@ -536,8 +551,8 @@ function OverviewPrestadorAbaKpisOcrConteudo({
                   </tr>
                 </thead>
                 <tbody>
-                  {atencaoOrdenados.map((r, i) => (
-                    <tr key={r.prestadorId} style={{ background: dataTable.zebraRow(i) }}>
+                  {linhas.map((r, i) => (
+                    <tr key={r.prestadorId} style={{ background: dataTable.zebraRow(zebraIdx(i)) }}>
                       <td style={dataTable.tdCenter}>{r.label}</td>
                       <td style={dataTable.tdCenter}>{r.total.toLocaleString("pt-BR")}</td>
                       <td style={dataTable.tdCenter}>{fmtDuracaoMs(r.tmaTotalMs)}</td>
@@ -549,6 +564,8 @@ function OverviewPrestadorAbaKpisOcrConteudo({
                 </tbody>
               </table>
             </div>
+              )}
+            </TabelaComPaginacao>
           )}
         </div>
       ) : null}

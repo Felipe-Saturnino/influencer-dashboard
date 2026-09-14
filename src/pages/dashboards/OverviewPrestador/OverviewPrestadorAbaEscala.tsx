@@ -214,8 +214,28 @@ function tabelaCobertura(
   dataTable: ReturnType<typeof useDataTableBlock>,
   mostrarMov: boolean,
   colLabel: string,
+  paginar?: { t: ReturnType<typeof useApp>["theme"]; resetKey: unknown },
 ) {
-  return (
+  const total = rows.find((r) => r.chave === "__total__");
+  const dados = rows.filter((r) => r.chave !== "__total__");
+
+  const renderLinha = (r: OverviewPrestadorCoberturaLinha, zebra: string, isTotal: boolean) => {
+    const pct = pctPresencaAderencia(r.jornadasRealizadas, r.jornadasEscaladasAderencia);
+    return (
+      <tr key={r.chave} style={{ background: isTotal ? dataTable.totalRowBgStrong : zebra }}>
+        <td style={isTotal ? dataTable.tdTotal : dataTable.tdCenter}>{r.label}</td>
+        <td style={isTotal ? dataTable.tdTotal : dataTable.tdCenter}>{r.prestadores}</td>
+        <td style={isTotal ? dataTable.tdTotal : dataTable.tdCenter}>{r.jornadasEscaladas}</td>
+        <td style={isTotal ? dataTable.tdTotal : dataTable.tdCenter}>{r.jornadasRealizadas}</td>
+        <td style={isTotal ? dataTable.tdTotal : dataTable.tdCenter}>{fmtPct(pct)}</td>
+        {mostrarMov ? (
+          <td style={isTotal ? dataTable.tdTotal : dataTable.tdCenter}>{r.movimentacoes}</td>
+        ) : null}
+      </tr>
+    );
+  };
+
+  const tabela = (linhas: OverviewPrestadorCoberturaLinha[], zebraIdx: (i: number) => number) => (
     <div className="app-table-wrap" style={getDataTableWrapStyle()}>
       <table style={getDataTableStyle({ minWidth: mostrarMov ? 640 : 520 })}>
         <caption style={{ display: "none" }}>Cobertura por {colLabel.toLowerCase()}</caption>
@@ -230,30 +250,21 @@ function tabelaCobertura(
           </tr>
         </thead>
         <tbody>
-          {rows.map((r, i) => {
-            const isTotal = r.chave === "__total__";
-            const pct = pctPresencaAderencia(r.jornadasRealizadas, r.jornadasEscaladasAderencia);
-            return (
-              <tr
-                key={r.chave}
-                style={{
-                  background: isTotal ? dataTable.totalRowBgStrong : dataTable.zebraRow(i),
-                }}
-              >
-                <td style={isTotal ? dataTable.tdTotal : dataTable.tdCenter}>{r.label}</td>
-                <td style={isTotal ? dataTable.tdTotal : dataTable.tdCenter}>{r.prestadores}</td>
-                <td style={isTotal ? dataTable.tdTotal : dataTable.tdCenter}>{r.jornadasEscaladas}</td>
-                <td style={isTotal ? dataTable.tdTotal : dataTable.tdCenter}>{r.jornadasRealizadas}</td>
-                <td style={isTotal ? dataTable.tdTotal : dataTable.tdCenter}>{fmtPct(pct)}</td>
-                {mostrarMov ? (
-                  <td style={isTotal ? dataTable.tdTotal : dataTable.tdCenter}>{r.movimentacoes}</td>
-                ) : null}
-              </tr>
-            );
-          })}
+          {linhas.map((r, i) => renderLinha(r, dataTable.zebraRow(zebraIdx(i)), false))}
+          {total ? renderLinha(total, dataTable.totalRowBgStrong, true) : null}
         </tbody>
       </table>
     </div>
+  );
+
+  if (!paginar) {
+    return tabela(dados, (i) => i);
+  }
+
+  return (
+    <TabelaComPaginacao items={dados} t={paginar.t} resetKey={paginar.resetKey}>
+      {(linhas, zebraIdx) => tabela(linhas, zebraIdx)}
+    </TabelaComPaginacao>
   );
 }
 
@@ -738,7 +749,10 @@ export function OverviewPrestadorAbaEscala({
               Sem dados para o período selecionado.
             </div>
           ) : (
-            tabelaCobertura(coberturaPorEstudio, dataTable, mostrarMov, "Estúdio")
+            tabelaCobertura(coberturaPorEstudio, dataTable, mostrarMov, "Estúdio", {
+              t,
+              resetKey: coberturaPorEstudio.map((r) => r.chave).join("|"),
+            })
           )}
         </div>
       ) : null}

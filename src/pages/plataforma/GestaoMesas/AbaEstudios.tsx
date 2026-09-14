@@ -5,6 +5,7 @@ import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { FONT, FONT_TITLE } from "../../../constants/theme";
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
 import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles";
+import { TabelaComPaginacao } from "../../../components/TabelaPaginacaoBar";
 import { getPageContentBoxStyle, getPageKpiSectionGapStyle } from "../../../lib/pageContentBoxStyles";
 import SectionTitle from "../../../components/dashboard/SectionTitle";
 import { SortTableTh, type SortDir } from "../../../components/dashboard";
@@ -235,6 +236,12 @@ export function AbaEstudios({
                 : "Nenhum estúdio para o filtro selecionado."}
           </div>
         ) : (
+          <TabelaComPaginacao
+            items={rowsOrdenadas}
+            t={t}
+            resetKey={`${busca}|${filtroOperadora}|${sort.col}|${sort.dir}`}
+          >
+            {(linhas, zebraIdx) => (
           <div className="app-table-wrap" style={getDataTableWrapStyle()}>
             <table style={getDataTableStyle()}>
               <caption style={{ display: "none" }}>Cadastro de estúdios Spin</caption>
@@ -284,8 +291,8 @@ export function AbaEstudios({
                 </tr>
               </thead>
               <tbody>
-                {rowsOrdenadas.map((r, i) => {
-                  const zebra = dataTable.zebraRow(i);
+                {linhas.map((r, i) => {
+                  const zebra = dataTable.zebraRow(zebraIdx(i));
                   const opsLabel = nomesOperadorasEstudio(r).join(", ") || "—";
                   return (
                     <tr
@@ -336,6 +343,8 @@ export function AbaEstudios({
               </tbody>
             </table>
           </div>
+            )}
+          </TabelaComPaginacao>
         )}
       </div>
 

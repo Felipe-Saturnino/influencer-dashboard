@@ -107,7 +107,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Aba Financeiro",
         texto:
-          "KPIs Financeiros (FTD, Depósitos, Saques, WD Ratio, GGR por Jogador, PVI), Investimento por Afiliado e Ranking Financeiro com coluna Afiliado e perfis de jogador (Whales, Core, Recreativos, Caçadores de Bônus).",
+          "KPIs Financeiros (FTD, Depósitos, Saques, WD Ratio, GGR por Jogador, PVI), Investimento por Afiliado e Ranking Financeiro com coluna Afiliado e perfis de jogador (Whales, Core, Recreativos, Caçadores de Bônus). As tabelas mostram até **20 linhas** por vez; a barra some quando o resultado cabe numa página.",
       },
     ],
   },
@@ -228,7 +228,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Como ler as coberturas",
         texto:
-          "Nas tabelas **Cobertura por turno** e **Cobertura por estúdio**, a coluna **Prestadores** conta pessoas distintas com jornada no período — quem apenas trocou o dia entra em Movimentações, sem ocupar vaga do turno. Um prestador que assume um turno comprado fora do seu turno habitual aparece nos dois turnos, por isso a soma das linhas pode passar do Total, que é sempre a contagem de pessoas distintas. Só a escala do time selecionado entra na conta: dias em treinamento ou em outra área não contam.",
+          "Nas tabelas **Cobertura por turno** e **Cobertura por estúdio**, a coluna **Prestadores** conta pessoas distintas com jornada no período — quem apenas trocou o dia entra em Movimentações, sem ocupar vaga do turno. Um prestador que assume um turno comprado fora do seu turno habitual aparece nos dois turnos, por isso a soma das linhas pode passar do Total, que é sempre a contagem de pessoas distintas. Só a escala do time selecionado entra na conta: dias em treinamento ou em outra área não contam. **Cobertura por estúdio** mostra até **20 linhas** por vez (a linha Total continua no conjunto completo; a barra some quando cabe numa página).",
       },
       {
         subtitulo: "Detalhamento Diário",
@@ -243,7 +243,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Aba KPIs de OCR",
         texto:
-          "No time **Service Manager**, a segunda aba chama-se **KPIs de OCR** e avalia o desempenho dos SMs no atendimento.\n\n**Sinais** vêm dos sinais resolvidos pelo SM selecionado — ou por todos os SMs do time quando o filtro está em **Todo o time**. **Tickets** são os incidentes em que o SM é o **relator** (quem abriu o ticket); em Todo o time, entram todos os tickets relatados pelos SMs do time.\n\nCards: Sinais, TMA Total, TMA de Atendimento, TMA de Resolução e Tickets (com comparativo ao mês anterior em formato de relógio nos TMAs; tempos e tickets usam semântica inversa — menor é melhor). Tabelas: **Por Jogo**, **Por Estúdio** (expanda o estúdio para ver as mesas) e **Equipe** (só na visão de time — ranking por SM: sinais, TMAs e tickets) e **Detalhamento Diário** (até **20 linhas** por vez; **Por Jogo** não pagina). O período do mês corrente inclui até **hoje** (mesmo critério da aba Sinais em Incidentes). Shift Leader não tem esta aba.",
+          "No time **Service Manager**, a segunda aba chama-se **KPIs de OCR** e avalia o desempenho dos SMs no atendimento.\n\n**Sinais** vêm dos sinais resolvidos pelo SM selecionado — ou por todos os SMs do time quando o filtro está em **Todo o time**. **Tickets** são os incidentes em que o SM é o **relator** (quem abriu o ticket); em Todo o time, entram todos os tickets relatados pelos SMs do time.\n\nCards: Sinais, TMA Total, TMA de Atendimento, TMA de Resolução e Tickets (com comparativo ao mês anterior em formato de relógio nos TMAs; tempos e tickets usam semântica inversa — menor é melhor). Tabelas: **Por Jogo**, **Por Estúdio** (expanda o estúdio para ver as mesas) e **Equipe** (só na visão de time — ranking por SM: sinais, TMAs e tickets) e **Detalhamento Diário**. **Por Estúdio**, **Equipe** e Detalhamento mostram até **20 linhas** por vez (a barra some quando cabe numa página; **Por Jogo** não pagina). O período do mês corrente inclui até **hoje** (mesmo critério da aba Sinais em Incidentes). Shift Leader não tem esta aba.",
       },
     ],
   },
@@ -262,7 +262,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Aba Overview",
         texto:
-          "No modo mês: KPIs HC Ativo, Contratação e Distrato na primeira linha; Variação, Turnover e Permanência na segunda (comparação com o mês anterior só com o valor). Pizza do HC por gerência (total no centro; hover na lista mostra HC por time) e barras por tipo de contrato.\n\nNo **Histórico**: KPIs HC Ativo, Distrato, Turnover e Permanência Média, mais a tabela **Mês a Mês** com Headcount, Contratação, Distrato e Turnover dos últimos 13 meses.",
+          "No modo mês: KPIs HC Ativo, Contratação e Distrato na primeira linha; Variação, Turnover e Permanência na segunda (comparação com o mês anterior só com o valor). Pizza do HC por gerência (total no centro; hover na lista mostra HC por time) e barras por tipo de contrato.\n\nNo **Histórico**: KPIs HC Ativo, Distrato, Turnover e Permanência Média, mais a tabela **Mês a Mês** com Headcount, Contratação, Distrato e Turnover dos últimos 13 meses (até **20 linhas** por vez; a barra some quando cabe numa página).",
       },
       {
         subtitulo: "Aba Contratação",
@@ -941,7 +941,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Rotação",
         texto:
-          "Cada **estúdio ativo** tem o próprio bloco de Game Presenters (**Pool do turno** + ações). Há também o bloco **Shuffler** (todos os estúdios): sem **Mover estúdio**, e na grade a posição é **TODOS** — vários Shufflers em TODOS no mesmo horário, com **apenas 1 Break por vez** e no máximo **3 TODOS seguidos** por pessoa. O pool usa a Escala Estúdio / Escala do Turno com status **Presente**, **Pendente**, **Saída Antecipada** ou **Hora Adicional**. Os badges **Chegou** / **Não chegou** seguem essa mesma Escala do Turno (Presente, Saída Antecipada e Hora Adicional = Chegou; Pendente = Não chegou). KPIs do bloco: **Escalados**, **Não Chegaram**, **Horas Adicionais** e **Disponíveis**. Com horário de saída, a grade marca **X** a partir desse horário. **Hora Adicional** do turno anterior também entra no turno seguinte. **Falta** fica de fora. Nos filtros de GP use **Mover estúdio…** (ou **Restaurar estúdio**) para realocar no turno. Fluxo por bloco: **Gerar prévia** → **Incluir Liderança** (só GP) / **Rotação de 20min–30min** / **Publicar** → após publicar só **Regenerar** (volta ao pool). A cada **Gerar prévia** / **Regenerar**, a ordem das linhas é **aleatória** (não alfabética). Ao **Publicar**, se alguém tiver **2 horas ou mais** seguidas em mesa, a plataforma pede confirmação com o tempo detectado. Na prévia, arraste o nome na coluna **Equipe** para trocar a sequência. **Shift Leaders** e **Service Managers** só entram por **Incluir Liderança** nos blocos de estúdio; a grade marca **X** fora da janela **08h–20h** / **20h–08h**."
+          "Cada **estúdio ativo** tem o próprio bloco de Game Presenters (**Pool do turno** + ações). Há também o bloco **Shuffler** (todos os estúdios): sem **Mover estúdio**, e na grade a posição é **TODOS** — vários Shufflers em TODOS no mesmo horário, com **apenas 1 Break por vez** e no máximo **3 TODOS seguidos** por pessoa. O pool usa a Escala Estúdio / Escala do Turno com status **Presente**, **Pendente**, **Saída Antecipada** ou **Hora Adicional**. Os badges **Chegou** / **Não chegou** seguem essa mesma Escala do Turno (Presente, Saída Antecipada e Hora Adicional = Chegou; Pendente = Não chegou). KPIs do bloco: **Escalados**, **Não Chegaram**, **Horas Adicionais** e **Disponíveis**. Com horário de saída, a grade marca **X** a partir desse horário. **Hora Adicional** do turno anterior também entra no turno seguinte. **Falta** fica de fora. Nos filtros de GP use **Mover estúdio…** (ou **Restaurar estúdio**) para realocar no turno. Fluxo por bloco: **Gerar prévia** → **Incluir Liderança** (só GP) / **Rotação de 20min–30min** / **Publicar** → após publicar só **Regenerar** (volta ao pool). A cada **Gerar prévia** / **Regenerar**, a ordem das linhas é **aleatória** (não alfabética). Ao **Publicar**, se alguém tiver **2 horas ou mais** seguidas em mesa, a plataforma pede confirmação com o tempo detectado. Na prévia, arraste o nome na coluna **Equipe** para trocar a sequência. A grade mostra até **20 linhas** por vez (a barra some quando cabe numa página). **Shift Leaders** e **Service Managers** só entram por **Incluir Liderança** nos blocos de estúdio; a grade marca **X** fora da janela **08h–20h** / **20h–08h**."
       },
       {
         subtitulo: "Notificações",
@@ -1555,7 +1555,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Lista de operadoras",
         texto:
-          "Exibe todas as operadoras cadastradas com status (Ativa ou Inativa), slug interno e data de criação. Os cards de resumo no topo mostram os totais. Use a busca abaixo do título do bloco para filtrar pelo nome da operadora. A tabela permite ordenação por qualquer coluna.",
+          "Exibe todas as operadoras cadastradas com status (Ativa ou Inativa), slug interno e data de criação. Os cards de resumo no topo mostram os totais. Use a busca abaixo do título do bloco para filtrar pelo nome da operadora. A tabela permite ordenação por qualquer coluna e mostra até **20 linhas** por vez (a barra some quando cabe numa página).",
       },
       {
         subtitulo: "Cadastrar ou editar operadora",
@@ -1579,7 +1579,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Filtros e navegação",
         texto:
-          "No topo, use as setas do carrossel para alternar a operadora exibida ou o botão **Todas Operadoras** para ver todas de uma vez. Na segunda linha, alterne entre as abas **Estúdios** e **Mesas**.\n\nNa aba Estúdios, os cards **Mesas Dedicadas** e **Mesas Network** mostram a quantidade de mesas do tipo conforme o filtro de operadora. A tabela lista estúdios com nome, tipo, quantidade de mesas e operadoras vinculadas.\n\nNa aba Mesas, os cards por jogo (Baccarat, Blackjack, Roleta e Futebol Brasileiro) atualizam conforme o filtro. Use a busca para filtrar por nome da mesa, estúdio, ID Spin ou número da mesa.",
+          "No topo, use as setas do carrossel para alternar a operadora exibida ou o botão **Todas Operadoras** para ver todas de uma vez. Na segunda linha, alterne entre as abas **Estúdios** e **Mesas**.\n\nNa aba Estúdios, os cards **Mesas Dedicadas** e **Mesas Network** mostram a quantidade de mesas do tipo conforme o filtro de operadora. A tabela lista estúdios com nome, tipo, quantidade de mesas e operadoras vinculadas — até **20 linhas** por vez (a barra some quando cabe numa página).\n\nNa aba Mesas, os cards por jogo (Baccarat, Blackjack, Roleta e Futebol Brasileiro) atualizam conforme o filtro. Use a busca para filtrar por nome da mesa, estúdio, ID Spin ou número da mesa. A lista de mesas também mostra até **20 linhas** por vez.",
       },
       {
         subtitulo: "Cadastrar ou editar estúdio",

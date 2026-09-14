@@ -227,7 +227,7 @@ Botões chip/pill que toggam filtro ativo devem expor `aria-pressed={ativo}`.
 - `useDashboardBrand()` obrigatório: header, CTA, modal.
 - Cards de resumo (Total/Ativas/Inativas): exibir `"—"` enquanto `loading === true`.
 - Bloco **Operadoras:** `getPageContentBoxStyle` + `SectionTitle` (`compact`) na linha 1; linha 2 — `BarraPesquisaPagina` (`PAGE_SEARCH.operadoraNome`) + `CtaCriarButton` **Nova Operadora** (`perm.canCriarOk`, `flexShrink: 0` ao lado da busca).
-- **Tabela principal** e **sub-tabela de mesas** no modal **Operações:** padrão canónico Global (`useDataTableBlock`, `getDataTableWrapStyle`, `getDataTableStyle`).
+- **Tabela principal:** paginação 20/página (`TabelaComPaginacao`); barra oculta com uma só página (`hideIfSinglePage`). KPIs/cards de resumo no conjunto completo. **Sub-tabela de mesas** no modal **Operações:** padrão canónico Global (`useDataTableBlock`, `getDataTableWrapStyle`, `getDataTableStyle`).
 - `app-table-wrap` + `getDataTableWrapStyle` — não `<div style={{ overflowX: "auto" }}>` solto.
 - `<caption style={{ display: "none" }}>` obrigatório; `scope="col"` em todas as colunas (incl. `SortTableTh` e Ações).
 - Excluir operadora: string amigável quando `foreign key` — nunca `e.message` cru no DOM.
@@ -241,7 +241,7 @@ Botões chip/pill que toggam filtro ativo devem expor `aria-pressed={ativo}`.
 ### GestaoMesas (Gestão de Estúdios)
 
 - Bloco de filtros: `getPageFilterBoxStyle` + carrossel de operadoras (`getCarouselBtnNavStyle` / `getCarouselPeriodLabelStyle`) + pill **Todas Operadoras** (`getFiltroBarTabButtonStyle` + ícone `Shield`) — **linha 2:** tablist `FiltroBarTabButton` **Estúdios** (`Building2`) | **Mesas** (`LayoutGrid`).
-- **Aba Estúdios:** KPIs `app-grid-2` — **Mesas Dedicadas** e **Mesas Network** (contagem de mesas por tipo de estúdio, respeitando filtro de operadora); bloco **Estúdios** com `SectionTitle`, `BarraPesquisaPagina`, `CtaCriarButton` **Novo Estúdio**, tabela (Nome, Tipo, Qtd Mesas, Operadoras, Ações); `ModalEstudio` (nome, tipo Network/Dedicado, operadoras ativas multi-seleção).
+- **Aba Estúdios:** KPIs `app-grid-2` — **Mesas Dedicadas** e **Mesas Network** (contagem de mesas por tipo de estúdio, respeitando filtro de operadora); bloco **Estúdios** com `SectionTitle`, `BarraPesquisaPagina`, `CtaCriarButton` **Novo Estúdio**, tabela (Nome, Tipo, Qtd Mesas, Operadoras, Ações) — paginação 20/página (`TabelaComPaginacao`; barra oculta com uma só página); `ModalEstudio` (nome, tipo Network/Dedicado, operadoras ativas multi-seleção).
 - **Aba Mesas:** KPIs por jogo `app-grid-kpi-4` + `getPageKpiSectionGapStyle` — Baccarat, Blackjack, Roleta, Futebol Brasileiro; `GAME_IDENTITY_HEX`; bloco **Mesas** com coluna **Nome do Estúdio** (não Operadora); paginação 20/página; `ModalMesa` com select de estúdio e campos opcionais de ID por operadora do estúdio (`mesas_spin_operadora_identificacao`).
 - Schema: `estudios_spin`, `estudios_spin_operadoras`, `mesas_spin_cadastro.estudio_slug` (legado `operadora_slug` mantido); migração futura remove colunas legadas.
 - Ícone do header: Lucide (`LayoutGrid` ou `Table2`) — `GiRoundTable` e qualquer GameIcon proibidos no header.

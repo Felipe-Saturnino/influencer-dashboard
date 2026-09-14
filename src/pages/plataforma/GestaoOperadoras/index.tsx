@@ -24,6 +24,7 @@ import { SortTableTh, type SortDir } from "../../../components/dashboard";
 import { compareAtivoBoolean, compareLocaleTexto } from "../../../lib/classificacaoSort";
 import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles";
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
+import { TabelaComPaginacao } from "../../../components/TabelaPaginacaoBar";
 import { GestaoUsuariosLoading } from "../GestaoUsuarios/gestaoUsuariosUi";
 import { getPageContentBoxStyle, getPageKpiSectionGapStyle } from "../../../lib/pageContentBoxStyles";
 
@@ -223,6 +224,12 @@ export default function GestaoOperadoras() {
         ) : operadorasOrdenadas.length === 0 ? (
           <div style={{ padding: "48px 0", color: t.textMuted, fontFamily: FONT.body, textAlign: "center" }}>Nenhuma operadora encontrada.</div>
         ) : (
+          <TabelaComPaginacao
+            items={operadorasOrdenadas}
+            t={t}
+            resetKey={`${buscaOperadora}|${sortOp.col}|${sortOp.dir}`}
+          >
+            {(linhas, zebraIdx) => (
           <div className="app-table-wrap" style={getDataTableWrapStyle()}>
           <table style={getDataTableStyle()}>
             <caption style={{ display: "none" }}>Lista de operadoras cadastradas</caption>
@@ -292,8 +299,8 @@ export default function GestaoOperadoras() {
               </tr>
             </thead>
             <tbody>
-              {operadorasOrdenadas.map((op, idx) => {
-                const zebra = dataTable.zebraRow(idx);
+              {linhas.map((op, idx) => {
+                const zebra = dataTable.zebraRow(zebraIdx(idx));
                 return (
                 <tr
                   key={op.slug}
@@ -366,6 +373,8 @@ export default function GestaoOperadoras() {
             </tbody>
           </table>
           </div>
+            )}
+          </TabelaComPaginacao>
         )}
       </div>
 
