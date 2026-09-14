@@ -87,14 +87,19 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
     titulo: "Afiliados",
     blocos: [
       {
-        subtitulo: "Por que vejo 'Sem dados para o filtro selecionado' em todos os blocos?",
+        subtitulo: "Por que vejo 'Sem dados para o período selecionado.'?",
         texto:
-          "Confirme o período no carrossel (ou Histórico), o filtro de afiliado e a operadora. As métricas vêm do sync CDA — conta Afiliados (Status Técnico → Casa de Apostas (CDA) — Afiliados). O afiliado precisa ter UTM mapeado (Links e Materiais ou Gestão de Links → Mapear como Afiliado) e o sync precisa ter rodado após o mapeamento. Links só com visita na TAP e ainda não mapeados aparecem em Gestão de Links → Pendentes (Origem = TAP Afiliados). Se o filtro de afiliados estiver vazio, verifique cadastros na página Afiliados.",
+          "Quando não há afiliados com métricas ou investimento no período (e filtros de Afiliado/Operadora), os blocos de KPI, Funil, Ranking e Investimento mostram a mensagem canónica de período vazio — não R$ 0,00. Confirme o carrossel (ou Histórico), o filtro de afiliado e a operadora. As métricas vêm do sync CDA — conta Afiliados (Status Técnico → Casa de Apostas (CDA) — Afiliados). O afiliado precisa ter UTM mapeado (Links e Materiais ou Gestão de Links → Mapear como Afiliado) e o sync precisa ter rodado após o mapeamento. Links só com visita na TAP e ainda não mapeados aparecem em Gestão de Links → Pendentes (Origem = TAP Afiliados). Se o filtro de afiliados estiver vazio, verifique cadastros na página Afiliados.",
+      },
+      {
+        subtitulo: "A página fica em 'Carregando…' ou pede para tentar de novo?",
+        texto:
+          "Falha de rede ou do sync mostra mensagem canónica com **Tentar de novo** — isso não é o mesmo que «sem dados». Se o problema persistir após o botão e um hard refresh (Ctrl+Shift+R), entre em contato com o suporte.",
       },
       {
         subtitulo: "Não vejo Afiliados no menu de Dashboards?",
         texto:
-          "Confirme em Gestão de Usuários se seu perfil tem permissão de **Ver** para a página **Afiliados** na seção **Dashboards**. Administradores têm acesso total. Não confunda com **Overview Afiliado** (visão do próprio afiliado) nem com a página **Afiliados** da seção de cadastro.",
+          "Confirme em Gestão de Usuários se seu perfil tem permissão de **Ver** para a página **Afiliados** na seção **Dashboards**. Administradores têm acesso total. Não confunda com **Overview Afiliado** (visão do próprio afiliado) nem com a página **Afiliados** da seção de cadastro. A URL do dashboard é **/DashAfiliados/**.",
       },
     ],
   },

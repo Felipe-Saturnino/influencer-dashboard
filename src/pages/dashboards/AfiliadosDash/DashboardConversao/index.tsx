@@ -5,7 +5,7 @@ import { useApp } from "../../../../context/AppContext";
 import { useDashboardBrand } from "../../../../hooks/useDashboardBrand";
 import { FONT } from "../../../../constants/theme";
 import { getPageContentBoxStyle } from "../../../../lib/pageContentBoxStyles";
-import { MSG_SEM_DADOS_FILTRO } from "../../../../lib/dashboardConstants";
+import { MSG_SEM_DADOS_PERIODO } from "../../../../lib/dashboardConstants";
 import { SectionTitle, SortTableTh, SelectComIcone, type SortDir } from "../../../../components/dashboard";
 import { useDataTableBlock } from "../../../../hooks/useDataTableBlock";
 import { getDataTableWrapStyle, getDataTableStyle } from "../../../../lib/dataTableStyles";
@@ -166,38 +166,98 @@ export default function DashboardConversao() {
           </SelectComIcone>
         </div>
 
-        <div
-          className="app-conversao-funil-duo"
-          style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}
-        >
-          <div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: t.textMuted, marginBottom: 8, textAlign: "center", fontFamily: FONT.body }}>
-              Afiliado A
-            </div>
-            <FunilAfiliados
-              acessos={metA?.acessos ?? 0}
-              registros={metA?.registros ?? 0}
-              ftds={metA?.ftds ?? 0}
-            />
+        {!ladoA && !ladoB ? (
+          <div
+            style={{
+              padding: "32px 0",
+              textAlign: "center",
+              color: t.textMuted,
+              fontSize: 13,
+              fontFamily: FONT.body,
+            }}
+          >
+            Selecione dois afiliados para comparar o funil.
           </div>
-          <div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: t.textMuted, marginBottom: 8, textAlign: "center", fontFamily: FONT.body }}>
-              Afiliado B
+        ) : (
+          <div
+            className="app-conversao-funil-duo"
+            style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}
+          >
+            <div>
+              <div
+                style={{
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: t.textMuted,
+                  marginBottom: 8,
+                  textAlign: "center",
+                  fontFamily: FONT.body,
+                }}
+              >
+                Afiliado A
+              </div>
+              {ladoA ? (
+                <FunilAfiliados
+                  acessos={metA?.acessos ?? 0}
+                  registros={metA?.registros ?? 0}
+                  ftds={metA?.ftds ?? 0}
+                />
+              ) : (
+                <div
+                  style={{
+                    padding: "24px 0",
+                    textAlign: "center",
+                    color: t.textMuted,
+                    fontSize: 13,
+                    fontFamily: FONT.body,
+                  }}
+                >
+                  Selecione o afiliado A
+                </div>
+              )}
             </div>
-            <FunilAfiliados
-              acessos={metB?.acessos ?? 0}
-              registros={metB?.registros ?? 0}
-              ftds={metB?.ftds ?? 0}
-            />
+            <div>
+              <div
+                style={{
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: t.textMuted,
+                  marginBottom: 8,
+                  textAlign: "center",
+                  fontFamily: FONT.body,
+                }}
+              >
+                Afiliado B
+              </div>
+              {ladoB ? (
+                <FunilAfiliados
+                  acessos={metB?.acessos ?? 0}
+                  registros={metB?.registros ?? 0}
+                  ftds={metB?.ftds ?? 0}
+                />
+              ) : (
+                <div
+                  style={{
+                    padding: "24px 0",
+                    textAlign: "center",
+                    color: t.textMuted,
+                    fontSize: 13,
+                    fontFamily: FONT.body,
+                  }}
+                >
+                  Selecione o afiliado B
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       <div style={{ ...card, marginBottom: 0 }}>
         <SectionTitle sub={historico ? "acumulado" : undefined}>Comparativo de Taxas</SectionTitle>
         {taxasOrdenadas.length === 0 ? (
           <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
-            {MSG_SEM_DADOS_FILTRO}
+            {MSG_SEM_DADOS_PERIODO}
           </div>
         ) : (
           <TabelaComPaginacao

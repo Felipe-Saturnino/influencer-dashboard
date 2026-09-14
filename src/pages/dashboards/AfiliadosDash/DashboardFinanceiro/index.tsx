@@ -4,7 +4,7 @@ import { useApp } from "../../../../context/AppContext";
 import { useDashboardBrand } from "../../../../hooks/useDashboardBrand";
 import { FONT } from "../../../../constants/theme";
 import { getPageContentBoxStyle } from "../../../../lib/pageContentBoxStyles";
-import { BRAND, MSG_SEM_DADOS_FILTRO } from "../../../../lib/dashboardConstants";
+import { BRAND, MSG_SEM_DADOS_PERIODO } from "../../../../lib/dashboardConstants";
 import { fmtBRL } from "../../../../lib/dashboardHelpers";
 import {
   SectionTitle,
@@ -77,6 +77,7 @@ export default function DashboardFinanceiro() {
   const sf = useAfiliadosFiltrosOptional();
   const historico = sf?.historico ?? false;
   const loading = sf?.isLoading ?? false;
+  const momPronto = sf?.momPronto ?? true;
   const totais = sf?.totais;
   const totaisAnt = sf?.totaisAnt;
   const ranking = useMemo(() => sf?.ranking ?? [], [sf?.ranking]);
@@ -147,6 +148,8 @@ export default function DashboardFinanceiro() {
     [ranking],
   );
 
+  const semDadosPeriodo = !loading && rankingOrdenado.length === 0;
+
   return (
     <div className="app-page-shell" style={{ paddingTop: 0 }}>
       <div style={card}>
@@ -169,6 +172,18 @@ export default function DashboardFinanceiro() {
               <SkeletonKpiCard />
             </div>
           </>
+        ) : semDadosPeriodo ? (
+          <div
+            style={{
+              padding: "40px 0",
+              textAlign: "center",
+              color: t.textMuted,
+              fontSize: 13,
+              fontFamily: FONT.body,
+            }}
+          >
+            {MSG_SEM_DADOS_PERIODO}
+          </div>
         ) : (
           <>
             <div className="app-grid-kpi-3" style={{ marginBottom: 12 }}>
@@ -181,7 +196,7 @@ export default function DashboardFinanceiro() {
                 accentColor={BRAND.roxo}
                 atual={ftdTotal}
                 anterior={totaisAnt?.ftd_total ?? 0}
-                isHistorico={historico}
+                isHistorico={historico || !momPronto}
                 isBRL
               />
               <KpiCard
@@ -193,7 +208,7 @@ export default function DashboardFinanceiro() {
                 accentColor={BRAND.ciano}
                 atual={depValor}
                 anterior={totaisAnt?.depositos_valor ?? 0}
-                isHistorico={historico}
+                isHistorico={historico || !momPronto}
                 isBRL
               />
               <KpiCard
@@ -204,7 +219,7 @@ export default function DashboardFinanceiro() {
                 accentColor={BRAND.vermelho}
                 atual={saqValor}
                 anterior={totaisAnt?.saques_valor ?? 0}
-                isHistorico={historico}
+                isHistorico={historico || !momPronto}
                 isBRL
                 isInverso
               />
@@ -219,7 +234,7 @@ export default function DashboardFinanceiro() {
                 anterior={
                   wdRatio(totaisAnt?.saques_valor ?? 0, totaisAnt?.depositos_valor ?? 0) ?? 0
                 }
-                isHistorico={historico}
+                isHistorico={historico || !momPronto}
                 isInverso
               />
               <KpiCard
@@ -233,7 +248,7 @@ export default function DashboardFinanceiro() {
                     ? (totaisAnt?.ggr ?? 0) / (totaisAnt?.ftds ?? 1)
                     : 0
                 }
-                isHistorico={historico}
+                isHistorico={historico || !momPronto}
                 isBRL
               />
               <KpiCard
@@ -243,7 +258,7 @@ export default function DashboardFinanceiro() {
                 accentColor={ggr >= 0 ? BRAND.verde : BRAND.vermelho}
                 atual={ggr}
                 anterior={totaisAnt?.ggr ?? 0}
-                isHistorico={historico}
+                isHistorico={historico || !momPronto}
                 isBRL
               />
             </div>
@@ -265,7 +280,7 @@ export default function DashboardFinanceiro() {
               fontFamily: FONT.body,
             }}
           >
-            {MSG_SEM_DADOS_FILTRO}
+            {MSG_SEM_DADOS_PERIODO}
           </div>
         ) : (
           <TabelaComPaginacao
@@ -316,7 +331,7 @@ export default function DashboardFinanceiro() {
               fontFamily: FONT.body,
             }}
           >
-            {MSG_SEM_DADOS_FILTRO}
+            {MSG_SEM_DADOS_PERIODO}
           </div>
         ) : (
           <TabelaComPaginacao

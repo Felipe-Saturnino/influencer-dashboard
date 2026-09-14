@@ -5,7 +5,7 @@ import { useApp } from "../../../../context/AppContext";
 import { useDashboardBrand } from "../../../../hooks/useDashboardBrand";
 import { FONT } from "../../../../constants/theme";
 import { getPageContentBoxStyle } from "../../../../lib/pageContentBoxStyles";
-import { BRAND, MSG_SEM_DADOS_FILTRO } from "../../../../lib/dashboardConstants";
+import { BRAND, MSG_SEM_DADOS_PERIODO } from "../../../../lib/dashboardConstants";
 import { fmtBRL } from "../../../../lib/dashboardHelpers";
 import {
   SectionTitle,
@@ -68,6 +68,7 @@ export default function DashboardOverview() {
   const sf = useAfiliadosFiltrosOptional();
   const historico = sf?.historico ?? false;
   const loading = sf?.isLoading ?? false;
+  const momPronto = sf?.momPronto ?? true;
   const totais = sf?.totais;
   const totaisAnt = sf?.totaisAnt;
   const ranking = useMemo(() => sf?.ranking ?? [], [sf?.ranking]);
@@ -115,6 +116,7 @@ export default function DashboardOverview() {
   }, [ranking, sortRanking]);
 
   const card = getPageContentBoxStyle(brand, t);
+  const semDadosPeriodo = !loading && rankingOrdenado.length === 0;
   const ggr = totais?.ggr ?? 0;
   const invest = totais?.investimento ?? 0;
   const roi = totais?.roi ?? 0;
@@ -152,6 +154,18 @@ export default function DashboardOverview() {
             <SkeletonKpiCard />
             <SkeletonKpiCard />
           </div>
+        ) : semDadosPeriodo ? (
+          <div
+            style={{
+              padding: "40px 0",
+              textAlign: "center",
+              color: t.textMuted,
+              fontSize: 13,
+              fontFamily: FONT.body,
+            }}
+          >
+            {MSG_SEM_DADOS_PERIODO}
+          </div>
         ) : (
           <div className="app-grid-kpi-3" style={{ marginBottom: 12 }}>
             <KpiCard
@@ -162,7 +176,7 @@ export default function DashboardOverview() {
               atual={ggr}
               anterior={totaisAnt?.ggr ?? 0}
               isBRL
-              isHistorico={historico}
+              isHistorico={historico || !momPronto}
             />
             <KpiCard
               label="Investimento"
@@ -173,7 +187,7 @@ export default function DashboardOverview() {
               atual={invest}
               anterior={totaisAnt?.investimento ?? 0}
               isBRL
-              isHistorico={historico}
+              isHistorico={historico || !momPronto}
             />
             <KpiCard
               label="ROI"
@@ -182,11 +196,13 @@ export default function DashboardOverview() {
               accentColor={invest > 0 ? (roi >= 0 ? BRAND.verde : BRAND.vermelho) : BRAND.verde}
               atual={roi}
               anterior={totaisAnt?.roi ?? 0}
-              isHistorico={historico}
+              isHistorico={historico || !momPronto}
             />
           </div>
         )}
 
+        {!semDadosPeriodo ? (
+        <>
         <div
           style={{
             borderTop: `1px solid ${t.cardBorder}`,
@@ -219,7 +235,7 @@ export default function DashboardOverview() {
               accentColor={BRAND.transacao}
               atual={registros}
               anterior={totaisAnt?.registros ?? 0}
-              isHistorico={historico}
+              isHistorico={historico || !momPronto}
             />
             <KpiCard
               label="Custo por Registro"
@@ -230,7 +246,7 @@ export default function DashboardOverview() {
               atual={custoReg}
               anterior={totaisAnt?.custoPorRegistro ?? 0}
               isBRL
-              isHistorico={historico}
+              isHistorico={historico || !momPronto}
             />
             <KpiCard
               label="FTDs"
@@ -240,7 +256,7 @@ export default function DashboardOverview() {
               accentColor={BRAND.transacao}
               atual={ftds}
               anterior={totaisAnt?.ftds ?? 0}
-              isHistorico={historico}
+              isHistorico={historico || !momPronto}
             />
             <KpiCard
               label="Custo por FTD"
@@ -251,15 +267,31 @@ export default function DashboardOverview() {
               atual={custoFtd}
               anterior={totaisAnt?.custoPorFTD ?? 0}
               isBRL
-              isHistorico={historico}
+              isHistorico={historico || !momPronto}
             />
           </div>
         )}
+        </>
+        ) : null}
       </div>
 
       <div style={card}>
         <SectionTitle sub={historico ? "acumulado" : undefined}>Funil de Conversão</SectionTitle>
-        <FunilAfiliados acessos={acessos} registros={registros} ftds={ftds} />
+        {!loading && rankingOrdenado.length === 0 ? (
+          <div
+            style={{
+              padding: "24px 0",
+              textAlign: "center",
+              color: t.textMuted,
+              fontSize: 13,
+              fontFamily: FONT.body,
+            }}
+          >
+            {MSG_SEM_DADOS_PERIODO}
+          </div>
+        ) : (
+          <FunilAfiliados acessos={acessos} registros={registros} ftds={ftds} />
+        )}
       </div>
 
       <div style={{ ...card, marginBottom: 0 }}>
@@ -274,7 +306,7 @@ export default function DashboardOverview() {
               fontFamily: FONT.body,
             }}
           >
-            {MSG_SEM_DADOS_FILTRO}
+            {MSG_SEM_DADOS_PERIODO}
           </div>
         ) : (
           <TabelaComPaginacao

@@ -218,6 +218,21 @@ Nenhuma exceção documentada. Comparativo de Jogo, Comparativo de mesa e Dados 
 - **Erro de carga:** mensagem canónica + **Tentar de novo** (`erroCarga` / `reloadTick`) — não tratar falha como vazio.
 - **Tabelas densas:** Ranking Overview, Comparativo de Taxas e Ranking Financeiro usam `TabelaPaginacaoBar` + `TABELA_PAGE_SIZE` (20); KPIs usam o conjunto completo. Em **Afiliados**: Ranking de Afiliados, Comparativo de Taxas (não o Funil), **Investimento por Afiliado** e Ranking Financeiro. Em **Overview Influencer**: Detalhamento Diário/Mensal. Em **Overview Afiliado**: Detalhamento por Afiliado.
 - **Conversão:** `influencerIds` do filtro da barra entra no fetch (igual Overview/Financeiro).
+
+---
+
+## Afiliados (Dash) — Arquitetura de 3 Abas
+
+- **Container:** `AfiliadosDash/index.tsx` — header, FilterBar compartilhada, tabs ARIA, Suspense.
+  Filtros em `AfiliadosFiltrosProvider` (`AfiliadosFiltrosContext.tsx`). Dados: `useAfiliadosDashboardData`.
+- **URL:** `/DashAfiliados/{Overview|Conversao|Financeiro}` (não `/Afiliados/…` — conflita com o CRM).
+- **Carga:** fase 1 = período atual (`Promise.all` analytics ∥ investimento); fase 2 = MoM em background (`momPronto`). Falha do MoM **não** apaga o mês já pintado.
+- **Erro de carga:** `MSG_ERRO_AFILIADOS` + **Tentar de novo** no shell (não tratar falha como vazio).
+- **Operadora:** SQL `operadora_slug` é a fonte da verdade — **não** refiltrar IDs pela junction `operadoraInfluencers`.
+- **Detalhe série:** só com `detalhePorAfiliado: true` (Overview Afiliado). Nas 3 abas do Dash, não montar dia/mês.
+- **Empty:** período/tabela → `MSG_SEM_DADOS_PERIODO`. Comparativo de Funil A/B sem seleção → orientação («Selecione dois afiliados…»), não 0/0/0.
+- **Tabelas densas:** Ranking de Afiliados, Comparativo de Taxas, Investimento por Afiliado, Ranking Financeiro — `TabelaComPaginacao` + `TABELA_PAGE_SIZE` (20).
+
 ---
 
 ## Mídias Sociais — Padrões Específicos

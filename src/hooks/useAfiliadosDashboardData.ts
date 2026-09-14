@@ -1,7 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useDashboardFiltros } from "./useDashboardFiltros";
 import { useDashboardAfiliadosCatalogo } from "./useDashboardAfiliadosCatalogo";
-import { useDashboardCatalogos } from "./useDashboardCatalogos";
 import { fetchInfluencerAnalyticsPeriodoCached } from "../lib/influencerAnalyticsQuery";
 import { buscarInvestimentoPago } from "../lib/investimentoPago";
 import { buscarMetricasDeAliases, mesclarMetricasComAliases } from "../lib/metricasAliases";
@@ -12,8 +11,6 @@ import {
 import {
   AFILIADO_TOTAIS_ZERO,
   calcTotaisAfiliados,
-  montaDetalheDiarioAfiliados,
-  montaDetalheMensalAfiliados,
   montaDetalhePorAfiliado,
   montaRankingAfiliados,
   type AfiliadoDiaRow,
@@ -22,18 +19,23 @@ import {
 } from "../lib/afiliadosAnalytics";
 import { AFILIADO_FILTRO_TODOS_VALUE } from "../components/FiltroAfiliadoSelect";
 
+export const MSG_ERRO_AFILIADOS =
+  "Não foi possível carregar os dados. Se o problema persistir, entre em contato com o suporte.";
+
 export type UseAfiliadosDashboardDataParams = {
   historico: boolean;
   mesSelecionado: { ano: number; mes: number } | undefined;
   filtroAfiliado: string;
   filtroOperadora: string;
-  /** Quando true, detalhe = tabela por afiliado (Overview Afiliado). Senão: dia/mês. */
+  /** Quando true, detalhe = tabela por afiliado (Overview Afiliado). Senão: não monta série (AfiliadosDash). */
   detalhePorAfiliado?: boolean;
 };
 
 /**
  * Métricas do canal afiliados (`influencer_metricas` filtrado a IDs com role afiliado).
  * Reutiliza o fetch de analytics dos influencers com escopo restrito.
+ *
+ * Fase 1: período atual (libera paint). Fase 2: MoM em background (`momPronto`).
  */
 export function useAfiliadosDashboardData(params: UseAfiliadosDashboardDataParams) {
   const {
@@ -47,9 +49,11 @@ export function useAfiliadosDashboardData(params: UseAfiliadosDashboardDataParam
   const { podeVerInfluencer, escoposVisiveis, operadoraSlugsForcado } = useDashboardFiltros();
   const { afiliados, afiliadoNomeById, afiliadoIds, isPending: catalogPending, error: catalogError } =
     useDashboardAfiliadosCatalogo();
-  const { operadoraInfluencers } = useDashboardCatalogos();
 
   const [loading, setLoading] = useState(true);
+  const [momPronto, setMomPronto] = useState(false);
+  const [erroCarga, setErroCarga] = useState<string | null>(null);
+  const [reloadTick, setReloadTick] = useState(0);
   const [totais, setTotais] = useState<AfiliadoTotais>(AFILIADO_TOTAIS_ZERO);
   const [totaisAnt, setTotaisAnt] = useState<AfiliadoTotais>(AFILIADO_TOTAIS_ZERO);
   const [ranking, setRanking] = useState<AfiliadoRankingRow[]>([]);
@@ -63,11 +67,17 @@ export function useAfiliadosDashboardData(params: UseAfiliadosDashboardDataParam
     [afiliados],
   );
 
+  const recarregar = useCallback(() => {
+    setReloadTick((n) => n + 1);
+  }, []);
+
   useEffect(() => {
     if (catalogPending) return;
     if (catalogError) {
       console.error("[AfiliadosDashboard] catálogo:", catalogError);
+      setErroCarga(MSG_ERRO_AFILIADOS);
       setLoading(false);
+      setMomPronto(true);
       return;
     }
 
@@ -75,130 +85,147 @@ export function useAfiliadosDashboardData(params: UseAfiliadosDashboardDataParam
 
     async function carregar() {
       setLoading(true);
+      setErroCarga(null);
+      setMomPronto(historico);
+      setTotaisAnt(AFILIADO_TOTAIS_ZERO);
 
-      const mom =
-        !historico && mesSelecionado
-          ? getPeriodoComparativoMoM(mesSelecionado.ano, mesSelecionado.mes)
-          : null;
-      const { inicio, fim } = historico
-        ? getPeriodoHistoricoCompetencias()
-        : mom!.atual;
+      try {
+        const mom =
+          !historico && mesSelecionado
+            ? getPeriodoComparativoMoM(mesSelecionado.ano, mesSelecionado.mes)
+            : null;
+        const { inicio, fim } = historico
+          ? getPeriodoHistoricoCompetencias()
+          : mom!.atual;
 
-      let idsEscopo = [...afiliadoIds];
-      if (filtroAfiliado !== AFILIADO_FILTRO_TODOS_VALUE) {
-        idsEscopo = idsEscopo.filter((id) => id === filtroAfiliado);
-      } else if (filtroOperadora !== "todas" && !operadoraSlugsForcado?.length) {
-        const daOp = operadoraInfluencers[filtroOperadora] ?? [];
-        idsEscopo = idsEscopo.filter((id) => daOp.includes(id));
-      }
-
-      if (idsEscopo.length === 0) {
-        if (!cancelled) {
-          setTotais(AFILIADO_TOTAIS_ZERO);
-          setTotaisAnt(AFILIADO_TOTAIS_ZERO);
-          setRanking([]);
-          setDetalhe([]);
-          setMetricasPorAfiliado({});
-          setLoading(false);
+        let idsEscopo = [...afiliadoIds];
+        if (filtroAfiliado !== AFILIADO_FILTRO_TODOS_VALUE) {
+          idsEscopo = idsEscopo.filter((id) => id === filtroAfiliado);
         }
-        return;
-      }
+        // SQL já filtra por operadora_slug — não refiltrar pela junction influencer_operadoras.
 
-      const operadoraSlugsQuery = operadoraSlugsForcado?.length
-        ? operadoraSlugsForcado
-        : filtroOperadora !== "todas"
-          ? [filtroOperadora]
-          : escoposVisiveis.semRestricaoEscopo
-            ? null
-            : escoposVisiveis.operadorasVisiveis.length > 0
-              ? escoposVisiveis.operadorasVisiveis
-              : null;
+        if (idsEscopo.length === 0) {
+          if (!cancelled) {
+            setTotais(AFILIADO_TOTAIS_ZERO);
+            setTotaisAnt(AFILIADO_TOTAIS_ZERO);
+            setRanking([]);
+            setDetalhe([]);
+            setMetricasPorAfiliado({});
+            setLoading(false);
+            setMomPronto(true);
+          }
+          return;
+        }
 
-      const analytics = await fetchInfluencerAnalyticsPeriodoCached({
-        inicio,
-        fim,
-        operadoraSlugs: operadoraSlugsQuery,
-        influencerIds: idsEscopo,
-      });
+        const operadoraSlugsQuery = operadoraSlugsForcado?.length
+          ? operadoraSlugsForcado
+          : filtroOperadora !== "todas"
+            ? [filtroOperadora]
+            : escoposVisiveis.semRestricaoEscopo
+              ? null
+              : escoposVisiveis.operadorasVisiveis.length > 0
+                ? escoposVisiveis.operadorasVisiveis
+                : null;
 
-      let metricas = analytics.metricas.filter((m) => podeVerInfluencer(m.influencer_id));
-      if (historico) {
-        const aliasesSinteticas = await buscarMetricasDeAliases({
-          operadora_slug: filtroOperadora !== "todas" ? filtroOperadora : undefined,
-          influencerIds: idsEscopo,
-          dataInicio: inicio,
-          dataFim: fim,
-        });
-        metricas = mesclarMetricasComAliases(metricas, aliasesSinteticas, fim, podeVerInfluencer);
-      }
+        const operadoraSlugInvest =
+          filtroOperadora !== "todas" ? filtroOperadora : undefined;
 
-      const invest = await buscarInvestimentoPago(
-        { inicio, fim },
-        {
-          influencerIds: idsEscopo,
-          operadora_slug: filtroOperadora !== "todas" ? filtroOperadora : undefined,
-          includeAgentes: false,
-        },
-      );
-
-      const totaisCalc = calcTotaisAfiliados(metricas, invest.total);
-      const rankingCalc = montaRankingAfiliados(
-        metricas,
-        invest.porInfluencer,
-        afiliadoNomeById,
-        idsEscopo,
-      );
-
-      const porAf: Record<string, { acessos: number; registros: number; ftds: number }> = {};
-      for (const r of rankingCalc) {
-        porAf[r.afiliado_id] = {
-          acessos: r.acessos,
-          registros: r.registros,
-          ftds: r.ftds,
-        };
-      }
-
-      let detalheCalc: AfiliadoDiaRow[];
-      if (detalhePorAfiliado) {
-        detalheCalc = montaDetalhePorAfiliado(metricas, afiliadoNomeById, idsEscopo);
-      } else if (historico) {
-        detalheCalc = montaDetalheMensalAfiliados(metricas);
-      } else if (mesSelecionado) {
-        detalheCalc = montaDetalheDiarioAfiliados(metricas, mesSelecionado.ano, mesSelecionado.mes);
-      } else {
-        detalheCalc = [];
-      }
-
-      let totaisAntCalc = AFILIADO_TOTAIS_ZERO;
-      if (mom) {
-        const { inicio: iA, fim: fA } = mom.anterior;
-        const [investAnt, analyticsAnt] = await Promise.all([
-          buscarInvestimentoPago(
-            { inicio: iA, fim: fA },
-            {
-              influencerIds: idsEscopo,
-              operadora_slug: filtroOperadora !== "todas" ? filtroOperadora : undefined,
-              includeAgentes: false,
-            },
-          ),
+        const [analytics, invest] = await Promise.all([
           fetchInfluencerAnalyticsPeriodoCached({
-            inicio: iA,
-            fim: fA,
+            inicio,
+            fim,
             operadoraSlugs: operadoraSlugsQuery,
             influencerIds: idsEscopo,
           }),
+          buscarInvestimentoPago(
+            { inicio, fim },
+            {
+              influencerIds: idsEscopo,
+              operadora_slug: operadoraSlugInvest,
+              includeAgentes: false,
+            },
+          ),
         ]);
-        const mA = analyticsAnt.metricas.filter((m) => podeVerInfluencer(m.influencer_id));
-        totaisAntCalc = calcTotaisAfiliados(mA, investAnt.total);
-      }
 
-      if (!cancelled) {
-        setTotais(totaisCalc);
-        setTotaisAnt(totaisAntCalc);
-        setRanking(rankingCalc);
-        setDetalhe(detalheCalc);
-        setMetricasPorAfiliado(porAf);
-        setLoading(false);
+        if (cancelled) return;
+
+        let metricas = analytics.metricas.filter((m) => podeVerInfluencer(m.influencer_id));
+        if (historico) {
+          const aliasesSinteticas = await buscarMetricasDeAliases({
+            operadora_slug: operadoraSlugInvest,
+            influencerIds: idsEscopo,
+            dataInicio: inicio,
+            dataFim: fim,
+          });
+          if (cancelled) return;
+          metricas = mesclarMetricasComAliases(metricas, aliasesSinteticas, fim, podeVerInfluencer);
+        }
+
+        const totaisCalc = calcTotaisAfiliados(metricas, invest.total);
+        const rankingCalc = montaRankingAfiliados(
+          metricas,
+          invest.porInfluencer,
+          afiliadoNomeById,
+          idsEscopo,
+        );
+
+        const porAf: Record<string, { acessos: number; registros: number; ftds: number }> = {};
+        for (const r of rankingCalc) {
+          porAf[r.afiliado_id] = {
+            acessos: r.acessos,
+            registros: r.registros,
+            ftds: r.ftds,
+          };
+        }
+
+        // O3: série dia/mês só no Overview Afiliado (detalhePorAfiliado).
+        const detalheCalc: AfiliadoDiaRow[] = detalhePorAfiliado
+          ? montaDetalhePorAfiliado(metricas, afiliadoNomeById, idsEscopo)
+          : [];
+
+        if (!cancelled) {
+          setTotais(totaisCalc);
+          setRanking(rankingCalc);
+          setDetalhe(detalheCalc);
+          setMetricasPorAfiliado(porAf);
+          setLoading(false);
+        }
+
+        if (mom) {
+          try {
+            const { inicio: iA, fim: fA } = mom.anterior;
+            const [investAnt, analyticsAnt] = await Promise.all([
+              buscarInvestimentoPago(
+                { inicio: iA, fim: fA },
+                {
+                  influencerIds: idsEscopo,
+                  operadora_slug: operadoraSlugInvest,
+                  includeAgentes: false,
+                },
+              ),
+              fetchInfluencerAnalyticsPeriodoCached({
+                inicio: iA,
+                fim: fA,
+                operadoraSlugs: operadoraSlugsQuery,
+                influencerIds: idsEscopo,
+              }),
+            ]);
+            if (cancelled) return;
+            const mA = analyticsAnt.metricas.filter((m) => podeVerInfluencer(m.influencer_id));
+            setTotaisAnt(calcTotaisAfiliados(mA, investAnt.total));
+            setMomPronto(true);
+          } catch (err) {
+            console.error("[AfiliadosDashboard] MoM:", err);
+            if (!cancelled) setMomPronto(true);
+          }
+        }
+      } catch (err) {
+        console.error("[AfiliadosDashboard] carga:", err);
+        if (!cancelled) {
+          setErroCarga(MSG_ERRO_AFILIADOS);
+          setLoading(false);
+          setMomPronto(true);
+        }
       }
     }
 
@@ -220,11 +247,14 @@ export function useAfiliadosDashboardData(params: UseAfiliadosDashboardDataParam
     escoposVisiveis.semRestricaoEscopo,
     escoposVisiveis.operadorasVisiveis,
     operadoraSlugsForcado,
-    operadoraInfluencers,
+    reloadTick,
   ]);
 
   return {
     loading,
+    momPronto,
+    erroCarga,
+    recarregar,
     totais,
     totaisAnt,
     ranking,
