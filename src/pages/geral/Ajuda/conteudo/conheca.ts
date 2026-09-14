@@ -1608,7 +1608,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Logs Recentes",
         texto:
-          "Lista eventos técnicos das últimas horas, incluindo falhas de sync e linhas geradas pelo diagnóstico manual. Filtre por tipo; entradas de diagnóstico resumem quantos checks passaram, avisaram ou falharam na execução.",
+          "Lista falhas técnicas e o relatório do diagnóstico manual. Filtre pelas últimas **48h**, **72h** ou **96h** (padrão 48h). O diagnóstico grava um resumo e só as linhas de atenção ou falha — o que passou não aparece como linha extra.",
       },
       {
         subtitulo: "Fluxo de dados",
@@ -1618,7 +1618,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Alertas automáticos",
         texto:
-          "A plataforma detecta automaticamente condições anômalas: syncs atrasados (> 24h ou > 36h), taxas de erro acima de 5%, e e-mails operacionais não enviados no dia. O aviso de CDA sem dados recentes considera a data de métrica de ontem (D-1), pois o sync diário grava o dia anterior. Alertas em vermelho indicam falha; em amarelo, atenção.",
+          "A plataforma detecta automaticamente condições anômalas: syncs que não rodaram no dia após o horário do job, coletas de lobby atrasadas (mais de 24h), taxas de erro acima de 5%, e e-mails operacionais não enviados no dia. O aviso de CDA sem dados recentes considera a data de métrica de ontem (D-1), pois o sync diário grava o dia anterior. Alertas em vermelho indicam falha; em amarelo, atenção.",
       },
       {
         subtitulo: "Redes permitidas — Check-in de prestadores",
@@ -1628,7 +1628,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Testes automatizados (CI) vs diagnóstico na plataforma",
         texto:
-          "A suíte Vitest no repositório (CI e pre-commit) valida helpers e imports — não substitui o diagnóstico em produção. Use **Executar diagnóstico** quando precisar de um snapshot operacional gravado em Logs Recentes no ambiente atual.",
+          "A suíte Vitest no repositório (CI e pre-commit) valida helpers e imports — não substitui o diagnóstico em produção. Use **Executar diagnóstico** para um snapshot do ambiente atual: jobs, credenciais, se as rotinas estão publicadas, Storage, e se ferramentas externas (e-mail, CDA, Outlook, feeds RSS) respondem. Não dispara sync nem envia e-mail. O resumo e os problemas aparecem em Logs Recentes (últimas 48h).",
       },
     ],
   },
@@ -1754,7 +1754,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Aba Escopos",
         texto:
-          "Dentro de **Escopos** há duas sub-abas:\n— **Operadora:** quais páginas entram no menu dos operadores de cada operadora.\n— **Prestadores:** quais páginas entram no menu por área de atuação (ex.: Estúdio, Escritório).\nGestores de departamento (Aquisição, Marketing, Operações, Academy, RH) usam só a matriz de **Permissões**, sem coluna própria nesta aba.\nO acesso efetivo é o cruzamento destas marcações com a matriz de Permissões.",
+          "Dentro de **Escopos** há duas sub-abas:\n— **Operadora:** quais páginas entram no menu dos operadores de cada operadora.\n— **Prestadores:** quais páginas entram no menu por área de atuação (Escritório, Estúdio).\nGestores de departamento (Aquisição, Marketing, Operações, Tech Ops, Academy, RH, Facilities, TI) usam só a matriz de **Permissões**, sem coluna própria nesta aba.\nOs perfis **Facilities** e **TI** (e os gestores correspondentes) também usam só Permissões — quem é cadastrado na gerência Facilities ou TI em Gestão de Prestadores recebe o perfil de staff automaticamente. Se alguém for colocado manualmente em um perfil de **Gestor de departamento**, o sync do organograma **não** altera esse perfil.\nO acesso efetivo é o cruzamento destas marcações com a matriz de Permissões.",
       },
       {
         subtitulo: "Aba Simulador de Login",

@@ -10,23 +10,24 @@ import { registrarHistoricoPerfil } from './common.ts'
  * Cria ou atualiza usuário Auth + profile + user_scopes conforme organograma do prestador.
  * Nome na plataforma: nome completo do prestador (`rh_funcionarios.nome`).
  * E-mail de login: E-mail Spin se válido; senão e-mail pessoal. Body opcional reforça valores após save.
- * Perfil / escopo: gerências (Figurino, Comunicação, RH, Tech Ops, Customer Service → perfil próprio; Facilities, Financeiro, TI → Prestador; Treinamento → gestor_academy) >
+ * Perfil / escopo: gerências (Figurino, Comunicação, RH, Tech Ops, Customer Service, Facilities, TI → perfil próprio; Financeiro → Prestador; Treinamento → gestor_academy) >
  *   times (Performance Coach → performance_coach, Shift Leader, Service Manager, Customer Service, Tech Ops, GP, Shuffler) >
  *   área de atuação do cadastro (Escritório / Estúdio) > default Escritório.
- * Usuário já existente (mesmo e-mail Spin ou pessoal): atualiza `profiles.role`, escopos RH e metadata Auth — sem e-mail de boas-vindas.
+ * Usuário já existente (mesmo e-mail Spin ou pessoal): atualiza nome/ativo/escopos RH e metadata Auth — sem e-mail de boas-vindas.
+ * **Não sobrescreve** `profiles.role` se o perfil atual for gestor de departamento (`gestor_*` em `_gestor_departamento_roles` / ROLES_GESTOR_DEPARTAMENTO) — atribuição manual em Gestão de Usuários prevalece sobre o organograma.
  * Chamada após salvar na Gestão de Prestadores (JWT do operador; mesma regra que _rh_funcionario_perm: admin, rh_funcionarios ou rh_staff com editar/criar).
  */
 
 type PrestadorTipoSlug =
   | 'escritorio'
-  | 'facilities'
-  | 'ti'
   | 'estudio'
 
 type PerfilRhSync =
   | 'figurino'
   | 'comunicacao'
   | 'rh'
+  | 'facilities'
+  | 'ti'
   | 'performance_coach'
   | 'shift_leader'
   | 'service_manager'
@@ -36,6 +37,22 @@ type PerfilRhSync =
   | 'tech_ops'
   | 'prestador'
   | 'gestor_academy'
+
+/** Espelha `ROLES_GESTOR_DEPARTAMENTO` / `_gestor_departamento_roles()` — manter alinhado. */
+const ROLES_GESTOR_DEPARTAMENTO = [
+  'gestor_aquisicao',
+  'gestor_marketing',
+  'gestor_operacoes',
+  'gestor_tech_ops',
+  'gestor_academy',
+  'gestor_rh',
+  'gestor_facilities',
+  'gestor_ti',
+] as const
+
+function roleGestorDepartamento(role: string): boolean {
+  return (ROLES_GESTOR_DEPARTAMENTO as readonly string[]).includes(role)
+}
 
 const supabaseServiceOptions = {
   auth: { autoRefreshToken: false, persistSession: false },
@@ -254,16 +271,21 @@ async function findProfileByEmails(
 async function syncEscoposRhPrestador(
   supabase: SupabaseSvc,
   userId: string,
-  perfilRole: PerfilRhSync,
+  perfilRole: string,
   tipoSlug: PrestadorTipoSlug | null,
 ): Promise<{ error?: string }> {
   // Limpa prestador_tipo e gestor_tipo legado; só reinsere prestador_tipo quando aplicável.
+  // Gestores de departamento: não reaplica área Prestador (perfil preservado / só role_permissions).
   const { error: delErr } = await supabase
     .from('user_scopes')
     .delete()
     .eq('user_id', userId)
     .in('scope_type', ['prestador_tipo', 'gestor_tipo'])
   if (delErr) return { error: `Erro ao limpar escopos RH: ${delErr.message}` }
+
+  if (roleGestorDepartamento(perfilRole)) {
+    return {}
+  }
 
   if (tipoSlug !== null && perfilRole === 'prestador') {
     const { error: scopeErr } = await supabase.from('user_scopes').insert({
@@ -368,13 +390,13 @@ function resolvePerfilEscopo(
     return { role: 'customer_service', prestadorTipo: null }
   }
   if (g === 'facilities') {
-    return { role: 'prestador', prestadorTipo: 'facilities' }
+    return { role: 'facilities', prestadorTipo: null }
   }
   if (g === 'financeiro') {
     return { role: 'prestador', prestadorTipo: 'escritorio' }
   }
   if (g === 'ti') {
-    return { role: 'prestador', prestadorTipo: 'ti' }
+    return { role: 'ti', prestadorTipo: null }
   }
   if (g === 'treinamento') {
     return { role: 'gestor_academy', prestadorTipo: null }
@@ -634,10 +656,17 @@ serve(async (req) => {
     const emailAnterior = String(perfilExistente.email ?? '').trim().toLowerCase()
     const emailMudou = emailAnterior !== loginEmail
 
+    /** Gestão manual (Gestão de Usuários) prevalece — sync não rebaixa gestor de departamento. */
+    const preservarRoleGestor = roleGestorDepartamento(roleAnterior)
+    const roleEfetivo = preservarRoleGestor ? roleAnterior : perfilRole
+    const tipoSlugEfetivo = preservarRoleGestor ? null : tipoSlug
+
     const patchProfile: Record<string, unknown> = {
       name: nomePlataforma,
-      role: perfilRole,
       ativo: true,
+    }
+    if (!preservarRoleGestor) {
+      patchProfile.role = roleEfetivo
     }
     if (emailMudou) patchProfile.email = loginEmail
 
@@ -653,7 +682,8 @@ serve(async (req) => {
     }
 
     const estavaInativo = (perfilExistente as { ativo?: boolean | null }).ativo === false
-    if (estavaInativo || roleAnterior !== perfilRole) {
+    const roleMudou = !preservarRoleGestor && roleAnterior !== roleEfetivo
+    if (estavaInativo || roleMudou) {
       if (estavaInativo) {
         await registrarHistoricoPerfil(supabase, {
           profileId: perfilExistente.id,
@@ -664,22 +694,22 @@ serve(async (req) => {
           preservarAccessGrantedAt: true,
         })
       }
-      if (roleAnterior !== perfilRole) {
+      if (roleMudou) {
         await registrarHistoricoPerfil(supabase, {
           profileId: perfilExistente.id,
           tipo: 'alteracao_perfil',
           origem: 'contrato_ativado',
           realizadoPor: whoami.userId,
-          resumo: `Perfil: ${roleAnterior || '—'} → ${perfilRole}`,
+          resumo: `Perfil: ${roleAnterior || '—'} → ${roleEfetivo}`,
           valorAnterior: roleAnterior || null,
-          valorNovo: perfilRole,
+          valorNovo: roleEfetivo,
         })
       }
     }
 
     const authUp = await goTrueAdminUpdateUser(supabaseUrl, serviceRoleKey, perfilExistente.id, {
       name: nomePlataforma,
-      perfilRole,
+      perfilRole: roleEfetivo,
       ...(emailMudou ? { email: loginEmail } : {}),
     })
     if (authUp.error) {
@@ -690,7 +720,12 @@ serve(async (req) => {
       })
     }
 
-    const escopos = await syncEscoposRhPrestador(supabase, perfilExistente.id, perfilRole, tipoSlug)
+    const escopos = await syncEscoposRhPrestador(
+      supabase,
+      perfilExistente.id,
+      roleEfetivo,
+      tipoSlugEfetivo,
+    )
     if (escopos.error) {
       return new Response(JSON.stringify({ error: escopos.error }), {
         status: 500,
@@ -703,8 +738,9 @@ serve(async (req) => {
         success: true,
         updated: true,
         userId: perfilExistente.id,
-        role: perfilRole,
-        roleChanged: roleAnterior !== perfilRole,
+        role: roleEfetivo,
+        roleChanged: roleMudou,
+        rolePreserved: preservarRoleGestor,
       }),
       { status: 200, headers: { ...cors, 'Content-Type': 'application/json' } },
     )

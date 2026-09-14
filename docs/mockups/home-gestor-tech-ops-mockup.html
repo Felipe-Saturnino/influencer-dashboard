@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Mockup — Home Gestor de Operações (proposta · variante Gestores)</title>
+  <title>Mockup — Home Gestor de Tech Ops (proposta · variante Gestores)</title>
   <style>
     :root {
       --brand-primary: #7c3aed;
@@ -266,7 +266,7 @@
 </head>
 <body>
   <div class="mock-banner">
-    <span>Mockup 7/N — Home · perfil <strong>Gestor de Operações</strong> · variante da família Gestores</span>
+    <span>Mockup 8/N — Home · perfil <strong>Gestor de Tech Ops</strong> · variante da família Gestores</span>
     <button type="button" id="btn-tema">Alternar tema claro / escuro</button>
   </div>
 
@@ -276,17 +276,17 @@
     <div class="welcome-card">
       <div class="topbar"></div>
       <div class="welcome-row">
-        <div class="avatar" aria-hidden="true">R</div>
+        <div class="avatar" aria-hidden="true">T</div>
         <div style="flex:1;min-width:200px">
-          <h1>Olá, Renata Oliveira!</h1>
-          <p class="role-label">Gestor de Operações</p>
-          <p class="welcome-sub">Estúdio, escala e mesas sob controle.
-O que precisa de cobertura ou decisão operacional, primeiro.</p>
+          <h1>Olá, Thiago Nunes!</h1>
+          <p class="role-label">Gestor de Tech Ops</p>
+          <p class="welcome-sub">Estoque e ordens de saída sob controle.
+O que precisa de aprovação ou atenção no inventário, primeiro.</p>
         </div>
       </div>
     </div>
 
-    <span class="block-tag">Bloco 2 · Escala Estúdio não aprovada · janela ≤ 5 dias úteis até o fim do mês</span>
+    <span class="block-tag">Bloco 2 · OS solicitadas aguardando aprovação (só quando houver)</span>
     <div class="alert-box">
       <svg class="alert-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>
@@ -294,83 +294,127 @@ O que precisa de cobertura ou decisão operacional, primeiro.</p>
       <div style="flex:1;min-width:0">
         <div class="alert-title">AÇÃO NECESSÁRIA</div>
         <p class="alert-body">
-          Faltam <strong>5 dias úteis</strong> para o fim de <strong>setembro 2026</strong> e a Escala Estúdio ainda está em <strong>rascunho</strong> (área Game Presenter). Aprove para alimentar o Calendário e o Controle de Turno.
+          Há <strong>5 ordens de saída</strong> com status <strong>Solicitada</strong> aguardando aprovação (Interna, Externa ou Manutenção). Revise em Ordem de Saída.
         </p>
-        <a class="alert-cta" href="#">Ir para Escala Estúdio</a>
-        <p class="nota-mock"><strong>Regra:</strong> só aparece se (1) restam <strong>≤ 5 dias úteis</strong> até o último dia útil do mês corrente e (2) alguma área operacional (GP / Shuffler / SL / SM) ainda <strong>não</strong> está aprovada. Dias úteis = seg–sex, excluindo feriados nacionais + SP capital (mesmo critério da Escala). Ocultar fora da janela ou se todas as áreas estiverem aprovadas. <strong>Sem</strong> alerta de Solicitações / Ofertas Spin / Incidentes. <strong>Sem</strong> bloco de KPIs nesta Home.</p>
+        <a class="alert-cta" href="#">Ir para Ordem de Saída</a>
+        <p class="nota-mock">Contagem de OS <code>solicitada</code> (todas as abas). Ocultar se zero. Ação típica do gestor com Editar em Ordem de Saída.</p>
       </div>
     </div>
 
-    <span class="block-tag">Bloco 3 · Informações — Informativos (perfil gestor_operacoes · 10 dias)</span>
+    <span class="block-tag">Bloco 3 · Principais KPIs — Pendências (OS) + Estoque</span>
+    <div class="content-box">
+      <h2 class="section-title">Principais KPIs</h2>
+      <p class="mes-sub">Setembro 2026 · Ordem de Saída + estoque</p>
+
+      <p class="mes-sub" style="margin-top:4px">Pendências</p>
+      <div class="grid-kpi-4" style="margin-bottom:16px">
+        <article class="kpi-card">
+          <div class="kpi-bar warn"></div>
+          <div class="kpi-body">
+            <div class="kpi-head"><span class="kpi-ic warn" aria-hidden="true">!</span><span class="kpi-label">Solicitadas</span></div>
+            <div class="kpi-value">5</div>
+          </div>
+        </article>
+        <article class="kpi-card">
+          <div class="kpi-bar sec"></div>
+          <div class="kpi-body">
+            <div class="kpi-head"><span class="kpi-ic sec" aria-hidden="true">↗</span><span class="kpi-label">Abertas</span></div>
+            <div class="kpi-value">12</div>
+          </div>
+        </article>
+        <article class="kpi-card">
+          <div class="kpi-bar ok"></div>
+          <div class="kpi-body">
+            <div class="kpi-head"><span class="kpi-ic ok" aria-hidden="true">✓</span><span class="kpi-label">Concluídas (mês)</span></div>
+            <div class="kpi-value">38</div>
+          </div>
+        </article>
+        <article class="kpi-card">
+          <div class="kpi-bar"></div>
+          <div class="kpi-body">
+            <div class="kpi-head"><span class="kpi-ic" aria-hidden="true">#</span><span class="kpi-label">Total (mês)</span></div>
+            <div class="kpi-value">61</div>
+          </div>
+        </article>
+      </div>
+
+      <p class="mes-sub">Estoque</p>
+      <div class="grid-kpi-4">
+        <article class="kpi-card">
+          <div class="kpi-bar sec"></div>
+          <div class="kpi-body">
+            <div class="kpi-head"><span class="kpi-ic sec" aria-hidden="true">📦</span><span class="kpi-label">Itens em uso</span></div>
+            <div class="kpi-value">214</div>
+          </div>
+        </article>
+        <article class="kpi-card">
+          <div class="kpi-bar warn"></div>
+          <div class="kpi-body">
+            <div class="kpi-head"><span class="kpi-ic warn" aria-hidden="true">🔧</span><span class="kpi-label">Eq. em manutenção</span></div>
+            <div class="kpi-value">7</div>
+          </div>
+        </article>
+        <article class="kpi-card">
+          <div class="kpi-bar ok"></div>
+          <div class="kpi-body">
+            <div class="kpi-head"><span class="kpi-ic ok" aria-hidden="true">▣</span><span class="kpi-label">Eq. em estoque</span></div>
+            <div class="kpi-value">43</div>
+          </div>
+        </article>
+        <article class="kpi-card">
+          <div class="kpi-bar"></div>
+          <div class="kpi-body">
+            <div class="kpi-head"><span class="kpi-ic" aria-hidden="true">📍</span><span class="kpi-label">Itens alocados (Set)</span></div>
+            <div class="kpi-value">156</div>
+          </div>
+        </article>
+      </div>
+      <p class="footer-hint">Quer saber mais? Acessa <a href="#">Ordem de Saída</a> · <a href="#">Gestão de Estoque</a> · <a href="#">Itens Alocados</a></p>
+      <p class="nota-mock"><strong>Pendências:</strong> KPIs de status da Ordem de Saída. <strong>Estoque:</strong> Itens em uso + equipamentos Em manutenção / Em estoque + Set em Itens Alocados. <strong>Fora:</strong> Status Técnico (não faz parte da função deste perfil na Home).</p>
+    </div>
+
+    <span class="block-tag">Bloco 4 · Informações — Informativos (perfil gestor_tech_ops · 10 dias)</span>
     <div class="content-box">
       <h2 class="section-title">Informações</h2>
       <ul class="feed-list">
         <li>
           <article class="feed-card">
-            <h3>Prévia de rotação — Sports Club</h3>
+            <h3>Checklist de Set — Sports Club</h3>
             <div class="feed-body">
-              <p>A prévia do mês foi gerada após aprovação da Escala. Revise slots no <a href="#">Controle de Turno</a> antes do próximo turno.</p>
+              <p>Revise o Set alocado no estúdio Sports Club em <a href="#">Itens Alocados</a> antes do próximo turno.</p>
             </div>
-            <p class="feed-footer">Equipe Operações · 12/09/26 - 09:40</p>
+            <p class="feed-footer">Equipe Tech Ops · 12/09/26 - 16:20</p>
             <button type="button" class="btn-li-ocultar">Li e Ocultar</button>
           </article>
         </li>
       </ul>
-      <p class="nota-mock">Perfil <code>gestor_operacoes</code>, 10 dias + «Li e Ocultar». Sem Blogueiro Spin nesta variante.</p>
+      <p class="nota-mock">Perfil <code>gestor_tech_ops</code>, 10 dias + «Li e Ocultar». Sem Blogueiro Spin.</p>
     </div>
 
-    <span class="block-tag">Bloco 4 · Acesso rápido (curado · Operações)</span>
+    <span class="block-tag">Bloco 5 · Acesso rápido (curado · Tech Ops)</span>
     <div class="content-box">
       <h2 class="section-title">Acesso rápido</h2>
       <p class="hint">Clique em um atalho abaixo para ir diretamente à página desejada.</p>
       <div class="grid-atalhos">
         <a class="atalho" href="#">
-          <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg></span>
-          <div style="flex:1;min-width:0">
-            <div class="tit"><span>Overview Spin</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
-            <p>Resultado das mesas ao vivo — GGR, UAP e detalhamento por operadora.</p>
-          </div>
-        </a>
-        <a class="atalho" href="#">
-          <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg></span>
-          <div style="flex:1;min-width:0">
-            <div class="tit"><span>Escala Estúdio</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
-            <p>Monte, ajuste e aprove a escala diária dos times de estúdio.</p>
-          </div>
-        </a>
-        <a class="atalho" href="#">
-          <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></span>
-          <div style="flex:1;min-width:0">
-            <div class="tit"><span>Controle de Turno</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
-            <p>Acompanhe rotação, escala/presença e notificações do turno.</p>
-          </div>
-        </a>
-        <a class="atalho" href="#">
-          <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
-          <div style="flex:1;min-width:0">
-            <div class="tit"><span>Gestão de Dealers</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
-            <p>Catálogo de Game Presenters e especialidades por mesa.</p>
-          </div>
-        </a>
-        <a class="atalho" href="#">
           <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M15 2H9a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1z"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg></span>
           <div style="flex:1;min-width:0">
-            <div class="tit"><span>Solicitações de Cliente</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
-            <p>Atenda pedidos das operadoras sobre mesas e operação.</p>
+            <div class="tit"><span>Ordem de Saída</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
+            <p>Aprove e acompanhe OS internas, externas e de manutenção.</p>
           </div>
         </a>
         <a class="atalho" href="#">
-          <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg></span>
+          <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg></span>
           <div style="flex:1;min-width:0">
-            <div class="tit"><span>Marketplace</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
-            <p>Ofertas Spin, cobertura e negociação de turnos.</p>
+            <div class="tit"><span>Gestão de Estoque</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
+            <p>Controle itens, equipamentos, insumos de jogo e fornecedores.</p>
           </div>
         </a>
         <a class="atalho" href="#">
-          <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></span>
+          <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>
           <div style="flex:1;min-width:0">
-            <div class="tit"><span>Incidentes</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
-            <p>Registre e acompanhe incidentes operacionais do estúdio.</p>
+            <div class="tit"><span>Itens Alocados</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
+            <p>Acompanhe o Set por local e itens em manutenção.</p>
           </div>
         </a>
         <a class="atalho" href="#">
@@ -381,20 +425,21 @@ O que precisa de cobertura ou decisão operacional, primeiro.</p>
           </div>
         </a>
       </div>
-      <p class="nota-mock">Lista curada de Operações — só com Ver liberado. <strong>Fora:</strong> <span class="removed">dump do menu / Financeiro / Marketing</span>. Sem Blogueiro Spin.</p>
+      <p class="nota-mock">Lista curada de Tech Ops — só com Ver liberado. <strong>Fora:</strong> <span class="removed">Status Técnico / dump do menu</span>.</p>
     </div>
 
   </div>
 
   <div class="legenda">
     <div class="content-box">
-      <h2 class="section-title">Notas para aprovação — Home Gestor de Operações</h2>
+      <h2 class="section-title">Notas para aprovação — Home Gestor de Tech Ops</h2>
       <ul>
-        <li><strong>Variante</strong> da família Gestores — mais enxuta (sem KPIs).</li>
-        <li><strong>AÇÃO NECESSÁRIA (única):</strong> Escala Estúdio não aprovada → Escala Estúdio, <strong>somente</strong> se restarem ≤ 5 dias úteis até o fim do mês.</li>
-        <li><strong>Removido:</strong> Solicitações pendentes; Ofertas Spin; Incidentes; bloco Inteiro de KPIs (Resultado + Operação).</li>
-        <li><strong>Informativos:</strong> perfil <code>gestor_operacoes</code>, 10 dias — sem Blogueiro Spin.</li>
-        <li><strong>Atalhos:</strong> Overview Spin → Escala → CT → Dealers → Solicitações → Marketplace → Incidentes → Ajuda.</li>
+        <li><strong>Variante</strong> da família Gestores.</li>
+        <li><strong>AÇÃO NECESSÁRIA:</strong> OS <code>solicitada</code> → Ordem de Saída.</li>
+        <li><strong>Sem Status Técnico</strong> na Home (alerta, KPIs, links e atalhos) — fora do escopo deste perfil.</li>
+        <li><strong>KPIs — Pendências:</strong> Solicitadas, Abertas, Concluídas (mês), Total (mês) — Ordem de Saída.</li>
+        <li><strong>KPIs — Estoque:</strong> Itens em uso, Eq. em manutenção, Eq. em estoque, Itens alocados (Set).</li>
+        <li><strong>Atalhos:</strong> Ordem de Saída → Gestão de Estoque → Itens Alocados → Ajuda.</li>
         <li><strong>Fluxo:</strong> só mockups — implantação em lote depois.</li>
       </ul>
     </div>

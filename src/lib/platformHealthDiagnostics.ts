@@ -37,6 +37,17 @@ export interface PlatformHealthSecretsSnapshot {
   destinatariosAgendaConfigurado: boolean;
 }
 
+export type PlatformHealthJobKind =
+  | "cda"
+  | "social"
+  | "rss"
+  | "email"
+  | "comercialSpa"
+  | "comercialDominio"
+  | "comercialCnpj"
+  | "lobby"
+  | "outro";
+
 export interface PlatformHealthIntegrationSnapshot {
   slug: string | null;
   nome: string;
@@ -46,14 +57,196 @@ export interface PlatformHealthIntegrationSnapshot {
   okHoje: boolean;
   teveHistorico: boolean;
   erros24h: number;
+  /** Taxa de falha no lote de sync_logs (0–100). */
+  taxaErroPct?: number | null;
+  /** Lobby: última coleta OK há mais de 24h. */
+  atrasoLobby24h?: boolean;
+  jobKind?: PlatformHealthJobKind;
+}
+
+/** Probe extra (smoke de infra, ping vivo, conflito de catálogo). */
+export interface PlatformHealthExtraProbe {
+  nome: string;
+  severidade: DiagnosticSeverity;
+  descricao: string;
+  integracaoSlugFk: string | null;
 }
 
 export interface PlatformHealthSnapshot {
   hojeIso: string;
   passouHorarioCda: boolean;
   passouHorarioSocial: boolean;
+  passouHorarioComercialSpa?: boolean;
+  passouHorarioComercialDominio?: boolean;
+  passouHorarioComercialCnpj?: boolean;
   secrets: PlatformHealthSecretsSnapshot;
   integracoes: PlatformHealthIntegrationSnapshot[];
+  extras?: PlatformHealthExtraProbe[];
+}
+
+/** Horários de corte alinhados a Status Técnico / `HORARIO_AGENDADO_BR`. */
+export const DIAGNOSTICO_HORARIO_CORTE = {
+  cda: 8,
+  social: 6,
+  comercialSpa: 7,
+  comercialDominio: 8,
+  comercialCnpj: 9,
+} as const;
+
+/** Edge Functions publicadas — smoke OPTIONS (sem disparar lógica). */
+export const DIAGNOSTICO_EDGE_FUNCTIONS = [
+  "platform-health-check",
+  "sync-metricas-cda",
+  "trigger-social-kpis",
+  "sync-spin-na-rede-rss",
+  "sync-painel-noticias-rss",
+  "sync-comercial-spa-lista",
+  "validate-comercial-dominios",
+  "enrich-comercial-cnpj",
+  "ingest-cs-atendimento-outlook",
+  "monitor-lobby-blaze",
+  "monitor-lobby-cda",
+  "monitor-lobby-esportiva",
+  "monitor-lobby-jonbet",
+  "monitor-lobby-bateu",
+  "monitor-lobby-rico",
+  "monitor-lobby-brx",
+  "monitor-lobby-donald",
+  "monitor-lobby-betponto",
+  "criar-usuario",
+  "criar-usuario-scout",
+  "criar-afiliado-network",
+  "sync-rh-prestador-auth-user",
+  "atualizar-perfil",
+  "admin-usuario-acao",
+  "recuperar-senha",
+  "aprovar-pagamento",
+  "prestador-ponto",
+  "prospecto-scout-site",
+  "prospecto-afiliados-network-site",
+  "prospecto-cs-atendimento-site",
+  "prospecto-vaga-candidatura-site",
+  "sync-vagas-carreiras-site",
+  "relatorio-diario-diretoria",
+  "email-agenda-diaria",
+  "rh-calendario-ics",
+  "purge-academy-performance-hub-videos",
+] as const;
+
+/** Slugs de job que o diagnóstico deve buscar em `sync_logs` (um fetch por slug). */
+export const DIAGNOSTICO_SYNC_SLUGS = [
+  "casa_apostas",
+  "casa_apostas_afiliados",
+  "spin_na_rede_rss",
+  "painel_noticias_rss",
+  "comercial_spa_lista",
+  "comercial_dominio_validacao",
+  "comercial_cnpj_enriquecimento",
+  "cs_atendimento_outlook",
+  "lobby_blaze",
+  "lobby_cda",
+  "lobby_esportiva",
+  "lobby_jonbet",
+  "lobby_bateu",
+  "lobby_rico",
+  "lobby_brx",
+  "lobby_donald",
+  "lobby_betponto",
+] as const;
+
+export const DIAGNOSTICO_LOBBY_OPERADORAS = [
+  "blaze",
+  "casa_apostas",
+  "esportiva_bet",
+  "jonbet",
+  "bateu_bet",
+  "rico_bet",
+  "brx_bet",
+  "donald_bet",
+  "betponto_bet",
+] as const;
+
+export const DIAGNOSTICO_CRON_JOBS = [
+  "daily-sync-metricas-cda-influencers",
+  "daily-sync-metricas-cda-afiliados",
+  "daily-relatorio-diario-diretoria",
+  "daily-email-agenda-diaria",
+  "daily-sync-spin-na-rede-rss",
+  "daily-sync-comercial-spa-lista",
+  "daily-validate-comercial-dominios",
+  "daily-enrich-comercial-cnpj",
+  "ingest-cs-atendimento-outlook-5min",
+] as const;
+
+export const DIAGNOSTICO_STORAGE_BUCKETS = [
+  "cs-atendimento-email",
+  "canal-denuncias-spin",
+  "academy-performance-hub-videos",
+  "academy-portal-assets",
+  "rh-portal-assets",
+  "estudio-incidentes",
+  "marketing-fotos-gerais",
+  "rh-vaga-candidaturas",
+] as const;
+
+export const DIAGNOSTICO_BRASIL_API_CNPJ_PING = "00000000000191";
+export const DIAGNOSTICO_SPA_LISTA_URL =
+  "https://www.gov.br/fazenda/pt-br/composicao/orgaos/secretaria-de-premios-e-apostas/lista-de-empresas/empresas-autorizadas";
+
+export const DIAGNOSTICO_PING_TIMEOUT_MS = 8000;
+export const DIAGNOSTICO_OPTIONS_TIMEOUT_MS = 4000;
+export const DIAGNOSTICO_CONCURRENCY = 4;
+export const DIAGNOSTICO_BUDGET_MS = 45_000;
+
+export function jobKindFromSlug(slug: string | null | undefined): PlatformHealthJobKind {
+  if (!slug) return "outro";
+  if (slug === "casa_apostas" || slug === "casa_apostas_afiliados") return "cda";
+  if (slug === "social_kpis") return "social";
+  if (slug.includes("rss") || slug === "spin_na_rede_rss" || slug === "painel_noticias_rss") return "rss";
+  if (slug.startsWith("email_")) return "email";
+  if (slug === "comercial_spa_lista") return "comercialSpa";
+  if (slug === "comercial_dominio_validacao") return "comercialDominio";
+  if (slug === "comercial_cnpj_enriquecimento") return "comercialCnpj";
+  if (slug.startsWith("lobby_")) return "lobby";
+  return "outro";
+}
+
+export function classificarHttpSmoke(
+  status: number,
+  aborted: boolean,
+): { severidade: DiagnosticSeverity; detalhe: string } {
+  if (aborted) return { severidade: "aviso", detalhe: "Tempo esgotado ao contactar o serviço." };
+  if (status === 401 || status === 403) {
+    return { severidade: "erro", detalhe: `HTTP ${status} — credencial recusada ou acesso negado.` };
+  }
+  if (status === 404) {
+    return { severidade: "erro", detalhe: "HTTP 404 — recurso ou função não encontrada (não publicada?)." };
+  }
+  if (status >= 500) {
+    return { severidade: "aviso", detalhe: `HTTP ${status} — serviço indisponível no momento.` };
+  }
+  if (status >= 200 && status < 400) {
+    return { severidade: "ok", detalhe: `HTTP ${status}.` };
+  }
+  return { severidade: "aviso", detalhe: `HTTP ${status}.` };
+}
+
+export function primeiraUrlDeLista(raw: string | undefined): string | null {
+  if (!raw?.trim()) return null;
+  const url = raw
+    .split(/[\s,;]+/)
+    .map((s) => s.trim())
+    .find((s) => /^https?:\/\//i.test(s));
+  return url ?? null;
+}
+
+export function githubRepoPath(raw: string | undefined): string | null {
+  const v = (raw ?? "").trim();
+  if (!v) return null;
+  const m = v.match(/github\.com\/([^/]+\/[^/]+)(?:\.git)?/i);
+  if (m?.[1]) return m[1].replace(/\.git$/i, "");
+  if (/^[^/]+\/[^/]+$/.test(v)) return v;
+  return null;
 }
 
 function trimEnv(get: (key: string) => string | undefined, key: string): string {
@@ -265,47 +458,28 @@ export function buildPlatformHealthTechLogs(snapshot: PlatformHealthSnapshot): T
   }
 
   for (const integ of snapshot.integracoes) {
-    let severidade: DiagnosticSeverity = "ok";
-    let detalhe = "Última execução dentro do esperado.";
-
-    if (!integ.teveHistorico && !integ.ultimoEm) {
-      severidade = "aviso";
-      detalhe = "Sem histórico de execução registrado.";
-    } else if (integ.ultimoStatus === "falha" || integ.ultimoStatus === "error") {
-      severidade = "erro";
-      detalhe = "Última execução com falha.";
-    } else if (integ.erros24h > 0) {
-      severidade = "aviso";
-      detalhe = `${integ.erros24h} ocorrência(s) de erro nas últimas 24 horas.`;
-    } else if (integ.teveHistorico && !integ.okHoje) {
-      const atraso =
-        integ.nome.includes("CDA") && snapshot.passouHorarioCda
-          ? "Job diário (4h BRT) ainda não registrou sucesso hoje."
-          : (integ.nome.includes("Social") || integ.nome.includes("RSS") || integ.nome.includes("E-mail")) &&
-              snapshot.passouHorarioSocial
-            ? "Job agendado (6h BRT) ainda não registrou sucesso hoje."
-            : "Sem sucesso registrado na data civil de hoje.";
-      severidade = "aviso";
-      detalhe = atraso;
-    }
-
-    countSeverity(severidade, counters);
-
+    const avaliado = avaliarJobIntegracao(integ, snapshot);
+    countSeverity(avaliado.severidade, counters);
     pushProbe(out, {
       nome: integ.nome,
-      severidade,
-      descricao: detalhe,
+      severidade: avaliado.severidade,
+      descricao: avaliado.detalhe,
       integracaoSlugFk: integ.integracaoSlugFk,
     });
+  }
+
+  for (const extra of snapshot.extras ?? []) {
+    countSeverity(extra.severidade, counters);
+    pushProbe(out, extra);
   }
 
   const { ok, aviso, erro } = counters;
   const resumo =
     erro > 0
-      ? `Diagnóstico manual concluído: ${erro} falha(s), ${aviso} atenção(ões), ${ok} OK. Revise as linhas abaixo.`
+      ? `Diagnóstico da plataforma: ${erro} falha(s), ${aviso} atenção(ões), ${ok} OK. Só problemas aparecem nas linhas seguintes.`
       : aviso > 0
-        ? `Diagnóstico manual concluído: ${ok} OK, ${aviso} atenção(ões). Nenhuma falha crítica.`
-        : `Diagnóstico manual concluído: ${ok} verificação(ões) OK. Nenhuma falha ou atenção.`;
+        ? `Diagnóstico da plataforma: ${ok} OK, ${aviso} atenção(ões). Nenhuma falha crítica.`
+        : `Diagnóstico da plataforma: ${ok} verificação(ões) OK. Nenhuma falha ou atenção.`;
 
   out.unshift({
     integracao_slug: null,
@@ -314,6 +488,73 @@ export function buildPlatformHealthTechLogs(snapshot: PlatformHealthSnapshot): T
   });
 
   return out;
+}
+
+function passouCorteDoJob(
+  kind: PlatformHealthJobKind,
+  snapshot: PlatformHealthSnapshot,
+): boolean {
+  if (kind === "cda") return snapshot.passouHorarioCda;
+  if (kind === "social" || kind === "rss" || kind === "email") return snapshot.passouHorarioSocial;
+  if (kind === "comercialSpa") return snapshot.passouHorarioComercialSpa ?? false;
+  if (kind === "comercialDominio") return snapshot.passouHorarioComercialDominio ?? snapshot.passouHorarioCda;
+  if (kind === "comercialCnpj") return snapshot.passouHorarioComercialCnpj ?? false;
+  return false;
+}
+
+function mensagemAtrasoJob(kind: PlatformHealthJobKind): string {
+  if (kind === "cda") return "Job diário (4h BRT) ainda não registrou sucesso hoje.";
+  if (kind === "social" || kind === "rss" || kind === "email") {
+    return "Job agendado (6h BRT) ainda não registrou sucesso hoje.";
+  }
+  if (kind === "comercialSpa") return "Job diário (7h30 BRT) ainda não registrou sucesso hoje.";
+  if (kind === "comercialDominio") return "Job diário (8h BRT) ainda não registrou sucesso hoje.";
+  if (kind === "comercialCnpj") return "Job diário (8h30 BRT) ainda não registrou sucesso hoje.";
+  return "Sem sucesso registrado na data civil de hoje.";
+}
+
+export function avaliarJobIntegracao(
+  integ: PlatformHealthIntegrationSnapshot,
+  snapshot: PlatformHealthSnapshot,
+): { severidade: DiagnosticSeverity; detalhe: string } {
+  const kind = integ.jobKind ?? jobKindFromSlug(integ.slug);
+  const taxa = integ.taxaErroPct ?? null;
+
+  if (taxa != null && taxa > 5) {
+    return { severidade: "erro", detalhe: `Taxa de erro alta (${taxa.toFixed(1)}%).` };
+  }
+  if (!integ.teveHistorico && !integ.ultimoEm) {
+    return { severidade: "aviso", detalhe: "Sem histórico de execução registrado." };
+  }
+  if (integ.ultimoStatus === "falha" || integ.ultimoStatus === "error") {
+    return { severidade: "erro", detalhe: "Última execução com falha." };
+  }
+  if (integ.atrasoLobby24h) {
+    return { severidade: "aviso", detalhe: "Coleta atrasada (mais de 24h sem execução OK)." };
+  }
+  if (integ.erros24h > 0) {
+    return {
+      severidade: "aviso",
+      detalhe: `${integ.erros24h} ocorrência(s) de erro nas últimas 24 horas.`,
+    };
+  }
+  if (integ.teveHistorico && !integ.okHoje && passouCorteDoJob(kind, snapshot)) {
+    return { severidade: "aviso", detalhe: mensagemAtrasoJob(kind) };
+  }
+  if (integ.teveHistorico && !integ.okHoje && kind === "lobby") {
+    return { severidade: "aviso", detalhe: "Sem sucesso registrado na data civil de hoje." };
+  }
+  return { severidade: "ok", detalhe: "Última execução dentro do esperado." };
+}
+
+/** Grava só o resumo + avisos/falhas — OKs ficam no contador do resumo. */
+export function techLogsParaGravar(logs: TechLogInsertRow[]): TechLogInsertRow[] {
+  return logs.filter(
+    (l) =>
+      l.tipo === TIPO_DIAGNOSTICO_RESUMO ||
+      l.tipo === TIPO_DIAGNOSTICO_AVISO ||
+      l.tipo === TIPO_DIAGNOSTICO_ERRO,
+  );
 }
 
 export function countDiagnosticSummary(logs: TechLogInsertRow[]): {

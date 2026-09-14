@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Mockup — Home Gestor de Operações (proposta · variante Gestores)</title>
+  <title>Mockup — Home Gestor de RH (proposta · variante Gestores)</title>
   <style>
     :root {
       --brand-primary: #7c3aed;
@@ -266,7 +266,7 @@
 </head>
 <body>
   <div class="mock-banner">
-    <span>Mockup 7/N — Home · perfil <strong>Gestor de Operações</strong> · variante da família Gestores</span>
+    <span>Mockup 10/N — Home · perfil <strong>Gestor de RH</strong> · variante da família Gestores</span>
     <button type="button" id="btn-tema">Alternar tema claro / escuro</button>
   </div>
 
@@ -276,17 +276,17 @@
     <div class="welcome-card">
       <div class="topbar"></div>
       <div class="welcome-row">
-        <div class="avatar" aria-hidden="true">R</div>
+        <div class="avatar" aria-hidden="true">B</div>
         <div style="flex:1;min-width:200px">
-          <h1>Olá, Renata Oliveira!</h1>
-          <p class="role-label">Gestor de Operações</p>
-          <p class="welcome-sub">Estúdio, escala e mesas sob controle.
-O que precisa de cobertura ou decisão operacional, primeiro.</p>
+          <h1>Olá, Beatriz Lima!</h1>
+          <p class="role-label">Gestor de RH</p>
+          <p class="welcome-sub">Prestadores, solicitações e gente sob controle.
+O que precisa de revisão ou atendimento, primeiro.</p>
         </div>
       </div>
     </div>
 
-    <span class="block-tag">Bloco 2 · Escala Estúdio não aprovada · janela ≤ 5 dias úteis até o fim do mês</span>
+    <span class="block-tag">Bloco 2 · Solicitações de RH em análise (só quando houver)</span>
     <div class="alert-box">
       <svg class="alert-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>
@@ -294,83 +294,171 @@ O que precisa de cobertura ou decisão operacional, primeiro.</p>
       <div style="flex:1;min-width:0">
         <div class="alert-title">AÇÃO NECESSÁRIA</div>
         <p class="alert-body">
-          Faltam <strong>5 dias úteis</strong> para o fim de <strong>setembro 2026</strong> e a Escala Estúdio ainda está em <strong>rascunho</strong> (área Game Presenter). Aprove para alimentar o Calendário e o Controle de Turno.
+          Há <strong>8 solicitações</strong> de RH com status <strong>Em análise</strong> (atestados, reuniões, vagas ou feedback). Atenda em Solicitações de RH.
         </p>
-        <a class="alert-cta" href="#">Ir para Escala Estúdio</a>
-        <p class="nota-mock"><strong>Regra:</strong> só aparece se (1) restam <strong>≤ 5 dias úteis</strong> até o último dia útil do mês corrente e (2) alguma área operacional (GP / Shuffler / SL / SM) ainda <strong>não</strong> está aprovada. Dias úteis = seg–sex, excluindo feriados nacionais + SP capital (mesmo critério da Escala). Ocultar fora da janela ou se todas as áreas estiverem aprovadas. <strong>Sem</strong> alerta de Solicitações / Ofertas Spin / Incidentes. <strong>Sem</strong> bloco de KPIs nesta Home.</p>
+        <a class="alert-cta" href="#">Ir para Solicitações de RH</a>
+        <p class="nota-mock">Contagem <code>em_analise</code> em todas as abas. Ocultar se zero. Exige Editar para atender.</p>
       </div>
     </div>
 
-    <span class="block-tag">Bloco 3 · Informações — Informativos (perfil gestor_operacoes · 10 dias)</span>
+    <span class="block-tag">Bloco 2b · Revisões cadastrais pendentes (só quando houver)</span>
+    <div class="alert-box">
+      <svg class="alert-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>
+      </svg>
+      <div style="flex:1;min-width:0">
+        <div class="alert-title">AÇÃO NECESSÁRIA</div>
+        <p class="alert-body">
+          Há <strong>14 prestadores</strong> com <strong>revisão cadastral pendente</strong>. Acompanhe em Gestão de Prestadores.
+        </p>
+        <a class="alert-cta" href="#">Ir para Gestão de Prestadores</a>
+        <p class="nota-mock">Mesmo KPI «Revisão cadastral pendente» da Gestão de Prestadores. Ocultar se zero.</p>
+      </div>
+    </div>
+
+    <span class="block-tag">Bloco 2c · Denúncias em aberto (Atenção · só quando houver)</span>
+    <div class="alert-box warn">
+      <svg class="alert-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>
+      </svg>
+      <div style="flex:1;min-width:0">
+        <div class="alert-title">ATENÇÃO</div>
+        <p class="alert-body">
+          Há <strong>2 denúncias</strong> em <strong>Relatado</strong> ou <strong>Em avaliação</strong> na Central de Denúncias.
+        </p>
+        <a class="alert-cta" href="#">Ir para Central de Denúncias</a>
+        <p class="nota-mock">Soma dos KPIs Relatado + Em avaliação. Amarelo = fila sensível. Ocultar se zero. Condicional — pode remover se produto achar ruído.</p>
+      </div>
+    </div>
+
+    <span class="block-tag">Bloco 3 · Principais KPIs — Prestadores + Filas</span>
+    <div class="content-box">
+      <h2 class="section-title">Principais KPIs</h2>
+      <p class="mes-sub">Setembro 2026 · Gestão de Prestadores + filas RH</p>
+
+      <p class="mes-sub" style="margin-top:4px">Prestadores</p>
+      <div class="grid-kpi-4" style="margin-bottom:16px">
+        <article class="kpi-card">
+          <div class="kpi-bar"></div>
+          <div class="kpi-body">
+            <div class="kpi-head"><span class="kpi-ic" aria-hidden="true">#</span><span class="kpi-label">Total</span></div>
+            <div class="kpi-value">312</div>
+          </div>
+        </article>
+        <article class="kpi-card">
+          <div class="kpi-bar warn"></div>
+          <div class="kpi-body">
+            <div class="kpi-head"><span class="kpi-ic warn" aria-hidden="true">!</span><span class="kpi-label">Cadastro incompleto</span></div>
+            <div class="kpi-value">23</div>
+          </div>
+        </article>
+        <article class="kpi-card">
+          <div class="kpi-bar warn"></div>
+          <div class="kpi-body">
+            <div class="kpi-head"><span class="kpi-ic warn" aria-hidden="true">↻</span><span class="kpi-label">Revisão pendente</span></div>
+            <div class="kpi-value">14</div>
+          </div>
+        </article>
+        <article class="kpi-card">
+          <div class="kpi-bar ok"></div>
+          <div class="kpi-body">
+            <div class="kpi-head"><span class="kpi-ic ok" aria-hidden="true">✓</span><span class="kpi-label">Cadastro completo</span></div>
+            <div class="kpi-value">275</div>
+          </div>
+        </article>
+      </div>
+
+      <p class="mes-sub">Filas</p>
+      <div class="grid-kpi-4">
+        <article class="kpi-card">
+          <div class="kpi-bar warn"></div>
+          <div class="kpi-body">
+            <div class="kpi-head"><span class="kpi-ic warn" aria-hidden="true">📋</span><span class="kpi-label">Solicitações em análise</span></div>
+            <div class="kpi-value">8</div>
+          </div>
+        </article>
+        <article class="kpi-card">
+          <div class="kpi-bar sec"></div>
+          <div class="kpi-body">
+            <div class="kpi-head"><span class="kpi-ic sec" aria-hidden="true">💼</span><span class="kpi-label">Vagas abertas</span></div>
+            <div class="kpi-value">6</div>
+          </div>
+        </article>
+        <article class="kpi-card">
+          <div class="kpi-bar"></div>
+          <div class="kpi-body">
+            <div class="kpi-head"><span class="kpi-ic" aria-hidden="true">👥</span><span class="kpi-label">Candidaturas ativas</span></div>
+            <div class="kpi-value">41</div>
+          </div>
+        </article>
+        <article class="kpi-card">
+          <div class="kpi-bar warn"></div>
+          <div class="kpi-body">
+            <div class="kpi-head"><span class="kpi-ic warn" aria-hidden="true">⚖</span><span class="kpi-label">Denúncias abertas</span></div>
+            <div class="kpi-value">2</div>
+          </div>
+        </article>
+      </div>
+      <p class="footer-hint">Quer saber mais? Acessa <a href="#">Gestão de Prestadores</a> · <a href="#">Solicitações de RH</a> · <a href="#">Vagas</a> · <a href="#">Portal de RH</a></p>
+      <p class="nota-mock"><strong>Prestadores:</strong> mesmos cards da Gestão de Prestadores (Total / incompleto / revisão; completo = Total − incompleto). <strong>Filas:</strong> Solicitações <code>em_analise</code>; vagas abertas + candidaturas ativas (Vagas); denúncias Relatado + Em avaliação.</p>
+    </div>
+
+    <span class="block-tag">Bloco 4 · Informações — Informativos (perfil gestor_rh · 10 dias)</span>
     <div class="content-box">
       <h2 class="section-title">Informações</h2>
       <ul class="feed-list">
         <li>
           <article class="feed-card">
-            <h3>Prévia de rotação — Sports Club</h3>
+            <h3>Campanha de atualização cadastral — Q3</h3>
             <div class="feed-body">
-              <p>A prévia do mês foi gerada após aprovação da Escala. Revise slots no <a href="#">Controle de Turno</a> antes do próximo turno.</p>
+              <p>Priorize prestadores com revisão pendente em <a href="#">Gestão de Prestadores</a> até o fim do mês.</p>
             </div>
-            <p class="feed-footer">Equipe Operações · 12/09/26 - 09:40</p>
+            <p class="feed-footer">Equipe RH · 12/09/26 - 14:30</p>
             <button type="button" class="btn-li-ocultar">Li e Ocultar</button>
           </article>
         </li>
       </ul>
-      <p class="nota-mock">Perfil <code>gestor_operacoes</code>, 10 dias + «Li e Ocultar». Sem Blogueiro Spin nesta variante.</p>
+      <p class="nota-mock">Perfil <code>gestor_rh</code>, 10 dias + «Li e Ocultar». Portal de RH fica nos atalhos (não como Central Academy).</p>
     </div>
 
-    <span class="block-tag">Bloco 4 · Acesso rápido (curado · Operações)</span>
+    <span class="block-tag">Bloco 5 · Acesso rápido (curado · RH)</span>
     <div class="content-box">
       <h2 class="section-title">Acesso rápido</h2>
       <p class="hint">Clique em um atalho abaixo para ir diretamente à página desejada.</p>
       <div class="grid-atalhos">
         <a class="atalho" href="#">
-          <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg></span>
-          <div style="flex:1;min-width:0">
-            <div class="tit"><span>Overview Spin</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
-            <p>Resultado das mesas ao vivo — GGR, UAP e detalhamento por operadora.</p>
-          </div>
-        </a>
-        <a class="atalho" href="#">
-          <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg></span>
-          <div style="flex:1;min-width:0">
-            <div class="tit"><span>Escala Estúdio</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
-            <p>Monte, ajuste e aprove a escala diária dos times de estúdio.</p>
-          </div>
-        </a>
-        <a class="atalho" href="#">
-          <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></span>
-          <div style="flex:1;min-width:0">
-            <div class="tit"><span>Controle de Turno</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
-            <p>Acompanhe rotação, escala/presença e notificações do turno.</p>
-          </div>
-        </a>
-        <a class="atalho" href="#">
           <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
           <div style="flex:1;min-width:0">
-            <div class="tit"><span>Gestão de Dealers</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
-            <p>Catálogo de Game Presenters e especialidades por mesa.</p>
+            <div class="tit"><span>Gestão de Prestadores</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
+            <p>Cadastro, headcount, ações e anotações de RH.</p>
           </div>
         </a>
         <a class="atalho" href="#">
           <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M15 2H9a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1z"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg></span>
           <div style="flex:1;min-width:0">
-            <div class="tit"><span>Solicitações de Cliente</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
-            <p>Atenda pedidos das operadoras sobre mesas e operação.</p>
+            <div class="tit"><span>Solicitações de RH</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
+            <p>Atestados, reuniões, vagas e feedback em análise.</p>
           </div>
         </a>
         <a class="atalho" href="#">
-          <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg></span>
+          <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect width="20" height="14" x="2" y="7" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg></span>
           <div style="flex:1;min-width:0">
-            <div class="tit"><span>Marketplace</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
-            <p>Ofertas Spin, cobertura e negociação de turnos.</p>
+            <div class="tit"><span>Vagas</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
+            <p>Abra vagas e acompanhe candidaturas no funil.</p>
           </div>
         </a>
         <a class="atalho" href="#">
-          <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></span>
+          <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8V6Z"/></svg></span>
           <div style="flex:1;min-width:0">
-            <div class="tit"><span>Incidentes</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
-            <p>Registre e acompanhe incidentes operacionais do estúdio.</p>
+            <div class="tit"><span>Portal de RH</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
+            <p>Comunicados, políticas, RH Talks e gerenciamento.</p>
+          </div>
+        </a>
+        <a class="atalho" href="#">
+          <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/></svg></span>
+          <div style="flex:1;min-width:0">
+            <div class="tit"><span>Central de Denúncias</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
+            <p>Acompanhe denúncias e o andamento das apurações.</p>
           </div>
         </a>
         <a class="atalho" href="#">
@@ -381,21 +469,22 @@ O que precisa de cobertura ou decisão operacional, primeiro.</p>
           </div>
         </a>
       </div>
-      <p class="nota-mock">Lista curada de Operações — só com Ver liberado. <strong>Fora:</strong> <span class="removed">dump do menu / Financeiro / Marketing</span>. Sem Blogueiro Spin.</p>
+      <p class="nota-mock">Lista curada de RH — só com Ver liberado. <strong>Fora:</strong> <span class="removed">dump do menu / Dados de Cadastro (pessoal) / Escala Estúdio</span>. Organograma e Escala Escritório ficam no menu se liberados.</p>
     </div>
 
   </div>
 
   <div class="legenda">
     <div class="content-box">
-      <h2 class="section-title">Notas para aprovação — Home Gestor de Operações</h2>
+      <h2 class="section-title">Notas para aprovação — Home Gestor de RH</h2>
       <ul>
-        <li><strong>Variante</strong> da família Gestores — mais enxuta (sem KPIs).</li>
-        <li><strong>AÇÃO NECESSÁRIA (única):</strong> Escala Estúdio não aprovada → Escala Estúdio, <strong>somente</strong> se restarem ≤ 5 dias úteis até o fim do mês.</li>
-        <li><strong>Removido:</strong> Solicitações pendentes; Ofertas Spin; Incidentes; bloco Inteiro de KPIs (Resultado + Operação).</li>
-        <li><strong>Informativos:</strong> perfil <code>gestor_operacoes</code>, 10 dias — sem Blogueiro Spin.</li>
-        <li><strong>Atalhos:</strong> Overview Spin → Escala → CT → Dealers → Solicitações → Marketplace → Incidentes → Ajuda.</li>
-        <li><strong>Fluxo:</strong> só mockups — implantação em lote depois.</li>
+        <li><strong>Variante</strong> da família Gestores.</li>
+        <li><strong>AÇÃO NECESSÁRIA:</strong> Solicitações Em análise → Solicitações de RH; Revisões cadastrais pendentes → Gestão de Prestadores.</li>
+        <li><strong>ATENÇÃO (opcional):</strong> Denúncias Relatado / Em avaliação → Central de Denúncias.</li>
+        <li><strong>KPIs — Prestadores:</strong> Total, Cadastro incompleto, Revisão pendente, Cadastro completo.</li>
+        <li><strong>KPIs — Filas:</strong> Solicitações em análise, Vagas abertas, Candidaturas ativas, Denúncias abertas.</li>
+        <li><strong>Atalhos:</strong> Prestadores → Solicitações → Vagas → Portal de RH → Central de Denúncias → Ajuda.</li>
+        <li><strong>Fluxo:</strong> só mockups — implantação em lote depois. Próximo: <strong>Admin</strong>.</li>
       </ul>
     </div>
   </div>

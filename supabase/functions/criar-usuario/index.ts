@@ -28,6 +28,8 @@ const ROLES_BLOQUEADOS = [
   'gestor_tech_ops',
   'gestor_academy',
   'gestor_rh',
+  'gestor_facilities',
+  'gestor_ti',
   'prestador',
   'executivo',
   'investidor',
@@ -39,14 +41,14 @@ const ROLES_BLOQUEADOS = [
   'tech_ops',
   'figurino',
   'comunicacao',
+  'facilities',
+  'ti',
   'performance_coach',
   'rh',
 ] // sem user_scopes genérico; staff Spin e gestores de departamento só role_permissions (aba Permissões)
 
 const PRESTADOR_TIPO_SLUGS = [
   'escritorio',
-  'facilities',
-  'ti',
   'estudio',
 ] as const
 

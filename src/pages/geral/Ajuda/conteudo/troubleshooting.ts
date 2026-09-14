@@ -1394,7 +1394,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Executar diagnóstico não faz nada ou retorna erro?",
         texto:
-          "Confirme permissão de **Editar** em Status Técnico (Gestão de Usuários). Se a mensagem indicar que a rotina de diagnóstico não está disponível, entre em contato com o suporte técnico — a publicação da rotina é feita pelo time de plataforma. O diagnóstico verifica apenas o ambiente em que você está logado; não substitui os testes automatizados da esteira de deploy.",
+          "Confirme permissão de **Editar** em Status Técnico (Gestão de Usuários). Se a mensagem indicar que a rotina de diagnóstico não está disponível, entre em contato com o suporte técnico — a publicação da rotina é feita pelo time de plataforma. O diagnóstico verifica o ambiente em que você está logado (jobs, credenciais e conexões); não dispara sync nem e-mail e não substitui os testes automatizados da esteira de deploy.",
       },
       {
         subtitulo: "O botão Sync não aparece para uma integração?",
@@ -1409,7 +1409,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "O alerta 'E-mail não enviado hoje' está aparecendo mesmo após o envio?",
         texto:
-          "Os alertas são calculados com base nos registros de email_envios do dia corrente (UTC). Se o envio foi feito muito cedo ou próximo da meia-noite, pode haver defasagem de fuso horário. Verifique nos Logs Recentes se o envio aparece registrado.",
+          "Os alertas usam os envios do **dia corrente no horário de Brasília**. Se o envio ficou muito perto da meia-noite, confira em Logs Recentes se o registro aparece no dia esperado. Se o problema persistir, entre em contato com o suporte técnico.",
       },
     ],
   },
@@ -1659,7 +1659,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não vejo Calendário no menu (perfil Prestador)?",
         texto:
-          "Para o perfil **Prestador**, a página só aparece no menu se as **duas** liberações estiverem ok:\n\n1. **Gestão de Usuários → Permissões** — perfil Prestador com Ver em **Próprios** ou **Sim** no Calendário.\n2. **Gestão de Usuários → Escopos → Prestadores** — a página **Calendário** marcada na(s) **área(s) de atuação** do usuário (Escritório, Estúdio, Facilities, TI).\n\nO menu efetivo é a interseção das duas. Se só a Permissão estiver liberada e o Escopo da área não tiver Calendário marcado, a página continua oculta. Confirme também se o usuário tem área de atuação no cadastro (escopo `prestador_tipo`). Depois de salvar, o prestador precisa **sair e entrar de novo** — as permissões do menu são carregadas no login.",
+          "Para o perfil **Prestador**, a página só aparece no menu se as **duas** liberações estiverem ok:\n\n1. **Gestão de Usuários → Permissões** — perfil Prestador com Ver em **Próprios** ou **Sim** no Calendário.\n2. **Gestão de Usuários → Escopos → Prestadores** — a página **Calendário** marcada na(s) **área(s) de atuação** do usuário (Escritório, Estúdio).\n\nO menu efetivo é a interseção das duas. Se só a Permissão estiver liberada e o Escopo da área não tiver Calendário marcado, a página continua oculta. Confirme também se o usuário tem área de atuação no cadastro (escopo de área Prestadores). Depois de salvar, o prestador precisa **sair e entrar de novo** — as permissões do menu são carregadas no login.\n\nPerfis de staff como **Facilities** e **TI** usam só a matriz de Permissões (sem coluna na aba Prestadores).",
       },
       {
         subtitulo: "Turnos não aparecem no calendário?",

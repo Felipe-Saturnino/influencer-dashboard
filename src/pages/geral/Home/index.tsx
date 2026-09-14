@@ -107,6 +107,8 @@ const ROLE_LABELS: Record<Role, string> = {
   gestor_tech_ops: "Gestor de Tech Ops",
   gestor_academy: "Gestor de Academy",
   gestor_rh: "Gestor de RH",
+  gestor_facilities: "Gestor de Facilities",
+  gestor_ti: "Gestor de TI",
   prestador: "Prestadores",
   executivo: "Executivo",
   shift_leader: "Shift Leader",
@@ -117,6 +119,8 @@ const ROLE_LABELS: Record<Role, string> = {
   tech_ops: "Tech Ops",
   figurino: "Figurino",
   comunicacao: "Comunicação",
+  facilities: "Facilities",
+  ti: "TI",
   performance_coach: "Performance Coach",
   rh: "RH",
   influencer: "Influencer",
@@ -162,6 +166,16 @@ const ROLE_WELCOME: Record<Role, { title: string; subtitle: string }> = {
     title: "Gestão de RH",
     subtitle:
       "Prestadores, escala e ferramentas de RH liberadas ao seu perfil — ajuste fino em Gestão de Usuários.",
+  },
+  gestor_facilities: {
+    title: "Gestão de Facilities",
+    subtitle:
+      "Facilities e páginas liberadas ao seu perfil — ajuste fino em Gestão de Usuários.",
+  },
+  gestor_ti: {
+    title: "Gestão de TI",
+    subtitle:
+      "TI e páginas liberadas ao seu perfil — ajuste fino em Gestão de Usuários.",
   },
   prestador: {
     title: "Área de atuação",
@@ -212,6 +226,16 @@ const ROLE_WELCOME: Record<Role, { title: string; subtitle: string }> = {
     title: "Comunicação",
     subtitle:
       "Conteúdo, informativos e ferramentas de comunicação liberadas ao seu perfil.",
+  },
+  facilities: {
+    title: "Facilities",
+    subtitle:
+      "Operação de Facilities e páginas liberadas ao seu perfil. Ajuste fino em Gestão de Usuários.",
+  },
+  ti: {
+    title: "TI",
+    subtitle:
+      "Operação de TI e páginas liberadas ao seu perfil. Ajuste fino em Gestão de Usuários.",
   },
   performance_coach: {
     title: "Performance Coach",

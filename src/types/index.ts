@@ -7,6 +7,8 @@ export type Role =
   | "gestor_tech_ops"
   | "gestor_academy"
   | "gestor_rh"
+  | "gestor_facilities"
+  | "gestor_ti"
   | "prestador"
   | "executivo"
   | "shift_leader"
@@ -19,6 +21,8 @@ export type Role =
   | "comunicacao"
   | "performance_coach"
   | "rh"
+  | "facilities"
+  | "ti"
   | "influencer"
   | "afiliado"
   | "operador"
@@ -250,8 +254,6 @@ export type ScopeType =
 /** Áreas de atuação do perfil Prestadores (mapeiam prestador_tipo_pages). */
 export type PrestadorTipoSlug =
   | "escritorio"
-  | "facilities"
-  | "ti"
   | "estudio";
 
 export interface UserScope {

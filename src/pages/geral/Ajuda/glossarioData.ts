@@ -1204,7 +1204,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Diagnóstico da Plataforma",
         definicao:
-          "Verificação sob demanda que testa integrações e configurações essenciais. Fica OK quando conclui; avisos e falhas aparecem na coluna Erros e em Logs Recentes.",
+          "Verificação sob demanda do funcionamento da plataforma: jobs, credenciais, rotinas publicadas e conexões com ferramentas externas. Não dispara sync nem envia e-mail. O resumo e os problemas aparecem em Logs Recentes.",
         referencia: "Status Técnico",
       },
     ],

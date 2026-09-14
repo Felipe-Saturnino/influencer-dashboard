@@ -81,7 +81,7 @@ export const VERSIONAMENTO_RELEASES: VersionamentoRelease[] = [
         paginas: "*",
         titulo: "Estabilidade e qualidade da plataforma",
         descricao:
-          "Correções e reforço da saúde do código com impacto em Controle de Turno, Escala Estúdio, Solicitações de RH, Overview Spin, Calendário, Versionamento e Influencers.",
+          "Correções e reforço da saúde do código com impacto em Controle de Turno, Escala Estúdio, Solicitações de RH, Overview Spin, Calendário e Influencers.",
       },
     ],
   },
@@ -147,7 +147,7 @@ export const VERSIONAMENTO_RELEASES: VersionamentoRelease[] = [
         paginas: "*",
         titulo: "Estabilidade e qualidade da plataforma",
         descricao:
-          "Correções e reforço da saúde do código com impacto em Itens Alocados, Marketplace, Controle de Turno, Portal de RH e Figurinos.",
+          "Correções e reforço da saúde do código com impacto em Marketplace, Portal de RH e Figurinos.",
       },
     ],
   },
@@ -220,7 +220,7 @@ export const VERSIONAMENTO_RELEASES: VersionamentoRelease[] = [
         paginas: "*",
         titulo: "Estabilidade e qualidade da plataforma",
         descricao:
-          "Correções e reforço da saúde do código com impacto em Ajuda, Solicitações de RH, Calendário, Gestão de Staff, Home, Simulador de Login e Performance Hub.",
+          "Correções e reforço da saúde do código com impacto em Solicitações de RH, Calendário, Home, Simulador de Login e Performance Hub.",
       },
     ],
   },
@@ -294,7 +294,7 @@ export const VERSIONAMENTO_RELEASES: VersionamentoRelease[] = [
         paginas: "*",
         titulo: "Estabilidade e qualidade da plataforma",
         descricao:
-          "Correções e reforço da saúde do código com impacto em Marketplace, Incidentes, Overview Prestador, Overview Spin, Central de Denúncias e Ajuda.",
+          "Correções e reforço da saúde do código com impacto em Overview Spin, Central de Denúncias e Ajuda.",
       },
     ],
   },
@@ -367,7 +367,7 @@ export const VERSIONAMENTO_RELEASES: VersionamentoRelease[] = [
         paginas: "*",
         titulo: "Estabilidade e qualidade da plataforma",
         descricao:
-          "Correções e reforço da saúde do código com impacto em Calendário, Escala Estúdio, Portal da Academy, Headcount, Gestão de Estoque e Overview Afiliados.",
+          "Correções e reforço da saúde do código com impacto em Calendário, Portal da Academy e Overview Afiliados.",
       },
     ],
   },
@@ -433,7 +433,7 @@ export const VERSIONAMENTO_RELEASES: VersionamentoRelease[] = [
         paginas: "*",
         titulo: "Estabilidade e qualidade da plataforma",
         descricao:
-          "Correções e reforço da saúde do código com impacto em Portal da Academy, Performance Hub, Atendimento, Solicitações de RH, Simulador de Login, Figurinos e Home.",
+          "Correções e reforço da saúde do código com impacto em Figurinos e Home.",
       },
     ],
   },
@@ -491,7 +491,7 @@ export const VERSIONAMENTO_RELEASES: VersionamentoRelease[] = [
         paginas: "*",
         titulo: "Estabilidade e qualidade da plataforma",
         descricao:
-          "Correções e reforço da saúde do código com impacto em Overview Comercial, Pipeline B2B, Gestão de Estúdios, Galeria de Fotos e Portal de RH.",
+          "Correções e reforço da saúde do código com impacto em Gestão de Estúdios e Portal de RH.",
       },
     ],
   },
@@ -542,7 +542,7 @@ export const VERSIONAMENTO_RELEASES: VersionamentoRelease[] = [
         paginas: "*",
         titulo: "Estabilidade e qualidade da plataforma",
         descricao:
-          "Correções e reforço da saúde do código com impacto em Home, Gestão de Staff, Banca de Jogo e Informativos.",
+          "Correções e reforço da saúde do código com impacto em Gestão de Staff, Banca de Jogo e Informativos.",
       },
     ],
   },
@@ -621,7 +621,7 @@ export const VERSIONAMENTO_RELEASES: VersionamentoRelease[] = [
         paginas: "*",
         titulo: "Estabilidade e qualidade da plataforma",
         descricao:
-          "Correções e reforço da saúde do código com impacto em Ajuda, Portal de RH, Central de Denúncias, Overview Spin, Calendário, Escala Estúdio, Vagas, Dados de Cadastro e Informativos.",
+          "Correções e reforço da saúde do código com impacto em Calendário, Escala Estúdio e Vagas.",
       },
     ],
   },
@@ -665,7 +665,7 @@ export const VERSIONAMENTO_RELEASES: VersionamentoRelease[] = [
         paginas: "*",
         titulo: "Estabilidade e qualidade da plataforma",
         descricao:
-          "Correções e reforço da saúde do código com impacto em Afiliados, Spin na Rede, Gestão de Prestadores e Calendário.",
+          "Correções e reforço da saúde do código com impacto em Gestão de Prestadores.",
       },
     ],
   },
@@ -732,13 +732,6 @@ export const VERSIONAMENTO_RELEASES: VersionamentoRelease[] = [
         descricao: "Abertura do fluxo de vagas no RH.",
         linkPagina: true,
       },
-      {
-        tipo: "correcao",
-        paginas: "*",
-        titulo: "Estabilidade e qualidade da plataforma",
-        descricao:
-          "Correções e reforço da saúde do código com impacto em Gestão de Staff, Escala Estúdio, Gestão de Estúdios, Organograma, Gestão de Prestadores, Figurinos, Mídias Sociais e Vagas.",
-      },
     ],
   },
   {
@@ -788,7 +781,7 @@ export const VERSIONAMENTO_RELEASES: VersionamentoRelease[] = [
         paginas: "*",
         titulo: "Estabilidade e qualidade da plataforma",
         descricao:
-          "Correções e reforço da saúde do código com impacto em Streamers, Central de Notificações, Gestão de Dealers, Overview Spin e Gestão de Usuários.",
+          "Correções e reforço da saúde do código com impacto em Gestão de Dealers, Overview Spin e Gestão de Usuários.",
       },
     ],
   },
@@ -833,13 +826,6 @@ export const VERSIONAMENTO_RELEASES: VersionamentoRelease[] = [
         titulo: "Plataforma responsiva",
         descricao: "Uso melhor em telas menores.",
       },
-      {
-        tipo: "correcao",
-        paginas: "*",
-        titulo: "Estabilidade e qualidade da plataforma",
-        descricao:
-          "Correções e reforço da saúde do código com impacto em Overview Spin, Banca de Jogo, Playbook Influencers e Roteiro de Mesa.",
-      },
     ],
   },
   {
@@ -877,13 +863,6 @@ export const VERSIONAMENTO_RELEASES: VersionamentoRelease[] = [
         paginas: "*",
         titulo: "Menu e layout das páginas",
         descricao: "Navegação e cabeçalhos alinhados à plataforma.",
-      },
-      {
-        tipo: "correcao",
-        paginas: "*",
-        titulo: "Estabilidade e qualidade da plataforma",
-        descricao:
-          "Correções e reforço da saúde do código com impacto em Gestão de Usuários, Scout e Gestão de Dealers.",
       },
     ],
   },

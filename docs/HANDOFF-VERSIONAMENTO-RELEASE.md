@@ -56,7 +56,7 @@ O Agent **não** redesenha a página. Só insere conteúdo.
 6. Copy em **PT-BR** (secção 4). Nomes de página = **label do menu** (`menu.ts`), nunca título legado.
 7. Não commit/push. Informar o `#` gravado, a data e quantos cards.
 
-**Não fazer:** apagar histórico; renumerar releases antigas; inventar cards que o humano não listou; citar tabela, RPC, Edge Function, SQL, deploy ou `PageKey` no texto visível ao usuário.
+**Não fazer:** apagar histórico; renumerar releases antigas; inventar cards que o humano não listou; citar tabela, RPC, Edge Function, SQL, deploy ou `PageKey` no texto visível ao usuário; listar no card «Estabilidade e qualidade…» uma página que na **mesma** release aparece como **Novo** (se a página nasceu nessa release, não houve correção dela — omitir o card se não restar nenhuma página de Melhoria/Correção).
 
 ### Forma do catálogo
 
@@ -225,6 +225,7 @@ Correção | Calendário | Presença deixa de duplicar justificativa no mesmo di
 
 ## 10. Checklist do Agent (antes de devolver)
 
+- [ ] Card «Estabilidade…»: só páginas com Melhoria/Correção na mesma release — **nunca** página listada como Novo; omitir o card se a lista ficar vazia
 - [ ] Maior `numero` lido; nova release = `max + 1` (ou `1` se o array estiver vazio)
 - [ ] Objeto inserido no início de `VERSIONAMENTO_RELEASES`
 - [ ] Cada item: `tipo` certo, `paginas` da tabela (`"*"` ou `PageKey[]`), `linkPagina` só se pedido
