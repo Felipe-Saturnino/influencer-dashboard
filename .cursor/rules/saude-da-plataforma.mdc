@@ -9,6 +9,16 @@ MDC **padrão** para checagens recorrentes (Verificação 2.0 e equivalentes): l
 
 Fluxo: ler MDC da pasta → smoke staging → laudo 4 eixos → implementar só o aprovado → recheck staging. Commit/push **só o usuário**.
 
+## Resultado esperado de cada ciclo
+
+Além de bugs/usabilidade/mensageria, **toda** página sob ciclo deve sair com **otimização de código** visando **reduzir tempo de carregamento** (first paint / tempo até conteúdo útil), **sem perder dados nem qualidade** (totais, KPIs, janelas, precisão, copy e contratos do MDC intactos).
+
+| Obrigatório no ciclo | Detalhe |
+|----------------------|---------|
+| **Laudo — eixo Otimização** | Sempre listar oportunidades reais da página (fetch, colunas, cache, 2 fases, DOM denso, waterfall). Se não houver ganho material, declarar **«sem alavanca»** com evidência — não inventar micro-refactors. |
+| **Medição** | Registrar **antes** (smoke do laudo) e **depois** (recheck): tempo até conteúdo útil **e/ou** contagem de requests relevantes. Sem número = não afirmar “mais rápido”. |
+| **Regressão proibida** | Otimizar **não** pode omitir linhas, truncar histórico sem Histórico 13, `select("*")` desnecessário, inventar zeros enganosos, ou quebrar P1/P2. |
+
 ## Dois pontos bloqueantes (aprendizado Ciclo 7)
 
 Validar **sempre** que a página do ciclo tiver superfície aplicável. Falha = ciclo **não** fecha OK.
@@ -27,10 +37,10 @@ Validar **sempre** que a página do ciclo tiver superfície aplicável. Falha = 
 
 ## Checklist transversal (todo ciclo)
 
-1. Listar no laudo os contratos testáveis do MDC da pasta (paginação, P2, filtros canónicos, identidade de jogo, duas fases, strings de vazio).
-2. Smoke: caminho feliz **e** caso especial do MDC (filtro específico, Histórico, Próprios).
+1. Listar no laudo os contratos testáveis do MDC da pasta (paginação, P2, filtros canónicos, identidade de jogo, duas fases, strings de vazio) **e** as alavancas de **otimização de carga** (§ Resultado esperado).
+2. Smoke: caminho feliz **e** caso especial do MDC (filtro específico, Histórico, Próprios); anotar tempo/requests **antes**.
 3. Páginas **críticas** (Overview Spin / investidor): smoke mais fundo; regressão P1/P2 no DOM = bloqueante.
-4. Recheck: IDs High/Medium **+** P1/P2 aplicáveis **+** hotfixes do ciclo.
+4. Recheck: IDs High/Medium **+** P1/P2 aplicáveis **+** hotfixes **+** tempo/requests **depois** (comparar com o antes).
 5. Evidência no DOM contradiz OK → **corrigir o veredito** (não fechar).
 
 ## Anti-patterns
@@ -39,6 +49,8 @@ Validar **sempre** que a página do ciclo tiver superfície aplicável. Falha = 
 - Ignorar evidência já no CDP/snapshot (dias duplicados, lista sem «Mostrando»).
 - Assumir agregador = mesmo risco que filtro específico.
 - Fechar sem recheck staging após hotfix.
+- Declarar página «mais rápida» sem medição antes/depois.
+- Otimizar cortando dado ou qualidade (totais incompletos, buracos no calendário, payload incompleto na UI).
 
 ## Memória — ciclos 1–7 (P1 / P2)
 
