@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mockup — Home Agência (proposta · todos os blocos ativos)</title>
+  <style>
+    :root {
+      --brand-primary: #7c3aed;
+      --brand-secondary: #1e36f8;
+      --brand-accent: #7c3aed;
+      --brand-roxo: #4a2082;
+      --brand-azul: #1e36f8;
+      --brand-ciano: #70cae4;
+      --vermelho: #e84025;
+      --amarelo: #f59e0b;
+      --verde: #22c55e;
+
+      --page-bg: #f4f4f8;
+      --card-bg: #ffffff;
+      --card-border: #e8e8f0;
+      --input-bg: #f8f8fc;
+      --text: #1a1a2e;
+      --text-muted: #666688;
+      --section-title: #1a1a2e;
+      --box-radius: 14px;
+      --box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+
+      --font: "Segoe UI", system-ui, -apple-system, sans-serif;
+      --font-title: "Segoe UI Semibold", "Segoe UI", system-ui, sans-serif;
+    }
+
+    body.dark {
+      --page-bg: #0f0f1a;
+      --card-bg: #1a1a2e;
+      --card-border: #2a2a4e;
+      --input-bg: rgba(255,255,255,0.07);
+      --text: #ffffff;
+      --text-muted: #e5dce1;
+      --section-title: #ffffff;
+      --box-radius: 18px;
+      --box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font);
+      background: var(--page-bg);
+      color: var(--text);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .mock-banner {
+      background: linear-gradient(135deg, #4a2082, #1e36f8);
+      color: #fff; padding: 10px 16px; font-size: 12px; font-weight: 600;
+      display: flex; align-items: center; justify-content: center; gap: 16px; flex-wrap: wrap;
+    }
+    .mock-banner button {
+      border: 1px solid rgba(255,255,255,.5); background: rgba(255,255,255,.12); color: #fff;
+      padding: 5px 12px; border-radius: 999px; font-size: 11px; font-weight: 700; cursor: pointer;
+      font-family: var(--font);
+    }
+
+    .page-shell {
+      max-width: 1100px; margin: 0 auto; padding: 24px 20px 40px;
+      display: flex; flex-direction: column; gap: 14px;
+    }
+
+    .block-tag {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+      color: var(--brand-primary); background: rgba(124, 58, 237, 0.12);
+      border: 1px dashed rgba(124, 58, 237, 0.45);
+      padding: 3px 8px; border-radius: 999px; margin-bottom: -6px; width: max-content;
+    }
+    body.dark .block-tag { color: var(--brand-ciano); }
+
+    .welcome-card {
+      position: relative; overflow: hidden;
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: 20px; padding: 28px; box-shadow: var(--box-shadow);
+    }
+    .welcome-card .topbar {
+      position: absolute; top: 0; left: 0; right: 0; height: 4px;
+      background: linear-gradient(90deg, var(--brand-primary), var(--brand-azul));
+    }
+    .welcome-row { display: flex; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+    .avatar {
+      width: 56px; height: 56px; border-radius: 50%; flex-shrink: 0;
+      background: linear-gradient(135deg, var(--brand-roxo), var(--brand-azul));
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-weight: 800; font-size: 20px;
+      border: 2px solid rgba(124, 58, 237, 0.45);
+    }
+    .welcome-card h1 {
+      font-family: var(--font-title); font-size: 22px; font-weight: 800;
+      letter-spacing: .02em; margin: 0 0 6px;
+    }
+    .role-label { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; }
+    .welcome-sub { font-size: 14px; color: var(--text-muted); line-height: 1.55; white-space: pre-line; }
+
+    .alert-box {
+      display: flex; gap: 14px; padding: 16px 18px; border-radius: 14px;
+      background: rgba(232,64,37,0.05); border: 1px solid rgba(232,64,37,0.28);
+      border-left: 4px solid var(--vermelho);
+    }
+    body.dark .alert-box { background: rgba(232,64,37,0.08); }
+    .alert-box .alert-icon { flex-shrink: 0; margin-top: 2px; color: var(--vermelho); }
+    .alert-title {
+      font-size: 12px; font-weight: 800; letter-spacing: .06em;
+      color: #b02a14; margin-bottom: 8px; font-family: var(--font-title);
+    }
+    body.dark .alert-title { color: #ff9980; }
+    .alert-body { font-size: 13px; line-height: 1.65; margin-bottom: 12px; }
+    .alert-cta {
+      display: inline-block; padding: 8px 16px; border-radius: 10px;
+      border: 1px solid var(--vermelho); background: rgba(232,64,37,0.09);
+      color: var(--vermelho); font-size: 12px; font-weight: 700; text-decoration: none;
+    }
+
+    .content-box {
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: var(--box-radius); box-shadow: var(--box-shadow); padding: 20px;
+    }
+    .section-title {
+      font-family: var(--font-title); font-size: 13px; font-weight: 800;
+      letter-spacing: .08em; text-transform: uppercase; color: var(--section-title);
+      margin: 0 0 14px;
+    }
+    .hint { font-size: 13px; line-height: 1.5; color: var(--text-muted); margin: 0 0 16px; }
+
+    .feed-list { list-style: none; display: flex; flex-direction: column; gap: 12px; }
+    .feed-card {
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: 14px; padding: 16px 18px; box-shadow: var(--box-shadow);
+    }
+    .feed-card h3 {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 15px; font-weight: 800; margin: 0; color: var(--text);
+    }
+    .feed-body { margin-top: 12px; font-size: 13px; line-height: 1.55; color: var(--text); }
+    .feed-body a { font-weight: 700; color: var(--brand-accent); text-decoration: underline; }
+    .feed-footer { font-size: 12px; color: var(--text-muted); margin: 14px 0 0; }
+    .btn-li-ocultar {
+      display: inline-flex; align-items: center; margin-top: 14px;
+      padding: 8px 14px; border-radius: 10px;
+      border: 1px solid var(--card-border);
+      background: rgba(124, 58, 237, 0.12);
+      color: var(--brand-accent); font-size: 12px; font-weight: 700; cursor: pointer;
+      font-family: var(--font);
+    }
+
+    .live-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+    .live-row {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+      padding: 12px 14px; border-radius: 12px;
+      border: 1px solid var(--card-border); background: var(--input-bg);
+    }
+    .live-row .meta { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+    .live-row .nome { font-size: 14px; font-weight: 700; }
+    .live-plat {
+      font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 999px;
+      background: rgba(124,58,237,.12); color: var(--brand-accent);
+    }
+
+    .grid-atalhos {
+      display: grid; gap: 12px;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+    }
+    .atalho {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 16px 18px; border-radius: 12px;
+      border: 1px solid var(--card-border); background: var(--input-bg);
+      color: var(--text); text-decoration: none;
+    }
+    .atalho:hover { border-color: var(--brand-primary); background: rgba(124, 58, 237, 0.08); }
+    .atalho .ic {
+      width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
+      background: rgba(74,32,130,0.2); color: var(--brand-accent);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .atalho .tit { display: flex; align-items: flex-start; gap: 8px; }
+    .atalho .tit span { flex: 1; font-size: 14px; font-weight: 700; line-height: 1.35; }
+    .atalho .tit svg { color: var(--text-muted); flex-shrink: 0; margin-top: 2px; }
+    .atalho p { margin: 8px 0 0; font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+
+    .mes-sub {
+      margin: -6px 0 14px; font-size: 12px; font-weight: 600;
+      letter-spacing: .02em; color: var(--text-muted);
+    }
+    .grid-kpi-3 {
+      display: grid; gap: 12px;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .grid-kpi-4 {
+      display: grid; gap: 12px;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+    @media (max-width: 900px) {
+      .grid-kpi-3, .grid-kpi-4 { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 520px) {
+      .grid-kpi-3, .grid-kpi-4 { grid-template-columns: 1fr; }
+    }
+    .kpi-card {
+      border-radius: 14px; border: 1px solid var(--card-border);
+      background: var(--card-bg); overflow: hidden;
+    }
+    .kpi-card .kpi-bar {
+      height: 3px;
+      background: linear-gradient(90deg, var(--brand-primary), transparent);
+    }
+    .kpi-card .kpi-bar.sec { background: linear-gradient(90deg, var(--brand-azul), transparent); }
+    .kpi-card .kpi-bar.accent { background: linear-gradient(90deg, var(--brand-ciano), transparent); }
+    .kpi-card .kpi-body { padding: 14px 16px; }
+    .kpi-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+    .kpi-ic {
+      width: 30px; height: 30px; border-radius: 8px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(124,58,237,.1); border: 1px solid rgba(124,58,237,.22);
+      color: var(--brand-primary);
+    }
+    .kpi-ic.sec { background: rgba(30,54,248,.1); border-color: rgba(30,54,248,.22); color: var(--brand-azul); }
+    .kpi-ic.accent { background: rgba(112,202,228,.15); border-color: rgba(112,202,228,.35); color: #0891b2; }
+    .kpi-label {
+      font-size: 10px; font-weight: 600; letter-spacing: .07em;
+      text-transform: uppercase; color: var(--text-muted);
+    }
+    .kpi-value {
+      font-size: 22px; font-weight: 800; line-height: 1.1; color: var(--text);
+      font-variant-numeric: tabular-nums;
+    }
+    .kpi-sub {
+      margin-top: 6px; font-size: 11px; color: var(--text-muted);
+      font-variant-numeric: tabular-nums;
+    }
+    .kpi-mom {
+      margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--card-border);
+      font-size: 11px;
+    }
+    .kpi-mom .row { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+    .kpi-mom .up { color: var(--verde); font-weight: 700; font-size: 12px; }
+    .kpi-mom .down { color: var(--vermelho); font-weight: 700; font-size: 12px; }
+    .footer-hint {
+      margin: 14px 0 0; font-size: 12px; color: var(--text-muted); line-height: 1.5;
+    }
+    .footer-hint a { font-weight: 700; color: var(--brand-accent); text-decoration: underline; }
+
+    .nota-mock {
+      display: flex; align-items: flex-start; gap: 6px; margin-top: 12px;
+      font-size: 11px; font-weight: 700; padding: 6px 10px; border-radius: 8px;
+      background: rgba(245,158,11,.12); color: #a16207; border: 1px dashed rgba(245,158,11,.55);
+    }
+    body.dark .nota-mock { color: var(--amarelo); }
+
+    .legenda {
+      max-width: 1100px; margin: 0 auto; padding: 0 20px 48px;
+    }
+    .legenda .content-box { font-size: 12px; color: var(--text-muted); }
+    .legenda ul { padding-left: 18px; margin-top: 10px; }
+    .legenda li { margin-bottom: 6px; }
+    .legenda strong { color: var(--text); }
+    .removed { text-decoration: line-through; opacity: .7; }
+  </style>
+</head>
+<body>
+  <div class="mock-banner">
+    <span>Mockup 3/N — Home · perfil <strong>Agência</strong> · proposta · portfólio (escopo) · KPIs + lives + Informativos</span>
+    <button type="button" id="btn-tema">Alternar tema claro / escuro</button>
+  </div>
+
+  <div class="page-shell">
+
+    <!-- 1 — Boas-vindas -->
+    <span class="block-tag">Bloco 1 · Boas-vindas</span>
+    <div class="welcome-card">
+      <div class="topbar"></div>
+      <div class="welcome-row">
+        <div class="avatar" aria-hidden="true">A</div>
+        <div style="flex:1;min-width:200px">
+          <h1>Olá, Agência Nova Era!</h1>
+          <p class="role-label">Agência</p>
+          <p class="welcome-sub">Gestão de parceiros.
+Acompanhe os influencers vinculados à sua agência.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2 — Alerta portfólio -->
+    <span class="block-tag">Bloco 2 · Cadastros incompletos no portfólio (só quando houver)</span>
+    <div class="alert-box">
+      <svg class="alert-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>
+      </svg>
+      <div style="flex:1;min-width:0">
+        <div class="alert-title">AÇÃO NECESSÁRIA</div>
+        <p class="alert-body">
+          Há <strong>2 influencers</strong> no seu escopo com cadastro incompleto. Isso pode impedir o pagamento das lives. Acesse a página Influencers e conclua os itens pendentes de cada perfil.
+        </p>
+        <a class="alert-cta" href="#">Ir para Influencers</a>
+        <p class="nota-mock">Agência <strong>não</strong> tem cadastro próprio de influencer — alerta é do <strong>portfólio</strong> (escopo). Contagem ilustrativa.</p>
+      </div>
+    </div>
+
+    <!-- 3 — Principais KPIs -->
+    <span class="block-tag">Bloco 3 · Principais KPIs — Overview Influencer (escopo da agência)</span>
+    <div class="content-box">
+      <h2 class="section-title">Principais KPIs</h2>
+      <p class="mes-sub">Setembro 2026 · 8 influencers no escopo</p>
+      <div class="grid-kpi-3" style="margin-bottom:12px">
+        <article class="kpi-card">
+          <div class="kpi-bar"></div>
+          <div class="kpi-body">
+            <div class="kpi-head">
+              <span class="kpi-ic" aria-hidden="true">↑</span>
+              <span class="kpi-label">GGR</span>
+            </div>
+            <div class="kpi-value">R$ 148.200,00</div>
+            <div class="kpi-mom">
+              <div class="row"><span style="color:var(--text-muted)">Mês anterior</span><span style="font-weight:600">R$ 132.400,00</span></div>
+              <div><span class="up">↑ +11,9%</span> <span style="color:var(--text-muted);font-size:10px">vs mês anterior</span></div>
+            </div>
+          </div>
+        </article>
+        <article class="kpi-card">
+          <div class="kpi-bar sec"></div>
+          <div class="kpi-body">
+            <div class="kpi-head">
+              <span class="kpi-ic sec" aria-hidden="true">$</span>
+              <span class="kpi-label">Investimento</span>
+            </div>
+            <div class="kpi-value">R$ 41.500,00</div>
+            <div class="kpi-mom">
+              <div class="row"><span style="color:var(--text-muted)">Mês anterior</span><span style="font-weight:600">R$ 38.000,00</span></div>
+              <div><span class="up">↑ +9,2%</span> <span style="color:var(--text-muted);font-size:10px">vs mês anterior</span></div>
+            </div>
+          </div>
+        </article>
+        <article class="kpi-card">
+          <div class="kpi-bar"></div>
+          <div class="kpi-body">
+            <div class="kpi-head">
+              <span class="kpi-ic" aria-hidden="true">%</span>
+              <span class="kpi-label">ROI</span>
+            </div>
+            <div class="kpi-value">+257,1%</div>
+            <div class="kpi-mom">
+              <div class="row"><span style="color:var(--text-muted)">Mês anterior</span><span style="font-weight:600">+248,4%</span></div>
+              <div><span class="up">↑ +8,7 pp</span> <span style="color:var(--text-muted);font-size:10px">vs mês anterior</span></div>
+            </div>
+          </div>
+        </article>
+      </div>
+      <div class="grid-kpi-4">
+        <article class="kpi-card">
+          <div class="kpi-bar"></div>
+          <div class="kpi-body">
+            <div class="kpi-head">
+              <span class="kpi-ic" aria-hidden="true">+</span>
+              <span class="kpi-label">Registros</span>
+            </div>
+            <div class="kpi-value">612</div>
+            <div class="kpi-sub">1.840 acessos (33,2% conv.)</div>
+            <div class="kpi-mom">
+              <div class="row"><span style="color:var(--text-muted)">Mês anterior</span><span style="font-weight:600">548</span></div>
+              <div><span class="up">↑ +11,7%</span> <span style="color:var(--text-muted);font-size:10px">vs mês anterior</span></div>
+            </div>
+          </div>
+        </article>
+        <article class="kpi-card">
+          <div class="kpi-bar"></div>
+          <div class="kpi-body">
+            <div class="kpi-head">
+              <span class="kpi-ic" aria-hidden="true">★</span>
+              <span class="kpi-label">FTDs</span>
+            </div>
+            <div class="kpi-value">128</div>
+            <div class="kpi-sub">R$ 96.400,00 valor</div>
+            <div class="kpi-mom">
+              <div class="row"><span style="color:var(--text-muted)">Mês anterior</span><span style="font-weight:600">114</span></div>
+              <div><span class="up">↑ +12,3%</span> <span style="color:var(--text-muted);font-size:10px">vs mês anterior</span></div>
+            </div>
+          </div>
+        </article>
+        <article class="kpi-card">
+          <div class="kpi-bar sec"></div>
+          <div class="kpi-body">
+            <div class="kpi-head">
+              <span class="kpi-ic sec" aria-hidden="true">↓</span>
+              <span class="kpi-label">Depósitos</span>
+            </div>
+            <div class="kpi-value">394</div>
+            <div class="kpi-sub">R$ 412.800,00 valor</div>
+            <div class="kpi-mom">
+              <div class="row"><span style="color:var(--text-muted)">Mês anterior</span><span style="font-weight:600">360</span></div>
+              <div><span class="up">↑ +9,4%</span> <span style="color:var(--text-muted);font-size:10px">vs mês anterior</span></div>
+            </div>
+          </div>
+        </article>
+        <article class="kpi-card">
+          <div class="kpi-bar accent"></div>
+          <div class="kpi-body">
+            <div class="kpi-head">
+              <span class="kpi-ic accent" aria-hidden="true">▶</span>
+              <span class="kpi-label">Lives</span>
+            </div>
+            <div class="kpi-value">46</div>
+            <div class="kpi-sub">128:30 horas · 2.140 views méd.</div>
+            <div class="kpi-mom">
+              <div class="row"><span style="color:var(--text-muted)">Mês anterior</span><span style="font-weight:600">41</span></div>
+              <div><span class="up">↑ +12,2%</span> <span style="color:var(--text-muted);font-size:10px">vs mês anterior</span></div>
+            </div>
+          </div>
+        </article>
+      </div>
+      <p class="footer-hint">Quer saber mais? Acessa o Dashboard de <a href="#">Overview Influencer</a></p>
+      <p class="nota-mock">KPIs = soma do <strong>escopo</strong> (`influencersVisiveis`), não “meus” dados pessoais. Visual = <code>HomeKpiCard</code> + MoM. Mix: executivos (GGR/Investimento/ROI) + conversão + lives — alinhado ao Overview Influencer da agência.</p>
+    </div>
+
+    <!-- 4 — Próximas lives do portfólio -->
+    <span class="block-tag">Bloco 4 · Próximas lives (portfólio · escopo)</span>
+    <div class="content-box">
+      <h2 class="section-title">Próximas lives</h2>
+      <p class="hint">Lives agendadas dos influencers do seu escopo.</p>
+      <ul class="live-list">
+        <li class="live-row">
+          <div>
+            <div class="nome">Luna Stream</div>
+            <div class="meta">15/09/2026 · 20:00 · Blackjack VIP</div>
+          </div>
+          <span class="live-plat">Twitch</span>
+        </li>
+        <li class="live-row">
+          <div>
+            <div class="nome">Diego Plays</div>
+            <div class="meta">16/09/2026 · 19:30 · Roleta Speed</div>
+          </div>
+          <span class="live-plat">Kick</span>
+        </li>
+        <li class="live-row">
+          <div>
+            <div class="nome">Carol Live</div>
+            <div class="meta">18/09/2026 · 21:00 · Baccarat</div>
+          </div>
+          <span class="live-plat">YouTube</span>
+        </li>
+      </ul>
+      <p class="footer-hint"><a href="#">Ver Agenda</a> · filtrada pelo escopo da agência.</p>
+      <p class="nota-mock">Não é “minha live” — lista do <strong>portfólio</strong>. Ocultar bloco se não houver lives futuras. Sem Feedbacks recentes pessoais (agência opera pelo escopo; Feedback fica no atalho).</p>
+    </div>
+
+    <!-- 5 — Informações -->
+    <span class="block-tag">Bloco 5 · Informações — Informativos (perfil agencia · 10 dias)</span>
+    <div class="content-box">
+      <h2 class="section-title">Informações</h2>
+      <ul class="feed-list">
+        <li>
+          <article class="feed-card">
+            <h3>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/>
+              </svg>
+              Diretrizes de agendamento — setembro
+            </h3>
+            <div class="feed-body">
+              <p>Ao criar lives para o seu portfólio, confirme cadastro e Playbook do influencer selecionado. Em dúvida, use a <a href="#">Ajuda</a>.</p>
+            </div>
+            <p class="feed-footer">Equipe Aquisição · 11/09/26 - 10:00</p>
+            <button type="button" class="btn-li-ocultar">Li e Ocultar</button>
+          </article>
+        </li>
+        <li>
+          <article class="feed-card">
+            <h3>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/>
+              </svg>
+              Links e materiais do portfólio
+            </h3>
+            <div class="feed-body">
+              <p>Novos criativos disponíveis. Emita links em <a href="#">Links e Materiais</a> apenas para influencers do seu escopo.</p>
+            </div>
+            <p class="feed-footer">Equipe Aquisição · 06/09/26 - 15:20</p>
+            <button type="button" class="btn-li-ocultar">Li e Ocultar</button>
+          </article>
+        </li>
+      </ul>
+      <p class="nota-mock">Feed <code>agencia</code>, janela 10 dias + «Li e Ocultar». Sem Portal RH / Academy / revisão cadastral RH de 6 meses.</p>
+    </div>
+
+    <!-- 6 — Acesso rápido -->
+    <span class="block-tag">Bloco 6 · Acesso rápido (atalhos curados · não dump do menu)</span>
+    <div class="content-box">
+      <h2 class="section-title">Acesso rápido</h2>
+      <p class="hint">Clique em um atalho abaixo para ir diretamente à página desejada.</p>
+      <div class="grid-atalhos">
+        <a class="atalho" href="#">
+          <span class="ic">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+          </span>
+          <div style="flex:1;min-width:0">
+            <div class="tit">
+              <span>Overview Influencer</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </div>
+            <p>Resumo executivo de financeiro e conversão dos influencers do seu escopo.</p>
+          </div>
+        </a>
+        <a class="atalho" href="#">
+          <span class="ic">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
+          </span>
+          <div style="flex:1;min-width:0">
+            <div class="tit">
+              <span>Agenda</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </div>
+            <p>Visualize, agende e acompanhe as lives dos influencers.</p>
+          </div>
+        </a>
+        <a class="atalho" href="#">
+          <span class="ic">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
+          </span>
+          <div style="flex:1;min-width:0">
+            <div class="tit">
+              <span>Resultados</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </div>
+            <p>Consulte o desempenho das lives realizadas.</p>
+          </div>
+        </a>
+        <a class="atalho" href="#">
+          <span class="ic">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
+          </span>
+          <div style="flex:1;min-width:0">
+            <div class="tit">
+              <span>Feedback</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </div>
+            <p>Veja observações e métricas das lives recentes.</p>
+          </div>
+        </a>
+        <a class="atalho" href="#">
+          <span class="ic">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          </span>
+          <div style="flex:1;min-width:0">
+            <div class="tit">
+              <span>Influencers</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </div>
+            <p>Gerencie os influencers do seu escopo.</p>
+          </div>
+        </a>
+        <a class="atalho" href="#">
+          <span class="ic">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+          </span>
+          <div style="flex:1;min-width:0">
+            <div class="tit">
+              <span>Links e Materiais</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </div>
+            <p>Emita links e materiais para o portfólio (Ver = Próprios).</p>
+          </div>
+        </a>
+        <a class="atalho" href="#">
+          <span class="ic">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>
+          </span>
+          <div style="flex:1;min-width:0">
+            <div class="tit">
+              <span>Financeiro</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </div>
+            <p>Acompanhe os ciclos de pagamento dos influencers do escopo.</p>
+          </div>
+        </a>
+        <a class="atalho" href="#">
+          <span class="ic">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+          </span>
+          <div style="flex:1;min-width:0">
+            <div class="tit">
+              <span>Ajuda</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </div>
+            <p>Conheça as funcionalidades da plataforma, o glossário, tutoriais e soluções para problemas comuns.</p>
+          </div>
+        </a>
+      </div>
+      <p class="nota-mock">Lista curada — só com Ver = sim/proprios. <strong>Fora:</strong> <span class="removed">Streamers</span>, <span class="removed">Scout</span>, <span class="removed">Network</span>, <span class="removed">Afiliados</span>, <span class="removed">Playbook</span> (ciência é do influencer; gate na Agenda/Nova Live). Se faltar permissão, o card some.</p>
+    </div>
+
+  </div>
+
+  <div class="legenda">
+    <div class="content-box">
+      <h2 class="section-title">Notas para aprovação — Home Agência</h2>
+      <ul>
+        <li><strong>Eixo:</strong> gestão de <strong>portfólio</strong> (escopo de influencers), não “minha jornada” pessoal como Influencer/Afiliado.</li>
+        <li><strong>Bloco 2:</strong> alerta opcional de cadastros incompletos no escopo → Influencers. Sem alerta de Playbook próprio da agência.</li>
+        <li><strong>Bloco 3:</strong> KPIs agregados do escopo (GGR / Investimento / ROI + conversão + lives), MoM, link Overview Influencer.</li>
+        <li><strong>Bloco 4:</strong> próximas lives do portfólio (não pessoais). Sem bloco Feedbacks recentes na Home.</li>
+        <li><strong>Bloco 5:</strong> Informativos perfil <code>agencia</code> (10 dias + «Li e Ocultar»).</li>
+        <li><strong>Acesso rápido:</strong> Overview Influencer → Agenda → Resultados → Feedback → Influencers → Links e Materiais → Financeiro → Ajuda.</li>
+        <li><strong>Fora:</strong> revisão RH 6 meses, Portal RH, Academy, dump do menu.</li>
+        <li><strong>Como abrir:</strong> duplo clique no arquivo / navegador. Botão no topo alterna tema claro/escuro.</li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById("btn-tema").addEventListener("click", function () {
+      document.body.classList.toggle("dark");
+    });
+  </script>
+</body>
+</html>

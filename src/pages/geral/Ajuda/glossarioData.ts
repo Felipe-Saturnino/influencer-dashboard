@@ -1229,8 +1229,14 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Home Influencer",
         definicao:
-          "Painel pós-login com boas-vindas, avisos de AÇÃO NECESSÁRIA (cadastro incompleto, Playbook pendente e, se não houver live futura e ainda restar saldo da cota, horas pendentes com atalho para a Agenda), próximas lives, feedbacks recentes, Informativos e acesso rápido curado.",
+          "Painel pós-login com boas-vindas, avisos de AÇÃO NECESSÁRIA (cadastro incompleto, Playbook pendente e, se não houver live futura e ainda restar saldo da cota, horas pendentes com atalho para a Agenda), Principais KPIs próprios (conversão e lives, com MoM), próximas lives, feedbacks recentes, Informativos e acesso rápido curado.",
         referencia: "Home · Agenda · Influencers",
+      },
+      {
+        termo: "Home Afiliado",
+        definicao:
+          "Painel pós-login com boas-vindas, avisos de AÇÃO NECESSÁRIA (cadastro incompleto com foco em comissões e Playbook pendente), Principais KPIs do Overview Afiliado (GGR, investimento, ROI e conversão, com MoM), Informativos e acesso rápido curado — sem lives nem Feedback.",
+        referencia: "Home · Afiliados",
       },
       {
         termo: "Home staff (Estúdio / Escritório)",

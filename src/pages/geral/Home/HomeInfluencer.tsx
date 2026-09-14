@@ -7,6 +7,7 @@ import { isPerfilIncompleto } from "../../../lib/influencerPerfilCompleto";
 import { useHomeInfluencerData } from "./hooks/useHomeInfluencerData";
 import { BoasVindasInfluencer } from "./influencer/BoasVindasInfluencer";
 import { AlertasInfluencerHome } from "./influencer/AlertasInfluencerHome";
+import { KpisInfluencerHome } from "./influencer/KpisInfluencerHome";
 import { ProximasLivesInfluencer } from "./influencer/ProximasLivesInfluencer";
 import { FeedbacksRecentesInfluencer } from "./influencer/FeedbacksRecentesInfluencer";
 import { InformacoesInfluencerHome } from "./influencer/InformacoesInfluencerHome";
@@ -111,6 +112,7 @@ export default function HomeInfluencer() {
         horasPendentes={horasPendentes ?? 0}
         simulacaoLogin={simulacaoLogin}
       />
+      <KpisInfluencerHome userId={uid} sectionIdPrefix={HOME_INFLUENCER_PREFIX} />
       <ProximasLivesInfluencer lives={livesFuturas} sectionIdPrefix={HOME_INFLUENCER_PREFIX} />
       <FeedbacksRecentesInfluencer
         lives={livesRealizadasRecentes}
