@@ -1802,7 +1802,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "Página de preferências da sua conta. Permite ajustar a aparência da interface (quando o perfil permitir) e alterar a senha de acesso. O acesso fica no menu do avatar (canto superior), junto com Ajuda — não aparece no menu lateral.",
+          "Página de preferências da sua conta. Permite ajustar a aparência da interface (quando o perfil permitir) e alterar a senha de acesso. O acesso fica no menu do avatar (canto superior), junto com Ajuda e Versionamento — não aparece no menu lateral.",
       },
       {
         subtitulo: "Aparência",
@@ -1841,12 +1841,36 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Quem pode usar e o que aparece na lista",
         texto:
-          "É necessário permissão de **Ver** em Simulador de Login. Os perfis disponíveis na página são definidos em **Gestão de Usuários → Simulador de Login** (matriz do perfil viewer × perfis simuláveis). Administrador vê o catálogo completo. Se a lista estiver vazia, peça ao administrador para liberar perfis nessa aba.",
+          "É necessário permissão de **Ver** em Simulador de Login. Os perfis disponíveis na página são definidos em **Gestão de Usuários → Simulador de Login** (matriz do perfil viewer × perfis simuláveis). Perfil Administrador vê o catálogo completo. Se a lista estiver vazia, peça a quem tem permissão de Editar nessa aba para liberar perfis.",
       },
       {
         subtitulo: "Encerrar",
         texto:
           "Use **Encerrar visualização** na faixa amarela no topo ou no bloco de status da página. A sessão volta ao seu perfil real e às permissões originais. Se a volta falhar, a faixa permanece e aparece um aviso para recarregar.",
+      },
+    ],
+  },
+  versionamento: {
+    titulo: "Versionamento",
+    blocos: [
+      {
+        texto:
+          "Página de novidades da plataforma: o que foi lançado, o que melhorou e o que foi corrigido a cada semana. O acesso fica no menu do avatar, abaixo de Ajuda — não aparece no menu lateral.\n\nAs releases entram só pelo fluxo interno da equipe (chat + handoff). Não há botão para publicar pela tela.",
+      },
+      {
+        subtitulo: "Release recente e histórico",
+        texto:
+          "A release mais nova aparece em destaque, com a tag **Recente**, o número sequencial e a data. As anteriores ficam no bloco **Histórico de releases**, recolhidas por padrão — abra o acordeão para ler os cards.",
+      },
+      {
+        subtitulo: "Cards e permissão",
+        texto:
+          "Cada card é **Novo**, **Melhoria** ou **Correção**. Você só vê o card se tiver permissão de **Ver** (ou **Próprios**) na página daquela feature. Mudanças de toda a plataforma aparecem para quem acessa Versionamento.",
+      },
+      {
+        subtitulo: "Filtros e busca",
+        texto:
+          "Filtre por tipo, por seção do menu e por palavras-chave (título, resumo, data, tipo e texto dos cards). Várias palavras exigem todas (E). A busca ignora acentos.",
       },
     ],
   },

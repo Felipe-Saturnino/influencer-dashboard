@@ -45,7 +45,9 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         termo: "Horas Pendentes",
         definicao:
           "Saldo da cota atual: Horas Acordadas menos Horas Realizadas desta cota. Nunca fica negativo — se a última live ultrapassar o combinado, o pendente aparece como zero.",
-        referencia: "Influencers",
+        nota:
+          "Na Home do Influencer, se houver saldo pendente e nenhuma live futura agendada, aparece o aviso AÇÃO NECESSÁRIA com atalho para a Agenda.",
+        referencia: "Influencers · Home",
       },
       {
         termo: "Validação de Live",
@@ -1225,6 +1227,12 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         referencia: "Home · Gestão de Operadoras",
       },
       {
+        termo: "Home Influencer",
+        definicao:
+          "Painel pós-login com boas-vindas, avisos de AÇÃO NECESSÁRIA (cadastro incompleto, Playbook pendente e, se não houver live futura e ainda restar saldo da cota, horas pendentes com atalho para a Agenda), próximas lives, feedbacks recentes, Informativos e acesso rápido curado.",
+        referencia: "Home · Agenda · Influencers",
+      },
+      {
         termo: "Home staff (Estúdio / Escritório)",
         definicao:
           "Painel pós-login com boas-vindas, atualização cadastral, aniversários, Informações (Informativos + Portal de RH), Blogueiro Spin e acesso rápido. Perfis de Estúdio incluem também a Central Academy (entre Informações e Blogueiro Spin).",
@@ -1436,7 +1444,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
   },
   {
     key: "geral_conta",
-    label: "Geral — Conta e simulação",
+    label: "Geral — Conta e plataforma",
     accentColor: "#64748b",
     termos: [
       {
@@ -1458,6 +1466,18 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         definicao:
           "Estado em que o menu e as permissões seguem o perfil escolhido no Simulador de Login. Criar, Editar e Excluir ficam bloqueados até encerrar a visualização.",
         referencia: "Simulador de Login",
+      },
+      {
+        termo: "Versionamento",
+        definicao:
+          "Página de releases semanais da plataforma: o que é novo, o que melhorou e o que foi corrigido. Acessível pelo menu do avatar, abaixo de Ajuda — não aparece no menu lateral. Os cards respeitam a permissão de Ver da página da feature.",
+        referencia: "Versionamento",
+      },
+      {
+        termo: "Release",
+        definicao:
+          "Pacote semanal de mudanças na plataforma, com número sequencial (a primeira publicada é #1), data e cards de Novo, Melhoria ou Correção. A mais nova aparece em destaque com a tag Recente; as anteriores ficam no histórico.",
+        referencia: "Versionamento",
       },
     ],
   },
@@ -1520,5 +1540,5 @@ export const GLOSSARIO_CATEGORIA_PAGE_KEYS: Record<string, PageKey[]> = {
   tech_ops_ordem_saida: ["tech_ops_ordem_saida"],
   tech_ops_itens_alocados: ["tech_ops_itens_alocados"],
   periodos: DASHBOARD_PAGE_KEYS,
-  geral_conta: ["configuracoes", "simulador_login"],
+  geral_conta: ["configuracoes", "simulador_login", "versionamento"],
 };

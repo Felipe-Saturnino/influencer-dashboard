@@ -18,5 +18,5 @@ export const ALL_PAGE_KEYS: PageKey[] = [
   "playbook_influencers", "links_materiais", "spin_na_rede", "rh_portal", "informativos",
   "tech_ops_estoque", "tech_ops_ordem_saida", "tech_ops_itens_alocados",
   "gestao_usuarios", "gestao_operadoras", "gestao_mesas", "status_tecnico",
-  "configuracoes", "simulador_login", "ajuda",
+  "configuracoes", "simulador_login", "ajuda", "versionamento",
 ];

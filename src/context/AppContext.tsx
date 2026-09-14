@@ -53,7 +53,7 @@ import {
 
 
 /** Home e páginas gerais: só `role_permissions`; sem interseção com `prestador_tipo_pages`. */
-const PAGES_SEM_MATRIZ_ESCOPO_TIPO = new Set<PageKey>(["home", "configuracoes", "simulador_login", "ajuda"]);
+const PAGES_SEM_MATRIZ_ESCOPO_TIPO = new Set<PageKey>(["home", "configuracoes", "simulador_login", "ajuda", "versionamento"]);
 
 // Tipo do mapa de permissões de visualização
 export type PermissoesMapa = Record<PageKey, PermissaoValor>;
@@ -306,7 +306,7 @@ async function carregarPermissoes(
 
   // Prestador: Ver efetivo = role_permissions ∩ união(prestador_tipo_pages das áreas do utilizador).
   // Áreas obrigatórias no cadastro; sem áreas, páginas operacionais bloqueadas.
-  // home / configuracoes / ajuda: só role_permissions (fora da aba Prestadores).
+  // home / configuracoes / ajuda / versionamento: só role_permissions (fora da aba Prestadores).
   if (role === "prestador") {
     if (!prestadorTiposVisiveis || prestadorTiposVisiveis.length === 0) {
       ALL_PAGE_KEYS.forEach((k) => {

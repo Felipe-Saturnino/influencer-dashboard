@@ -26,6 +26,7 @@ alwaysApply: false
 | Configurações | `geral/Configurações/` | Conta, tema, perfil |
 | Simulador de Login | `geral/SimuladorLogin/` | Visualização somente leitura de outro perfil |
 | Ajuda | `geral/Ajuda/` | Textos por página + glossário |
+| Versionamento | `geral/Versionamento/` | Releases semanais (catálogo em `releases.ts`; inclusão só via handoff) |
 | Trocar senha obrigatória | `geral/TrocarSenhaObrigatorio/` | Gate pós-login |
 | Canal de denúncias (público) | `public/CanalDenunciasSpinPage.tsx` | Rota pública; sem shell logado |
 | Painel de notícias (público) | `public/PainelNoticiasPage.tsx` | Rota `/painel-noticias`; RSS TV; sem shell logado |
@@ -67,7 +68,7 @@ Não há secção no menu lateral — páginas acessadas por fluxo, atalho ou UR
 - **Vários tutoriais na mesma aba:** `tutorial` aceita um objeto **ou** um array `{ id, urlSlug, titulo?, descricao? }[]`. Se o perfil vir **2+**, o ícone abre o modal **Tutoriais desta aba**; se vir **1**, navega direto. Referência: Calendário → Controle de Presença (`controle-presenca` + `justificativa-presenca`). Em **Solicitações** (RH) há **um tutorial por aba** (não array na mesma aba).
 - **Cor por ação** (fixa, não whitelabel): Conheça azul · Troubleshooting amarelo · Tutorial roxo — `getAjudaContextualAcaoStyle` em `src/lib/ajudaContextualStyles.ts` (detalhe visual em Brand §5).
 - Conheça / Troubleshooting: o terceiro segmento da URL seleciona a página na navegação lateral. Página inexistente ou sem permissão cai no primeiro item visível e substitui a URL pelo destino permitido.
-- **Cobertura:** todas as páginas de produto do menu (exceto Home, Configurações e a própria Ajuda). Páginas sem barra de filtros usam `PageHeader` `actions`/`right`.
+- **Cobertura:** todas as páginas de produto do menu (exceto Home, Configurações, Ajuda e Versionamento). Páginas sem barra de filtros usam `PageHeader` `actions`/`right`.
 
 | Secção | Páginas | Tutorial contextual |
 |---|----|----|
@@ -132,7 +133,7 @@ Seguir **Global § Linguagem e copy (PT-BR)**. Regras específicas:
 
 ### Secção Geral na Ajuda
 
-Páginas fora do menu lateral (`configuracoes`, `simulador_login`) aparecem no **fim** da navegação Conheça / Troubleshooting, sob **Geral**, só com permissão de Ver **sim** ou **próprios**. Conteúdo em `CONTEUDO_CONHECA` / `CONTEUDO_TROUBLE`; glossário categoria `geral_conta`. Títulos = labels de `PAGES` (Gestão de Usuários).
+Páginas fora do menu lateral (`configuracoes`, `simulador_login`, `versionamento`) aparecem no **fim** da navegação Conheça / Troubleshooting, sob **Geral**, só com permissão de Ver **sim** ou **próprios**. Conteúdo em `CONTEUDO_CONHECA` / `CONTEUDO_TROUBLE`; glossário categoria `geral_conta`. Títulos = labels de `PAGES` (Gestão de Usuários).
 
 ### Handoff pendente
 
@@ -161,7 +162,7 @@ Páginas fora do menu lateral (`configuracoes`, `simulador_login`) aparecem no *
 - **`operador`:** `HomeOperadorRouter` lê `operadoras.home_template` do escopo (`operadoraBrand`). **`default` / null / chave desconhecida → `HomeOperadorPadrao`** (boas-vindas, KPIs MTD com comparativo MoM, Spin na Rede, informativos com `operador_escopo`, atalhos Overview Spin + Ajuda). Templates dedicados: `lib/homeOperadoraTemplate.ts` + `operador/templates/`; campo na Gestão de Operadoras → aba Operações.
 - **Dados Home Investidor/Operador:** não dependem de `usePermission` das páginas fonte; RLS em `supabase/migrations/20260526120000_home_investidor_feed_rls.sql` e `20260526140000_home_operador_feed_rls.sql` (aplicar no Supabase).
 - **Período KPI / Aquisição (Home Investidor, Executivo e Operador Padrão):** `getHomeKpiReferenciaMes` / `getHomeKpiPeriodo` em `lib/homeInvestidorMtd.ts` — dia 1 do mês civil → mês anterior (ETL D-1); demais dias → MTD do mês de referência até ontem. Subtítulo do bloco: `HomeSectionMesSubtitle` com label `"Maio 2026"`.
-- **`influencer`:** layout dedicado em `HomeInfluencer.tsx` — boas-vindas com avatar + rótulo «Influenciador»; alertas de cadastro incompleto (CTA **Ir para Influencers**) e Playbook pendente; blocos **Próximas lives** e **Feedbacks recentes**; **Informações** = Informativos do perfil (`influencer`, janela 10 dias + «Li e Ocultar», reações); **sem** revisão cadastral RH de 6 meses, Portal RH nem Academy; acesso rápido curado (Overview Influencer → Agenda → Resultados → Feedback → Influencers → Playbook → Financeiro → Ajuda, filtrado por permissão Ver).
+- **`influencer`:** layout dedicado em `HomeInfluencer.tsx` — boas-vindas com avatar + rótulo «Influenciador»; alertas de **AÇÃO NECESSÁRIA** nesta ordem: (1) cadastro incompleto → **Ir para Influencers**; (2) Playbook pendente → **Ir para Playbook**; (3) horas pendentes da cota **e** nenhuma live futura agendada → **Ir para Agenda** (`mensagemHorasPendentesHome`); blocos **Próximas lives** e **Feedbacks recentes**; **Informações** = Informativos do perfil (`influencer`, janela 10 dias + «Li e Ocultar», reações); **sem** revisão cadastral RH de 6 meses, Portal RH nem Academy; acesso rápido curado (Overview Influencer → Agenda → Resultados → Feedback → Influencers → Playbook → Financeiro → Ajuda, filtrado por permissão Ver).
 - **`afiliado`:** layout dedicado em `HomeAfiliado.tsx` — boas-vindas com rótulo «Afiliado»; alerta de cadastro incompleto com copy de comissões e CTA **Ir para Afiliados** (`afiliados`); playbook pendente (mesmo fluxo do influencer); **sem** revisão cadastral RH de 6 meses; **sem** blocos Próximas lives / Feedbacks recentes; acesso rápido (Overview Afiliado primeiro quando liberado) + Informações.
 - **Demais perfis:** Home legada (`index.tsx`) — atalhos dinâmicos pelo menu (busca no Acesso rápido quando há mais de 8) + blocos **agência** / gestores / admin. Homes por role em `React.lazy`. Influencer e afiliado **não** usam a Home legada.
 
@@ -192,6 +193,19 @@ Páginas fora do menu lateral (`configuracoes`, `simulador_login`) aparecem no *
 - Preferências de conta/tema; CTAs de marca quando aplicável.
 - **Alterar senha:** mesmos 4 requisitos + CTA desabilitado até cumprir (paridade com Trocar senha obrigatória); `<form>` + `htmlFor`; loading «Salvando…» (U+2026); erros Auth mapeados com suporte; vermelho semântico `#e84025`.
 - Sem permissão: string Global «Você não tem permissão para visualizar esta página.»
+
+## Versionamento (`geral/Versionamento/`)
+
+- **PageKey:** `versionamento` — menu do avatar, **abaixo de Ajuda** e acima de Sair; **não** no menu lateral.
+- **Utilitária:** qualquer autenticado vê a página (`PAGES_SEM_MATRIZ_ESCOPO_TIPO` + seed `can_view='sim'`). Cards filtram por permissão de Ver/Próprios da página da feature (`paginas: "*" | PageKey[]`).
+- **Subtítulo:** `Acompanhe as novidades, melhorias e correções publicadas a cada semana na plataforma.`
+- **Inclusão de release:** só via chat Cursor + `docs/HANDOFF-VERSIONAMENTO-RELEASE.md` → `src/pages/geral/Versionamento/releases.ts`. **Sem** CTA «Nova Release» e **sem** modal de cadastro.
+- **Catálogo vazio:** `Nenhuma release publicada.` Filtro sem resultado: `Nenhuma release encontrada para os filtros selecionados.`
+- **Destaque:** tag verde **Recente** + `Release #N` + data `DD/MM/AAAA`; título no `h2`. Histórico em acordeão **recolhido por padrão**.
+- **Cards:** Novo `#a78bfa` · Melhoria `#1e36f8` · Correção `#22c55e`.
+- **Busca:** `PAGE_SEARCH.versionamento` — palavras-chave (AND, sem acentos) em título, resumo, data, tipo, seção e texto dos cards.
+- **Filtro de seção:** `FiltroBarCampoSelect` com ícone **`LayoutGrid`** 15px (`FILTRO_BAR_ICON_PROPS`) — exceção de domínio (não está no catálogo Brand de Operadora/Status). Agregadora **Todas Seções**.
+- **Ajuda contextual:** não usar `AjudaContextualAcoes` nesta página (igual Configurações / Ajuda).
 
 ## Simulador de Login (`geral/SimuladorLogin/`)
 

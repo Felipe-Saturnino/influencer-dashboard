@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Settings, HelpCircle, LogOut, Menu, Eye } from "lucide-react";
+import { Settings, HelpCircle, GitCommitHorizontal, LogOut, Menu, Eye } from "lucide-react";
 import { useApp } from "../context/AppContext";
 import { MENU } from "../constants/menu";
 import { FONT } from "../constants/theme";
@@ -17,6 +17,7 @@ const HEADER_EXTRA_LABELS: Record<string, string> = {
   configuracoes: "CONFIGURAÇÕES",
   simulador_login: "SIMULADOR DE LOGIN",
   ajuda: "AJUDA",
+  versionamento: "VERSIONAMENTO",
 };
 
 /** Título da barra superior: nome da seção do menu (ex.: Lives, Estúdio), não o nome da página. */
@@ -292,6 +293,21 @@ export default function Header({ activePage, onNavigate, onLogout, showMenuButto
             >
               <HelpCircle size={14} color={t.textMuted} aria-hidden />
               Ajuda
+            </button>
+
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                onNavigate("versionamento");
+                setOpen(false);
+              }}
+              style={dropdownItem}
+              onMouseEnter={(e) => (e.currentTarget.style.background = t.inputBg ?? t.bg)}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+            >
+              <GitCommitHorizontal size={14} color={t.textMuted} aria-hidden />
+              Versionamento
             </button>
 
             <div style={{ height: "1px", background: t.cardBorder, margin: "6px 0" }} />

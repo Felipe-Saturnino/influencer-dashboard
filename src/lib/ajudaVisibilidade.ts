@@ -1,17 +1,18 @@
-import { Eye, Settings } from "lucide-react";
+import { Eye, GitCommitHorizontal, Settings } from "lucide-react";
 import { MENU, type MenuSection } from "../constants/menu";
 import type { PermissoesMapa } from "../context/AppContext";
 import type { PageKey } from "../types";
 import { MENU_ORDERED_PAGE_KEYS } from "./menuPagesOrder";
 
 /** Páginas da secção Geral na Ajuda (fora do menu lateral; sem a própria Ajuda). */
-export const AJUDA_GERAL_PAGE_KEYS: PageKey[] = ["configuracoes", "simulador_login"];
+export const AJUDA_GERAL_PAGE_KEYS: PageKey[] = ["configuracoes", "simulador_login", "versionamento"];
 
 const MENU_AJUDA_GERAL: MenuSection = {
   section: "Geral",
   items: [
     { key: "configuracoes", label: "Configurações", icon: Settings },
     { key: "simulador_login", label: "Simulador de Login", icon: Eye },
+    { key: "versionamento", label: "Versionamento", icon: GitCommitHorizontal },
   ],
 };
 

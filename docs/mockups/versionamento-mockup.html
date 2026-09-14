@@ -58,6 +58,11 @@
       padding: 5px 12px; border-radius: 999px; font-size: 11px; font-weight: 700;
     }
     .mock-banner button[aria-pressed="true"] { background: #fff; color: #4a2082; border-color: #fff; }
+    .mock-banner select {
+      border: 1px solid rgba(255,255,255,.5); background: rgba(255,255,255,.12); color: #fff;
+      padding: 5px 10px; border-radius: 999px; font-size: 11px; font-weight: 700;
+    }
+    .mock-banner select option { color: #1a1a2e; }
 
     .app-header {
       display: flex; align-items: center; justify-content: space-between;
@@ -265,15 +270,15 @@
     .week.open .week-btn { border-bottom: 1px solid var(--card-border); }
     .week-accent { width: 3px; height: 16px; border-radius: 2px; background: var(--brand-primary); flex-shrink: 0; }
     .week-btn h3 {
-      font-family: var(--font-title); font-size: 12px; font-weight: 700;
-      text-transform: uppercase; letter-spacing: 0.08em; flex: 1;
+      font-family: var(--font-title); font-size: 13px; font-weight: 700;
+      flex: 1; line-height: 1.4; min-width: 0;
     }
-    .week-counts { display: flex; gap: 6px; flex-wrap: wrap; }
+    .week-counts { display: flex; gap: 6px; flex-wrap: wrap; flex-shrink: 0; }
     .count {
       font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 999px;
       background: var(--input-bg); color: var(--text-muted); border: 1px solid var(--card-border);
     }
-    .chevron { color: var(--text-muted); transition: transform .2s; }
+    .chevron { color: var(--text-muted); transition: transform .2s; flex-shrink: 0; }
     .week.open .chevron { transform: rotate(90deg); }
     .week-body { display: none; padding: 16px 18px 18px; }
     .week.open .week-body { display: block; }
@@ -333,7 +338,14 @@
   <div class="mock-banner">
     MOCKUP — Versionamento · proposta de página (não implementado)
     <button type="button" id="btn-theme">Tema claro / escuro</button>
-    <button type="button" id="btn-admin" aria-pressed="false">Visão: usuário</button>
+    <label>
+      Perfil simulado
+      <select id="perfil-simulado" aria-label="Perfil simulado">
+        <option value="admin">Administrador (vê todas as páginas)</option>
+        <option value="influencer">Influencer</option>
+        <option value="prestador">Prestador</option>
+      </select>
+    </label>
   </div>
 
   <header class="app-header">
@@ -395,9 +407,9 @@
         </button>
         <div class="search-wrap">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input class="search" id="busca" type="search" placeholder="Pesquisar release..." aria-label="Buscar por título ou descrição" />
+          <input class="search" id="busca" type="search" placeholder="Pesquisar palavras-chave..." aria-label="Buscar por palavras-chave no título, texto e blocos" />
         </div>
-        <button type="button" class="cta-criar hidden" id="cta-nova">
+        <button type="button" class="cta-criar" id="cta-nova">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Nova Release
         </button>
@@ -406,16 +418,17 @@
 
     <div class="note">
       <strong>Proposta de produto.</strong>
-      Página irmã de Ajuda — acesso pelo menu do avatar (canto superior), <strong>abaixo de Ajuda</strong> e acima de Sair.
-      Cadência semanal com identificador <code>AAAA.SS</code> (ano + semana). A semana corrente fica em destaque; as anteriores entram no histórico em acordeão.
-      Conteúdo em linguagem de produto (sem citar tabelas, RPC ou deploy). Administrador publica a release; demais perfis só leem.
+      Página irmã de Ajuda — menu do avatar, abaixo de Ajuda. A primeira release publicada é <code>Release #1</code>; o número sobe a cada semana.
+      O destaque é só a mais recente (tag <strong>Recente</strong>); o histórico fica <strong>recolhido</strong> por padrão.
+      <strong>Busca:</strong> palavras-chave no título da release, resumo, título do bloco, data, tipo, seção e texto dos cards (várias palavras = todas precisam aparecer).
+      <strong>Permissão:</strong> cada card aponta para a página da feature — quem não tem permissão de Ver (ou Próprios) nessa página não vê o card. Use o seletor <em>Perfil simulado</em> no topo para testar. Feature transversal (ex.: busca nos filtros) aparece para todos que acessam Versionamento.
     </div>
 
-    <article class="featured" data-week="2026.37">
+    <article class="featured" data-week="4" data-q="recente release 4 inatividade reativacao cadastro home influencer 13/09/2026 13092026">
       <div class="featured-top">
-        <span class="badge badge-now">Esta semana</span>
-        <span class="ver">2026.37</span>
-        <span class="week-meta">07 a 13 set 2026</span>
+        <span class="badge badge-now">Recente</span>
+        <span class="ver">Release #4</span>
+        <span class="week-meta">13/09/2026</span>
       </div>
       <h2>Home do Influencer e controle de inatividade</h2>
       <p class="lead">
@@ -423,7 +436,7 @@
         para o time de Lives acompanhar o canal sem sair do ponto de entrada da plataforma.
       </p>
       <div class="change-list">
-        <div class="change" data-tipo="novo" data-secao="Home" data-q="home influencer alertas próximas lives atalhos">
+        <div class="change" data-tipo="novo" data-secao="Home" data-page="home" data-q="home influencer alertas próximas lives atalhos">
           <span class="tipo tipo-novo">Novo</span>
           <div>
             <div class="change-title">Home do Influencer com agenda, alertas e atalhos</div>
@@ -434,7 +447,7 @@
             <span class="change-sec">Home</span>
           </div>
         </div>
-        <div class="change" data-tipo="novo" data-secao="Plataforma" data-q="histórico acesso usuário gestão">
+        <div class="change" data-tipo="novo" data-secao="Plataforma" data-page="gestao_usuarios" data-q="histórico acesso usuário gestão">
           <span class="tipo tipo-novo">Novo</span>
           <div>
             <div class="change-title">Histórico de acesso na Gestão de Usuários</div>
@@ -444,7 +457,7 @@
             <span class="change-sec">Plataforma</span>
           </div>
         </div>
-        <div class="change" data-tipo="melhoria" data-secao="Lives" data-q="reativar perfil e-mail boas-vindas horas cota">
+        <div class="change" data-tipo="melhoria" data-secao="Lives" data-page="influencers" data-q="reativar perfil e-mail boas-vindas horas cota">
           <span class="tipo tipo-melhoria">Melhoria</span>
           <div>
             <div class="change-title">Reativar influencer volta a enviar o e-mail de boas-vindas</div>
@@ -454,7 +467,7 @@
             <span class="change-sec">Lives</span>
           </div>
         </div>
-        <div class="change" data-tipo="correcao" data-secao="Lives" data-q="agenda bloqueio influencer inativo">
+        <div class="change" data-tipo="correcao" data-secao="Lives" data-page="agenda" data-q="agenda bloqueio influencer inativo">
           <span class="tipo tipo-correcao">Correção</span>
           <div>
             <div class="change-title">Agenda impede live de influencer inativo</div>
@@ -469,13 +482,13 @@
 
     <div class="content-box">
       <div class="block-title">Histórico de releases</div>
-      <p class="block-sub">Semanas anteriores, da mais recente para a mais antiga</p>
+      <p class="block-sub">Releases anteriores, da mais recente para a mais antiga — recolhidas por padrão</p>
 
       <div id="historico">
-        <article class="week" data-week="2026.36">
+        <article class="week" data-week="3" data-q="release 3 tutoriais ajuda ciencia portal rh politicas incidentes calendario presenca 06/09/2026 06092026">
           <button type="button" class="week-btn" aria-expanded="false">
             <span class="week-accent" aria-hidden="true"></span>
-            <h3>2026.36 · 31 ago a 06 set</h3>
+            <h3>Release #3 - Tutoriais na Ajuda e ciência no Portal de RH - 06/09/2026</h3>
             <span class="week-counts">
               <span class="count">2 novo</span>
               <span class="count">1 melhoria</span>
@@ -484,9 +497,8 @@
             <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
           </button>
           <div class="week-body">
-            <p style="font-size:13px;font-weight:700;margin-bottom:12px;">Tutoriais na Ajuda e ciência no Portal de RH</p>
             <div class="change-list">
-              <div class="change" data-tipo="novo" data-secao="Geral" data-q="tutoriais ajuda visibilidade perfil">
+              <div class="change" data-tipo="novo" data-secao="Geral" data-page="ajuda" data-q="tutoriais ajuda visibilidade perfil">
                 <span class="tipo tipo-novo">Novo</span>
                 <div>
                   <div class="change-title">Aba Tutoriais na Ajuda, por perfil</div>
@@ -494,7 +506,7 @@
                   <span class="change-sec">Geral</span>
                 </div>
               </div>
-              <div class="change" data-tipo="novo" data-secao="RH" data-q="portal rh políticas ciência">
+              <div class="change" data-tipo="novo" data-secao="RH" data-page="rh_portal" data-q="portal rh políticas ciência">
                 <span class="tipo tipo-novo">Novo</span>
                 <div>
                   <div class="change-title">Registro de ciência nas políticas do Portal de RH</div>
@@ -502,7 +514,7 @@
                   <span class="change-sec">RH</span>
                 </div>
               </div>
-              <div class="change" data-tipo="melhoria" data-secao="Estúdio" data-q="incidentes scripts descrição">
+              <div class="change" data-tipo="melhoria" data-secao="Estúdio" data-page="incidentes" data-q="incidentes scripts descrição">
                 <span class="tipo tipo-melhoria">Melhoria</span>
                 <div>
                   <div class="change-title">Scripts de incidente com descrição mais clara</div>
@@ -510,7 +522,7 @@
                   <span class="change-sec">Estúdio</span>
                 </div>
               </div>
-              <div class="change" data-tipo="correcao" data-secao="Escala" data-q="calendário presença justificativa">
+              <div class="change" data-tipo="correcao" data-secao="Escala" data-page="rh_calendario" data-q="calendário presença justificativa">
                 <span class="tipo tipo-correcao">Correção</span>
                 <div>
                   <div class="change-title">Calendário de presença deixa de duplicar justificativa no mesmo dia</div>
@@ -522,10 +534,10 @@
           </div>
         </article>
 
-        <article class="week" data-week="2026.35">
+        <article class="week" data-week="2" data-q="release 2 overview prestador busca filtros acentos historico competencias 30/08/2026 30082026">
           <button type="button" class="week-btn" aria-expanded="false">
             <span class="week-accent" aria-hidden="true"></span>
-            <h3>2026.35 · 24 a 30 ago</h3>
+            <h3>Release #2 - Overview Prestador e busca nos filtros - 30/08/2026</h3>
             <span class="week-counts">
               <span class="count">1 novo</span>
               <span class="count">2 melhoria</span>
@@ -533,9 +545,8 @@
             <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
           </button>
           <div class="week-body">
-            <p style="font-size:13px;font-weight:700;margin-bottom:12px;">Overview Prestador e busca nos filtros</p>
             <div class="change-list">
-              <div class="change" data-tipo="novo" data-secao="Dashboards" data-q="overview prestador escala presença">
+              <div class="change" data-tipo="novo" data-secao="Dashboards" data-page="dash_overview_prestador" data-q="overview prestador escala presença">
                 <span class="tipo tipo-novo">Novo</span>
                 <div>
                   <div class="change-title">Overview Prestador com visão de time e individual</div>
@@ -543,7 +554,7 @@
                   <span class="change-sec">Dashboards</span>
                 </div>
               </div>
-              <div class="change" data-tipo="melhoria" data-secao="Geral" data-q="busca filtro acentos painel">
+              <div class="change" data-tipo="melhoria" data-secao="Geral" data-page="*" data-q="busca filtro acentos painel">
                 <span class="tipo tipo-melhoria">Melhoria</span>
                 <div>
                   <div class="change-title">Busca nos filtros ignora acentos e aceita várias palavras</div>
@@ -551,7 +562,7 @@
                   <span class="change-sec">Geral</span>
                 </div>
               </div>
-              <div class="change" data-tipo="melhoria" data-secao="Dashboards" data-q="histórico 13 competências">
+              <div class="change" data-tipo="melhoria" data-secao="Dashboards" data-page="mesas_spin,streamers,dash_overview_influencer" data-q="histórico 13 competências">
                 <span class="tipo tipo-melhoria">Melhoria</span>
                 <div>
                   <div class="change-title">Histórico cobre 13 competências mensais</div>
@@ -563,10 +574,10 @@
           </div>
         </article>
 
-        <article class="week" data-week="2026.34">
+        <article class="week" data-week="1" data-q="release 1 agenda financeiro network afiliado pagamento hoje 23/08/2026 23082026">
           <button type="button" class="week-btn" aria-expanded="false">
             <span class="week-accent" aria-hidden="true"></span>
-            <h3>2026.34 · 17 a 23 ago</h3>
+            <h3>Release #1 - Ajustes de Agenda e Financeiro - 23/08/2026</h3>
             <span class="week-counts">
               <span class="count">1 melhoria</span>
               <span class="count">2 correção</span>
@@ -574,9 +585,8 @@
             <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
           </button>
           <div class="week-body">
-            <p style="font-size:13px;font-weight:700;margin-bottom:12px;">Ajustes de Agenda e Financeiro</p>
             <div class="change-list">
-              <div class="change" data-tipo="melhoria" data-secao="Lives" data-q="agenda modo dia semana mês hoje">
+              <div class="change" data-tipo="melhoria" data-secao="Lives" data-page="agenda" data-q="agenda modo dia semana mês hoje">
                 <span class="tipo tipo-melhoria">Melhoria</span>
                 <div>
                   <div class="change-title">Agenda com atalho Hoje no modo Dia</div>
@@ -584,7 +594,7 @@
                   <span class="change-sec">Lives</span>
                 </div>
               </div>
-              <div class="change" data-tipo="correcao" data-secao="Aquisição" data-q="financeiro status pagamento">
+              <div class="change" data-tipo="correcao" data-secao="Aquisição" data-page="financeiro" data-q="financeiro status pagamento">
                 <span class="tipo tipo-correcao">Correção</span>
                 <div>
                   <div class="change-title">Status Aguard. pagamento deixa de sumir após filtro de operadora</div>
@@ -592,7 +602,7 @@
                   <span class="change-sec">Aquisição</span>
                 </div>
               </div>
-              <div class="change" data-tipo="correcao" data-secao="Afiliados" data-q="network cadastro e-mail">
+              <div class="change" data-tipo="correcao" data-secao="Afiliados" data-page="afiliados_network" data-q="network cadastro e-mail">
                 <span class="tipo tipo-correcao">Correção</span>
                 <div>
                   <div class="change-title">Cadastro de afiliado na Network valida o e-mail antes de salvar</div>
@@ -615,13 +625,13 @@
         <button type="button" class="btn-x" id="fechar-nova" aria-label="Fechar modal" title="Fechar modal">×</button>
       </div>
       <div class="modal-body">
-        <p style="font-size:12px;color:var(--text-muted);margin-bottom:14px;">Somente administrador. A release da semana corrente substitui o destaque; semanas passadas entram no histórico.</p>
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:14px;">Somente administrador. O número sequencial é gerado na publicação (próximo = #5). Cada item exige a página da feature — quem não tiver permissão de Ver nessa página não vê o card.</p>
         <div class="field">
-          <label>Semana <span style="color:#e84025">*</span></label>
-          <select><option>2026.37 · 07 a 13 set 2026 (atual)</option><option>2026.38 · 14 a 20 set 2026</option></select>
+          <label>Data da release <span style="color:#e84025">*</span></label>
+          <input type="text" value="13/09/2026" inputmode="numeric" />
         </div>
         <div class="field">
-          <label>Título da semana <span style="color:#e84025">*</span></label>
+          <label>Título da release <span style="color:#e84025">*</span></label>
           <input type="text" value="Home do Influencer e controle de inatividade" />
         </div>
         <div class="field">
@@ -629,9 +639,9 @@
           <textarea>A semana concentra a nova Home do perfil influencer e as regras de reativação de cadastro.</textarea>
         </div>
         <div class="field">
-          <label>Itens (um por linha: Tipo | Seção | Título — descrição)</label>
+          <label>Itens (um por linha: Tipo | Página | Título — descrição)</label>
           <textarea style="min-height:110px;">Novo | Home | Home do Influencer — agenda, alertas e atalhos
-Correção | Lives | Agenda impede live de influencer inativo</textarea>
+Correção | Agenda | Agenda impede live de influencer inativo</textarea>
         </div>
       </div>
       <div class="modal-foot">
@@ -644,7 +654,7 @@ Correção | Lives | Agenda impede live de influencer inativo</textarea>
     const body = document.body;
     const menu = document.getElementById("menu-avatar");
     const btnAvatar = document.getElementById("btn-avatar");
-    const btnAdmin = document.getElementById("btn-admin");
+    const perfilSelect = document.getElementById("perfil-simulado");
     const cta = document.getElementById("cta-nova");
     const overlay = document.getElementById("modal-nova");
     const busca = document.getElementById("busca");
@@ -653,6 +663,22 @@ Correção | Lives | Agenda impede live de influencer inativo</textarea>
     const secoes = ["Todas Seções", "Home", "Lives", "Plataforma", "Geral", "RH", "Estúdio", "Escala", "Dashboards", "Aquisição", "Afiliados"];
     let secaoIdx = 0;
     let tipo = "todos";
+
+    /** Páginas com permissão de Ver/Próprios por perfil (mock). "*" no card = feature transversal. */
+    const PAGINAS_POR_PERFIL = {
+      admin: "*",
+      influencer: ["home", "agenda", "resultados", "feedback", "influencers", "financeiro", "ajuda", "dash_overview_influencer", "streamers"],
+      prestador: ["home", "ajuda", "rh_portal", "rh_calendario", "incidentes", "dash_overview_prestador"],
+    };
+
+    function podeVerPagina(pageAttr) {
+      const perfil = perfilSelect.value;
+      if (perfil === "admin" || PAGINAS_POR_PERFIL[perfil] === "*") return true;
+      const permitidas = new Set(PAGINAS_POR_PERFIL[perfil] || []);
+      const paginas = (pageAttr || "").split(",").map((p) => p.trim()).filter(Boolean);
+      if (paginas.length === 0 || paginas.includes("*")) return true;
+      return paginas.some((p) => permitidas.has(p));
+    }
 
     document.getElementById("btn-theme").addEventListener("click", () => body.classList.toggle("dark"));
 
@@ -668,11 +694,9 @@ Correção | Lives | Agenda impede live de influencer inativo</textarea>
       }
     });
 
-    btnAdmin.addEventListener("click", () => {
-      const on = btnAdmin.getAttribute("aria-pressed") !== "true";
-      btnAdmin.setAttribute("aria-pressed", String(on));
-      btnAdmin.textContent = on ? "Visão: administrador" : "Visão: usuário";
-      cta.classList.toggle("hidden", !on);
+    perfilSelect.addEventListener("change", () => {
+      cta.classList.toggle("hidden", perfilSelect.value !== "admin");
+      aplicarFiltro();
     });
 
     cta.addEventListener("click", () => overlay.classList.add("open"));
@@ -712,27 +736,92 @@ Correção | Lives | Agenda impede live de influencer inativo</textarea>
     function norm(s) {
       return (s || "").toLowerCase().normalize("NFD").replace(/\p{M}/gu, "");
     }
+
+    function tokensBusca(raw) {
+      return norm(raw).split(/\s+/).filter(Boolean);
+    }
+
+    function hayContemTokens(hay, tokens) {
+      if (!tokens.length) return true;
+      return tokens.every((t) => hay.includes(t));
+    }
+
+    function haystackBloco(block) {
+      const bits = [
+        block.getAttribute("data-q"),
+        block.querySelector("h2")?.textContent,
+        block.querySelector("h3")?.textContent,
+        block.querySelector(".lead")?.textContent,
+        block.querySelector(".ver")?.textContent,
+        block.querySelector(".week-meta")?.textContent,
+        block.querySelector(".badge")?.textContent,
+      ];
+      return norm(bits.filter(Boolean).join(" "));
+    }
+
+    function haystackCard(el) {
+      const bits = [
+        el.getAttribute("data-q"),
+        el.dataset.tipo,
+        el.dataset.secao,
+        el.querySelector(".change-title")?.textContent,
+        el.querySelector(".change-desc")?.textContent,
+        el.querySelector(".tipo")?.textContent,
+        el.querySelector(".change-sec")?.textContent,
+      ];
+      return norm(bits.filter(Boolean).join(" "));
+    }
+
+    function rotuloContagem(n, tipoLabel) {
+      if (n <= 0) return "";
+      return `<span class="count">${n} ${tipoLabel}</span>`;
+    }
+
+    function atualizarContagens(block) {
+      const countsEl = block.querySelector(".week-counts");
+      if (!countsEl) return;
+      const vis = [...block.querySelectorAll(".change")].filter((c) => !c.classList.contains("hidden-item"));
+      const novo = vis.filter((c) => c.dataset.tipo === "novo").length;
+      const melhoria = vis.filter((c) => c.dataset.tipo === "melhoria").length;
+      const correcao = vis.filter((c) => c.dataset.tipo === "correcao").length;
+      countsEl.innerHTML = [
+        rotuloContagem(novo, "novo"),
+        rotuloContagem(melhoria, "melhoria"),
+        rotuloContagem(correcao, "correção"),
+      ].join("");
+    }
+
     function aplicarFiltro() {
-      const q = norm(busca.value);
-      const tokens = q.split(/\s+/).filter(Boolean);
+      const tokens = tokensBusca(busca.value);
       const secao = secoes[secaoIdx];
       let visiveis = 0;
 
-      document.querySelectorAll(".change").forEach((el) => {
-        const okTipo = tipo === "todos" || el.dataset.tipo === tipo;
-        const okSecao = secao === "Todas Seções" || el.dataset.secao === secao;
-        const hay = norm(el.dataset.q + " " + el.textContent);
-        const okBusca = tokens.every((t) => hay.includes(t));
-        const show = okTipo && okSecao && okBusca;
-        el.classList.toggle("hidden-item", !show);
-        if (show) visiveis++;
-      });
-
       document.querySelectorAll("[data-week]").forEach((block) => {
+        const blocoHay = haystackBloco(block);
+        const blocoMatch = hayContemTokens(blocoHay, tokens);
+
+        block.querySelectorAll(".change").forEach((el) => {
+          const okPerm = podeVerPagina(el.dataset.page);
+          const okTipo = tipo === "todos" || el.dataset.tipo === tipo;
+          const okSecao = secao === "Todas Seções" || el.dataset.secao === secao;
+          const cardHay = haystackCard(el) + " " + blocoHay;
+          const okBusca = blocoMatch || hayContemTokens(cardHay, tokens);
+          const show = okPerm && okTipo && okSecao && okBusca;
+          el.classList.toggle("hidden-item", !show);
+          if (show) visiveis++;
+        });
+
         const any = [...block.querySelectorAll(".change")].some((c) => !c.classList.contains("hidden-item"));
         block.classList.toggle("hidden-item", !any);
-        if (block.classList.contains("week") && any && (tipo !== "todos" || secaoIdx !== 0 || tokens.length)) {
-          block.classList.add("open");
+        if (block.classList.contains("week")) {
+          atualizarContagens(block);
+          if (!tokens.length) {
+            block.classList.remove("open");
+            block.querySelector(".week-btn")?.setAttribute("aria-expanded", "false");
+          } else if (any) {
+            block.classList.add("open");
+            block.querySelector(".week-btn")?.setAttribute("aria-expanded", "true");
+          }
         }
       });
 

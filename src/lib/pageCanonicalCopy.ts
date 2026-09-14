@@ -25,6 +25,8 @@ export const PAGE_CANONICAL_SUBTITLE: Partial<Record<PageKey, string>> = {
   financeiro: "Gerencie os ciclos de pagamento dos influencers e afiliados, do rascunho ao pago.",
   afiliados: "Seu perfil de afiliado na plataforma.",
   ajuda: "Conheça as funcionalidades da plataforma, o glossário, tutoriais passo a passo e soluções para problemas comuns.",
+  versionamento:
+    "Acompanhe as novidades, melhorias e correções publicadas a cada semana na plataforma.",
   rh_calendario:
     "Organize a rotina operacional com visibilidade completa de turnos e compromissos.",
   rh_organograma:

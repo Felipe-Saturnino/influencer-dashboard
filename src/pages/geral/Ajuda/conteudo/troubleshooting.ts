@@ -2094,7 +2094,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "A lista de perfis está vazia?",
         texto:
-          "Nenhum perfil simulável foi liberado para o seu perfil viewer. Peça ao administrador para marcar as opções em **Gestão de Usuários → Simulador de Login**. Administradores veem o catálogo completo sem essa matriz.",
+          "Nenhum perfil simulável foi liberado para o seu perfil viewer. Peça a quem tem permissão de Editar em **Gestão de Usuários → Simulador de Login** para marcar as opções. Quem tem perfil Administrador vê o catálogo completo sem essa matriz.",
       },
       {
         subtitulo: "Não aparece nenhum usuário ativo?",
@@ -2125,6 +2125,31 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "Como sair da simulação?",
         texto:
           "Clique em **Encerrar visualização** na faixa amarela no topo da plataforma ou no bloco correspondente na página Simulador de Login. Se a faixa não sumir, recarregue a página. Se o problema persistir, entre em contato com o suporte.",
+      },
+    ],
+  },
+  versionamento: {
+    titulo: "Versionamento",
+    blocos: [
+      {
+        subtitulo: "Não encontro Versionamento no menu lateral?",
+        texto:
+          "Comportamento esperado: Versionamento fica no menu do avatar (canto superior), abaixo de Ajuda — não no menu lateral.",
+      },
+      {
+        subtitulo: "A página diz que nenhuma release foi publicada?",
+        texto:
+          "Ainda não há release no catálogo. As novidades entram só pelo fluxo interno da equipe; não há botão para criar release nesta tela.",
+      },
+      {
+        subtitulo: "Não vejo o card de uma feature que saiu na semana?",
+        texto:
+          "Cada card só aparece se você tiver permissão de **Ver** (ou **Próprios**) na página daquela feature. Sem essa permissão, o card fica oculto — e a release some se todos os cards ficarem ocultos.",
+      },
+      {
+        subtitulo: "A busca não encontra o que eu digitei?",
+        texto:
+          "Use palavras do título, do resumo, da data (com ou sem barras), do tipo (Novo, Melhoria, Correção) ou do texto do card. Várias palavras exigem todas. A busca ignora acentos. Limpe os filtros de tipo e seção se a lista estiver vazia.",
       },
     ],
   },

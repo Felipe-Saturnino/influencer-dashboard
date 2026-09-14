@@ -200,6 +200,7 @@ const PAGES_META: {
     hasExcluir: false,
   },
   { key: "ajuda", label: "Ajuda", secao: "Geral", hasCriar: false, hasEditar: false, hasExcluir: false },
+  { key: "versionamento", label: "Versionamento", secao: "Geral", hasCriar: false, hasEditar: false, hasExcluir: false },
 ];
 
 export const PAGES = sortPagesLikeMenu(PAGES_META);

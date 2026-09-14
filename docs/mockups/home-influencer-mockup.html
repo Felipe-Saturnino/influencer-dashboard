@@ -201,6 +201,61 @@
     .atalho .tit svg { color: var(--text-muted); flex-shrink: 0; margin-top: 2px; }
     .atalho p { margin: 8px 0 0; font-size: 12px; color: var(--text-muted); line-height: 1.5; }
 
+    .mes-sub {
+      margin: -6px 0 14px; font-size: 12px; font-weight: 600;
+      letter-spacing: .02em; color: var(--text-muted);
+    }
+    .grid-kpi-3 {
+      display: grid; gap: 12px;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    @media (max-width: 800px) {
+      .grid-kpi-3 { grid-template-columns: 1fr; }
+    }
+    .kpi-card {
+      border-radius: 14px; border: 1px solid var(--card-border);
+      background: var(--card-bg); overflow: hidden;
+    }
+    .kpi-card .kpi-bar {
+      height: 3px;
+      background: linear-gradient(90deg, var(--brand-primary), transparent);
+    }
+    .kpi-card .kpi-bar.sec { background: linear-gradient(90deg, var(--brand-azul), transparent); }
+    .kpi-card .kpi-bar.accent { background: linear-gradient(90deg, var(--brand-ciano), transparent); }
+    .kpi-card .kpi-body { padding: 14px 16px; }
+    .kpi-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+    .kpi-ic {
+      width: 30px; height: 30px; border-radius: 8px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(124,58,237,.1); border: 1px solid rgba(124,58,237,.22);
+      color: var(--brand-primary);
+    }
+    .kpi-ic.sec { background: rgba(30,54,248,.1); border-color: rgba(30,54,248,.22); color: var(--brand-azul); }
+    .kpi-ic.accent { background: rgba(112,202,228,.15); border-color: rgba(112,202,228,.35); color: #0891b2; }
+    .kpi-label {
+      font-size: 10px; font-weight: 600; letter-spacing: .07em;
+      text-transform: uppercase; color: var(--text-muted);
+    }
+    .kpi-value {
+      font-size: 22px; font-weight: 800; line-height: 1.1; color: var(--text);
+      font-variant-numeric: tabular-nums;
+    }
+    .kpi-sub {
+      font-size: 12px; color: var(--text-muted); margin: 4px 0 0; line-height: 1.35;
+    }
+    .kpi-sub strong { color: var(--text); font-weight: 600; }
+    .kpi-mom {
+      margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--card-border);
+      font-size: 11px;
+    }
+    .kpi-mom .row { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+    .kpi-mom .up { color: var(--verde); font-weight: 700; font-size: 12px; }
+    .kpi-mom .down { color: var(--vermelho); font-weight: 700; font-size: 12px; }
+    .footer-hint {
+      margin: 14px 0 0; font-size: 12px; color: var(--text-muted); line-height: 1.5;
+    }
+    .footer-hint a { font-weight: 700; color: var(--brand-accent); text-decoration: underline; }
+
     .nota-mock {
       display: flex; align-items: flex-start; gap: 6px; margin-top: 12px;
       font-size: 11px; font-weight: 700; padding: 6px 10px; border-radius: 8px;
@@ -273,6 +328,122 @@ Acompanhe cada passo da sua jornada.</p>
         <a class="alert-cta" href="#">Ir para Playbook</a>
         <p class="nota-mock">Link: <strong>Playbook Influencers</strong>. Gate da Agenda exige cadastro + Playbook.</p>
       </div>
+    </div>
+
+    <!-- 3b — Horas pendentes -->
+    <span class="block-tag">Bloco 3b · Horas pendentes sem live agendada (condicional)</span>
+    <div class="alert-box">
+      <svg class="alert-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>
+      </svg>
+      <div style="flex:1;min-width:0">
+        <div class="alert-title">AÇÃO NECESSÁRIA</div>
+        <p class="alert-body">
+          Você ainda tem 5 horas pendentes, realize o agendamento da próxima live na página de Agenda.
+        </p>
+        <a class="alert-cta" href="#">Ir para Agenda</a>
+        <p class="nota-mock">Só quando <strong>não</strong> há live futura agendada e a cota tem saldo &gt; 0. Ordem: cadastro → Playbook → horas. Link: <strong>Agenda</strong>.</p>
+      </div>
+    </div>
+
+    <!-- 3c — Principais KPIs (Overview Influencer) -->
+    <span class="block-tag">Bloco 3c · Principais KPIs — Overview Influencer (proposta)</span>
+    <div class="content-box">
+      <h2 class="section-title">Principais KPIs</h2>
+      <p class="mes-sub">Setembro 2026</p>
+      <div class="grid-kpi-3" style="margin-bottom:12px">
+        <article class="kpi-card">
+          <div class="kpi-bar"></div>
+          <div class="kpi-body">
+            <div class="kpi-head">
+              <span class="kpi-ic" aria-hidden="true">+</span>
+              <span class="kpi-label">Registros</span>
+            </div>
+            <div class="kpi-value">248</div>
+            <p class="kpi-sub"><strong>1.842 (13,5%)</strong> acessos (conv.)</p>
+            <div class="kpi-mom">
+              <div class="row"><span style="color:var(--text-muted)">Mês anterior</span><span style="font-weight:600">210</span></div>
+              <div><span class="up">↑ +18,1%</span> <span style="color:var(--text-muted);font-size:10px">vs mês anterior</span></div>
+            </div>
+          </div>
+        </article>
+        <article class="kpi-card">
+          <div class="kpi-bar"></div>
+          <div class="kpi-body">
+            <div class="kpi-head">
+              <span class="kpi-ic" aria-hidden="true">★</span>
+              <span class="kpi-label">FTDs</span>
+            </div>
+            <div class="kpi-value">54</div>
+            <p class="kpi-sub"><strong>R$ 18.720,00</strong> valor</p>
+            <div class="kpi-mom">
+              <div class="row"><span style="color:var(--text-muted)">Mês anterior</span><span style="font-weight:600">48</span></div>
+              <div><span class="up">↑ +12,5%</span> <span style="color:var(--text-muted);font-size:10px">vs mês anterior</span></div>
+            </div>
+          </div>
+        </article>
+        <article class="kpi-card">
+          <div class="kpi-bar accent"></div>
+          <div class="kpi-body">
+            <div class="kpi-head">
+              <span class="kpi-ic accent" aria-hidden="true">↓</span>
+              <span class="kpi-label">Depósitos</span>
+            </div>
+            <div class="kpi-value">312</div>
+            <p class="kpi-sub"><strong>R$ 95.400,00</strong> valor</p>
+            <div class="kpi-mom">
+              <div class="row"><span style="color:var(--text-muted)">Mês anterior</span><span style="font-weight:600">280</span></div>
+              <div><span class="up">↑ +11,4%</span> <span style="color:var(--text-muted);font-size:10px">vs mês anterior</span></div>
+            </div>
+          </div>
+        </article>
+      </div>
+      <div class="grid-kpi-3">
+        <article class="kpi-card">
+          <div class="kpi-bar sec"></div>
+          <div class="kpi-body">
+            <div class="kpi-head">
+              <span class="kpi-ic sec" aria-hidden="true">▶</span>
+              <span class="kpi-label">Lives</span>
+            </div>
+            <div class="kpi-value">14</div>
+            <div class="kpi-mom">
+              <div class="row"><span style="color:var(--text-muted)">Mês anterior</span><span style="font-weight:600">12</span></div>
+              <div><span class="up">↑ +16,7%</span> <span style="color:var(--text-muted);font-size:10px">vs mês anterior</span></div>
+            </div>
+          </div>
+        </article>
+        <article class="kpi-card">
+          <div class="kpi-bar sec"></div>
+          <div class="kpi-body">
+            <div class="kpi-head">
+              <span class="kpi-ic sec" aria-hidden="true">⏱</span>
+              <span class="kpi-label">Horas Realizadas</span>
+            </div>
+            <div class="kpi-value">28:45</div>
+            <div class="kpi-mom">
+              <div class="row"><span style="color:var(--text-muted)">Mês anterior</span><span style="font-weight:600">24:00</span></div>
+              <div><span class="up">↑ +19,8%</span> <span style="color:var(--text-muted);font-size:10px">vs mês anterior</span></div>
+            </div>
+          </div>
+        </article>
+        <article class="kpi-card">
+          <div class="kpi-bar accent"></div>
+          <div class="kpi-body">
+            <div class="kpi-head">
+              <span class="kpi-ic accent" aria-hidden="true">👁</span>
+              <span class="kpi-label">Média de Views</span>
+            </div>
+            <div class="kpi-value">1.842</div>
+            <div class="kpi-mom">
+              <div class="row"><span style="color:var(--text-muted)">Mês anterior</span><span style="font-weight:600">1.610</span></div>
+              <div><span class="up">↑ +14,4%</span> <span style="color:var(--text-muted);font-size:10px">vs mês anterior</span></div>
+            </div>
+          </div>
+        </article>
+      </div>
+      <p class="footer-hint">Quer saber mais? Acessa o Dashboard de <a href="#">Overview Influencer</a></p>
+      <p class="nota-mock">1ª fileira = conversão do Overview Influencer (com <code>subValue</code>): Registros → acessos (conv.); FTDs/Depósitos → valor em R$. 2ª fileira = Lives / Horas / Views. Visual Home + MoM. Sem GGR/Investimento/ROI/Saques na Home.</p>
     </div>
 
     <!-- 4 — Próximas lives -->
@@ -492,7 +663,8 @@ Acompanhe cada passo da sua jornada.</p>
       <ul>
         <li><strong>Fora desta Home (proposital):</strong> <span class="removed">atualização cadastral RH de 6 meses</span> — não se aplica a Influencer/Afiliado.</li>
         <li><strong>Fora desta Home:</strong> Portal de RH, Central Academy, Marketplace, aniversários de staff.</li>
-        <li><strong>Blocos 2 e 3</strong> são condicionais — neste mockup aparecem juntos para revisão de copy e CTAs.</li>
+        <li><strong>Bloco 3c (novo):</strong> Principais KPIs — Registros (com acessos abaixo) / FTDs (valor) / Depósitos (qtd + valor) + Lives / Horas / Views, com MoM.</li>
+        <li><strong>Blocos 2, 3 e 3b</strong> são condicionais — neste mockup aparecem juntos para revisão de copy e CTAs. Ordem real: cadastro → Playbook → horas pendentes (só sem live futura).</li>
         <li><strong>Bloco 6</strong> é a mudança principal vs. legado (texto fixo → feed Informativos). Se preferir manter só o texto + Ajuda, diga na aprovação.</li>
         <li><strong>Implantação:</strong> após aprovação → <code>HomeInfluencer.tsx</code> dedicada (sair da Home legada), espelhando o padrão do Afiliado.</li>
         <li><strong>Como abrir:</strong> duplo clique no arquivo no Explorer / navegador. Botão no topo alterna tema claro/escuro.</li>

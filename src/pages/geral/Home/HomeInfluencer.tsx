@@ -28,6 +28,7 @@ export default function HomeInfluencer() {
     ready,
     perfilRow,
     playbookPendente,
+    horasPendentes,
     livesFuturas,
     livesRealizadasRecentes,
     resultadosPorLive,
@@ -47,6 +48,13 @@ export default function HomeInfluencer() {
     isPerfilIncompleto(perfilRow, nomePerfil);
 
   const showPlaybook = ready && playbookPendente;
+
+  const showHorasPendentes =
+    ready &&
+    (perfilRow?.status ?? "ativo") === "ativo" &&
+    livesFuturas.length === 0 &&
+    horasPendentes != null &&
+    horasPendentes > 0;
 
   const simulacaoNota = simulacaoLogin
     ? `Sua conta não muda — você continua como ${user.name}. Visualização: ${simulacaoLogin.labelExibicao}.`
@@ -99,6 +107,8 @@ export default function HomeInfluencer() {
       <AlertasInfluencerHome
         showCadastroIncompleto={showCadastroIncompleto}
         showPlaybook={showPlaybook}
+        showHorasPendentes={showHorasPendentes}
+        horasPendentes={horasPendentes ?? 0}
         simulacaoLogin={simulacaoLogin}
       />
       <ProximasLivesInfluencer lives={livesFuturas} sectionIdPrefix={HOME_INFLUENCER_PREFIX} />

@@ -10,6 +10,7 @@ import {
 import { FONT } from "../../../constants/theme";
 import { useApp } from "../../../context/AppContext";
 import { supabase } from "../../../lib/supabase";
+import { fetchAllPages } from "../../../lib/supabasePaginate";
 import {
   fmtDataHoraHistoricoUsuario,
   labelRealizadoPorAtivacao,
@@ -135,79 +136,92 @@ export function ModalHistoricoUsuario({
   const carregar = useCallback(async () => {
     setLoading(true);
     setErro(null);
-    const [{ data: perfil, error: errPerfil }, { data: hist, error: errHist }] = await Promise.all([
-      supabase
-        .from("profiles")
-        .select(
-          "access_granted_at, access_granted_by, access_granted_origem, first_sign_in_at, created_at, ativo, desativado_em, desativado_por, desativado_origem, ultimo_reset_senha_em, ultimo_reset_senha_por, ultimo_reset_senha_origem",
-        )
-        .eq("id", usuario.id)
-        .maybeSingle(),
-      supabase
-        .from("profiles_historico")
-        .select("id, profile_id, tipo, origem, realizado_por, resumo, valor_anterior, valor_novo, created_at")
-        .eq("profile_id", usuario.id)
-        .order("created_at", { ascending: false }),
-    ]);
+    try {
+      const [{ data: perfil, error: errPerfil }, histRaw] = await Promise.all([
+        supabase
+          .from("profiles")
+          .select(
+            "access_granted_at, access_granted_by, access_granted_origem, first_sign_in_at, created_at, ativo, desativado_em, desativado_por, desativado_origem, ultimo_reset_senha_em, ultimo_reset_senha_por, ultimo_reset_senha_origem",
+          )
+          .eq("id", usuario.id)
+          .maybeSingle(),
+        fetchAllPages<Record<string, unknown>>(async (from, to) => {
+          const { data, error } = await supabase
+            .from("profiles_historico")
+            .select(
+              "id, profile_id, tipo, origem, realizado_por, resumo, valor_anterior, valor_novo, created_at",
+            )
+            .eq("profile_id", usuario.id)
+            .order("created_at", { ascending: false })
+            .range(from, to);
+          return { data: (data as Record<string, unknown>[] | null) ?? null, error };
+        }),
+      ]);
 
-    if (errPerfil || errHist) {
-      console.error("[ModalHistoricoUsuario]", errPerfil ?? errHist);
+      if (errPerfil) {
+        console.error("[ModalHistoricoUsuario]", errPerfil);
+        setErro(ERRO_HIST);
+        setSnap(null);
+        setEventos([]);
+        return;
+      }
+
+      const p = (perfil ?? {}) as Record<string, unknown>;
+      setSnap({
+        access_granted_at: typeof p.access_granted_at === "string" ? p.access_granted_at : null,
+        access_granted_by: typeof p.access_granted_by === "string" ? p.access_granted_by : null,
+        access_granted_origem: typeof p.access_granted_origem === "string" ? p.access_granted_origem : null,
+        first_sign_in_at: typeof p.first_sign_in_at === "string" ? p.first_sign_in_at : null,
+        created_at: typeof p.created_at === "string" ? p.created_at : null,
+        ativo: typeof p.ativo === "boolean" ? p.ativo : null,
+        desativado_em: typeof p.desativado_em === "string" ? p.desativado_em : null,
+        desativado_por: typeof p.desativado_por === "string" ? p.desativado_por : null,
+        desativado_origem: typeof p.desativado_origem === "string" ? p.desativado_origem : null,
+        ultimo_reset_senha_em: typeof p.ultimo_reset_senha_em === "string" ? p.ultimo_reset_senha_em : null,
+        ultimo_reset_senha_por: typeof p.ultimo_reset_senha_por === "string" ? p.ultimo_reset_senha_por : null,
+        ultimo_reset_senha_origem:
+          typeof p.ultimo_reset_senha_origem === "string" ? p.ultimo_reset_senha_origem : null,
+      });
+
+      const rows = histRaw
+        .map(parseHistoricoRow)
+        .filter((r): r is ProfilesHistoricoRow => r != null);
+
+      const ids = [
+        ...new Set(
+          [
+            ...rows.map((r) => r.realizado_por),
+            typeof p.access_granted_by === "string" ? p.access_granted_by : null,
+            typeof p.desativado_por === "string" ? p.desativado_por : null,
+            typeof p.ultimo_reset_senha_por === "string" ? p.ultimo_reset_senha_por : null,
+          ].filter((x): x is string => Boolean(x)),
+        ),
+      ];
+
+      const map: Record<string, string> = {};
+      if (ids.length > 0) {
+        const { data: profs } = await supabase.from("profiles").select("id, name").in("id", ids);
+        for (const pr of profs ?? []) {
+          const row = pr as { id: string; name: string | null };
+          map[row.id] = row.name?.trim() || "";
+        }
+      }
+
+      setNomes(map);
+      setEventos(
+        rows.map((r) => ({
+          ...r,
+          autor_nome: r.realizado_por ? map[r.realizado_por] ?? null : null,
+        })),
+      );
+    } catch (err) {
+      console.error("[ModalHistoricoUsuario]", err);
       setErro(ERRO_HIST);
       setSnap(null);
       setEventos([]);
+    } finally {
       setLoading(false);
-      return;
     }
-
-    const p = (perfil ?? {}) as Record<string, unknown>;
-    setSnap({
-      access_granted_at: typeof p.access_granted_at === "string" ? p.access_granted_at : null,
-      access_granted_by: typeof p.access_granted_by === "string" ? p.access_granted_by : null,
-      access_granted_origem: typeof p.access_granted_origem === "string" ? p.access_granted_origem : null,
-      first_sign_in_at: typeof p.first_sign_in_at === "string" ? p.first_sign_in_at : null,
-      created_at: typeof p.created_at === "string" ? p.created_at : null,
-      ativo: typeof p.ativo === "boolean" ? p.ativo : null,
-      desativado_em: typeof p.desativado_em === "string" ? p.desativado_em : null,
-      desativado_por: typeof p.desativado_por === "string" ? p.desativado_por : null,
-      desativado_origem: typeof p.desativado_origem === "string" ? p.desativado_origem : null,
-      ultimo_reset_senha_em: typeof p.ultimo_reset_senha_em === "string" ? p.ultimo_reset_senha_em : null,
-      ultimo_reset_senha_por: typeof p.ultimo_reset_senha_por === "string" ? p.ultimo_reset_senha_por : null,
-      ultimo_reset_senha_origem:
-        typeof p.ultimo_reset_senha_origem === "string" ? p.ultimo_reset_senha_origem : null,
-    });
-
-    const rows = ((hist ?? []) as Record<string, unknown>[])
-      .map(parseHistoricoRow)
-      .filter((r): r is ProfilesHistoricoRow => r != null);
-
-    const ids = [
-      ...new Set(
-        [
-          ...rows.map((r) => r.realizado_por),
-          typeof p.access_granted_by === "string" ? p.access_granted_by : null,
-          typeof p.desativado_por === "string" ? p.desativado_por : null,
-          typeof p.ultimo_reset_senha_por === "string" ? p.ultimo_reset_senha_por : null,
-        ].filter((x): x is string => Boolean(x)),
-      ),
-    ];
-
-    const map: Record<string, string> = {};
-    if (ids.length > 0) {
-      const { data: profs } = await supabase.from("profiles").select("id, name").in("id", ids);
-      for (const pr of profs ?? []) {
-        const row = pr as { id: string; name: string | null };
-        map[row.id] = row.name?.trim() || "";
-      }
-    }
-
-    setNomes(map);
-    setEventos(
-      rows.map((r) => ({
-        ...r,
-        autor_nome: r.realizado_por ? map[r.realizado_por] ?? null : null,
-      })),
-    );
-    setLoading(false);
   }, [usuario.id]);
 
   useEffect(() => {

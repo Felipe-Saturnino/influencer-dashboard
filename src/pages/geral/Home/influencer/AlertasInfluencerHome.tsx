@@ -6,7 +6,9 @@ import { FONT_TITLE } from "../../../../lib/dashboardConstants";
 import {
   INFLUENCER_HOME_CADASTRO_INCOMPLETO_CTA,
   INFLUENCER_HOME_CADASTRO_INCOMPLETO_MENSAGEM,
+  INFLUENCER_HOME_HORAS_PENDENTES_CTA,
   INFLUENCER_HOME_PLAYBOOK_CTA,
+  mensagemHorasPendentesHome,
 } from "../../../../lib/homeInfluencerCopy";
 
 const VERMELHO = "#e84025";
@@ -66,16 +68,20 @@ const ctaStyle: React.CSSProperties = {
 export function AlertasInfluencerHome({
   showCadastroIncompleto,
   showPlaybook,
+  showHorasPendentes,
+  horasPendentes,
   simulacaoLogin,
 }: {
   showCadastroIncompleto: boolean;
   showPlaybook: boolean;
+  showHorasPendentes: boolean;
+  horasPendentes: number;
   simulacaoLogin: { userName?: string | null } | null;
 }) {
   const { theme: t } = useApp();
   const { propsFor } = useAppPageNav();
 
-  if (!showCadastroIncompleto && !showPlaybook) return null;
+  if (!showCadastroIncompleto && !showPlaybook && !showHorasPendentes) return null;
 
   return (
     <>
@@ -107,6 +113,19 @@ export function AlertasInfluencerHome({
           </p>
           <a {...propsFor("playbook_influencers")} style={ctaStyle}>
             {INFLUENCER_HOME_PLAYBOOK_CTA}
+          </a>
+        </AlertBox>
+      ) : null}
+
+      {showHorasPendentes ? (
+        <AlertBox>
+          <p style={{ margin: "0 0 12px", fontSize: 13, color: t.text, lineHeight: 1.65, fontFamily: FONT.body }}>
+            {simulacaoLogin
+              ? `Horas pendentes sem live agendada no usuário visualizado${simulacaoLogin.userName ? ` (${simulacaoLogin.userName})` : ""}. A visualização é somente leitura.`
+              : mensagemHorasPendentesHome(horasPendentes)}
+          </p>
+          <a {...propsFor("agenda")} style={ctaStyle}>
+            {INFLUENCER_HOME_HORAS_PENDENTES_CTA}
           </a>
         </AlertBox>
       ) : null}

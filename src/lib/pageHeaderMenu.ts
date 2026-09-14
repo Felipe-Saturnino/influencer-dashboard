@@ -4,6 +4,7 @@ import { getMenuItem } from "../constants/menu";
 /** Páginas fora do menu lateral — label canónico alinhado ao PageHeader. */
 const PAGE_MENU_LABEL_OVERRIDE: Partial<Record<PageKey, string>> = {
   ajuda: "Ajuda",
+  versionamento: "Versionamento",
 };
 
 export function getPageMenuLabel(pageKey: PageKey): string {

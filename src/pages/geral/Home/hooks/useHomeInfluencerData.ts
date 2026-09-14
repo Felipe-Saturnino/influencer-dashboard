@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../../../lib/supabase";
 import { PLAYBOOK_ITENS_OBRIGATORIOS } from "../../../../constants/playbookGuia";
+import {
+  buscarHorasRealizadasCiclo,
+  horasPendentesCota,
+} from "../../../../lib/influencerHorasCota";
 import type { Live, LiveResultado } from "../../../../types";
 
 const LIVE_HOME_COLS = "id, data, horario, plataforma, titulo, observacao, status";
@@ -17,6 +21,8 @@ export type HomeInfluencerPerfilRow = {
   agencia?: string | null;
   conta?: string | null;
   status?: string | null;
+  horas_acordadas?: number | null;
+  horas_ciclo_iniciado_em?: string | null;
 };
 
 function dataLocalIso(d: Date): string {
@@ -39,6 +45,7 @@ export function useHomeInfluencerData(userId: string | undefined) {
   const [ready, setReady] = useState(false);
   const [perfilRow, setPerfilRow] = useState<HomeInfluencerPerfilRow | null>(null);
   const [playbookPendente, setPlaybookPendente] = useState(false);
+  const [horasPendentes, setHorasPendentes] = useState<number | null>(null);
   const [livesFuturas, setLivesFuturas] = useState<Live[]>([]);
   const [livesRealizadasRecentes, setLivesRealizadasRecentes] = useState<Live[]>([]);
   const [resultadosPorLive, setResultadosPorLive] = useState<Record<string, LiveResultado>>({});
@@ -48,6 +55,7 @@ export function useHomeInfluencerData(userId: string | undefined) {
       setReady(true);
       setPerfilRow(null);
       setPlaybookPendente(false);
+      setHorasPendentes(null);
       setLivesFuturas([]);
       setLivesRealizadasRecentes([]);
       setResultadosPorLive({});
@@ -63,7 +71,7 @@ export function useHomeInfluencerData(userId: string | undefined) {
         supabase
           .from("influencer_perfil")
           .select(
-            "nome_artistico, nome_completo, telefone, cpf, cache_hora, chave_pix, banco, agencia, conta, status",
+            "nome_artistico, nome_completo, telefone, cpf, cache_hora, chave_pix, banco, agencia, conta, status, horas_acordadas, horas_ciclo_iniciado_em",
           )
           .eq("id", userId)
           .maybeSingle(),
@@ -88,7 +96,8 @@ export function useHomeInfluencerData(userId: string | undefined) {
 
       if (cancelled) return;
 
-      setPerfilRow((perfilRes.data as HomeInfluencerPerfilRow) ?? null);
+      const perfil = (perfilRes.data as HomeInfluencerPerfilRow) ?? null;
+      setPerfilRow(perfil);
       const keysOk = new Set((confRes.data ?? []).map((r: { item_key: string }) => r.item_key));
       setPlaybookPendente(PLAYBOOK_ITENS_OBRIGATORIOS.some((k) => !keysOk.has(k)));
 
@@ -115,6 +124,22 @@ export function useHomeInfluencerData(userId: string | undefined) {
         }
       }
       if (!cancelled) setResultadosPorLive(map);
+
+      const acordadas = perfil?.horas_acordadas;
+      const cicloInicio = perfil?.horas_ciclo_iniciado_em;
+      const temCota = acordadas != null && acordadas > 0 && !!cicloInicio;
+      if (temCota) {
+        try {
+          const realizadasCiclo = await buscarHorasRealizadasCiclo(userId, cicloInicio);
+          if (!cancelled) setHorasPendentes(horasPendentesCota(acordadas, realizadasCiclo));
+        } catch (err) {
+          console.error("useHomeInfluencerData horas pendentes:", err);
+          if (!cancelled) setHorasPendentes(null);
+        }
+      } else if (!cancelled) {
+        setHorasPendentes(null);
+      }
+
       if (!cancelled) setReady(true);
     })();
 
@@ -127,6 +152,7 @@ export function useHomeInfluencerData(userId: string | undefined) {
     ready,
     perfilRow,
     playbookPendente,
+    horasPendentes,
     livesFuturas,
     livesRealizadasRecentes,
     resultadosPorLive,

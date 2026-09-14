@@ -14,8 +14,8 @@ export const ROUTE_SLUG_HOME = "Home";
 export const ROUTE_SLUG_LOGIN = "Login";
 export const ROUTE_SLUG_SEM_ACESSO = "SemAcesso";
 
-/** Home, Configurações e Ajuda — acessíveis a qualquer perfil autenticado. */
-export const PAGE_KEYS_UTILITY: PageKey[] = ["home", "configuracoes", "ajuda"];
+/** Home, Configurações, Ajuda e Versionamento — acessíveis a qualquer perfil autenticado. */
+export const PAGE_KEYS_UTILITY: PageKey[] = ["home", "configuracoes", "ajuda", "versionamento"];
 
 export type AppRouteTabDef = {
   /** Chave interna do componente (ex.: `overview`, `conversao`). */
@@ -317,6 +317,7 @@ export const APP_ROUTE_CATALOG: AppRouteDef[] = [
     { tabId: "escopos", slug: "Escopos", label: "Escopos", access: "always" },
     { tabId: "simulador", slug: "SimuladorDeLogin", label: "Simulador de Login", access: "always" },
   ]),
+  page("Versionamento", "versionamento", "Versionamento"),
   page("Ajuda", "ajuda", "Ajuda", [
     { tabId: "conheca", slug: "ConhecaAPlataforma", label: "Conheça a Plataforma", access: "always" },
     { tabId: "troubleshooting", slug: "Troubleshooting", label: "Troubleshooting", access: "always" },

@@ -54,6 +54,7 @@ const Home                   = lazyWithRetry(() => import("./pages/geral/Home"))
 const Configuracoes          = lazyWithRetry(() => import("./pages/geral/Configuracoes"));
 const SimuladorLogin         = lazyWithRetry(() => import("./pages/geral/SimuladorLogin"));
 const Ajuda                  = lazyWithRetry(() => import("./pages/geral/Ajuda"));
+const Versionamento          = lazyWithRetry(() => import("./pages/geral/Versionamento"));
 const Streamers                  = lazyWithRetry(() => import("./pages/dashboards/Streamers"));
 const AfiliadosDash              = lazyWithRetry(() => import("./pages/dashboards/AfiliadosDash"));
 const DashboardOverviewInfluencer = lazyWithRetry(() => import("./pages/dashboards/DashboardOverviewInfluencer"));
@@ -176,6 +177,7 @@ const PAGE_MAP: Record<string, LazyExoticComponent<ComponentType>> = {
   configuracoes:    Configuracoes,
   simulador_login:  SimuladorLogin,
   ajuda:            Ajuda,
+  versionamento:    Versionamento,
 };
 
 const PageLoadingFallback = ({ background = "#0d0d12" }: { background?: string }) => (

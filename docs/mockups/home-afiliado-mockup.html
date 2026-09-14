@@ -172,6 +172,66 @@
     .atalho .tit svg { color: var(--text-muted); flex-shrink: 0; margin-top: 2px; }
     .atalho p { margin: 8px 0 0; font-size: 12px; color: var(--text-muted); line-height: 1.5; }
 
+    .mes-sub {
+      margin: -6px 0 14px; font-size: 12px; font-weight: 600;
+      letter-spacing: .02em; color: var(--text-muted);
+    }
+    .grid-kpi-3 {
+      display: grid; gap: 12px;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .grid-kpi-4 {
+      display: grid; gap: 12px;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+    @media (max-width: 900px) {
+      .grid-kpi-3, .grid-kpi-4 { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 520px) {
+      .grid-kpi-3, .grid-kpi-4 { grid-template-columns: 1fr; }
+    }
+    .kpi-card {
+      border-radius: 14px; border: 1px solid var(--card-border);
+      background: var(--card-bg); overflow: hidden;
+    }
+    .kpi-card .kpi-bar {
+      height: 3px;
+      background: linear-gradient(90deg, var(--brand-primary), transparent);
+    }
+    .kpi-card .kpi-bar.sec { background: linear-gradient(90deg, var(--brand-azul), transparent); }
+    .kpi-card .kpi-bar.accent { background: linear-gradient(90deg, var(--brand-ciano), transparent); }
+    .kpi-card .kpi-bar.danger { background: linear-gradient(90deg, var(--vermelho), transparent); }
+    .kpi-card .kpi-body { padding: 14px 16px; }
+    .kpi-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+    .kpi-ic {
+      width: 30px; height: 30px; border-radius: 8px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(124,58,237,.1); border: 1px solid rgba(124,58,237,.22);
+      color: var(--brand-primary);
+    }
+    .kpi-ic.sec { background: rgba(30,54,248,.1); border-color: rgba(30,54,248,.22); color: var(--brand-azul); }
+    .kpi-ic.accent { background: rgba(112,202,228,.15); border-color: rgba(112,202,228,.35); color: #0891b2; }
+    .kpi-ic.danger { background: rgba(232,64,37,.1); border-color: rgba(232,64,37,.25); color: var(--vermelho); }
+    .kpi-label {
+      font-size: 10px; font-weight: 600; letter-spacing: .07em;
+      text-transform: uppercase; color: var(--text-muted);
+    }
+    .kpi-value {
+      font-size: 22px; font-weight: 800; line-height: 1.1; color: var(--text);
+      font-variant-numeric: tabular-nums;
+    }
+    .kpi-mom {
+      margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--card-border);
+      font-size: 11px;
+    }
+    .kpi-mom .row { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+    .kpi-mom .up { color: var(--verde); font-weight: 700; font-size: 12px; }
+    .kpi-mom .down { color: var(--vermelho); font-weight: 700; font-size: 12px; }
+    .footer-hint {
+      margin: 14px 0 0; font-size: 12px; color: var(--text-muted); line-height: 1.5;
+    }
+    .footer-hint a { font-weight: 700; color: var(--brand-accent); text-decoration: underline; }
+
     .nota-mock {
       display: flex; align-items: flex-start; gap: 6px; margin-top: 12px;
       font-size: 11px; font-weight: 700; padding: 6px 10px; border-radius: 8px;
@@ -193,7 +253,7 @@
 </head>
 <body>
   <div class="mock-banner">
-    <span>Mockup 2/N — Home · perfil <strong>Afiliado</strong> · proposta para aprovação · alinhado ao Influencer aprovado</span>
+    <span>Mockup 2/N — Home · perfil <strong>Afiliado</strong> · proposta · KPIs Overview + Informativos + atalhos curados</span>
     <button type="button" id="btn-tema">Alternar tema claro / escuro</button>
   </div>
 
@@ -244,6 +304,117 @@ Acompanhe cada passo da sua jornada.</p>
         <a class="alert-cta" href="#">Ir para Playbook</a>
         <p class="nota-mock">Mesmo fluxo do Influencer — página <strong>Playbook Influencers</strong>.</p>
       </div>
+    </div>
+
+    <!-- 3b — Principais KPIs (Overview Afiliado) -->
+    <span class="block-tag">Bloco 3b · Principais KPIs — Overview Afiliado (proposta)</span>
+    <div class="content-box">
+      <h2 class="section-title">Principais KPIs</h2>
+      <p class="mes-sub">Setembro 2026</p>
+      <div class="grid-kpi-3" style="margin-bottom:12px">
+        <article class="kpi-card">
+          <div class="kpi-bar"></div>
+          <div class="kpi-body">
+            <div class="kpi-head">
+              <span class="kpi-ic" aria-hidden="true">↑</span>
+              <span class="kpi-label">GGR</span>
+            </div>
+            <div class="kpi-value">R$ 32.150,00</div>
+            <div class="kpi-mom">
+              <div class="row"><span style="color:var(--text-muted)">Mês anterior</span><span style="font-weight:600">R$ 28.900,00</span></div>
+              <div><span class="up">↑ +11,2%</span> <span style="color:var(--text-muted);font-size:10px">vs mês anterior</span></div>
+            </div>
+          </div>
+        </article>
+        <article class="kpi-card">
+          <div class="kpi-bar sec"></div>
+          <div class="kpi-body">
+            <div class="kpi-head">
+              <span class="kpi-ic sec" aria-hidden="true">$</span>
+              <span class="kpi-label">Investimento</span>
+            </div>
+            <div class="kpi-value">R$ 8.200,00</div>
+            <div class="kpi-mom">
+              <div class="row"><span style="color:var(--text-muted)">Mês anterior</span><span style="font-weight:600">R$ 7.500,00</span></div>
+              <div><span class="up">↑ +9,3%</span> <span style="color:var(--text-muted);font-size:10px">vs mês anterior</span></div>
+            </div>
+          </div>
+        </article>
+        <article class="kpi-card">
+          <div class="kpi-bar"></div>
+          <div class="kpi-body">
+            <div class="kpi-head">
+              <span class="kpi-ic" aria-hidden="true">%</span>
+              <span class="kpi-label">ROI</span>
+            </div>
+            <div class="kpi-value">+292,1%</div>
+            <div class="kpi-mom">
+              <div class="row"><span style="color:var(--text-muted)">Mês anterior</span><span style="font-weight:600">+285,3%</span></div>
+              <div><span class="up">↑ +6,8 pp</span> <span style="color:var(--text-muted);font-size:10px">vs mês anterior</span></div>
+            </div>
+          </div>
+        </article>
+      </div>
+      <div class="grid-kpi-4">
+        <article class="kpi-card">
+          <div class="kpi-bar"></div>
+          <div class="kpi-body">
+            <div class="kpi-head">
+              <span class="kpi-ic" aria-hidden="true">+</span>
+              <span class="kpi-label">Registros</span>
+            </div>
+            <div class="kpi-value">186</div>
+            <div class="kpi-mom">
+              <div class="row"><span style="color:var(--text-muted)">Mês anterior</span><span style="font-weight:600">162</span></div>
+              <div><span class="up">↑ +14,8%</span> <span style="color:var(--text-muted);font-size:10px">vs mês anterior</span></div>
+            </div>
+          </div>
+        </article>
+        <article class="kpi-card">
+          <div class="kpi-bar"></div>
+          <div class="kpi-body">
+            <div class="kpi-head">
+              <span class="kpi-ic" aria-hidden="true">★</span>
+              <span class="kpi-label">FTDs</span>
+            </div>
+            <div class="kpi-value">42</div>
+            <div class="kpi-mom">
+              <div class="row"><span style="color:var(--text-muted)">Mês anterior</span><span style="font-weight:600">38</span></div>
+              <div><span class="up">↑ +10,5%</span> <span style="color:var(--text-muted);font-size:10px">vs mês anterior</span></div>
+            </div>
+          </div>
+        </article>
+        <article class="kpi-card">
+          <div class="kpi-bar accent"></div>
+          <div class="kpi-body">
+            <div class="kpi-head">
+              <span class="kpi-ic accent" aria-hidden="true">↓</span>
+              <span class="kpi-label">Depósitos</span>
+            </div>
+            <div class="kpi-value">R$ 95.400,00</div>
+            <div class="kpi-mom">
+              <div class="row"><span style="color:var(--text-muted)">Mês anterior</span><span style="font-weight:600">R$ 88.100,00</span></div>
+              <div><span class="up">↑ +8,3%</span> <span style="color:var(--text-muted);font-size:10px">vs mês anterior</span></div>
+            </div>
+          </div>
+        </article>
+        <article class="kpi-card">
+          <div class="kpi-bar danger"></div>
+          <div class="kpi-body">
+            <div class="kpi-head">
+              <span class="kpi-ic danger" aria-hidden="true">↑</span>
+              <span class="kpi-label">Saques</span>
+            </div>
+            <div class="kpi-value">R$ 21.300,00</div>
+            <div class="kpi-mom">
+              <div class="row"><span style="color:var(--text-muted)">Mês anterior</span><span style="font-weight:600">R$ 19.800,00</span></div>
+              <div><span class="down">↓ +7,6%</span> <span style="color:var(--text-muted);font-size:10px">vs mês anterior · inverso</span></div>
+            </div>
+          </div>
+        </article>
+      </div>
+      <p class="footer-hint">Quer saber mais? Acessa o Dashboard de <a href="#">Overview Afiliado</a></p>
+      <p class="nota-mock">Mesmos KPIs Executivos do Overview Afiliado (3 + 4). Visual = <code>HomeKpiCard</code> + MoM (padrão Operador). Escopo = próprio afiliado. Sem lives/views.</p>
     </div>
 
     <!-- 4 — Informações (feed Informativos) -->
@@ -385,6 +556,7 @@ Acompanhe cada passo da sua jornada.</p>
     <div class="content-box">
       <h2 class="section-title">Notas para aprovação — Home Afiliado</h2>
       <ul>
+        <li><strong>Bloco 3b (novo):</strong> Principais KPIs do Overview Afiliado — GGR / Investimento / ROI + Registros / FTDs / Depósitos / Saques, com MoM.</li>
         <li><strong>Alinhado ao Influencer aprovado:</strong> Informativos no bloco Informações; atalhos curados; sem revisão cadastral RH de 6 meses; sem Portal RH / Academy.</li>
         <li><strong>Fora desta Home:</strong> <span class="removed">Próximas lives</span> e <span class="removed">Feedbacks recentes</span> — afiliado não opera lives.</li>
         <li><strong>Blocos 2 e 3</strong> condicionais — neste mockup juntos para revisão de copy/CTAs. Cadastro → <strong>Ir para Afiliados</strong> (comissões).</li>

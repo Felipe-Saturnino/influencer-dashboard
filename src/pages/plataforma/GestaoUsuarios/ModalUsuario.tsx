@@ -331,7 +331,6 @@ export function ModalUsuario({ editando, operadoras, onClose, onSalvo }: ModalUs
     outline: "none",
     transition: "border-color 0.18s",
   };
-  const selectStyle: React.CSSProperties = { ...inputStyle, cursor: "pointer" };
   const field: React.CSSProperties = { marginBottom: 18 };
 
   const addParAgencia = () => setParesAgencia((prev) => [...prev, { influencerId: "", operadoraSlug: "" }]);
@@ -440,7 +439,6 @@ export function ModalUsuario({ editando, operadoras, onClose, onSalvo }: ModalUs
             influencers={influencers}
             operadoras={operadoras}
             labelStyle={labelStyle}
-            selectStyle={selectStyle}
             field={field}
           />
         ) : roleParidadeInfluencer(role) ? (

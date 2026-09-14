@@ -321,8 +321,9 @@ export function AbaPermissoes({ roleAtivo, onDirtyChange }: AbaPermissoesProps) 
           qualquer usuário com este perfil. No cadastro (aba Usuários), cada prestador deve ter pelo menos uma{" "}
           <strong style={{ color: t.text }}>área de atuação</strong>; o menu cruza estas permissões com a união das páginas
           marcadas para essas áreas na aba <strong style={{ color: t.text }}>Prestadores</strong>.{" "}
-          <strong style={{ color: t.text }}>Home</strong>, <strong style={{ color: t.text }}>Configurações</strong> e{" "}
-          <strong style={{ color: t.text }}>Ajuda</strong> não passam pela aba Prestadores.
+          <strong style={{ color: t.text }}>Home</strong>, <strong style={{ color: t.text }}>Configurações</strong>,{" "}
+          <strong style={{ color: t.text }}>Ajuda</strong> e <strong style={{ color: t.text }}>Versionamento</strong> não
+          passam pela aba Prestadores.
         </p>
       ) : null}
       <div

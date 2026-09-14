@@ -370,7 +370,7 @@ serve(async (req) => {
             success: true,
             emailEnviado: false,
             emailErro:
-              'Usuário reativado e senha redefinida, mas não foi possível enviar o e-mail. Verifique RESEND_API_KEY e RESEND_FROM_SISTEMA no Supabase.',
+              'Usuário reativado e senha redefinida, mas não foi possível enviar o e-mail. Se o problema persistir, entre em contato com o suporte.',
           }),
           { status: 200, headers: { ...cors, 'Content-Type': 'application/json' } },
         )
@@ -447,7 +447,7 @@ serve(async (req) => {
             success: true,
             emailEnviado: false,
             emailErro:
-              'Senha redefinida, mas não foi possível enviar o e-mail. Verifique RESEND_API_KEY e RESEND_FROM_SISTEMA no Supabase.',
+              'Senha redefinida, mas não foi possível enviar o e-mail. Se o problema persistir, entre em contato com o suporte.',
           }),
           { status: 200, headers: { ...cors, 'Content-Type': 'application/json' } },
         )

@@ -307,7 +307,7 @@ export default function SimuladorLogin() {
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         {linhasPerfis.length === 0 ? (
           <div style={{ ...pageBox, padding: "40px 20px", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
-            Nenhum perfil liberado para visualização. Peça ao administrador para configurar em Gestão de Usuários → Simulador de Login.
+            Nenhum perfil liberado para visualização. Peça a quem tem permissão de Editar em Gestão de Usuários → Simulador de Login para liberar os perfis.
           </div>
         ) : (
           linhasPerfis.map((linha) => (

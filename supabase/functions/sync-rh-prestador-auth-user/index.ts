@@ -804,7 +804,7 @@ serve(async (req) => {
     created: true,
     userId: uid,
     emailEnviado: mail.ok,
-    ...(mail.ok ? {} : { emailErro: 'Não foi possível enviar o e-mail de boas-vindas. Verifique RESEND_API_KEY e RESEND_FROM_SISTEMA no Supabase.' }),
+    ...(mail.ok ? {} : { emailErro: 'Não foi possível enviar o e-mail de boas-vindas. Se o problema persistir, entre em contato com o suporte.' }),
   }), {
     status: 200,
     headers: { ...cors, 'Content-Type': 'application/json' },

@@ -388,6 +388,7 @@ Regras de dados e `extraOptions` (“Nenhuma”): **Global** § Filtro de operad
 | Tipo / vagas (contrato) | `ClipboardType` | Vagas Candidaturas |
 | Gerência / contrato (RH) | `Layers` / `FileSignature` | Gestão de Prestadores |
 | Meu Calendário | `CalendarCheck` | Calendário RH (`FiltroMeuCalendarioButton`) |
+| Seção (Versionamento) | `LayoutGrid` | Versionamento — filtro **Todas Seções** |
 
 | Tipo (outro padrão) | Ícone / UI | Componente / notas |
 |---------------------|------------|-------------------|

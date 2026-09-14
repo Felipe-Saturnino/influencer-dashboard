@@ -184,9 +184,6 @@ export function ModalVisualizar({ influencer, operadorasList, onClose, isDark }:
                     )
                     : val(temCota && horasRealizadasCiclo != null ? fmtHorasTotal(horasRealizadasCiclo) : "")}
               </div>
-              <p style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body, margin: 0, lineHeight: 1.45 }}>
-                Horas desta cota operacional — não seguem o ciclo de pagamento. Sem cota ativa os campos ficam vazios.
-              </p>
             </>
         )}
 

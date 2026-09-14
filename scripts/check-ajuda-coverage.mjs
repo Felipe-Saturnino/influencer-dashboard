@@ -8,7 +8,7 @@ const visib = fs.readFileSync("src/lib/ajudaVisibilidade.ts", "utf8");
 const menuKeys = [...menu.matchAll(/key: "([a-z_0-9]+)"/g)].map((m) => m[1]);
 const geralKeys = [...visib.matchAll(/"([a-z_0-9]+)"/g)]
   .map((m) => m[1])
-  .filter((k, i, arr) => ["configuracoes", "simulador_login"].includes(k) && arr.indexOf(k) === i);
+  .filter((k, i, arr) => ["configuracoes", "simulador_login", "versionamento"].includes(k) && arr.indexOf(k) === i);
 const keys = [...menuKeys, ...geralKeys];
 
 const conhecaKeys = new Set([...conheca.matchAll(/^ {2}([a-z_0-9]+): \{/gm)].map((m) => m[1]));

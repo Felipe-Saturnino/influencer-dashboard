@@ -97,7 +97,8 @@ export type PageKey =
   | "tech_ops_itens_alocados"
   | "configuracoes"
   | "simulador_login"
-  | "ajuda";
+  | "ajuda"
+  | "versionamento";
 
 // ─── PLATAFORMA / LIVE STATUS ────────────────────────────────────────────────
 export type Plataforma = "Twitch" | "YouTube" | "Instagram" | "TikTok" | "Kick" | "Discord" | "WhatsApp" | "Telegram";
