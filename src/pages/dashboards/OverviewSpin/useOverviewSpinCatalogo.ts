@@ -44,6 +44,12 @@ export function useOverviewSpinCatalogo(opts: {
   });
   const catalogo = catalogoQuery.data ?? CATALOGO_VAZIO;
   const loadingCatalogo = catalogoQuery.isPending;
+  const erroCatalogo = catalogoQuery.isError
+    ? "Não foi possível carregar o catálogo de estúdios. Se o problema persistir, entre em contato com o suporte."
+    : null;
+  const recarregarCatalogo = () => {
+    void catalogoQuery.refetch();
+  };
 
   const verAbaDedicado = useMemo(
     () =>
@@ -69,5 +75,13 @@ export function useOverviewSpinCatalogo(opts: {
     [opts.isAdmin, opts.canView, opts.operadorasVisiveis, catalogo],
   );
 
-  return { catalogo, loadingCatalogo, verAbaDedicado, verAbaNetwork };
+  return {
+    catalogo,
+    loadingCatalogo,
+    erroCatalogo,
+    isError: catalogoQuery.isError,
+    recarregarCatalogo,
+    verAbaDedicado,
+    verAbaNetwork,
+  };
 }

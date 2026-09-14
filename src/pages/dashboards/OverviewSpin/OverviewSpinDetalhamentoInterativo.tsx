@@ -1,4 +1,4 @@
-import { Fragment, Suspense, lazy, type Dispatch, type SetStateAction } from "react";
+import { Fragment, Suspense, lazy, useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import { ChevronDown, Table2, ChartColumnBig } from "lucide-react";
 import { BRAND, MSG_SEM_DADOS_PERIODO } from "../../../lib/dashboardConstants";
 import { fmtBRL } from "../../../lib/dashboardHelpers";
@@ -9,7 +9,7 @@ import {
   getDataTableStyle,
   getDataTableWrapStyle,
 } from "../../../lib/dataTableStyles";
-import { MarginBadge } from "../../../components/dashboard";
+import { MarginBadge, SortTableTh, type SortDir } from "../../../components/dashboard";
 import { TabelaComPaginacao } from "../../../components/TabelaPaginacaoBar";
 import type { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import type { useApp } from "../../../context/AppContext";
@@ -31,6 +31,7 @@ const OverviewSpinDetalhamentoChart = lazy(() =>
 type Brand = ReturnType<typeof useDashboardBrand>;
 type Theme = ReturnType<typeof useApp>["theme"];
 type DataTable = ReturnType<typeof createDataTableBlockStyles>;
+type SortColDetalhe = "periodo";
 
 export type OverviewSpinDetalhamentoInterativoProps = {
   colTempoLabel: "Data" | "Mês";
@@ -86,6 +87,20 @@ export function OverviewSpinDetalhamentoInterativo(props: OverviewSpinDetalhamen
     brand,
     t,
   } = props;
+
+  const [sort, setSort] = useState<{ col: SortColDetalhe; dir: SortDir }>({
+    col: "periodo",
+    dir: "desc",
+  });
+
+  const tabelaRowsOrdenadas = useMemo(() => {
+    const arr = [...tabelaRows];
+    arr.sort((a, b) => {
+      const cmp = (a.periodoIso ?? "").localeCompare(b.periodoIso ?? "");
+      return sort.dir === "desc" ? -cmp : cmp;
+    });
+    return arr;
+  }, [tabelaRows, sort]);
 
   return (
         <>
@@ -199,9 +214,9 @@ export function OverviewSpinDetalhamentoInterativo(props: OverviewSpinDetalhamen
     
           {modoVisualizacaoDetalhe === "tabela" ? (
             <TabelaComPaginacao
-              items={tabelaRows}
+              items={tabelaRowsOrdenadas}
               t={t}
-              resetKey={`${historico}|${colTempoLabel}|${mesSelecionadoLabel ?? ""}|${modoAgregadoTodasOperadoras}`}
+              resetKey={`${historico}|${colTempoLabel}|${mesSelecionadoLabel ?? ""}|${modoAgregadoTodasOperadoras}|${sort.dir}`}
             >
               {(linhas, zebraIdx) => (
             <div className="app-table-wrap app-table-wrap--sticky-col" style={getDataTableWrapStyle()}>
@@ -211,9 +226,20 @@ export function OverviewSpinDetalhamentoInterativo(props: OverviewSpinDetalhamen
                 </caption>
                 <thead>
                   <tr>
-                    <th scope="col" style={dataTable.thHeaderSticky}>
-                      {colTempoLabel}
-                    </th>
+                    <SortTableTh<SortColDetalhe>
+                      label={colTempoLabel}
+                      col="periodo"
+                      sortCol={sort.col}
+                      sortDir={sort.dir}
+                      thStyle={dataTable.thHeaderSticky}
+                      align="center"
+                      onSort={(col) =>
+                        setSort((s) => ({
+                          col,
+                          dir: s.col === col && s.dir === "desc" ? "asc" : "desc",
+                        }))
+                      }
+                    />
                     <th scope="col" style={dataTable.thHeader}>
                       GGR
                     </th>

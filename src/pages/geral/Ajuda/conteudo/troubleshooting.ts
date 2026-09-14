@@ -112,6 +112,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
           "O Posicionamento tenta o snapshot do **dia civil de Brasília**. Se o monitor horário ainda não executou hoje, a aba mostra o **último horário** válido (em geral ontem) — não fica vazia só por falta de coleta do dia. Confira **Última atualização** no bloco de mesas e, em **Status Técnico**, se Lobby Blaze / CDA / Esportiva Bet / Jonbet / Bateu Bet / Rico Bet / BRX Bet / Donald Bet / BetPontoBet estão OK. Com **Todas Operadoras**, as nove parceiras aparecem lado a lado; com operadora específica, só aquela. Se a aba continuar vazia após **Tentar de novo** e hard refresh (Ctrl+Shift+R), avise o time de produto.",
       },
       {
+        subtitulo: "O heatmap ou os Alertas do período mostram erro?",
+        texto:
+          "O histórico (7 dias / 30 dias e Alertas com **Todas Operadoras**) carrega em segundo plano. Se aparecer mensagem de erro com **Tentar de novo**, use o botão — isso não é o mesmo que «sem dados». Se o problema persistir, entre em contato com o suporte.",
+      },
+      {
         subtitulo: "Os dados do Histórico parecem diferentes do mês selecionado individualmente?",
         texto:
           "O Histórico agrega 13 competências mensais — a atual e as 12 anteriores. Algumas métricas como UAP e ARPU são calculadas de forma diferente: no modo Histórico, o UAP exibido no KPI é a média mensal dos períodos, não a soma. Isso é esperado — UAP é uma métrica de período, não acumulável. Para ver o UAP exato de um mês específico entre o atual e os dois anteriores, navegue até aquele mês sem ativar o Histórico.",

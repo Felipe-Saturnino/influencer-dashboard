@@ -17,6 +17,7 @@ import { OverviewSpinDetalhamentoInterativo } from "./OverviewSpinDetalhamentoIn
 import { OverviewSpinComparativoJogoInterativo } from "./OverviewSpinComparativoJogoInterativo";
 import { useOverviewSpinCatalogo } from "./useOverviewSpinCatalogo";
 import { useOverviewSpinFiltrosAcesso } from "./useOverviewSpinFiltrosAcesso";
+import { SelectListaComBusca } from "../../../components/SelectListaComBusca";
 
 import {
   abaEhFinanceira,
@@ -55,11 +56,12 @@ export default function OverviewSpin() {
   const [aba, setAba] = useRouteTab("mesas_spin", "overview", TAB_IDS_SPIN_TODAS);
   const [filtroOperadora, setFiltroOperadora] = useState<string>("todas");
 
-  const { catalogo, loadingCatalogo, verAbaDedicado, verAbaNetwork } = useOverviewSpinCatalogo({
-    isAdmin,
-    canView: perm.canView === "sim" || perm.canView === "proprios" ? perm.canView : "nao",
-    operadorasVisiveis: escoposVisiveis.operadorasVisiveis,
-  });
+  const { catalogo, loadingCatalogo, erroCatalogo, recarregarCatalogo, verAbaDedicado, verAbaNetwork } =
+    useOverviewSpinCatalogo({
+      isAdmin,
+      canView: perm.canView === "sim" || perm.canView === "proprios" ? perm.canView : "nao",
+      operadorasVisiveis: escoposVisiveis.operadorasVisiveis,
+    });
 
   /** Overview só com Dedicado e Network; Posicionamento sempre. Evita flash com as 4 abas enquanto o catálogo resolve. */
   const tabsVisiveis = useMemo((): OverviewSpinTab[] => {
@@ -86,6 +88,8 @@ export default function OverviewSpin() {
     operadorasDoFiltro,
     operadorasAtivas,
     slugsPermitidosPelaAba,
+    erroOperadoras,
+    recarregarOperadoras,
   } = useOverviewSpinFiltrosAcesso({
     canView: perm.canView,
     aba,
@@ -340,26 +344,28 @@ export default function OverviewSpin() {
     setAba(key);
   }
 
-  const selectStyle: React.CSSProperties = {
-    padding: "6px 12px 6px 32px",
-    borderRadius: 10,
-    border: `1px solid ${t.cardBorder}`,
-    background: t.inputBg ?? t.cardBg,
-    color: t.text,
-    fontSize: 13,
-    fontFamily: FONT.body,
-    cursor: "pointer",
-    appearance: "none" as const,
-    outline: "none",
-  };
-
-  const selectStyleSimple: React.CSSProperties = {
-    ...selectStyle,
-    padding: "7px 12px",
-  };
-
   const labelMesaComparativoA = mesasOpcoesBlackjack.find((m) => m.key === compMesaA)?.label ?? "—";
   const labelMesaComparativoB = mesasOpcoesBlackjack.find((m) => m.key === compMesaB)?.label ?? "—";
+
+  const opcoesMesaA = useMemo(
+    () =>
+      mesasOpcoesBlackjack
+        .filter((m) => mesasOpcoesBlackjack.length < 2 || m.key !== compMesaB)
+        .map((m) => ({ value: m.key, label: m.label })),
+    [mesasOpcoesBlackjack, compMesaB],
+  );
+  const opcoesMesaB = useMemo(
+    () =>
+      mesasOpcoesBlackjack
+        .filter((m) => mesasOpcoesBlackjack.length < 2 || m.key !== compMesaA)
+        .map((m) => ({ value: m.key, label: m.label })),
+    [mesasOpcoesBlackjack, compMesaA],
+  );
+
+  const erroCatalogoOuOperadoras = erroCatalogo ?? erroOperadoras;
+  const recarregarCatalogoOuOperadoras = erroCatalogo
+    ? recarregarCatalogo
+    : recarregarOperadoras;
 
   const chartTooltipTheme = useMemo(
     () => ({ cardBg: t.cardBg, cardBorder: t.cardBorder, text: t.text }),
@@ -407,6 +413,43 @@ export default function OverviewSpin() {
         loading={loading || loadingSecundario}
         onSelectAba={selecionarAbaSpin}
       />
+
+      {erroCatalogoOuOperadoras ? (
+        <div
+          role="alert"
+          aria-live="polite"
+          style={{
+            ...contentBox,
+            color: "#e84025",
+            fontSize: 13,
+            fontFamily: FONT.body,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 12,
+            flexWrap: "wrap",
+          }}
+        >
+          <span>{erroCatalogoOuOperadoras}</span>
+          <button
+            type="button"
+            onClick={() => recarregarCatalogoOuOperadoras()}
+            style={{
+              fontFamily: FONT.body,
+              fontSize: 13,
+              fontWeight: 700,
+              padding: "8px 14px",
+              borderRadius: 10,
+              border: "1px solid rgba(232,64,37,0.35)",
+              background: "transparent",
+              color: "#e84025",
+              cursor: "pointer",
+            }}
+          >
+            Tentar de novo
+          </button>
+        </div>
+      ) : null}
 
       <div role="tabpanel" id={`panel-overview-spin-${aba}`} aria-labelledby={`tab-overview-spin-${aba}`}>
       {financeira && (
@@ -679,55 +722,45 @@ export default function OverviewSpin() {
                 ) : (
                   <>
                     <div className="app-conversao-vs-row">
-                      <select
+                      <SelectListaComBusca
+                        variant="campo"
+                        label="Mesa A"
                         value={compMesaA}
-                        onChange={(e) => {
-                          const v = e.target.value;
+                        options={opcoesMesaA}
+                        onChange={(v) => {
                           setCompMesaA(v);
                           if (v && v === compMesaB) {
                             const o = mesasOpcoesBlackjack.find((m) => m.key !== v);
                             if (o) setCompMesaB(o.key);
                           }
                         }}
-                        style={{
-                          ...selectStyleSimple,
-                          borderColor: compMesaA ? corTituloBlackjack.borderMix : undefined,
-                          width: "100%",
-                        }}
-                      >
-                        {mesasOpcoesBlackjack
-                          .filter((m) => mesasOpcoesBlackjack.length < 2 || m.key !== compMesaB)
-                          .map((m) => (
-                            <option key={m.key} value={m.key}>
-                              {m.label}
-                            </option>
-                          ))}
-                      </select>
+                        wrapperStyle={{ width: "100%", flex: 1 }}
+                        style={
+                          compMesaA
+                            ? { borderColor: corTituloBlackjack.borderMix }
+                            : undefined
+                        }
+                      />
                       <div style={vsBadgeStyle}>VS</div>
-                      <select
+                      <SelectListaComBusca
+                        variant="campo"
+                        label="Mesa B"
                         value={compMesaB}
-                        onChange={(e) => {
-                          const v = e.target.value;
+                        options={opcoesMesaB}
+                        onChange={(v) => {
                           setCompMesaB(v);
                           if (v && v === compMesaA) {
                             const o = mesasOpcoesBlackjack.find((m) => m.key !== v);
                             if (o) setCompMesaA(o.key);
                           }
                         }}
-                        style={{
-                          ...selectStyleSimple,
-                          borderColor: compMesaB ? corTituloBlackjack.borderMix : undefined,
-                          width: "100%",
-                        }}
-                      >
-                        {mesasOpcoesBlackjack
-                          .filter((m) => mesasOpcoesBlackjack.length < 2 || m.key !== compMesaA)
-                          .map((m) => (
-                            <option key={m.key} value={m.key}>
-                              {m.label}
-                            </option>
-                          ))}
-                      </select>
+                        wrapperStyle={{ width: "100%", flex: 1 }}
+                        style={
+                          compMesaB
+                            ? { borderColor: corTituloBlackjack.borderMix }
+                            : undefined
+                        }
+                      />
                     </div>
 
                     {(compMesaA || compMesaB) && (
@@ -959,55 +992,45 @@ export default function OverviewSpin() {
                     ) : (
                       <>
                         <div className="app-conversao-vs-row">
-                          <select
+                          <SelectListaComBusca
+                            variant="campo"
+                            label="Mesa A"
                             value={compMesaA}
-                            onChange={(e) => {
-                              const v = e.target.value;
+                            options={opcoesMesaA}
+                            onChange={(v) => {
                               setCompMesaA(v);
                               if (v && v === compMesaB) {
                                 const o = mesasOpcoesBlackjack.find((m) => m.key !== v);
                                 if (o) setCompMesaB(o.key);
                               }
                             }}
-                            style={{
-                              ...selectStyleSimple,
-                              borderColor: compMesaA ? corTituloBlackjack.borderMix : undefined,
-                              width: "100%",
-                            }}
-                          >
-                            {mesasOpcoesBlackjack
-                              .filter((m) => mesasOpcoesBlackjack.length < 2 || m.key !== compMesaB)
-                              .map((m) => (
-                                <option key={m.key} value={m.key}>
-                                  {m.label}
-                                </option>
-                              ))}
-                          </select>
+                            wrapperStyle={{ width: "100%", flex: 1 }}
+                            style={
+                              compMesaA
+                                ? { borderColor: corTituloBlackjack.borderMix }
+                                : undefined
+                            }
+                          />
                           <div style={vsBadgeStyle}>VS</div>
-                          <select
+                          <SelectListaComBusca
+                            variant="campo"
+                            label="Mesa B"
                             value={compMesaB}
-                            onChange={(e) => {
-                              const v = e.target.value;
+                            options={opcoesMesaB}
+                            onChange={(v) => {
                               setCompMesaB(v);
                               if (v && v === compMesaA) {
                                 const o = mesasOpcoesBlackjack.find((m) => m.key !== v);
                                 if (o) setCompMesaA(o.key);
                               }
                             }}
-                            style={{
-                              ...selectStyleSimple,
-                              borderColor: compMesaB ? corTituloBlackjack.borderMix : undefined,
-                              width: "100%",
-                            }}
-                          >
-                            {mesasOpcoesBlackjack
-                              .filter((m) => mesasOpcoesBlackjack.length < 2 || m.key !== compMesaA)
-                              .map((m) => (
-                                <option key={m.key} value={m.key}>
-                                  {m.label}
-                                </option>
-                              ))}
-                          </select>
+                            wrapperStyle={{ width: "100%", flex: 1 }}
+                            style={
+                              compMesaB
+                                ? { borderColor: corTituloBlackjack.borderMix }
+                                : undefined
+                            }
+                          />
                         </div>
 
                         {(compMesaA || compMesaB) && (

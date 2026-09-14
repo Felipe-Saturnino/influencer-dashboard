@@ -1,3 +1,4 @@
+import { useMemo, useState } from "react";
 import { BRAND, MSG_SEM_DADOS_PERIODO } from "../../../lib/dashboardConstants";
 import { fmtBRL } from "../../../lib/dashboardHelpers";
 import { FONT } from "../../../constants/theme";
@@ -7,7 +8,7 @@ import {
   getDataTableStyle,
   getDataTableWrapStyle,
 } from "../../../lib/dataTableStyles";
-import { MarginBadge } from "../../../components/dashboard";
+import { MarginBadge, SortTableTh, type SortDir } from "../../../components/dashboard";
 import { TabelaComPaginacao } from "../../../components/TabelaPaginacaoBar";
 import type { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import type { useApp } from "../../../context/AppContext";
@@ -16,6 +17,7 @@ import { totaisLinhasMesaPorDia, type LinhaMesaPorDia } from "./overviewSpinLogi
 type Brand = ReturnType<typeof useDashboardBrand>;
 type Theme = ReturnType<typeof useApp>["theme"];
 type DataTable = ReturnType<typeof createDataTableBlockStyles>;
+type SortColMesa = "periodo";
 
 export type OverviewSpinMesaDiaTabelaProps = {
   linhas: LinhaMesaPorDia[];
@@ -36,6 +38,20 @@ export function OverviewSpinMesaDiaTabela({
   brand,
   t,
 }: OverviewSpinMesaDiaTabelaProps) {
+  const [sort, setSort] = useState<{ col: SortColMesa; dir: SortDir }>({
+    col: "periodo",
+    dir: "desc",
+  });
+
+  const linhasOrdenadas = useMemo(() => {
+    const arr = [...linhas];
+    arr.sort((a, b) => {
+      const cmp = a.dataIso.localeCompare(b.dataIso);
+      return sort.dir === "desc" ? -cmp : cmp;
+    });
+    return arr;
+  }, [linhas, sort]);
+
   if (linhas.length === 0) {
     return (
       <div className="app-table-wrap app-table-wrap--sticky-col" style={getDataTableWrapStyle()}>
@@ -82,9 +98,9 @@ export function OverviewSpinMesaDiaTabela({
 
   return (
     <TabelaComPaginacao
-      items={linhas}
+      items={linhasOrdenadas}
       t={t}
-      resetKey={`${colTempo}|${tituloTabela}|${linhas.length}|${linhas[0]?.dataIso ?? ""}`}
+      resetKey={`${colTempo}|${tituloTabela}|${linhas.length}|${linhas[0]?.dataIso ?? ""}|${sort.dir}`}
     >
       {(pageRows, zebraIdx) => (
         <div className="app-table-wrap app-table-wrap--sticky-col" style={getDataTableWrapStyle()}>
@@ -94,9 +110,20 @@ export function OverviewSpinMesaDiaTabela({
             </caption>
             <thead>
               <tr>
-                <th scope="col" style={dataTable.thHeaderSticky}>
-                  {colTempo}
-                </th>
+                <SortTableTh<SortColMesa>
+                  label={colTempo}
+                  col="periodo"
+                  sortCol={sort.col}
+                  sortDir={sort.dir}
+                  thStyle={dataTable.thHeaderSticky}
+                  align="center"
+                  onSort={(col) =>
+                    setSort((s) => ({
+                      col,
+                      dir: s.col === col && s.dir === "desc" ? "asc" : "desc",
+                    }))
+                  }
+                />
                 <th scope="col" style={dataTable.thHeader}>
                   GGR
                 </th>

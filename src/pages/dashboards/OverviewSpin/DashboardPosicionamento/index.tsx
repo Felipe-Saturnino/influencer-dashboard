@@ -598,11 +598,15 @@ function AlertasPeriodoBlock({
   alertas,
   cardStyle,
   loadingHistorico,
+  erroHistorico,
+  onRetryHistorico,
   sub,
 }: {
   alertas: AlertaPos[];
   cardStyle: CSSProperties;
   loadingHistorico?: boolean;
+  erroHistorico?: string | null;
+  onRetryHistorico?: () => void;
   sub?: string;
 }) {
   const { theme: t } = useApp();
@@ -620,9 +624,45 @@ function AlertasPeriodoBlock({
             fontFamily: FONT.body,
             fontSize: 13,
           }}
+          aria-live="polite"
         >
           <Clock size={12} aria-hidden />
           <span>Carregando…</span>
+        </div>
+      ) : erroHistorico ? (
+        <div
+          role="alert"
+          aria-live="polite"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            flexWrap: "wrap",
+            color: "#e84025",
+            fontFamily: FONT.body,
+            fontSize: 13,
+          }}
+        >
+          <span>{erroHistorico}</span>
+          {onRetryHistorico ? (
+            <button
+              type="button"
+              onClick={onRetryHistorico}
+              style={{
+                fontFamily: FONT.body,
+                fontSize: 13,
+                fontWeight: 700,
+                padding: "8px 14px",
+                borderRadius: 10,
+                border: "1px solid rgba(232,64,37,0.35)",
+                background: "transparent",
+                color: "#e84025",
+                cursor: "pointer",
+              }}
+            >
+              Tentar de novo
+            </button>
+          ) : null}
         </div>
       ) : alertas.length === 0 ? (
         <p style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body, margin: 0 }}>
@@ -693,6 +733,29 @@ function DashboardPosicionamentoTodas({
     brx.loadingHistorico ||
     donald.loadingHistorico ||
     betponto.loadingHistorico;
+
+  const erroHistoricoAlertas =
+    blaze.erroHistorico ||
+    cda.erroHistorico ||
+    esportiva.erroHistorico ||
+    jonbet.erroHistorico ||
+    bateu.erroHistorico ||
+    rico.erroHistorico ||
+    brx.erroHistorico ||
+    donald.erroHistorico ||
+    betponto.erroHistorico;
+
+  const recarregarHistoricoTodas = () => {
+    void blaze.recarregar();
+    void cda.recarregar();
+    void esportiva.recarregar();
+    void jonbet.recarregar();
+    void bateu.recarregar();
+    void rico.recarregar();
+    void brx.recarregar();
+    void donald.recarregar();
+    void betponto.recarregar();
+  };
 
   const alertasConsolidados = useMemo(() => {
     const prefix = (slug: string, lista: AlertaPos[]) =>
@@ -849,7 +912,9 @@ function DashboardPosicionamentoTodas({
         alertas={alertasConsolidados}
         cardStyle={card}
         loadingHistorico={loadingHistoricoAlertas}
-        sub="todas as alterações dos últimos 7 dias"
+        erroHistorico={erroHistoricoAlertas}
+        onRetryHistorico={recarregarHistoricoTodas}
+        sub="alteração mais recente por mesa nos últimos 7 dias"
       />
     </>
   );
@@ -883,6 +948,7 @@ function DashboardPosicionamentoOperadora({
     loading,
     loadingHistorico,
     erro,
+    erroHistorico,
     recarregar,
     semDados,
     execucoesAll,
@@ -1219,6 +1285,7 @@ function DashboardPosicionamentoOperadora({
                   fontSize: 12,
                   fontFamily: FONT.body,
                 }}
+                aria-live="polite"
               >
                 <Clock size={12} aria-hidden />
                 Carregando…
@@ -1253,6 +1320,42 @@ function DashboardPosicionamentoOperadora({
             })}
           </div>
         </div>
+        {erroHistorico && historicoModo !== "dia" ? (
+          <div
+            role="alert"
+            aria-live="polite"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 12,
+              flexWrap: "wrap",
+              padding: "24px 0",
+              color: "#e84025",
+              fontSize: 13,
+              fontFamily: FONT.body,
+            }}
+          >
+            <span>{erroHistorico}</span>
+            <button
+              type="button"
+              onClick={() => void recarregar()}
+              style={{
+                fontFamily: FONT.body,
+                fontSize: 13,
+                fontWeight: 700,
+                padding: "8px 14px",
+                borderRadius: 10,
+                border: "1px solid rgba(232,64,37,0.35)",
+                background: "transparent",
+                color: "#e84025",
+                cursor: "pointer",
+              }}
+            >
+              Tentar de novo
+            </button>
+          </div>
+        ) : (
         <TabelaComPaginacao
           items={heatMesasOrdenadas}
           t={t}
@@ -1319,6 +1422,7 @@ function DashboardPosicionamentoOperadora({
         </div>
           )}
         </TabelaComPaginacao>
+        )}
       </div>
 
       <div className="app-grid-2" style={getPageKpiSectionGapStyle()}>

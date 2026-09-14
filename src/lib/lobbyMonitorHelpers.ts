@@ -995,7 +995,9 @@ function fmtDiaMesIso(isoYmd: string): string {
 /**
  * Lista mudanças de posição por mesa na janela civil `[desdeDiaKey … ateDiaKey]`.
  * Usa a **última leitura de cada dia** e emite uma linha quando o dia seguinte
- * difere do anterior (evita ruído de polls intra-dia). Mais recente primeiro.
+ * difere do anterior (evita ruído de polls intra-dia).
+ * Por mesa (mesma operadora na chamada): mantém **só a alteração mais recente**
+ * (maior `sortTs` / data mais nova). Lista final ordenada do mais recente ao mais antigo.
  */
 export function gerarAlertasAlteracoesJanela(
   execucoes: LobbyExecucaoRow[],
@@ -1053,6 +1055,7 @@ export function gerarAlertasAlteracoesJanela(
   const alertas: AlertaPos[] = [];
   for (const [mesaId, dias] of porMesaDia.entries()) {
     const diasOrdenados = [...dias.entries()].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+    let maisRecente: AlertaPos | null = null;
     for (let i = 1; i < diasOrdenados.length; i++) {
       const [, ant] = diasOrdenados[i - 1];
       const [diaAtual, atual] = diasOrdenados[i];
@@ -1064,13 +1067,14 @@ export function gerarAlertasAlteracoesJanela(
         nome_mesa: atual.nomeMesa,
         mesa_identificacao: mesaId,
       });
-      alertas.push({
+      maisRecente = {
         tipo: melhorou ? "positivo" : "atencao",
         texto: `${labelMesa} — ${fmtDiaMesIso(diaAtual)} — ${fmtPosicao(ant.posicao)} → ${fmtPosicao(atual.posicao)}`,
         dataIso: diaAtual,
         sortTs: new Date(atual.executadoEm).getTime(),
-      });
+      };
     }
+    if (maisRecente) alertas.push(maisRecente);
   }
 
   return alertas.sort((a, b) => (b.sortTs ?? 0) - (a.sortTs ?? 0));

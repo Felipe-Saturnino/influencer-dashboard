@@ -1,4 +1,4 @@
-import { Fragment, Suspense, lazy, type Dispatch, type SetStateAction } from "react";
+import { Fragment, Suspense, lazy, useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import { Table2, ChartColumnBig } from "lucide-react";
 import { MSG_SEM_DADOS_PERIODO } from "../../../lib/dashboardConstants";
 import { FONT } from "../../../constants/theme";
@@ -8,6 +8,7 @@ import {
   getDataTableStyle,
   getDataTableWrapStyle,
 } from "../../../lib/dataTableStyles";
+import { SortTableTh, type SortDir } from "../../../components/dashboard";
 import type { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import type { useApp } from "../../../context/AppContext";
 import {
@@ -27,6 +28,7 @@ const OverviewSpinComparativoJogoChart = lazy(() =>
 type Brand = ReturnType<typeof useDashboardBrand>;
 type Theme = ReturnType<typeof useApp>["theme"];
 type DataTable = ReturnType<typeof createDataTableBlockStyles>;
+type SortColJogo = "periodo";
 
 type JogoAtivo = { key: JogoComparativoKey; label: string; cor: string };
 
@@ -80,6 +82,20 @@ export function OverviewSpinComparativoJogoInterativo(props: OverviewSpinCompara
     brand,
     t,
   } = props;
+
+  const [sort, setSort] = useState<{ col: SortColJogo; dir: SortDir }>({
+    col: "periodo",
+    dir: "desc",
+  });
+
+  const linhasOrdenadas = useMemo(() => {
+    const arr = [...linhasComparativoJogo];
+    arr.sort((a, b) => {
+      const cmp = a.dataIso.localeCompare(b.dataIso);
+      return sort.dir === "desc" ? -cmp : cmp;
+    });
+    return arr;
+  }, [linhasComparativoJogo, sort]);
 
   return (
         <>
@@ -231,9 +247,21 @@ export function OverviewSpinComparativoJogoInterativo(props: OverviewSpinCompara
                   </caption>
                   <thead>
                     <tr>
-                      <th rowSpan={2} scope="col" style={dataTable.thHeaderSticky}>
-                        {colTempoLabel}
-                      </th>
+                      <SortTableTh<SortColJogo>
+                        label={colTempoLabel}
+                        col="periodo"
+                        sortCol={sort.col}
+                        sortDir={sort.dir}
+                        thStyle={dataTable.thHeaderSticky}
+                        align="center"
+                        rowSpan={2}
+                        onSort={(col) =>
+                          setSort((s) => ({
+                            col,
+                            dir: s.col === col && s.dir === "desc" ? "asc" : "desc",
+                          }))
+                        }
+                      />
                       {kpisAtivosComparativo.map((kpi) => (
                         <th
                           key={kpi.key}
@@ -357,7 +385,7 @@ export function OverviewSpinComparativoJogoInterativo(props: OverviewSpinCompara
                         </tr>
                       );
                     })()}
-                    {linhasComparativoJogo.map((row, i) => {
+                    {linhasOrdenadas.map((row, i) => {
                       const totaisOficiais = row.totaisOficiais;
                       const zebra = dataTable.zebraRow(i);
                       return (
