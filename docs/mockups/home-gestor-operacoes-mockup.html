@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Mockup — Home Gestor de Aquisição (proposta · padrão da família Gestores)</title>
+  <title>Mockup — Home Gestor de Operações (proposta · variante Gestores)</title>
   <style>
     :root {
       --brand-primary: #7c3aed;
@@ -188,12 +188,6 @@
       font-size: 22px; font-weight: 800; line-height: 1.1; color: var(--text);
       font-variant-numeric: tabular-nums;
     }
-    .kpi-mom {
-      margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--card-border);
-      font-size: 11px;
-    }
-    .kpi-mom .row { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
-    .kpi-mom .up { color: var(--verde); font-weight: 700; font-size: 12px; }
     .footer-hint {
       margin: 14px 0 0; font-size: 12px; color: var(--text-muted); line-height: 1.5;
     }
@@ -216,6 +210,21 @@
       color: var(--brand-accent); font-size: 12px; font-weight: 700; cursor: pointer;
       font-family: var(--font);
     }
+
+    .spin-list { list-style: none; display: flex; flex-direction: column; gap: 12px; }
+    .spin-card {
+      display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-start;
+      padding: 14px 16px; border-radius: 14px;
+      border: 1px solid var(--card-border); background: var(--input-bg);
+    }
+    .spin-thumb {
+      width: 96px; height: 64px; border-radius: 10px; flex-shrink: 0;
+      background: linear-gradient(135deg, var(--brand-roxo), var(--brand-azul));
+      opacity: .85;
+    }
+    .spin-card h3 { font-size: 14px; font-weight: 800; margin: 0 0 6px; }
+    .spin-card p { font-size: 12px; color: var(--text-muted); line-height: 1.5; margin: 0; }
+    .spin-meta { margin-top: 8px; font-size: 11px; color: var(--text-muted); }
 
     .grid-atalhos {
       display: grid; gap: 12px;
@@ -257,29 +266,27 @@
 </head>
 <body>
   <div class="mock-banner">
-    <span>Mockup 5/N — Home · perfil <strong>Gestor de Aquisição</strong> · padrão da família Gestores</span>
+    <span>Mockup 7/N — Home · perfil <strong>Gestor de Operações</strong> · variante da família Gestores</span>
     <button type="button" id="btn-tema">Alternar tema claro / escuro</button>
   </div>
 
   <div class="page-shell">
 
-    <!-- 1 — Boas-vindas -->
     <span class="block-tag">Bloco 1 · Boas-vindas</span>
     <div class="welcome-card">
       <div class="topbar"></div>
       <div class="welcome-row">
-        <div class="avatar" aria-hidden="true">C</div>
+        <div class="avatar" aria-hidden="true">R</div>
         <div style="flex:1;min-width:200px">
-          <h1>Olá, Camila Ferreira!</h1>
-          <p class="role-label">Gestor de Aquisição</p>
-          <p class="welcome-sub">Canal de aquisição sob controle.
-Lives, financeiro, bancas e scout — o que precisa de ação, primeiro.</p>
+          <h1>Olá, Renata Oliveira!</h1>
+          <p class="role-label">Gestor de Operações</p>
+          <p class="welcome-sub">Estúdio, escala e mesas sob controle.
+O que precisa de cobertura ou decisão operacional, primeiro.</p>
         </div>
       </div>
     </div>
 
-    <!-- 2 — Horas pendentes (portfólio) -->
-    <span class="block-tag">Bloco 2 · Horas pendentes sem live agendada (só quando houver)</span>
+    <span class="block-tag">Bloco 2 · Escala Estúdio do mês ainda não aprovada (só quando houver)</span>
     <div class="alert-box">
       <svg class="alert-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>
@@ -287,15 +294,14 @@ Lives, financeiro, bancas e scout — o que precisa de ação, primeiro.</p>
       <div style="flex:1;min-width:0">
         <div class="alert-title">AÇÃO NECESSÁRIA</div>
         <p class="alert-body">
-          Há <strong>4 influencers</strong> com horas pendentes da cota e sem live futura agendada (total de <strong>22 horas</strong>). Realize o agendamento na página de Agenda.
+          A Escala Estúdio de <strong>setembro 2026</strong> ainda está em <strong>rascunho</strong> (área Game Presenter). Aprove para alimentar o Calendário e o Controle de Turno.
         </p>
-        <a class="alert-cta" href="#">Ir para Agenda</a>
-        <p class="nota-mock">Mesma regra da Home Influencer/Agência: cota com saldo e nenhuma live futura. Visão de gestão (todos os influencers visíveis ao gestor).</p>
+        <a class="alert-cta" href="#">Ir para Escala Estúdio</a>
+        <p class="nota-mock">Dispara se o mês corrente tiver grade <strong>não aprovada</strong> em alguma área operacional (GP / Shuffler / SL / SM). Ocultar se todas aprovadas.</p>
       </div>
     </div>
 
-    <!-- 2b — Resultados > 48h -->
-    <span class="block-tag">Bloco 2b · Resultados pendentes há mais de 48h (só quando houver)</span>
+    <span class="block-tag">Bloco 2b · Solicitações de Cliente pendentes (só quando houver)</span>
     <div class="alert-box">
       <svg class="alert-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>
@@ -303,31 +309,14 @@ Lives, financeiro, bancas e scout — o que precisa de ação, primeiro.</p>
       <div style="flex:1;min-width:0">
         <div class="alert-title">AÇÃO NECESSÁRIA</div>
         <p class="alert-body">
-          Há <strong>7 lives</strong> com resultado pendente de validação há mais de <strong>48 horas</strong>. Valide na página Resultados.
+          Há <strong>6 solicitações</strong> de cliente aguardando atendimento. Revise em Solicitações de Cliente.
         </p>
-        <a class="alert-cta" href="#">Ir para Resultados</a>
-        <p class="nota-mock">Lives <code>realizada</code> ainda na fila de Resultados; contagem só se a data/hora da live (ou entrada na fila) passou de 48h. Ocultar se zero.</p>
+        <a class="alert-cta" href="#">Ir para Solicitações de Cliente</a>
+        <p class="nota-mock">Status aberto / em andamento. Ocultar se zero.</p>
       </div>
     </div>
 
-    <!-- 2c — Financeiro: >7 dias no mesmo status -->
-    <span class="block-tag">Bloco 2c · Ciclos financeiros parados &gt; 7 dias (Em análise ou Aguard. pagamento)</span>
-    <div class="alert-box">
-      <svg class="alert-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>
-      </svg>
-      <div style="flex:1;min-width:0">
-        <div class="alert-title">AÇÃO NECESSÁRIA</div>
-        <p class="alert-body">
-          Há <strong>3 pagamentos</strong> há mais de <strong>7 dias</strong> no mesmo status (<strong>Em análise</strong> ou <strong>Aguard. pagamento</strong>), totalizando <strong>R$ 18.750,00</strong>. Revise na página Financeiro.
-        </p>
-        <a class="alert-cta" href="#">Ir para Financeiro</a>
-        <p class="nota-mock"><strong>Regra:</strong> só dispara se o registro estiver em <code>em_analise</code> ou <code>a_pagar</code> <strong>e</strong> o status atual tiver mais de 7 dias (desde a última mudança de status / <code>updated_at</code> do status). <strong>Não</strong> alertar só porque existe R$ pendente recente.</p>
-      </div>
-    </div>
-
-    <!-- 2d — Banca -->
-    <span class="block-tag">Bloco 2d · Bancas aguardando aprovação (só quando houver)</span>
+    <span class="block-tag">Bloco 2c · Ofertas Spin abertas (Atenção · só quando houver)</span>
     <div class="alert-box warn">
       <svg class="alert-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>
@@ -335,197 +324,186 @@ Lives, financeiro, bancas e scout — o que precisa de ação, primeiro.</p>
       <div style="flex:1;min-width:0">
         <div class="alert-title">ATENÇÃO</div>
         <p class="alert-body">
-          Há <strong>5 solicitações</strong> de Banca de Jogo aguardando aprovação. Acesse Banca de Jogo para revisar.
+          Há <strong>4 Ofertas Spin</strong> de cobertura abertas no Marketplace. Acompanhe a aba Ofertas Spin.
         </p>
-        <a class="alert-cta" href="#">Ir para Banca de Jogo</a>
-        <p class="nota-mock">Amarelo = fila de aprovação (não bloqueio crítico). Contagem de solicitações em aberto no filtro «Aguardando».</p>
+        <a class="alert-cta" href="#">Ir para Marketplace</a>
+        <p class="nota-mock">Ofertas Spin ainda abertas. Amarelo = cobertura em curso. Ocultar se zero.</p>
       </div>
     </div>
 
-    <!-- 3 — KPIs -->
-    <span class="block-tag">Bloco 3 · Principais KPIs — Financeiro + canal (mês)</span>
+    <span class="block-tag">Bloco 2d · Incidentes abertos (Atenção · só quando houver)</span>
+    <div class="alert-box warn">
+      <svg class="alert-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>
+      </svg>
+      <div style="flex:1;min-width:0">
+        <div class="alert-title">ATENÇÃO</div>
+        <p class="alert-body">
+          Há <strong>3 incidentes</strong> abertos no estúdio. Acompanhe o andamento em Incidentes.
+        </p>
+        <a class="alert-cta" href="#">Ir para Incidentes</a>
+        <p class="nota-mock">Incidentes com status aberto / em tratamento. Ocultar se zero.</p>
+      </div>
+    </div>
+
+    <span class="block-tag">Bloco 3 · Principais KPIs — Resultado (mesas) + Operação</span>
     <div class="content-box">
       <h2 class="section-title">Principais KPIs</h2>
-      <p class="mes-sub">Setembro 2026</p>
-      <div class="grid-kpi-3" style="margin-bottom:12px">
+      <p class="mes-sub">Setembro 2026 · Overview Spin + operação</p>
+
+      <p class="mes-sub" style="margin-top:4px">Resultado</p>
+      <div class="grid-kpi-4" style="margin-bottom:16px">
+        <article class="kpi-card">
+          <div class="kpi-bar"></div>
+          <div class="kpi-body">
+            <div class="kpi-head"><span class="kpi-ic" aria-hidden="true">↑</span><span class="kpi-label">GGR</span></div>
+            <div class="kpi-value">R$ 4,82 mi</div>
+            <div style="margin-top:10px;font-size:11px;color:var(--text-muted)">
+              <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span>Mês anterior</span><span style="font-weight:600;color:var(--text)">R$ 4,41 mi</span></div>
+              <div><span style="color:var(--verde);font-weight:700">↑ +9,3%</span> <span style="font-size:10px">vs mês anterior</span></div>
+            </div>
+          </div>
+        </article>
+        <article class="kpi-card">
+          <div class="kpi-bar sec"></div>
+          <div class="kpi-body">
+            <div class="kpi-head"><span class="kpi-ic sec" aria-hidden="true">⇅</span><span class="kpi-label">Turnover</span></div>
+            <div class="kpi-value">R$ 62,1 mi</div>
+            <div style="margin-top:10px;font-size:11px;color:var(--text-muted)">
+              <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span>Mês anterior</span><span style="font-weight:600;color:var(--text)">R$ 58,4 mi</span></div>
+              <div><span style="color:var(--verde);font-weight:700">↑ +6,3%</span> <span style="font-size:10px">vs mês anterior</span></div>
+            </div>
+          </div>
+        </article>
+        <article class="kpi-card">
+          <div class="kpi-bar"></div>
+          <div class="kpi-body">
+            <div class="kpi-head"><span class="kpi-ic" aria-hidden="true">#</span><span class="kpi-label">Apostas</span></div>
+            <div class="kpi-value">8,42 mi</div>
+            <div style="margin-top:10px;font-size:11px;color:var(--text-muted)">
+              <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span>Mês anterior</span><span style="font-weight:600;color:var(--text)">7,98 mi</span></div>
+              <div><span style="color:var(--verde);font-weight:700">↑ +5,5%</span> <span style="font-size:10px">vs mês anterior</span></div>
+            </div>
+          </div>
+        </article>
         <article class="kpi-card">
           <div class="kpi-bar ok"></div>
           <div class="kpi-body">
-            <div class="kpi-head">
-              <span class="kpi-ic ok" aria-hidden="true">$</span>
-              <span class="kpi-label">R$ Pago</span>
+            <div class="kpi-head"><span class="kpi-ic ok" aria-hidden="true">◉</span><span class="kpi-label">UAP</span></div>
+            <div class="kpi-value">128.450</div>
+            <div style="margin-top:10px;font-size:11px;color:var(--text-muted)">
+              <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span>Mês anterior</span><span style="font-weight:600;color:var(--text)">121.200</span></div>
+              <div><span style="color:var(--verde);font-weight:700">↑ +6,0%</span> <span style="font-size:10px">vs mês anterior</span></div>
             </div>
-            <div class="kpi-value">R$ 126.400,00</div>
-            <div class="kpi-mom">
-              <div class="row"><span style="color:var(--text-muted)">Mês anterior</span><span style="font-weight:600">R$ 118.200,00</span></div>
-              <div><span class="up">↑ +6,9%</span> <span style="color:var(--text-muted);font-size:10px">vs mês anterior</span></div>
-            </div>
+          </div>
+        </article>
+      </div>
+
+      <p class="mes-sub">Operação</p>
+      <div class="grid-kpi-4">
+        <article class="kpi-card">
+          <div class="kpi-bar warn"></div>
+          <div class="kpi-body">
+            <div class="kpi-head"><span class="kpi-ic warn" aria-hidden="true">!</span><span class="kpi-label">Solicitações abertas</span></div>
+            <div class="kpi-value">6</div>
           </div>
         </article>
         <article class="kpi-card">
           <div class="kpi-bar warn"></div>
           <div class="kpi-body">
-            <div class="kpi-head">
-              <span class="kpi-ic warn" aria-hidden="true">!</span>
-              <span class="kpi-label">R$ Pendente</span>
-            </div>
-            <div class="kpi-value">R$ 48.320,00</div>
-            <div class="kpi-mom">
-              <div class="row"><span style="color:var(--text-muted)">Mês anterior</span><span style="font-weight:600">R$ 52.100,00</span></div>
-              <div><span class="up">↓ −7,3%</span> <span style="color:var(--text-muted);font-size:10px">vs mês anterior · menos pendente = melhor</span></div>
-            </div>
+            <div class="kpi-head"><span class="kpi-ic warn" aria-hidden="true">⚠</span><span class="kpi-label">Incidentes abertos</span></div>
+            <div class="kpi-value">3</div>
           </div>
         </article>
         <article class="kpi-card">
           <div class="kpi-bar sec"></div>
           <div class="kpi-body">
-            <div class="kpi-head">
-              <span class="kpi-ic sec" aria-hidden="true">⏱</span>
-              <span class="kpi-label">Horas realizadas</span>
-            </div>
-            <div class="kpi-value">312:45</div>
-            <div class="kpi-mom">
-              <div class="row"><span style="color:var(--text-muted)">Mês anterior</span><span style="font-weight:600">298:20</span></div>
-              <div><span class="up">↑ +4,8%</span> <span style="color:var(--text-muted);font-size:10px">vs mês anterior</span></div>
-            </div>
+            <div class="kpi-head"><span class="kpi-ic sec" aria-hidden="true">✦</span><span class="kpi-label">Ofertas Spin</span></div>
+            <div class="kpi-value">4</div>
+          </div>
+        </article>
+        <article class="kpi-card">
+          <div class="kpi-bar ok"></div>
+          <div class="kpi-body">
+            <div class="kpi-head"><span class="kpi-ic ok" aria-hidden="true">✓</span><span class="kpi-label">Dealers ativos</span></div>
+            <div class="kpi-value">86</div>
           </div>
         </article>
       </div>
-      <div class="grid-kpi-4">
-        <article class="kpi-card">
-          <div class="kpi-bar"></div>
-          <div class="kpi-body">
-            <div class="kpi-head">
-              <span class="kpi-ic" aria-hidden="true">▶</span>
-              <span class="kpi-label">Lives</span>
-            </div>
-            <div class="kpi-value">84</div>
-          </div>
-        </article>
-        <article class="kpi-card">
-          <div class="kpi-bar"></div>
-          <div class="kpi-body">
-            <div class="kpi-head">
-              <span class="kpi-ic" aria-hidden="true">↑</span>
-              <span class="kpi-label">GGR canal</span>
-            </div>
-            <div class="kpi-value">R$ 892 mil</div>
-          </div>
-        </article>
-        <article class="kpi-card">
-          <div class="kpi-bar sec"></div>
-          <div class="kpi-body">
-            <div class="kpi-head">
-              <span class="kpi-ic sec" aria-hidden="true">★</span>
-              <span class="kpi-label">FTDs</span>
-            </div>
-            <div class="kpi-value">312</div>
-          </div>
-        </article>
-        <article class="kpi-card">
-          <div class="kpi-bar"></div>
-          <div class="kpi-body">
-            <div class="kpi-head">
-              <span class="kpi-ic" aria-hidden="true">◎</span>
-              <span class="kpi-label">Bancas abertas</span>
-            </div>
-            <div class="kpi-value">5</div>
-          </div>
-        </article>
-      </div>
-      <p class="footer-hint">Quer saber mais? <a href="#">Financeiro</a> · <a href="#">Streamers</a> · <a href="#">Overview Influencer</a></p>
-      <p class="nota-mock">Fileira 1 = KPIs do <strong>Financeiro</strong> (já na página). Fileira 2 = snapshot do canal (Streamers / Overview). Ajustar métricas se produto quiser só Financeiro.</p>
+      <p class="footer-hint">Quer saber mais? Acessa o <a href="#">Overview Spin</a> · <a href="#">Escala Estúdio</a> · <a href="#">Controle de Turno</a></p>
+      <p class="nota-mock"><strong>Resultado:</strong> GGR, Turnover, Apostas, UAP (Overview Spin). <strong>Operação:</strong> Solicitações, Incidentes, Ofertas Spin, Dealers ativos.</p>
     </div>
 
-    <!-- 4 — Informações -->
-    <span class="block-tag">Bloco 4 · Informações — Informativos (perfil gestor_aquisicao · 10 dias)</span>
+    <span class="block-tag">Bloco 4 · Informações — Informativos (perfil gestor_operacoes · 10 dias)</span>
     <div class="content-box">
       <h2 class="section-title">Informações</h2>
       <ul class="feed-list">
         <li>
           <article class="feed-card">
-            <h3>Fechamento de ciclos — lembrete</h3>
+            <h3>Prévia de rotação — Sports Club</h3>
             <div class="feed-body">
-              <p>Priorize a liberação dos ciclos em <a href="#">Financeiro</a> até sexta-feira. Em dúvida, consulte a Ajuda da seção Aquisição.</p>
+              <p>A prévia do mês foi gerada após aprovação da Escala. Revise slots no <a href="#">Controle de Turno</a> antes do próximo turno.</p>
             </div>
-            <p class="feed-footer">Equipe Aquisição · 11/09/26 - 11:00</p>
-            <button type="button" class="btn-li-ocultar">Li e Ocultar</button>
-          </article>
-        </li>
-        <li>
-          <article class="feed-card">
-            <h3>Novos prospects no Scout</h3>
-            <div class="feed-body">
-              <p>Há leads recentes aguardando qualificação. Abra o <a href="#">Scout</a> para revisar status e avançar no funil.</p>
-            </div>
-            <p class="feed-footer">Equipe Aquisição · 08/09/26 - 16:40</p>
+            <p class="feed-footer">Equipe Operações · 12/09/26 - 09:40</p>
             <button type="button" class="btn-li-ocultar">Li e Ocultar</button>
           </article>
         </li>
       </ul>
-      <p class="nota-mock">Perfil <code>gestor_aquisicao</code>, janela 10 dias + «Li e Ocultar» (padrão canal/staff). Sem Portal RH / Academy.</p>
+      <p class="nota-mock">Perfil <code>gestor_operacoes</code>, 10 dias + «Li e Ocultar». Sem Blogueiro Spin nesta variante.</p>
     </div>
 
-    <!-- 5 — Acesso rápido -->
-    <span class="block-tag">Bloco 5 · Acesso rápido (curado · padrão para demais gestores)</span>
+    <span class="block-tag">Bloco 5 · Acesso rápido (curado · Operações)</span>
     <div class="content-box">
       <h2 class="section-title">Acesso rápido</h2>
       <p class="hint">Clique em um atalho abaixo para ir diretamente à página desejada.</p>
       <div class="grid-atalhos">
         <a class="atalho" href="#">
-          <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg></span>
+          <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg></span>
           <div style="flex:1;min-width:0">
-            <div class="tit"><span>Overview Influencer</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
-            <p>Resumo executivo de financeiro, operação e conversão do canal de influencers.</p>
+            <div class="tit"><span>Overview Spin</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
+            <p>Resultado das mesas ao vivo — GGR, UAP e detalhamento por operadora.</p>
           </div>
         </a>
         <a class="atalho" href="#">
-          <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect width="20" height="15" x="2" y="7" rx="2"/><polyline points="17 2 12 7 7 2"/></svg></span>
+          <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg></span>
           <div style="flex:1;min-width:0">
-            <div class="tit"><span>Streamers</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
-            <p>Acompanhe performance, conversão e financeiro do canal de influencers.</p>
+            <div class="tit"><span>Escala Estúdio</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
+            <p>Monte, ajuste e aprove a escala diária dos times de estúdio.</p>
           </div>
         </a>
         <a class="atalho" href="#">
-          <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg></span>
+          <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></span>
           <div style="flex:1;min-width:0">
-            <div class="tit"><span>Agenda</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
-            <p>Visualize, agende e acompanhe as lives dos influencers.</p>
+            <div class="tit"><span>Controle de Turno</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
+            <p>Acompanhe rotação, escala/presença e notificações do turno.</p>
           </div>
         </a>
         <a class="atalho" href="#">
-          <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg></span>
+          <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
           <div style="flex:1;min-width:0">
-            <div class="tit"><span>Resultados</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
-            <p>Consulte o desempenho das lives realizadas.</p>
+            <div class="tit"><span>Gestão de Dealers</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
+            <p>Catálogo de Game Presenters e especialidades por mesa.</p>
           </div>
         </a>
         <a class="atalho" href="#">
-          <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="12" r="3"/><path d="m16 16-1.5-1.5"/></svg></span>
+          <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M15 2H9a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1z"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg></span>
           <div style="flex:1;min-width:0">
-            <div class="tit"><span>Scout</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
-            <p>Cadastre e qualifique prospects do canal de aquisição.</p>
+            <div class="tit"><span>Solicitações de Cliente</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
+            <p>Atenda pedidos das operadoras sobre mesas e operação.</p>
           </div>
         </a>
         <a class="atalho" href="#">
-          <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></span>
+          <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg></span>
           <div style="flex:1;min-width:0">
-            <div class="tit"><span>Influencers</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
-            <p>Gerencie o cadastro e o status dos influencers.</p>
+            <div class="tit"><span>Marketplace</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
+            <p>Ofertas Spin, cobertura e negociação de turnos.</p>
           </div>
         </a>
         <a class="atalho" href="#">
-          <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg></span>
+          <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></span>
           <div style="flex:1;min-width:0">
-            <div class="tit"><span>Financeiro</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
-            <p>Gerencie os ciclos de pagamento dos influencers e afiliados, do rascunho ao pago.</p>
-          </div>
-        </a>
-        <a class="atalho" href="#">
-          <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M2 12C2 6.5 6.5 2 12 2a10 10 0 0 1 8 4"/><path d="M12 8v8"/><path d="M8 12h8"/></svg></span>
-          <div style="flex:1;min-width:0">
-            <div class="tit"><span>Banca de Jogo</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
-            <p>Solicite, aprove e libere bancas de jogo por parceiro e operadora.</p>
+            <div class="tit"><span>Incidentes</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
+            <p>Registre e acompanhe incidentes operacionais do estúdio.</p>
           </div>
         </a>
         <a class="atalho" href="#">
@@ -536,25 +514,23 @@ Lives, financeiro, bancas e scout — o que precisa de ação, primeiro.</p>
           </div>
         </a>
       </div>
-      <p class="nota-mock">Lista curada — só com Ver liberado. <strong>Fora:</strong> <span class="removed">dump do menu</span>, Overview Spin / Estúdio / RH. Este layout-base serve de molde para Marketing, Operações, Tech Ops, Academy e RH (só mudam atalhos + 1–2 alertas/KPIs).</p>
+      <p class="nota-mock">Lista curada de Operações — só com Ver liberado. <strong>Fora:</strong> <span class="removed">dump do menu / Financeiro / Marketing</span>. Sem Blogueiro Spin.</p>
     </div>
 
   </div>
 
   <div class="legenda">
     <div class="content-box">
-      <h2 class="section-title">Notas para aprovação — Home Gestor de Aquisição</h2>
+      <h2 class="section-title">Notas para aprovação — Home Gestor de Operações</h2>
       <ul>
-        <li><strong>Família Gestores:</strong> 1 layout-base + variantes de atalho/alerta por departamento. Este mockup é o #1 da família.</li>
-        <li><strong>Alertas (AÇÃO NECESSÁRIA):</strong> (1) influencers com horas pendentes sem live agendada → Agenda; (2) lives com resultado pendente &gt; 48h → Resultados; (3) pagamentos em <strong>Em análise</strong> ou <strong>Aguard. pagamento</strong> há &gt; 7 dias no mesmo status → Financeiro.</li>
-        <li><strong>Atenção (amarelo):</strong> Banca de Jogo aguardando aprovação — condicional.</li>
-        <li><strong>Financeiro — regra fina:</strong> <strong>não</strong> alertar só por existir R$ pendente; só quando o status atual (&gt;7 dias) for <code>em_analise</code> ou <code>a_pagar</code>.</li>
-        <li><strong>KPIs:</strong> alinhados ao Financeiro (Pago / Pendente / Horas) + snapshot do canal (Lives, GGR, FTDs, Bancas abertas).</li>
-        <li><strong>Informativos:</strong> perfil <code>gestor_aquisicao</code>, 10 dias + «Li e Ocultar».</li>
-        <li><strong>Atalhos:</strong> Overview Influencer → Streamers → Agenda → Resultados → Scout → Influencers → Financeiro → Banca de Jogo → Ajuda.</li>
-        <li><strong>Sem:</strong> whitelabel, revisão RH 6m, Academy, dump do menu.</li>
-        <li><strong>Fluxo:</strong> só mockups agora — implantação em lote depois.</li>
-        <li><strong>Como abrir:</strong> duplo clique / navegador. Botão no topo alterna claro/escuro.</li>
+        <li><strong>Variante</strong> da família Gestores (mesmo shell do Aquisição / Marketing).</li>
+        <li><strong>AÇÃO NECESSÁRIA:</strong> Escala Estúdio não aprovada; Solicitações de Cliente pendentes.</li>
+        <li><strong>ATENÇÃO:</strong> Ofertas Spin abertas → Marketplace; Incidentes abertos → Incidentes.</li>
+        <li><strong>KPIs — Resultado:</strong> GGR, Turnover, Apostas, UAP (Overview Spin).</li>
+        <li><strong>KPIs — Operação:</strong> Solicitações abertas, Incidentes abertos, Ofertas Spin, Dealers ativos.</li>
+        <li><strong>Sem Blogueiro Spin</strong> nesta variante.</li>
+        <li><strong>Atalhos:</strong> Overview Spin → Escala → CT → Dealers → Solicitações → Marketplace → Incidentes → Ajuda.</li>
+        <li><strong>Fluxo:</strong> só mockups — implantação em lote depois.</li>
       </ul>
     </div>
   </div>
@@ -566,3 +542,4 @@ Lives, financeiro, bancas e scout — o que precisa de ação, primeiro.</p>
   </script>
 </body>
 </html>
+

@@ -264,6 +264,8 @@ Páginas fora do menu lateral (`configuracoes`, `simulador_login`, `versionament
 - Formulários: `CampoObrigatorioMark` e semântica de erro do Global.
 - Tipos compartilhados com a Central interna via `TIPOS_DENUNCIA`; **Elogios** (`elogios`) segue o mesmo envio, protocolo e atendimento dos demais tipos.
 - Privacidade: não expor detalhes técnicos em mensagens de erro; na consulta, mensagens do RH aparecem como **Equipe RH** (sem nome do staff).
+- **Zoom UI:** `useDisableAppUiZoom(true)` — o zoom do `#root` desalinha cliques nas abas/Pesquisar (mesmo padrão Login / SemAcesso).
+- **Estrutura:** shell em `CanalDenunciasSpinPage.tsx` + painéis `CanalDenunciarPanel` / `CanalConsultarPanel` + `canalDenunciasPublicUi` / `canalDenunciasPublicFields`.
 
 **Protocolo:** novos registros usam código imprevisível (`CDSPIN-` + 16 hex). Protocolos legados `CDSPIN00001…` continuam válidos. Consulta e resposta (`consultar_denuncia_spin` / `responder_denuncia_spin`) exigem o **mesmo e-mail do envio** quando o relato foi identificado; anônimo consulta só com o protocolo. Erro genérico «não encontrado» (não revelar se o protocolo existe).
 

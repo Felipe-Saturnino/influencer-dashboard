@@ -3,7 +3,7 @@ import { useEffect } from "react";
 const CLASS_NO_UI_ZOOM = "app-no-ui-zoom";
 
 /**
- * Desativa o zoom do `#root` enquanto telas de auth / SemAcesso estão montadas.
+ * Desativa o zoom do `#root` enquanto telas de auth / SemAcesso / canal público estão montadas.
  * Evita desalinhamento de clique (hit-testing) com `zoom` no Chromium.
  */
 export function useDisableAppUiZoom(enabled: boolean): void {
