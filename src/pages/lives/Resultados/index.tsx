@@ -10,7 +10,7 @@ import { fetchAllPages, fetchLiveResultadosBatched } from "../../../lib/supabase
 import { Live, LiveResultado, LiveStatus } from "../../../types";
 
 const LIVE_COLS =
-  "id, influencer_id, operadora_slug, data, horario, plataforma, status, link, observacao, titulo, created_by, profiles!lives_influencer_id_fkey(name)";
+  "id, influencer_id, operadora_slug, data, horario, plataforma, status, link, observacao, created_by, profiles!lives_influencer_id_fkey(name)";
 const LIVE_RESULTADO_COLS =
   "id, live_id, duracao_horas, duracao_min, media_views, max_views, created_at, updated_at";
 import { ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal";
@@ -644,7 +644,6 @@ export default function Resultados() {
         status: LiveStatus;
         link?: string | null;
         observacao?: string | null;
-        titulo?: string | null;
         created_by?: string | null;
         profiles?: { name: string } | { name: string }[] | null;
       };
@@ -679,7 +678,7 @@ export default function Resultados() {
           status: l.status,
           link: l.link ?? undefined,
           observacao: l.observacao ?? undefined,
-          titulo: l.titulo ?? "",
+          titulo: "",
           created_by: l.created_by ?? "",
           influencer_name: profileName ?? undefined,
         };
