@@ -1,6 +1,6 @@
 ---
-description: Conceitos de negócio Spin Gaming — estúdios, operadoras, produtos Live, atores, dados financeiros e glossário. Consultar em dúvidas de domínio antes de modelar schema ou UX.
-alwaysApply: true
+description: Conceitos de negócio Spin Gaming — estúdios, operadoras, produtos Live, atores, dados financeiros e glossário. Ler em /nova-feature se o domínio for estúdio/operadora/mesa; não always-on.
+alwaysApply: false
 ---
 
 # Spin Gaming — Negócio e domínio

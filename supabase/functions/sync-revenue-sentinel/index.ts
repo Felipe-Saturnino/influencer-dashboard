@@ -314,7 +314,7 @@ serve(async (req: Request) => {
 
     return json(req, {
       ok: status === "ok",
-      versao: "v1.0.0",
+      versao: "v1.1.0",
       integracao: INTEGRACAO_SLUG,
       dry_run: dryRun,
       periodo: { data_inicio: dataInicio, data_fim: dataFim },

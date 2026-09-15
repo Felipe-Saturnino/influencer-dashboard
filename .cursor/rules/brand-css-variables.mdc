@@ -1,6 +1,9 @@
 ---
-description: MDC Brand — whitelabel, tokens CSS, cabeçalhos, filtros com ícone, carrossel de período, ações em ícone e CTAs. Complementa global.mdc; secções citam este ficheiro para detalhes de marca (não duplicar).
-alwaysApply: true
+description: MDC Brand — whitelabel, tokens CSS, cabeçalhos, filtros com ícone, carrossel de período, ações em ícone e CTAs. Complementa global.mdc. Frente /nova-feature lê este ficheiro; não always-on.
+globs:
+  - src/**/*.tsx
+  - src/**/*.ts
+alwaysApply: false
 ---
 
 # MDC Brand — Whitelabel e padrões de UI de marca

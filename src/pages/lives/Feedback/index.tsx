@@ -8,18 +8,23 @@ import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../li
 import { FONT_TITLE, BRAND } from "../../../lib/dashboardConstants";
 import { getPeriodoHistoricoCompetencias } from "../../../lib/dashboardHelpers";
 import { supabase } from "../../../lib/supabase";
-import { fetchLiveResultadosBatched } from "../../../lib/supabasePaginate";
+import { fetchAllPages, fetchLiveResultadosBatched } from "../../../lib/supabasePaginate";
 import { Live, LiveResultado, LiveStatus } from "../../../types";
 
+const LIVE_COLS =
+  "id, influencer_id, operadora_slug, data, horario, plataforma, status, link, observacao, titulo, created_by, profiles!lives_influencer_id_fkey(name)";
 const LIVE_RESULTADO_COLS =
   "id, live_id, duracao_horas, duracao_min, media_views, max_views, created_at, updated_at";
 import {
-  X, Pencil, Calendar, User, ChevronLeft, ChevronRight, Loader2,
+  X, Pencil, Calendar, User, ChevronLeft, ChevronRight, Loader2, Clock,
 } from "lucide-react";
 import { PlatLogo } from "../../../components/PlatLogo";
 import { ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal";
 import { BtnExcluirLinha } from "../../../components/BtnExcluirLinha";
+import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
+import { TabelaComPaginacao } from "../../../components/TabelaPaginacaoBar";
 import {descricaoModalExcluirItem, tooltipExcluir} from "../../../lib/excluirItemUi";
+import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
 import {
   DashboardPageHeader,
   FiltroHistoricoButton,
@@ -30,8 +35,10 @@ import {
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
 import { SelectListaComBusca } from "../../../components/SelectListaComBusca";
+import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { placeholderPesquisaFiltro } from "../../../lib/searchBarConstants";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
+import { getPageCanonicalSubtitle } from "../../../lib/pageCanonicalCopy";
 import {
   getPageContentBoxStyle,
   getPageFilterBoxStyle,
@@ -42,6 +49,14 @@ import { PLAT_COLOR } from "../../../constants/platforms";
 
 // ─── CARROSSEL DE SEMANAS (a partir de 01/12/2025) ────────────────────────────
 const MESES_ABREV = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+
+/** Data local YYYY-MM-DD (não usar toISOString — desloca no fuso BR). */
+function dateToISOLocal(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
 
 function getSemanasDisponiveis(): { start: Date; end: Date; label: string }[] {
   const lista: { start: Date; end: Date; label: string }[] = [];
@@ -59,14 +74,13 @@ function getSemanasDisponiveis(): { start: Date; end: Date; label: string }[] {
 }
 
 function getRangeSemana(semana: { start: Date; end: Date } | null, historico: boolean): { start: string; end: string } {
-  const toISO = (d: Date) => d.toISOString().split("T")[0];
   const now = new Date();
   if (historico) {
     const periodo = getPeriodoHistoricoCompetencias(now);
     return { start: periodo.inicio, end: periodo.fim };
   }
-  if (!semana) return { start: toISO(now), end: toISO(now) };
-  return { start: toISO(semana.start), end: toISO(semana.end) };
+  if (!semana) return { start: dateToISOLocal(now), end: dateToISOLocal(now) };
+  return { start: dateToISOLocal(semana.start), end: dateToISOLocal(semana.end) };
 }
 
 // ─── STATUS (padrão Agenda: legenda + cores) ───────────────────────────────────
@@ -134,6 +148,7 @@ function LiveCard({
   onRefresh,
 }: LiveCardProps) {
   const [modalExcluirAberto, setModalExcluirAberto] = useState(false);
+  const [erroExcluir, setErroExcluir] = useState("");
   const isRealizada = live.status === "realizada";
   const statusColor = isRealizada ? BRAND.verde : BRAND.vermelho;
   const platColor = PLAT_COLOR[live.plataforma];
@@ -144,12 +159,19 @@ function LiveCard({
 
   async function handleExcluirConfirmado() {
     if (!perm.canExcluirOk) return;
+    setErroExcluir("");
     setExcluindo(live);
     await supabase.from("live_resultados").delete().eq("live_id", live.id);
     const { error } = await supabase.from("lives").delete().eq("id", live.id);
     setExcluindo(null);
     setModalExcluirAberto(false);
-    if (!error) onRefresh();
+    if (error) {
+      setErroExcluir(
+        "Não foi possível excluir a live. Se o problema persistir, entre em contato com o suporte.",
+      );
+      return;
+    }
+    onRefresh();
   }
 
   return (
@@ -236,26 +258,12 @@ function LiveCard({
         {(podeEditar || podeExcluir) && (
           <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
             {podeEditar && (
-              <button
-                type="button"
+              <BtnIconeAcaoLinha
+                label={tooltipAcao("Editar live")}
                 onClick={() => onEditar(live)}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 5,
-                  padding: "6px 12px",
-                  borderRadius: 8,
-                  border: `1px solid ${t.cardBorder}`,
-                  background: t.inputBg ?? t.cardBg,
-                  color: t.text,
-                  fontSize: 11,
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  fontFamily: FONT.body,
-                }}
               >
-                <Pencil size={11} aria-hidden="true" /> Editar
-              </button>
+                <Pencil size={13} aria-hidden="true" />
+              </BtnIconeAcaoLinha>
             )}
             {podeExcluir && (
               <BtnExcluirLinha
@@ -267,6 +275,12 @@ function LiveCard({
           </div>
         )}
       </div>
+
+      {erroExcluir ? (
+        <div role="alert" aria-live="polite" style={{ color: "#e84025", fontSize: 12, fontFamily: FONT.body, marginTop: 10 }}>
+          {erroExcluir}
+        </div>
+      ) : null}
 
       {modalExcluirAberto ? (
         <ModalConfirmExcluirPadrao
@@ -376,69 +390,111 @@ export default function Feedback() {
   const [influencerFiltros, setInfluencerFiltros] = useState<string[]>([]);
   const [filterOperadora,   setFilterOperadora]   = useState<string>("todas");
   const [operadorasList,    setOperadorasList]    = useState<{ slug: string; nome: string }[]>([]);
-  const [lives,             setLives]             = useState<LiveComObs[]>([]);
-  const [resultados,        setResultados]        = useState<Record<string, LiveResultado>>({});
   const [influencers,       setInfluencers]       = useState<{ id: string; name: string }[]>([]);
   const [loading,           setLoading]           = useState(true);
   const [editando,          setEditando]          = useState<LiveComObs | null>(null);
   const [excluindo,         setExcluindo]         = useState<LiveComObs | null>(null);
   const [livesAll,          setLivesAll]          = useState<LiveComObs[]>([]);
   const [resultadosAll,     setResultadosAll]     = useState<Record<string, LiveResultado>>({});
+  const [loadError,         setLoadError]         = useState<string | null>(null);
 
   const semanaSelecionada = semanasDisponiveis[idxSemana];
+  const loadGenRef = useRef(0);
 
   const loadData = useCallback(async () => {
+    const gen = ++loadGenRef.current;
     setLoading(true);
+    setLoadError(null);
     const { start, end } = getRangeSemana(semanaSelecionada ?? null, historico);
 
-    let baseQuery = supabase
-      .from("lives")
-      .select("*, profiles!lives_influencer_id_fkey(name)")
-      .gte("data", start).lte("data", end)
-      .in("status", ["realizada", "nao_realizada"])
-      .order("data", { ascending: false })
-      .order("horario", { ascending: true });
+    try {
+      type LiveRowDb = {
+        id: string;
+        influencer_id: string;
+        operadora_slug?: string | null;
+        data: string;
+        horario: string;
+        plataforma: Live["plataforma"];
+        status: LiveStatus;
+        link?: string | null;
+        observacao?: string | null;
+        titulo?: string | null;
+        created_by?: string | null;
+        profiles?: { name: string } | { name: string }[] | null;
+      };
 
-    if (operadoraSlugsForcado?.length) baseQuery = baseQuery.in("operadora_slug", operadoraSlugsForcado);
-    if (influencerFiltros.length > 0) baseQuery = baseQuery.in("influencer_id", influencerFiltros);
+      const allData = await fetchAllPages<LiveRowDb>(async (from, to) => {
+        let q = supabase
+          .from("lives")
+          .select(LIVE_COLS)
+          .gte("data", start)
+          .lte("data", end)
+          .in("status", ["realizada", "nao_realizada"])
+          .order("data", { ascending: false })
+          .order("horario", { ascending: true })
+          .range(from, to);
+        if (operadoraSlugsForcado?.length) q = q.in("operadora_slug", operadoraSlugsForcado);
+        if (influencerFiltros.length > 0) q = q.in("influencer_id", influencerFiltros);
+        return await q;
+      });
 
-    const { data: allData } = await baseQuery;
+      if (gen !== loadGenRef.current) return;
 
-    if (allData) {
-      const mappedAll: LiveComObs[] = allData
-        .map((l: { profiles?: { name: string }; [k: string]: unknown }) => ({ ...l, influencer_name: l.profiles?.name })) as LiveComObs[];
+      const mappedAll: LiveComObs[] = allData.map((l) => {
+        const profileEmbed = l.profiles;
+        const profileName = Array.isArray(profileEmbed)
+          ? profileEmbed[0]?.name
+          : profileEmbed?.name;
+        return {
+          id: l.id,
+          influencer_id: l.influencer_id,
+          operadora_slug: l.operadora_slug ?? undefined,
+          data: l.data,
+          horario: l.horario,
+          plataforma: l.plataforma,
+          status: l.status,
+          link: l.link ?? undefined,
+          observacao: l.observacao ?? undefined,
+          titulo: l.titulo ?? "",
+          created_by: l.created_by ?? "",
+          influencer_name: profileName ?? undefined,
+        };
+      });
       const visiveis = mappedAll.filter((l) => podeVerInfluencer(l.influencer_id));
       setLivesAll(visiveis);
 
       const unique = Array.from(
-        new Map(visiveis.map(l => [l.influencer_id, { id: l.influencer_id, name: l.influencer_name ?? l.influencer_id }])).values()
-      ).filter((i) => podeVerInfluencer(i.id)).sort((a, b) => (a.name ?? "").localeCompare(b.name ?? "", "pt-BR"));
+        new Map(visiveis.map((l) => [l.influencer_id, { id: l.influencer_id, name: l.influencer_name ?? l.influencer_id }])).values(),
+      )
+        .filter((i) => podeVerInfluencer(i.id))
+        .sort((a, b) => (a.name ?? "").localeCompare(b.name ?? "", "pt-BR"));
       setInfluencers(unique);
 
-      const allIds = visiveis.map(l => l.id);
+      const allIds = visiveis.map((l) => l.id);
       const resMapAll: Record<string, LiveResultado> = {};
       if (allIds.length > 0) {
         const resAll = await fetchLiveResultadosBatched(allIds, async (ids) =>
           await supabase.from("live_resultados").select(LIVE_RESULTADO_COLS).in("live_id", ids),
         );
+        if (gen !== loadGenRef.current) return;
         resAll.forEach((r) => {
           resMapAll[(r as LiveResultado).live_id] = r as LiveResultado;
         });
       }
       setResultadosAll(resMapAll);
-
-      const filtered = statusFiltro === "todos" ? visiveis : visiveis.filter(l => l.status === statusFiltro);
-      setLives(filtered);
-
-      const resMap: Record<string, LiveResultado> = {};
-      for (const l of filtered) {
-        const row = resMapAll[l.id];
-        if (row) resMap[l.id] = row;
-      }
-      setResultados(resMap);
+    } catch (err) {
+      console.error("Feedback loadData:", err);
+      if (gen !== loadGenRef.current) return;
+      setLivesAll([]);
+      setResultadosAll({});
+      setInfluencers([]);
+      setLoadError(
+        "Não foi possível carregar as lives. Se o problema persistir, entre em contato com o suporte.",
+      );
+    } finally {
+      if (gen === loadGenRef.current) setLoading(false);
     }
-    setLoading(false);
-  }, [semanaSelecionada, historico, operadoraSlugsForcado, influencerFiltros, statusFiltro, podeVerInfluencer]);
+  }, [semanaSelecionada, historico, operadoraSlugsForcado, influencerFiltros, podeVerInfluencer]);
 
   useEffect(() => { void loadData(); }, [loadData]);
 
@@ -453,17 +509,26 @@ export default function Feedback() {
     return livesAll.filter((l) => l.operadora_slug === filterOperadora);
   }, [livesAll, filterOperadora, operadoraSlugsForcado]);
 
+  /** Lista + KPIs respeitam o mesmo filtro de status (U2). */
   const livesFiltered = useMemo(() => {
-    if (operadoraSlugsForcado?.length) return lives.filter((l) => l.operadora_slug && operadoraSlugsForcado.includes(l.operadora_slug));
-    if (!filterOperadora || filterOperadora === "todas") return lives;
-    return lives.filter((l) => l.operadora_slug === filterOperadora);
-  }, [lives, filterOperadora, operadoraSlugsForcado]);
+    if (statusFiltro === "todos") return livesAllFiltered;
+    return livesAllFiltered.filter((l) => l.status === statusFiltro);
+  }, [livesAllFiltered, statusFiltro]);
 
-  // ── Cálculos dos quadros ──────────────────────────────────────────────────
-  const totalLives         = livesAllFiltered.length;
-  const totalRealizadas    = livesAllFiltered.filter(l => l.status === "realizada").length;
-  const totalNaoRealizadas = livesAllFiltered.filter(l => l.status === "nao_realizada").length;
-  const realizadasComRes   = livesAllFiltered.filter(l => l.status === "realizada" && resultadosAll[l.id]);
+  const resultados = useMemo(() => {
+    const map: Record<string, LiveResultado> = {};
+    for (const l of livesFiltered) {
+      const row = resultadosAll[l.id];
+      if (row) map[l.id] = row;
+    }
+    return map;
+  }, [livesFiltered, resultadosAll]);
+
+  // ── Cálculos dos quadros (mesmo conjunto da lista) ──────────────────────────
+  const totalLives         = livesFiltered.length;
+  const totalRealizadas    = livesFiltered.filter(l => l.status === "realizada").length;
+  const totalNaoRealizadas = livesFiltered.filter(l => l.status === "nao_realizada").length;
+  const realizadasComRes   = livesFiltered.filter(l => l.status === "realizada" && resultadosAll[l.id]);
 
   const totalHoras = realizadasComRes.reduce((acc, l) => {
     const r = resultadosAll[l.id];
@@ -482,6 +547,24 @@ export default function Feedback() {
   const cardShadow = t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
 
   // ── Render ────────────────────────────────────────────────────────────────
+  if (perm.loading) {
+    return (
+      <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
+        <DashboardPageHeader
+          icon={<PageMenuIcon pageKey="feedback" />}
+          title={getPageMenuLabel("feedback")}
+          subtitle={getPageCanonicalSubtitle("feedback")}
+          brand={brand}
+          t={t}
+        />
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, minHeight: 280 }}>
+          <Loader2 className="app-lucide-spin" size={24} color="var(--brand-primary, #7c3aed)" aria-hidden />
+          <span style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>Carregando…</span>
+        </div>
+      </div>
+    );
+  }
+
   if (perm.canView === "nao") {
     return (
       <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
@@ -496,7 +579,7 @@ export default function Feedback() {
       <DashboardPageHeader
         icon={<PageMenuIcon pageKey="feedback" />}
         title={getPageMenuLabel("feedback")}
-        subtitle="Consulte o histórico validado de lives com KPIs e dados de resultado."
+        subtitle={getPageCanonicalSubtitle("feedback")}
         brand={brand}
         t={t}
       />
@@ -560,6 +643,15 @@ export default function Feedback() {
                 }
               />
             )}
+            {loading ? (
+              <span
+                style={{ fontSize: 12, color: t.textMuted, display: "flex", alignItems: "center", gap: 4 }}
+                aria-live="polite"
+              >
+                <Clock size={12} aria-hidden />
+                Carregando…
+              </span>
+            ) : null}
           </div>
           <div className="app-filter-bar-tabs-cta__actions">
             <AjudaContextualAcoes pageKey="feedback" />
@@ -638,35 +730,50 @@ export default function Feedback() {
       )}
 
       {/* Lista */}
-      {loading ? (
+      {loadError ? (
+        <div role="alert" aria-live="polite" style={{ ...getPageContentBoxStyle(brand, t, { padding: 48, textAlign: "center" }), color: "#e84025", fontFamily: FONT.body, fontSize: 13 }}>
+          {loadError}
+        </div>
+      ) : loading ? (
         <div
           role="status"
           aria-label="Carregando feedback de lives"
-          style={{ textAlign: "center", padding: 60, color: t.textMuted, fontFamily: FONT.body, display: "flex", alignItems: "center", justifyContent: "center" }}
+          style={{ textAlign: "center", padding: 60, color: t.textMuted, fontFamily: FONT.body, display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}
         >
           <Loader2 size={20} className="app-lucide-spin" style={{ color: "var(--brand-primary, #7c3aed)" }} aria-hidden="true" />
+          <span style={{ fontSize: 13 }}>Carregando…</span>
         </div>
       ) : livesFiltered.length === 0 ? (
         <div style={{ ...getPageContentBoxStyle(brand, t, { padding: 48, textAlign: "center" }), color: t.textMuted, fontFamily: FONT.body }}>
           Sem dados para o período selecionado.
         </div>
       ) : (
-        livesFiltered.map((l) => (
-          <LiveCard
-            key={l.id}
-            live={l}
-            res={resultados[l.id]}
-            brand={brand}
-            t={t}
-            isDark={isDark ?? false}
-            perm={perm}
-            podeVerInfluencer={podeVerInfluencer}
-            excluindo={excluindo}
-            setExcluindo={setExcluindo}
-            onEditar={setEditando}
-            onRefresh={loadData}
-          />
-        ))
+        <TabelaComPaginacao
+          items={livesFiltered}
+          t={t}
+          resetKey={`${historico}|${idxSemana}|${statusFiltro}|${filterOperadora}|${influencerFiltros.join(",")}`}
+        >
+          {(linhas) => (
+            <>
+              {linhas.map((l) => (
+                <LiveCard
+                  key={l.id}
+                  live={l}
+                  res={resultados[l.id]}
+                  brand={brand}
+                  t={t}
+                  isDark={isDark ?? false}
+                  perm={perm}
+                  podeVerInfluencer={podeVerInfluencer}
+                  excluindo={excluindo}
+                  setExcluindo={setExcluindo}
+                  onEditar={setEditando}
+                  onRefresh={loadData}
+                />
+              ))}
+            </>
+          )}
+        </TabelaComPaginacao>
       )}
 
       {/* Modal Editar */}
@@ -675,10 +782,11 @@ export default function Feedback() {
           live={editando}
           res={resultadosAll[editando.id]}
           operadorasList={operadorasList}
+          escoposVisiveis={escoposVisiveis}
           t={t}
           isDark={isDark ?? false}
           onClose={() => setEditando(null)}
-          onSalvo={() => { setEditando(null); loadData(); }}
+          onSalvo={() => { setEditando(null); void loadData(); }}
         />
       )}
     </div>
@@ -686,9 +794,10 @@ export default function Feedback() {
 }
 
 // ─── MODAL EDITAR FEEDBACK ────────────────────────────────────────────────────
-function ModalFeedbackEdit({ live, res, operadorasList, t, isDark: _isDark, onClose, onSalvo }: {
+function ModalFeedbackEdit({ live, res, operadorasList, escoposVisiveis, t, isDark: _isDark, onClose, onSalvo }: {
   live: LiveComObs; res?: LiveResultado;
   operadorasList: { slug: string; nome: string }[];
+  escoposVisiveis: ReturnType<typeof useDashboardFiltros>["escoposVisiveis"];
   t: ReturnType<typeof useApp>["theme"]; isDark: boolean;
   onClose: () => void; onSalvo: () => void;
 }) {
@@ -737,14 +846,22 @@ function ModalFeedbackEdit({ live, res, operadorasList, t, isDark: _isDark, onCl
 
     const { error: upErr } = await supabase.from("lives")
       .update(liveUpdate).eq("id", live.id);
-    if (upErr) { setError("Erro ao salvar. Tente novamente."); setSaving(false); return; }
+    if (upErr) {
+      setError("Não foi possível salvar. Se o problema persistir, entre em contato com o suporte.");
+      setSaving(false);
+      return;
+    }
 
     if (showResultFields) {
       const payload = { live_id: live.id, duracao_horas: duracaoHoras, duracao_min: duracaoMin, media_views: mediaViews, max_views: maxViews };
       const { error: resErr } = res
         ? await supabase.from("live_resultados").update(payload).eq("live_id", live.id)
         : await supabase.from("live_resultados").insert(payload);
-      if (resErr) { setError("Erro ao salvar resultado. Tente novamente."); setSaving(false); return; }
+      if (resErr) {
+        setError("Não foi possível salvar o resultado. Se o problema persistir, entre em contato com o suporte.");
+        setSaving(false);
+        return;
+      }
     }
 
     setSaving(false);
@@ -882,7 +999,7 @@ function ModalFeedbackEdit({ live, res, operadorasList, t, isDark: _isDark, onCl
         {operadorasList.length > 0 && (
           <div style={{ marginBottom: 14 }}>
             <label style={labelStyle}>
-              Operadora {showResultFields && <span style={{ color: BRAND.vermelho }}>*</span>}
+              Operadora {showResultFields ? <CampoObrigatorioMark /> : null}
             </label>
             <SelectListaComBusca
               variant="campo"
@@ -898,10 +1015,16 @@ function ModalFeedbackEdit({ live, res, operadorasList, t, isDark: _isDark, onCl
               }}
               options={[
                 { value: "", label: "Selecione a operadora..." },
-                ...[...operadorasList].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map((o) => ({
-                  value: o.slug,
-                  label: o.nome,
-                })),
+                ...[...operadorasList]
+                  .filter((o) =>
+                    escoposVisiveis.operadorasVisiveis.length === 0
+                    || escoposVisiveis.operadorasVisiveis.includes(o.slug),
+                  )
+                  .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
+                  .map((o) => ({
+                    value: o.slug,
+                    label: o.nome,
+                  })),
               ]}
             />
           </div>

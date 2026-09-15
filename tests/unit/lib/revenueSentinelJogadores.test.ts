@@ -54,6 +54,69 @@ describe("parseJogadoresSpinResponse", () => {
     expect(r.dias[0]?.data).toBe("2026-09-14");
     expect(r.dias[0]?.ggr_spin).toBe(10);
   });
+
+  it("lê jogadores[].spin.dias e ignora bko", () => {
+    const r = parseJogadoresSpinResponse({
+      operadora_slug: "casa_apostas",
+      found: 1,
+      missing: [],
+      jogadores: [
+        {
+          ext_customer_id: "2203598",
+          external_id: "casadeapostas.if_dgc.L011_358_56.CDA-2203598",
+          utm_source: "MarcoVeio",
+          spin: {
+            jogou: true,
+            ggr: 80,
+            turnover: 1200,
+            bet_count: 12,
+            dias: [{ data: "2026-09-14", ggr: 80, turnover: 1200, bet_count: 12 }],
+          },
+          bko: {
+            ggr: 9999,
+            days: { "2026-09-14": { ggr: 9999, bet_count: 50 } },
+          },
+        },
+      ],
+    });
+    expect(r.dias).toHaveLength(1);
+    expect(r.dias[0]?.ext_customer_id).toBe("2203598");
+    expect(r.dias[0]?.data).toBe("2026-09-14");
+    expect(r.dias[0]?.ggr_spin).toBe(80);
+    expect(r.dias[0]?.jogou_spin).toBe(true);
+    expect(r.dias[0]?.apostas_spin).toBe(12);
+  });
+
+  it("lê jogadores[].spin.days chaveado por data", () => {
+    const r = parseJogadoresSpinResponse({
+      found: 1,
+      jogadores: [
+        {
+          ext_customer_id: "2203598",
+          spin: {
+            days: { "2026-09-14": { ggr: 10, turnover: 100, bet_count: 3 } },
+          },
+          bko: { days: { "2026-09-14": { ggr: 500, bet_count: 9 } } },
+        },
+      ],
+    });
+    expect(r.dias).toHaveLength(1);
+    expect(r.dias[0]?.ggr_spin).toBe(10);
+    expect(r.dias[0]?.apostas_spin).toBe(3);
+  });
+
+  it("lê jogadores[].spin como lista de dias", () => {
+    const r = parseJogadoresSpinResponse({
+      jogadores: [
+        {
+          ext_customer_id: "2203598",
+          spin: [{ snapshot_date: "2026-09-14", ggr: 7, bet_count: 2 }],
+        },
+      ],
+    });
+    expect(r.dias).toHaveLength(1);
+    expect(r.dias[0]?.ggr_spin).toBe(7);
+  });
 });
 
 describe("chunkIds", () => {

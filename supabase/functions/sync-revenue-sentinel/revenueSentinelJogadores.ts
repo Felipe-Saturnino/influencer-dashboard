@@ -109,18 +109,21 @@ function asList(v: unknown): unknown[] {
 function flattenItems(payload: unknown): unknown[] {
   const root = asRecord(payload);
   if (!root) return asArray(payload);
+  // `found` no contrato atual é contagem (number), não lista — não misturar com jogadores.
   const direct = [
-    "items",
     "jogadores",
+    "items",
     "players",
-    "data",
     "rows",
-    "found",
     "results",
     "hits",
     "jogadores_spin",
   ].flatMap((k) => asList(root[k]));
   if (direct.length > 0) return direct;
+  const foundList = asList(root.found);
+  if (foundList.length > 0) return foundList;
+  const dataList = asList(root.data);
+  if (dataList.length > 0) return dataList;
   if (asArray(root.missing).length > 0 || asArray(root.missing_ids).length > 0) return [];
   return asList(payload);
 }
@@ -131,6 +134,10 @@ export function summarizeRsPayload(payload: unknown): {
   keys: string[];
   item_keys: string[];
   n_items: number;
+  spin_kind?: string;
+  spin_keys?: string[];
+  n_spin_days?: number;
+  spin_day_keys?: string[];
 } {
   if (payload == null) return { kind: "null", keys: [], item_keys: [], n_items: 0 };
   if (Array.isArray(payload)) {
@@ -146,11 +153,22 @@ export function summarizeRsPayload(payload: unknown): {
   if (!root) return { kind: typeof payload, keys: [], item_keys: [], n_items: 0 };
   const items = flattenItems(payload);
   const first = asRecord(items[0]);
+  const spinNode = first?.spin;
+  const spinRec = asRecord(spinNode);
+  const harvested: RsSpinDia[] = [];
+  if (spinNode != null && first) {
+    harvestDatedMetrics(spinNode, str(first.ext_customer_id), harvested, 0);
+  }
+  const firstDay = harvested[0];
   return {
     kind: "object",
     keys: Object.keys(root).slice(0, 24),
     item_keys: first ? Object.keys(first).slice(0, 24) : [],
     n_items: items.length,
+    spin_kind: Array.isArray(spinNode) ? "array" : spinNode == null ? "null" : typeof spinNode,
+    spin_keys: spinRec ? Object.keys(spinRec).slice(0, 24) : Array.isArray(spinNode) ? ["(array)"] : [],
+    n_spin_days: harvested.length,
+    spin_day_keys: firstDay ? ["data", "ggr_spin", "turnover_spin", "rodadas_spin"] : [],
   };
 }
 
@@ -175,34 +193,55 @@ function mesaFromRow(row: Record<string, unknown>): { mesa: string; jogo: string
   };
 }
 
+function truthyFlag(v: unknown): boolean {
+  if (v === true) return true;
+  const s = str(v).toLowerCase();
+  return s === "true" || s === "1" || s === "sim";
+}
+
 function diaFromFlat(row: Record<string, unknown>, fallbackExt: string): RsSpinDia | null {
   const external = str(pick(row, ["external_id", "player_id_bko", "player_external_id", "onair_id"]));
   const tap = tapIdFromRsExternal(
     str(pick(row, ["ext_customer_id", "crm_id", "tap_id", "customer_id"])) || external || fallbackExt,
   );
-  const data = isoDate(pick(row, ["snapshot_date", "snapshotDate", "round_date", "data", "dia", "date", "day"]));
+  const data = isoDate(pick(row, [
+    "snapshot_date",
+    "snapshotDate",
+    "round_date",
+    "data",
+    "dia",
+    "date",
+    "day",
+    "day_date",
+    "dt",
+  ]));
   if (!tap || !data) return null;
   const nestedMesas = [
     ...asArray(row.rounds),
     ...asArray(row.mesas),
     ...asArray(row.por_mesa),
     ...asArray(row.tables),
+    ...asArray(row.hands),
   ];
   const porMesa = nestedMesas.map((m) => {
     const r = asRecord(m);
     return r ? mesaFromRow(r) : { mesa: "", jogo: null, rodadas: 0, ggr: null, turnover: null };
   }).filter((m) => m.mesa || (m.rodadas > 0));
-  const apostas = num(pick(row, ["bet_count", "apostas", "apostas_spin", "bets"])) ?? porMesa.reduce((s, m) => s + m.rodadas, 0);
-  const rodadas = num(pick(row, ["rodadas_spin", "rodadas", "rounds", "round_count"])) ?? apostas;
-  const ggr = num(pick(row, ["ggr", "ggr_spin"]));
-  const turnover = num(pick(row, ["turnover", "turnover_spin"]));
+  const apostas = num(pick(row, ["bet_count", "apostas", "apostas_spin", "bets", "hand_count", "n_hands"])) ?? porMesa.reduce((s, m) => s + m.rodadas, 0);
+  const roundsAsNum = Array.isArray(row.rounds) ? null : num(row.rounds);
+  const rodadasRaw = num(pick(row, ["rodadas_spin", "rodadas", "round_count", "n_rounds", "hands_count"])) ?? roundsAsNum;
+  const rodadas = rodadasRaw ?? apostas;
+  const ggr = num(pick(row, ["ggr", "ggr_spin", "spin_ggr"]));
+  const turnover = num(pick(row, ["turnover", "turnover_spin", "spin_turnover"]));
   const porJogo: Record<string, number> = {};
   if (porMesa.length > 0) {
     for (const m of porMesa) mergeJogo(porJogo, m.jogo, m.rodadas);
   } else {
     mergeJogo(porJogo, jogoIdentidadeDeMesa(str(pick(row, ["game_name", "jogo", "table_name", "mesa"]))), rodadas);
   }
-  const jogou = rodadas > 0 || apostas > 0 || (ggr != null && ggr !== 0) || (turnover != null && turnover !== 0);
+  const flag = truthyFlag(pick(row, ["jogou_spin", "jogou", "played", "has_spin", "played_spin"]));
+  const jogou = flag || rodadas > 0 || apostas > 0 || (ggr != null && ggr !== 0) || (turnover != null && turnover !== 0);
+  if (!jogou && !flag) return null;
   return {
     ext_customer_id: tap,
     data,
@@ -222,6 +261,101 @@ function diaFromFlat(row: Record<string, unknown>, fallbackExt: string): RsSpinD
       turnover: m.turnover ?? undefined,
     })),
   };
+}
+
+function lifetimeDateFromSpin(spin: Record<string, unknown>): string | null {
+  return isoDate(pick(spin, [
+    "ultima",
+    "ultima_data",
+    "last_date",
+    "last_day",
+    "last_snapshot",
+    "max_date",
+    "snapshot_date",
+    "data",
+  ]));
+}
+
+/**
+ * Percorre `jogadores[].spin` (não `bko`) e coleta fatos com data.
+ * Mapas chaveados por YYYY-MM-DD e listas `dias`/`days` entram.
+ */
+function harvestDatedMetrics(node: unknown, fallbackExt: string, acc: RsSpinDia[], depth: number): void {
+  if (depth > 8 || node == null) return;
+  if (Array.isArray(node)) {
+    for (const x of node) harvestDatedMetrics(x, fallbackExt, acc, depth + 1);
+    return;
+  }
+  const rec = asRecord(node);
+  if (!rec) return;
+  const d = diaFromFlat(rec, fallbackExt);
+  if (d) {
+    acc.push(d);
+    return;
+  }
+  for (const [k, v] of Object.entries(rec)) {
+    if (k === "bko") continue;
+    const inner = asRecord(v);
+    if (inner && isoDate(k)) {
+      harvestDatedMetrics(
+        { ...inner, snapshot_date: inner.snapshot_date || k, data: inner.data || k },
+        fallbackExt,
+        acc,
+        depth + 1,
+      );
+      continue;
+    }
+    harvestDatedMetrics(v, fallbackExt, acc, depth + 1);
+  }
+}
+
+function diasDoJogadorRs(row: Record<string, unknown>): RsSpinDia[] {
+  const fallbackExt = str(pick(row, ["ext_customer_id", "external_id", "crm_id"]));
+  const acc: RsSpinDia[] = [];
+  if (row.spin != null) {
+    harvestDatedMetrics(row.spin, fallbackExt, acc, 0);
+    if (acc.length === 0) {
+      const spinRec = asRecord(row.spin);
+      if (spinRec) {
+        const data = lifetimeDateFromSpin(spinRec);
+        if (data) {
+          const one = diaFromFlat({ ...spinRec, data, snapshot_date: data, ext_customer_id: fallbackExt }, fallbackExt);
+          if (one) acc.push(one);
+        }
+      }
+    }
+    return acc;
+  }
+  const nestedDias = [
+    ...asList(row.dias),
+    ...asList(row.days),
+    ...asList(row.snapshots),
+    ...asList(row.daily),
+    ...asList(row.by_day),
+    ...asList(row.por_dia),
+  ];
+  if (nestedDias.length > 0) {
+    for (const d of nestedDias) {
+      const inner = asRecord(d);
+      if (!inner) continue;
+      const parsed = diaFromFlat({ ...row, ...inner, bko: undefined }, fallbackExt);
+      if (parsed) acc.push(parsed);
+    }
+    return acc;
+  }
+  const nestedRounds = asArray(row.rounds);
+  if (nestedRounds.length > 0 && !isoDate(pick(row, ["snapshot_date", "data", "date"]))) {
+    for (const r of nestedRounds) {
+      const inner = asRecord(r);
+      if (!inner) continue;
+      const parsed = diaFromFlat({ ...row, ...inner, bko: undefined }, fallbackExt);
+      if (parsed) acc.push(parsed);
+    }
+    return acc;
+  }
+  const flat = diaFromFlat(row, fallbackExt);
+  if (flat) acc.push(flat);
+  return acc;
 }
 
 /** Normaliza o JSON do POST (formato ainda evolui no RS). */
@@ -255,31 +389,7 @@ export function parseJogadoresSpinResponse(payload: unknown): RsJogadoresSpinPar
   for (const item of flattenItems(payload)) {
     const row = asRecord(item);
     if (!row) continue;
-    const nestedDias = [
-      ...asList(row.dias),
-      ...asList(row.days),
-      ...asList(row.snapshots),
-      ...asList(row.daily),
-      ...asList(row.by_day),
-      ...asList(row.por_dia),
-    ];
-    const fallbackExt = str(pick(row, ["ext_customer_id", "external_id", "crm_id"]));
-    if (nestedDias.length > 0) {
-      for (const d of nestedDias) {
-        const inner = asRecord(d);
-        if (inner) push(diaFromFlat({ ...row, ...inner }, fallbackExt));
-      }
-      continue;
-    }
-    const nestedRounds = asArray(row.rounds);
-    if (nestedRounds.length > 0 && !isoDate(pick(row, ["snapshot_date", "data", "date"]))) {
-      for (const r of nestedRounds) {
-        const inner = asRecord(r);
-        if (inner) push(diaFromFlat({ ...row, ...inner }, fallbackExt));
-      }
-      continue;
-    }
-    push(diaFromFlat(row, fallbackExt));
+    for (const d of diasDoJogadorRs(row)) push(d);
   }
 
   return { dias, missing };

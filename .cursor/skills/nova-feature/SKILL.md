@@ -11,7 +11,13 @@ disable-model-invocation: true
 
 Lei: **Read** `.cursor/rules/global.mdc`, `.cursor/rules/brand-css-variables.mdc` e o MDC da secção do alvo **antes** de codar. Não recopiar esses ficheiros aqui. `.cursor/rules/business.mdc` só se o domínio for estúdio, operadora ou mesa.
 
-Preferir **Custom Mode**: `/nova-feature` + Alt+Enter (Windows).
+No **painel do editor**, Custom Mode não liga. Usar **Enter** numa mensagem:
+
+```
+/nova-feature {o que construir}
+```
+
+O `/nova-feature` laranja no campo **é** a invocação. Badge/Alt+Enter só na Agents Window.
 
 ## Instruções
 

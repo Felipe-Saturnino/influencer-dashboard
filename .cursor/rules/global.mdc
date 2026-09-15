@@ -1,9 +1,9 @@
 ---
-description: Regras globais de UI/UX, dados, permissões e fluxo de desenvolvimento — toda a plataforma Spin Gaming. Complementa brand-css-variables.mdc e MDCs de secção.
+description: Regras globais de UI/UX, dados, permissões e fluxo de desenvolvimento — toda a plataforma Spin Gaming. Complementa brand-css-variables.mdc e MDCs de secção. Frente /nova-feature lê este ficheiro; não always-on.
 globs:
   - src/**/*.tsx
   - src/**/*.ts
-alwaysApply: true
+alwaysApply: false
 ---
 
 # Plataforma Data Intelligence — Spin Gaming

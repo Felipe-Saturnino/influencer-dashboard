@@ -441,6 +441,10 @@ const brand = useDashboardBrand(); // chamar dentro do modal
 
 ### Resultados
 
+**Carga:** `fetchAllPages` + colunas explícitas em `lives` (sem `select("*")`); catálogo do filtro Influencer também com `fetchAllPages`. Lista de cards pendentes pagina a vista com **`TabelaComPaginacao`** (`TABELA_PAGE_SIZE` = 20); o contador «X lives aguardando» usa o total filtrado.
+
+**Subtítulo:** `getPageCanonicalSubtitle("resultados")` — a janela de **5 h** fica na Ajuda / regra abaixo, não no header.
+
 **Janela de elegibilidade — não alterar sem validação de produto:**
 ```typescript
 // Só entram lives cujo horário agendado já passou há mais de 5 horas
@@ -472,6 +476,8 @@ const RESULTADOS_JANELA_MS = 5 * 60 * 60 * 1000;
 
 ### Feedback
 
+**Carga:** `fetchAllPages` + colunas explícitas; range da semana em **data local** (nunca `toISOString()`). Lista pagina com **`TabelaComPaginacao`** (20). KPIs usam o **mesmo** conjunto filtrado por Status que a lista. Modal Editar: `SelectListaComBusca` de operadora filtrada por `escoposVisiveis` (como Resultados).
+
 **Filtro de influencer na barra:** `FiltroInfluencerSelect` com `mode="multiple"` — Global § Filtro de influencer. Agregadora **Todos Influencers**; não declarar dropdown local.
 ```tsx
 import { FiltroInfluencerSelect } from "../../../components/dashboard";
@@ -480,7 +486,7 @@ import { FiltroInfluencerSelect } from "../../../components/dashboard";
 **`ModalFeedbackEdit` — usar `useDashboardBrand()` internamente:**
 ```tsx
 // O modal nunca recebe brand como prop
-function ModalFeedbackEdit({ live, res, operadorasList, t, isDark, onClose, onSalvo }) {
+function ModalFeedbackEdit({ live, res, operadorasList, escoposVisiveis, t, isDark, onClose, onSalvo }) {
   const brand = useDashboardBrand(); // ← interno ao modal
   // ...
 }

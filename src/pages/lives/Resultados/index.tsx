@@ -6,9 +6,11 @@ import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { BRAND, FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
-import { fetchLiveResultadosBatched } from "../../../lib/supabasePaginate";
+import { fetchAllPages, fetchLiveResultadosBatched } from "../../../lib/supabasePaginate";
 import { Live, LiveResultado, LiveStatus } from "../../../types";
 
+const LIVE_COLS =
+  "id, influencer_id, operadora_slug, data, horario, plataforma, status, link, observacao, titulo, created_by, profiles!lives_influencer_id_fkey(name)";
 const LIVE_RESULTADO_COLS =
   "id, live_id, duracao_horas, duracao_min, media_views, max_views, created_at, updated_at";
 import { ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal";
@@ -22,7 +24,9 @@ import { PlatLogo } from "../../../components/PlatLogo";
 import { DashboardPageHeader, FiltroOperadoraSelect } from "../../../components/dashboard";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
+import { TabelaComPaginacao } from "../../../components/TabelaPaginacaoBar";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
+import { getPageCanonicalSubtitle } from "../../../lib/pageCanonicalCopy";
 import {
   AlertTriangle,
   Check,
@@ -112,6 +116,7 @@ function LiveCard({
   onLiveDeleted,
 }: LiveCardProps) {
   const [modalExcluirAberto, setModalExcluirAberto] = useState(false);
+  const [erroExcluir, setErroExcluir] = useState("");
   const nomeCompleto = nomeCompletos[live.influencer_id] ?? "";
   const platColor = PLAT_COLOR[live.plataforma];
   const podeExcluir = perm.canExcluirOk && (perm.canExcluir !== "proprios" || podeVerInfluencer(live.influencer_id));
@@ -120,12 +125,19 @@ function LiveCard({
 
   async function handleExcluirConfirmado() {
     if (!perm.canExcluirOk) return;
+    setErroExcluir("");
     setExcluindo(live);
     await supabase.from("live_resultados").delete().eq("live_id", live.id);
     const { error } = await supabase.from("lives").delete().eq("id", live.id);
     setExcluindo(null);
     setModalExcluirAberto(false);
-    if (!error) onLiveDeleted(live);
+    if (error) {
+      setErroExcluir(
+        "Não foi possível excluir a live. Se o problema persistir, entre em contato com o suporte.",
+      );
+      return;
+    }
+    onLiveDeleted(live);
   }
 
   return (
@@ -199,6 +211,12 @@ function LiveCard({
           )}
         </div>
       </div>
+
+      {erroExcluir ? (
+        <div role="alert" aria-live="polite" style={{ color: "#e84025", fontSize: 12, fontFamily: FONT.body, marginTop: 10 }}>
+          {erroExcluir}
+        </div>
+      ) : null}
 
       {modalExcluirAberto ? (
         <ModalConfirmExcluirPadrao
@@ -279,14 +297,22 @@ function ModalValidacao({
     if (showResultFields && horarioReal) (liveUpdate as Record<string, string>).horario = horarioReal;
 
     const { error: updateError } = await supabase.from("lives").update(liveUpdate).eq("id", live.id);
-    if (updateError) { setError("Erro ao salvar. Tente novamente."); setSaving(false); return; }
+    if (updateError) {
+      setError("Não foi possível salvar. Se o problema persistir, entre em contato com o suporte.");
+      setSaving(false);
+      return;
+    }
 
     if (showResultFields) {
       const payload = { live_id: live.id, duracao_horas: duracaoHoras, duracao_min: duracaoMin, media_views: mediaViews, max_views: maxViews };
       const { error: resultError } = existing
         ? await supabase.from("live_resultados").update(payload).eq("live_id", live.id)
         : await supabase.from("live_resultados").insert(payload);
-      if (resultError) { setError("Erro ao salvar resultado. Tente novamente."); setSaving(false); return; }
+      if (resultError) {
+        setError("Não foi possível salvar o resultado. Se o problema persistir, entre em contato com o suporte.");
+        setSaving(false);
+        return;
+      }
     }
 
     setSaving(false);
@@ -560,7 +586,7 @@ function ModalValidacao({
           {saving ? (
             <>
               <Loader2 size={14} className="app-lucide-spin" aria-hidden="true" />
-              Salvando...
+              Salvando…
             </>
           ) : (
             <>
@@ -591,6 +617,8 @@ export default function Resultados() {
   const [influencerList,    setInfluencerList]    = useState<{ id: string; name: string }[]>([]);
   const [operadorasList,    setOperadorasList]    = useState<{ slug: string; nome: string }[]>([]);
   const [excluindo,         setExcluindo]         = useState<Live | null>(null);
+  const [loadError,         setLoadError]         = useState<string | null>(null);
+  const loadGenRef = useRef(0);
 
   const influencerListVisiveis = useMemo(
     () => influencerList.filter((i) => podeVerInfluencer(i.id)),
@@ -599,21 +627,63 @@ export default function Resultados() {
   const showInfluencerName = influencerListVisiveis.length > 1;
 
   const loadData = useCallback(async () => {
+    const gen = ++loadGenRef.current;
     setLoading(true);
+    setLoadError(null);
     const hojeLocal = todayISOLocal();
     const agora = Date.now();
-    let q = supabase
-      .from("lives")
-      .select("*, profiles!lives_influencer_id_fkey(name)")
-      .lte("data", hojeLocal)
-      .eq("status", "agendada")
-      .order("data", { ascending: false })
-      .order("horario", { ascending: true });
-    if (operadoraSlugsForcado?.length) q = q.in("operadora_slug", operadoraSlugsForcado);
-    const { data: livesData } = await q;
 
-    if (livesData) {
-      const mapped = livesData.map((l: { profiles?: { name: string }; [k: string]: unknown }) => ({ ...l, influencer_name: l.profiles?.name })) as Live[];
+    try {
+      type LiveRowDb = {
+        id: string;
+        influencer_id: string;
+        operadora_slug?: string | null;
+        data: string;
+        horario: string;
+        plataforma: Live["plataforma"];
+        status: LiveStatus;
+        link?: string | null;
+        observacao?: string | null;
+        titulo?: string | null;
+        created_by?: string | null;
+        profiles?: { name: string } | { name: string }[] | null;
+      };
+
+      const livesData = await fetchAllPages<LiveRowDb>(async (from, to) => {
+        let q = supabase
+          .from("lives")
+          .select(LIVE_COLS)
+          .lte("data", hojeLocal)
+          .eq("status", "agendada")
+          .order("data", { ascending: false })
+          .order("horario", { ascending: true })
+          .range(from, to);
+        if (operadoraSlugsForcado?.length) q = q.in("operadora_slug", operadoraSlugsForcado);
+        return await q;
+      });
+
+      if (gen !== loadGenRef.current) return;
+
+      const mapped: Live[] = livesData.map((l) => {
+        const profileEmbed = l.profiles;
+        const profileName = Array.isArray(profileEmbed)
+          ? profileEmbed[0]?.name
+          : profileEmbed?.name;
+        return {
+          id: l.id,
+          influencer_id: l.influencer_id,
+          operadora_slug: l.operadora_slug ?? undefined,
+          data: l.data,
+          horario: l.horario,
+          plataforma: l.plataforma,
+          status: l.status,
+          link: l.link ?? undefined,
+          observacao: l.observacao ?? undefined,
+          titulo: l.titulo ?? "",
+          created_by: l.created_by ?? "",
+          influencer_name: profileName ?? undefined,
+        };
+      });
       const visiveis = mapped
         .filter((l) => podeVerInfluencer(l.influencer_id))
         .filter((l) => agora - parseLiveLocal(l.data, l.horario).getTime() > RESULTADOS_JANELA_MS);
@@ -624,32 +694,64 @@ export default function Resultados() {
         const resData = await fetchLiveResultadosBatched(ids, async (chunk) =>
           await supabase.from("live_resultados").select(LIVE_RESULTADO_COLS).in("live_id", chunk),
         );
+        if (gen !== loadGenRef.current) return;
         const map: Record<string, LiveResultado> = {};
         resData.forEach((r) => {
           map[(r as LiveResultado).live_id] = r as LiveResultado;
         });
         setResultados(map);
+      } else {
+        setResultados({});
       }
 
       const influencerIds = [...new Set(visiveis.map((l) => l.influencer_id).filter(Boolean))];
       if (influencerIds.length > 1) {
         const { data: perfisData } = await supabase
           .from("influencer_perfil").select("id, nome_completo").in("id", influencerIds);
+        if (gen !== loadGenRef.current) return;
         if (perfisData) {
           const nomesMap: Record<string, string> = {};
           perfisData.forEach((p: Record<string, string>) => { nomesMap[p.id] = p.nome_completo ?? ""; });
           setNomeCompletos(nomesMap);
         }
+      } else {
+        setNomeCompletos({});
       }
+    } catch (err) {
+      console.error("Resultados loadData:", err);
+      if (gen !== loadGenRef.current) return;
+      setLives([]);
+      setResultados({});
+      setLoadError(
+        "Não foi possível carregar as lives. Se o problema persistir, entre em contato com o suporte.",
+      );
+    } finally {
+      if (gen === loadGenRef.current) setLoading(false);
     }
-    setLoading(false);
   }, [podeVerInfluencer, operadoraSlugsForcado]);
 
   useEffect(() => { void loadData(); }, [loadData]);
 
   useEffect(() => {
-    supabase.from("profiles").select("id, name").in("role", [...ROLES_PARIDADE_INFLUENCER])
-      .then(({ data }) => { if (data) setInfluencerList(data); });
+    let cancelled = false;
+    void (async () => {
+      try {
+        const rows = await fetchAllPages<{ id: string; name: string }>(async (from, to) =>
+          supabase
+            .from("profiles")
+            .select("id, name")
+            .in("role", [...ROLES_PARIDADE_INFLUENCER])
+            .order("name")
+            .range(from, to),
+        );
+        if (!cancelled) setInfluencerList(rows);
+      } catch (e) {
+        console.error(e);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -674,6 +776,24 @@ export default function Resultados() {
   }
 
   // ── Render ────────────────────────────────────────────────────────────────────
+  if (perm.loading) {
+    return (
+      <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
+        <DashboardPageHeader
+          icon={<PageMenuIcon pageKey="resultados" />}
+          title={getPageMenuLabel("resultados")}
+          subtitle={getPageCanonicalSubtitle("resultados")}
+          brand={brand}
+          t={t}
+        />
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, minHeight: 280 }}>
+          <Loader2 className="app-lucide-spin" size={24} color="var(--brand-primary, #7c3aed)" aria-hidden />
+          <span style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>Carregando…</span>
+        </div>
+      </div>
+    );
+  }
+
   if (perm.canView === "nao") {
     return (
       <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
@@ -688,7 +808,7 @@ export default function Resultados() {
       <DashboardPageHeader
         icon={<PageMenuIcon pageKey="resultados" />}
         title={getPageMenuLabel("resultados")}
-        subtitle="Valide lives encerradas (após 5 h do horário agendado): status, duração, views e operadora."
+        subtitle={getPageCanonicalSubtitle("resultados")}
         brand={brand}
         t={t}
         right={
@@ -731,13 +851,18 @@ export default function Resultados() {
       )}
 
       {/* ── CONTEÚDO ── */}
-      {loading ? (
+      {loadError ? (
+        <div role="alert" aria-live="polite" style={{ ...getPageContentBoxStyle(brand, t), padding: 48, textAlign: "center", color: "#e84025", fontFamily: FONT.body, fontSize: 13 }}>
+          {loadError}
+        </div>
+      ) : loading ? (
         <div
           role="status"
           aria-label="Carregando resultados de lives"
-          style={{ textAlign: "center", padding: 60, color: t.textMuted, fontFamily: FONT.body, display: "flex", alignItems: "center", justifyContent: "center" }}
+          style={{ textAlign: "center", padding: 60, color: t.textMuted, fontFamily: FONT.body, display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}
         >
           <Loader2 size={20} className="app-lucide-spin" style={{ color: "var(--brand-primary, #7c3aed)" }} aria-hidden="true" />
+          <span style={{ fontSize: 13 }}>Carregando…</span>
         </div>
       ) : livesFiltered.length === 0 ? (
         <div style={{ ...getPageContentBoxStyle(brand, t), padding: 48, textAlign: "center", color: t.textMuted }}>
@@ -755,23 +880,33 @@ export default function Resultados() {
             <AlertTriangle size={15} aria-hidden="true" />
             {livesFiltered.length} live{livesFiltered.length !== 1 ? "s" : ""} aguardando validação
           </div>
-          {livesFiltered.map(l => (
-            <LiveCard
-              key={l.id}
-              live={l}
-              brand={brand}
-              t={t}
-              isDark={isDark}
-              perm={perm}
-              podeVerInfluencer={podeVerInfluencer}
-              showInfluencerName={showInfluencerName}
-              nomeCompletos={nomeCompletos}
-              excluindo={excluindo}
-              setExcluindo={setExcluindo}
-              onValidar={setModal}
-              onLiveDeleted={handleLiveDeleted}
-            />
-          ))}
+          <TabelaComPaginacao
+            items={livesFiltered}
+            t={t}
+            resetKey={`${filterOperadora}|${filterInfluencers.join(",")}`}
+          >
+            {(linhas) => (
+              <>
+                {linhas.map((l) => (
+                  <LiveCard
+                    key={l.id}
+                    live={l}
+                    brand={brand}
+                    t={t}
+                    isDark={isDark}
+                    perm={perm}
+                    podeVerInfluencer={podeVerInfluencer}
+                    showInfluencerName={showInfluencerName}
+                    nomeCompletos={nomeCompletos}
+                    excluindo={excluindo}
+                    setExcluindo={setExcluindo}
+                    onValidar={setModal}
+                    onLiveDeleted={handleLiveDeleted}
+                  />
+                ))}
+              </>
+            )}
+          </TabelaComPaginacao>
         </>
       )}
 

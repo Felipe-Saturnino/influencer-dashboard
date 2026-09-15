@@ -13,7 +13,17 @@ Esta frente é o **chat diário de carga**. Não misturar com `/nova-feature` ne
 
 Lei: **Read** `.cursor/rules/mesas-spin-carga.mdc` **antes** de extract ou runner. Não recopiar o MDC aqui. Split EsportivaBet / zeros / D-0 estão lá.
 
-Preferir **Custom Mode**: `/carga-mesas` + Alt+Enter (Windows). No chat de carga do dia, ligar o modo na primeira mensagem.
+No **painel do editor** (Composer com Open Canvas / Changes / This PC): Custom Mode **não liga**. Alt+Enter só insere `/carga-mesas` em laranja no campo — é o fluxo certo daqui.
+
+**Como usar neste chat:** uma mensagem só, Enter:
+
+```
+/carga-mesas Atualizar os dados até D-1.
+```
+
+O texto laranja `/carga-mesas` no input (e a bolha no histórico) **é** a confirmação. Não há badge.
+
+Badge / Alt+Enter / Use as Mode: só na **Agents Window** (janela Agents), não neste compositor.
 
 ## Instruções
 

@@ -12,7 +12,13 @@ disable-model-invocation: true
 
 Skill de **frente**. A lei está em `.cursor/rules/saude-da-plataforma.mdc` — **Read** nesse chat **antes** de código, smoke ou tabela. Não recopiar o MDC aqui.
 
-Preferir **Custom Mode**: `/verificacao` + Alt+Enter (Windows). Enter sozinho cola o skill só nesta mensagem.
+No **painel do editor**, Custom Mode não liga. Usar **Enter** numa mensagem:
+
+```
+/verificacao {alvo}
+```
+
+O `/verificacao` laranja no campo **é** a invocação. Badge/Alt+Enter só na Agents Window.
 
 ## Instruções
 
