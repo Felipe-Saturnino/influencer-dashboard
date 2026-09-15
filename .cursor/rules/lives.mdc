@@ -506,7 +506,9 @@ const [idxSemana, setIdxSemana] = useState(
 
 ### Influencers
 
-**Lista:** carregar `profiles` só com `role = influencer`. **Não** usar `ROLES_PARIDADE_INFLUENCER` nesta página — afiliados (Network / página Afiliados) compartilham `influencer_perfil`, mas **não** devem aparecer em Influencers. A constante de paridade permanece para Financeiro, Agenda, escopos, etc.
+**Lista:** carregar `profiles` só com `role = influencer` via **`fetchAllPages`** + colunas explícitas; `influencer_perfil` / `influencer_operadoras` com **`fetchInBatched`**. **Não** usar `ROLES_PARIDADE_INFLUENCER` nesta página — afiliados (Network / página Afiliados) compartilham `influencer_perfil`, mas **não** devem aparecer em Influencers. A constante de paridade permanece para Financeiro, Agenda, escopos, etc.
+
+**Vista:** lista filtrada pagina com **`TabelaComPaginacao`** (20). Ações Ver/Editar: **`BtnIconeAcaoLinha`** + `tooltipAcao` (sem nome no tooltip). Falha de carga: alerta vermelho. Loading: «Carregando…».
 
 **Reativação de acesso:** ao mudar `influencer_perfil.status` para **ativo** (badge ou modal), o trigger `trg_influencer_perfil_reativar_usuario` chama a Edge `admin-usuario-acao` (`ativar`): reativa a conta, redefine a senha para a padrão, exige troca no próximo login e envia o **e-mail de boas-vindas**. Conta desativada na plataforma aparece com pill **Desativado** no card.
 
@@ -559,7 +561,7 @@ import { fmtBRL } from "../../../lib/dashboardHelpers";
 
 - CTA novo prospecto: **`CtaCriarButton`** na barra de filtros — rótulo **`Novo Influencer`** (`Plus` 14px no componente; Brand §3).
 - **Funil de Prospecção:** quatro cards no topo via **`FunilProspeccaoKpiGrid`** — clicáveis para filtrar por status (toggle); **sem** chips de Status na barra. Default `todos`: lista exclui **Fechados**; clique no card Fechado para visualizá-los. **`Limpar filtros`** reseta também o card ativo.
-- **Proteção de volume:** a listagem inicial consulta no máximo 500 prospectos, preservando a ordenação alfabética e evitando carga sem limite.
+- **Proteção de volume:** a listagem inicial consulta no máximo **500** prospectos (`SCOUT_LIST_LIMIT`), ordem alfabética; se atingir o teto, banner informativo. Lista filtrada pagina a vista com **`TabelaComPaginacao`** (20). Ações Ver/Editar: **`BtnIconeAcaoLinha`**. Falha de carga: alerta vermelho. Loading: «Carregando…».
 
 **`StatusScoutBadge` — ARIA completo (ver seção "Dropdowns de Status" acima).**
 

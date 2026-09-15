@@ -7,6 +7,7 @@ Constituição **não** vive aqui. Este ficheiro só aponta a frente. Chat novo 
 /carga-grafana Atualizar até D-1.
 /nova-feature {o que o usuário vê}
 /verificacao {página, aba ou função}
+/atualizar-backlog Antes de fechar — propõe diff do fio deste chat.
 ```
 
 O `/skill` **laranja** no input **é** a invocação. Alt+Enter / badge só na Agents Window — neste painel ignore.
@@ -19,6 +20,8 @@ O `/skill` **laranja** no input **é** a invocação. Alt+Enter / badge só na A
 | Varredura de um item | `/verificacao` | `saude-da-plataforma.mdc` + MDC da secção |
 
 Não misturar frentes no mesmo chat. Dois chats diários de carga: **Mesas** (`/carga-mesas`) e **Grafana** (`/carga-grafana`) — nunca os dois no mesmo compositor. Bugfix na mesma página: glob da secção basta, sem skill.
+
+**Backlog:** no início do chat, Read `docs/BACKLOG.md`. Cargas diárias: secção **Locks** basta. Chat longo ao fechar: `/atualizar-backlog` (skill) — um fio por chat, não reescrever o ficheiro inteiro.
 
 ## Trilhos duros (sempre)
 
@@ -35,6 +38,7 @@ Não misturar frentes no mesmo chat. Dois chats diários de carga: **Mesas** (`/
 - UI / permissões / fetch / copy: `global.mdc` + Brand
 - Pasta da página: `.cursor/rules/<secao>.mdc` (`lives`, `dashboards`, `rh`, …)
 - Carga Grafana (detalhe): `grafana-carga.mdc` · setup: `docs/SETUP-GP-KPI-GRAFANA.md`
+- Fios abertos / pausados: `docs/BACKLOG.md`
 - E-mail: `emails.mdc` · Lobby Telecom: `telecom.mdc`
 
 Commit/push **não**. Alterações locais; o usuário publica.

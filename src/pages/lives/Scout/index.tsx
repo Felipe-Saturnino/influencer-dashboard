@@ -21,8 +21,11 @@ import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
+import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
+import { TabelaComPaginacao } from "../../../components/TabelaPaginacaoBar";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { textoContemBuscaEmAlgum } from "../../../lib/searchText";
+import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
 import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
 import {
   getPageContentBoxStyle,
@@ -44,6 +47,9 @@ import { BtnExcluirComTexto } from "../../../components/BtnExcluirComTexto";
 import { ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal";
 import { ModalTabPanel } from "../../../components/ModalTabPanel";
 import {descricaoModalExcluirItem, tooltipExcluir} from "../../../lib/excluirItemUi";
+
+/** Proteção de volume (lives.mdc) — listagem inicial no máximo 500. */
+const SCOUT_LIST_LIMIT = 500;
 
 type ScoutModalTab = "contato" | "canais" | "anotacoes";
 
@@ -311,6 +317,9 @@ export default function Scout() {
   const [viewsLimit, setViewsLimit] = useState(100000);
   const [operadorasOpt, setOperadorasOpt] = useState<OperadoraScoutOpt[]>([]);
   const [statusError, setStatusError] = useState("");
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [listaTruncada, setListaTruncada] = useState(false);
+  const loadGenRef = useRef(0);
 
   useEffect(() => {
     supabase.from("operadoras").select("slug, nome, brand_action").order("nome").then(({ data }) => {
@@ -319,27 +328,42 @@ export default function Scout() {
   }, []);
 
   const loadData = useCallback(async () => {
+    const gen = ++loadGenRef.current;
     setLoading(true);
+    setLoadError(null);
     const SCOUT_COLS =
       "id, nome_artistico, status, tipo_contato, nome_agente, telefone, cache_negociado, live_cassino, email, plataformas, link_twitch, link_youtube, link_kick, link_instagram, link_tiktok, link_discord, link_whatsapp, link_telegram, views_twitch, views_youtube, views_kick, views_instagram, views_tiktok, views_discord, views_whatsapp, views_telegram, categorias, operadora_slug, user_id, created_by, created_at, updated_at";
-    const { data, error } = await supabase
-      .from("scout_influencer")
-      .select(SCOUT_COLS)
-      .order("nome_artistico")
-      .limit(500);
-    if (error) { console.error("[Scout] Erro ao carregar:", error); setList([]); }
-    else {
-      const rows = await enrichProspectosComCriadorNome((data ?? []) as ScoutInfluencer[]);
+    try {
+      const { data, error } = await supabase
+        .from("scout_influencer")
+        .select(SCOUT_COLS)
+        .order("nome_artistico")
+        .limit(SCOUT_LIST_LIMIT);
+      if (error) throw new Error(error.message);
+      if (gen !== loadGenRef.current) return;
+      const raw = (data ?? []) as ScoutInfluencer[];
+      setListaTruncada(raw.length >= SCOUT_LIST_LIMIT);
+      const rows = await enrichProspectosComCriadorNome(raw);
+      if (gen !== loadGenRef.current) return;
       setList(rows);
       const caches = rows.map((s) => toCacheNumber(s.cache_negociado)).filter((v: number) => v > 0);
       const viewsAll = rows.map((s) => getViewsTotal(s)).filter((v: number) => v > 0);
       if (caches.length > 0) { const cm = Math.max(...caches, 5000); setCacheMax(cm); setCacheLimit(cm); }
       if (viewsAll.length > 0) { const vm = Math.max(...viewsAll, 100000); setViewsMax(vm); setViewsLimit(vm); }
+    } catch (err) {
+      console.error("[Scout] Erro ao carregar:", err);
+      if (gen !== loadGenRef.current) return;
+      setList([]);
+      setListaTruncada(false);
+      setLoadError(
+        "Não foi possível carregar os prospectos. Se o problema persistir, entre em contato com o suporte.",
+      );
+    } finally {
+      if (gen === loadGenRef.current) setLoading(false);
     }
-    setLoading(false);
   }, []);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  useEffect(() => { void loadData(); }, [loadData]);
 
   const filtered = list.filter((s) => {
     if (search.trim() && !textoContemBuscaEmAlgum(search, s.nome_artistico, s.email)) return false;
@@ -609,6 +633,23 @@ export default function Scout() {
       </div>
 
       {/* Bloco 3: Lista */}
+      {listaTruncada && !loading && !loadError ? (
+        <div
+          role="status"
+          style={{
+            background: `${BRAND.amarelo}18`,
+            border: `1px solid ${BRAND.amarelo}44`,
+            color: t.text,
+            borderRadius: 10,
+            padding: "10px 14px",
+            fontSize: 13,
+            marginBottom: 14,
+            fontFamily: FONT.body,
+          }}
+        >
+          Exibindo os primeiros {SCOUT_LIST_LIMIT} prospectos (ordem alfabética). Refine a busca ou os filtros para localizar os demais.
+        </div>
+      ) : null}
       {statusError && (
         <div
           style={{
@@ -638,18 +679,30 @@ export default function Scout() {
           </button>
         </div>
       )}
-      {loading ? (
+      {loadError ? (
+        <div role="alert" aria-live="polite" style={{ ...getPageContentBoxStyle(brand, t, { padding: 48, textAlign: "center" }), color: "#e84025", fontFamily: FONT.body, fontSize: 13 }}>
+          {loadError}
+        </div>
+      ) : loading ? (
         <div
           role="status"
           aria-label="Carregando prospectos scout"
-          style={{ textAlign: "center", padding: "60px", color: t.textMuted, fontFamily: FONT.body, display: "flex", alignItems: "center", justifyContent: "center" }}
+          style={{ textAlign: "center", padding: "60px", color: t.textMuted, fontFamily: FONT.body, display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}
         >
           <Loader2 size={20} className="app-lucide-spin" style={{ color: "var(--brand-primary, #7c3aed)" }} aria-hidden="true" />
+          <span style={{ fontSize: 13 }}>Carregando…</span>
         </div>
       ) : filtered.length === 0 ? (
         <div style={{ ...getPageContentBoxStyle(brand, t, { padding: 48, textAlign: "center" }), color: t.textMuted, fontFamily: FONT.body }}>Nenhum prospecto encontrado.</div>
       ) : (
-        filtered.map((s) => {
+        <TabelaComPaginacao
+          items={filtered}
+          t={t}
+          resetKey={`${filterStatus}|${filterPlat}|${search}|${cacheLimit}|${viewsLimit}`}
+        >
+          {(linhas) => (
+            <>
+              {linhas.map((s) => {
           const plats = s.plataformas ?? [];
           return (
             <div key={s.id} style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 18, padding: "18px 20px", marginBottom: 10, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", boxShadow: cardShadow }}>
@@ -720,28 +773,27 @@ export default function Scout() {
                 </div>
               </div>
               <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-                <button
-                  type="button"
+                <BtnIconeAcaoLinha
+                  label={tooltipAcao("Ver prospecto")}
                   onClick={() => setModal({ mode: "visualizar", scout: s })}
-                  aria-label={`Ver prospecto ${s.nome_artistico}`}
-                  style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.text, fontSize: 12, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer" }}
                 >
-                  <Eye size={13} aria-hidden="true" /> Ver
-                </button>
+                  <Eye size={13} aria-hidden="true" />
+                </BtnIconeAcaoLinha>
                 {podeEditarScout(s) && (
-                  <button
-                    type="button"
+                  <BtnIconeAcaoLinha
+                    label={tooltipAcao("Editar prospecto")}
                     onClick={() => setModal({ mode: "editar", scout: s })}
-                    aria-label={`Editar prospecto ${s.nome_artistico}`}
-                    style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10, border: "none", cursor: "pointer", background: getCtaCriarGradient(brand), color: "#fff", fontSize: 12, fontWeight: 700, fontFamily: FONT.body }}
                   >
-                    <Pencil size={13} aria-hidden="true" /> Editar
-                  </button>
+                    <Pencil size={13} aria-hidden="true" />
+                  </BtnIconeAcaoLinha>
                 )}
               </div>
             </div>
           );
-        })
+              })}
+            </>
+          )}
+        </TabelaComPaginacao>
       )}
 
       {modal?.mode === "visualizar" && modal.scout && (
@@ -1488,9 +1540,9 @@ function ModalEditar({ scout, operadorasList, perm, onClose, onSaved, isDark }: 
           <button type="button" onClick={() => void handleSave()} disabled={saving}
             style={{ padding: "10px 20px", borderRadius: 10, border: "none", cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1, background: getCtaCriarGradient(brand), color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: FONT.body, display: "flex", alignItems: "center", gap: 6 }}>
             {saving && criandoUsuario ? (
-              <><Loader2 size={14} className="app-lucide-spin" aria-hidden="true" /> Criando usuário...</>
+              <><Loader2 size={14} className="app-lucide-spin" aria-hidden="true" /> Criando usuário…</>
             ) : saving ? (
-              <><Loader2 size={14} className="app-lucide-spin" aria-hidden="true" /> Salvando...</>
+              <><Loader2 size={14} className="app-lucide-spin" aria-hidden="true" /> Salvando…</>
             ) : (
               "Salvar"
             )}
