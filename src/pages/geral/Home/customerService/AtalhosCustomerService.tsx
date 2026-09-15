@@ -1,15 +1,18 @@
-import { HelpCircle, MessageSquare, Network } from "lucide-react";
-import { AtalhosStaffHome } from "../shared/AtalhosStaffHome";
+import { BookOpen, CalendarRange, HelpCircle, Headphones, Network, Users } from "lucide-react";
+import { AtalhosCuradosHome, type HomeAtalhoCurado } from "../shared/AtalhosCuradosHome";
 
-const ATALHOS_CUSTOMER_SERVICE = [
-  { key: "cs_atendimento" as const, icon: MessageSquare },
-  { key: "ajuda" as const, icon: HelpCircle },
-  { key: "rh_organograma" as const, icon: Network },
+const ATALHOS_CUSTOMER_SERVICE: HomeAtalhoCurado[] = [
+  { key: "cs_atendimento", icon: Headphones },
+  { key: "rh_calendario", icon: CalendarRange },
+  { key: "academy_portal", icon: BookOpen },
+  { key: "rh_portal", icon: Users },
+  { key: "ajuda", icon: HelpCircle },
+  { key: "rh_organograma", icon: Network },
 ];
 
 export function AtalhosCustomerService() {
   return (
-    <AtalhosStaffHome
+    <AtalhosCuradosHome
       sectionIdPrefix="home-customer-service"
       atalhos={ATALHOS_CUSTOMER_SERVICE}
       gridClassName="app-grid-atalhos-operador"

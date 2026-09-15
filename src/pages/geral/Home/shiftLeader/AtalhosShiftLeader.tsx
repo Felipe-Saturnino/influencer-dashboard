@@ -1,14 +1,31 @@
-import { HelpCircle, Network } from "lucide-react";
-import { AtalhosStaffHome } from "../shared/AtalhosStaffHome";
+import {
+  AlertTriangle,
+  BookOpen,
+  CalendarRange,
+  ClipboardList,
+  Gauge,
+  HelpCircle,
+  Network,
+  ShoppingCart,
+  Users,
+} from "lucide-react";
+import { AtalhosCuradosHome, type HomeAtalhoCurado } from "../shared/AtalhosCuradosHome";
 
-const ATALHOS_SHIFT_LEADER = [
-  { key: "ajuda" as const, icon: HelpCircle },
-  { key: "rh_organograma" as const, icon: Network },
+const ATALHOS_SHIFT_LEADER: HomeAtalhoCurado[] = [
+  { key: "rh_calendario", icon: CalendarRange },
+  { key: "escala_marketplace_turnos", icon: ShoppingCart },
+  { key: "academy_performance_hub", icon: Gauge },
+  { key: "escala_controle_turno", icon: ClipboardList },
+  { key: "incidentes", icon: AlertTriangle },
+  { key: "academy_portal", icon: BookOpen },
+  { key: "rh_portal", icon: Users },
+  { key: "ajuda", icon: HelpCircle },
+  { key: "rh_organograma", icon: Network },
 ];
 
 export function AtalhosShiftLeader() {
   return (
-    <AtalhosStaffHome
+    <AtalhosCuradosHome
       sectionIdPrefix="home-shift-leader"
       atalhos={ATALHOS_SHIFT_LEADER}
       gridClassName="app-grid-atalhos-operador"

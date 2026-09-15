@@ -3,11 +3,13 @@ import { useIdentidadeEfetiva } from "../../../hooks/useIdentidadeEfetiva";
 import { FONT } from "../../../constants/theme";
 import { PAGE_CONTENT_BOX_GAP } from "../../../lib/pageContentBoxStyles";
 import { BoasVindasCustomerService } from "./customerService/BoasVindasCustomerService";
+import { AtalhosCustomerService } from "./customerService/AtalhosCustomerService";
 import { HomeStaffAposBoasVindas } from "./shared/HomeStaffAposBoasVindas";
+import { KpisEstudioCustomerServiceHome } from "./shared/KpisEstudioCustomerServiceHome";
+import { ProximosTurnosStaffHome } from "./shared/ProximosTurnosStaffHome";
 import { InformacoesStaffHome } from "./shared/InformacoesStaffHome";
 import { CentralAcademyStaffHome } from "./shared/CentralAcademyStaffHome";
 import { BlogueiroSpinStaffHome } from "./shared/BlogueiroSpinStaffHome";
-import { AtalhosCustomerService } from "./customerService/AtalhosCustomerService";
 
 const HOME_CUSTOMER_SERVICE_PREFIX = "home-customer-service";
 
@@ -33,6 +35,8 @@ export default function HomeCustomerService() {
     >
       <BoasVindasCustomerService nome={nome} />
       <HomeStaffAposBoasVindas sectionIdPrefix={HOME_CUSTOMER_SERVICE_PREFIX} />
+      <KpisEstudioCustomerServiceHome sectionIdPrefix={HOME_CUSTOMER_SERVICE_PREFIX} />
+      <ProximosTurnosStaffHome sectionIdPrefix={HOME_CUSTOMER_SERVICE_PREFIX} showMarketplacePill={false} />
       <InformacoesStaffHome perfil="customer_service" sectionIdPrefix={HOME_CUSTOMER_SERVICE_PREFIX} />
       <CentralAcademyStaffHome sectionIdPrefix={HOME_CUSTOMER_SERVICE_PREFIX} />
       <BlogueiroSpinStaffHome sectionIdPrefix={HOME_CUSTOMER_SERVICE_PREFIX} />

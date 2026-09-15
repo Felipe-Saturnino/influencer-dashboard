@@ -310,7 +310,32 @@ Seu turno, o time e o que precisa de cobertura — primeiro.</p>
       <p class="nota-mock">Componente compartilhado staff (`AtualizacaoCadastralStaffHome`). Ocultar se em dia. No mock de aprovação, manter para lembrar a regra.</p>
     </div>
 
-    <span class="block-tag">Bloco 3 · Marketplace (compartilhado · GP / Shuffler / SL / SM · só se houver)</span>
+    <span class="block-tag">Bloco 3 · Ausência de Check-in/Check-out (compartilhado · Status Falta ou Pendente)</span>
+    <div class="hero-card">
+      <div class="topbar topbar-alert"></div>
+      <div class="title-row">
+        <div class="icon-box alert" aria-hidden="true">!</div>
+        <h2>Ausência de Check-in/Check-out</h2>
+      </div>
+      <p class="hero-body">Você possui dias escalados com ausência de Check-in/Check-out, por gentileza, realize a justificativa e correção para geração do demonstrativo financeiro.</p>
+      <a class="cta-alert" href="#">Ir para Controle de Presença</a>
+      <p class="nota-mock">Compartilhado Estúdio. Exibir quando houver dia no <strong>Controle de Presença</strong> com Status <strong>Falta</strong> ou <strong>Pendente</strong>. CTA → aba Controle de Presença do Prestador (Calendário). Ocultar se nenhum dia nesses status.</p>
+    </div>
+
+    <span class="block-tag">Bloco 4 · Aprovação de Horas Prestadas (compartilhado · Status Registrado)</span>
+    <div class="hero-card">
+      <div class="topbar topbar-alert"></div>
+      <div class="title-row">
+        <div class="icon-box alert" aria-hidden="true">!</div>
+        <h2>Aprovação de Horas Prestadas</h2>
+      </div>
+      <p class="hero-body">Você possui horas prestadas pendente de aprovação, por gentileza, realize a análise e aprovação para geração do demonstrativo financeiro.</p>
+      <a class="cta-alert" href="#">Ir para Controle de Presença</a>
+      <p class="nota-mock">Compartilhado Estúdio. Exibir quando houver dia no <strong>Controle de Presença</strong> com Status <strong>Registrado</strong>. CTA → aba Controle de Presença do Prestador (Calendário). Ocultar se nenhum dia nesse status.</p>
+    </div>
+
+
+    <span class="block-tag">Bloco 5 · Marketplace (compartilhado · GP / Shuffler / SL / SM · só se houver)</span>
     <div class="hero-card">
       <div class="topbar topbar-mkt"></div>
       <div class="title-row">
@@ -322,7 +347,7 @@ Seu turno, o time e o que precisa de cobertura — primeiro.</p>
       <p class="nota-mock">Já existe (`MarketplaceAlertasStaffHome`): proposta Em análise do ofertante <strong>ou</strong> lembrete de oferta aceita até o início do turno. Sem «Li e Ocultar».</p>
     </div>
 
-    <span class="block-tag">Bloco 4 · Principais KPIs — minha escala (mês civil · próprios)</span>
+    <span class="block-tag">Bloco 6 · Principais KPIs — minha escala (mês civil · próprios)</span>
     <div class="content-box">
       <h2 class="section-title">Principais KPIs</h2>
       <p class="mes-sub">Setembro 2026 · seus turnos</p>
@@ -376,7 +401,7 @@ Seu turno, o time e o que precisa de cobertura — primeiro.</p>
       <p class="nota-mock"><strong>KPIs SL:</strong> Turnos e Horas = mesmos do GP (próprios). <strong>Feedbacks pendentes</strong> = count de avaliações com status <code>Feedback</code> no Performance Hub (escopo do SL). <strong>Ciências</strong> = Manuais + Políticas. Zero → <code>0</code>.</p>
     </div>
 
-    <span class="block-tag">Bloco 5 · Próximos turnos (próprios · até 3 · ocultar se vazio)</span>
+    <span class="block-tag">Bloco 7 · Próximos turnos (próprios · até 3 · ocultar se vazio)</span>
     <div class="content-box">
       <h2 class="section-title">Próximos turnos</h2>
       <p class="mes-sub">Do Calendário · Compromissos</p>
@@ -414,7 +439,7 @@ Seu turno, o time e o que precisa de cobertura — primeiro.</p>
       <p class="nota-mock">Análogo a «Próximas lives» do Influencer. Máx. <strong>3</strong> próximos (incluindo o destaque). Origem: compromissos de turno do usuário no Calendário. Sem turno futuro → ocultar bloco inteiro.</p>
     </div>
 
-    <span class="block-tag">Bloco 6 · Informações (compartilhado · Informativos + Portal RH)</span>
+    <span class="block-tag">Bloco 8 · Informações (compartilhado · Informativos + Portal RH)</span>
     <div class="content-box">
       <h2 class="section-title">Informações</h2>
       <ul class="feed-list">
@@ -432,7 +457,7 @@ Seu turno, o time e o que precisa de cobertura — primeiro.</p>
       <p class="nota-mock">`InformacoesStaffHome`: informativos <code>shift_leader</code> (10 dias) + Portal RH. Bloco oculto se vazio.</p>
     </div>
 
-    <span class="block-tag">Bloco 7 · Central Academy (compartilhado · só Estúdio)</span>
+    <span class="block-tag">Bloco 9 · Central Academy (compartilhado · só Estúdio)</span>
     <div class="content-box">
       <h2 class="section-title">Central Academy</h2>
       <ul class="feed-list">
@@ -449,14 +474,14 @@ Seu turno, o time e o que precisa de cobertura — primeiro.</p>
       </ul>
     </div>
 
-    <span class="block-tag">Bloco 8 · Blogueiro Spin (compartilhado · ocultar se vazio)</span>
+    <span class="block-tag">Bloco 10 · Blogueiro Spin (compartilhado · ocultar se vazio)</span>
     <div class="content-box">
       <h2 class="section-title">Blogueiro Spin</h2>
       <p class="hint">Galeria + Spin na Rede · últimos 10 dias · «Li e Ocultar».</p>
       <p class="nota-mock">Mesmo componente das demais Homes de Estúdio/Escritório. Sem item → ocultar.</p>
     </div>
 
-    <span class="block-tag">Bloco 9 · Acesso rápido (curado · Shift Leader)</span>
+    <span class="block-tag">Bloco 11 · Acesso rápido (curado · Shift Leader)</span>
     <div class="content-box">
       <h2 class="section-title">Acesso rápido</h2>
       <p class="hint">Clique em um atalho abaixo para ir diretamente à página desejada.</p>

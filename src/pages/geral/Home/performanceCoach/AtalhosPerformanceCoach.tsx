@@ -1,14 +1,18 @@
-import { HelpCircle, Network } from "lucide-react";
-import { AtalhosStaffHome } from "../shared/AtalhosStaffHome";
+import { BookOpen, CalendarRange, Gauge, HelpCircle, Network, Users } from "lucide-react";
+import { AtalhosCuradosHome, type HomeAtalhoCurado } from "../shared/AtalhosCuradosHome";
 
-const ATALHOS_PERFORMANCE_COACH = [
-  { key: "ajuda" as const, icon: HelpCircle },
-  { key: "rh_organograma" as const, icon: Network },
+const ATALHOS_PERFORMANCE_COACH: HomeAtalhoCurado[] = [
+  { key: "academy_performance_hub", icon: Gauge },
+  { key: "academy_portal", icon: BookOpen },
+  { key: "rh_calendario", icon: CalendarRange },
+  { key: "rh_portal", icon: Users },
+  { key: "ajuda", icon: HelpCircle },
+  { key: "rh_organograma", icon: Network },
 ];
 
 export function AtalhosPerformanceCoach() {
   return (
-    <AtalhosStaffHome
+    <AtalhosCuradosHome
       sectionIdPrefix="home-performance-coach"
       atalhos={ATALHOS_PERFORMANCE_COACH}
       gridClassName="app-grid-atalhos-operador"
