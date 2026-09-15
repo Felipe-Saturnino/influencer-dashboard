@@ -77,7 +77,10 @@ async function fetchPaginas(
   return rows.map(asFact);
 }
 
-/** Daily TAP + Spin do canal influencers no período. Pagina PostgREST; lotes `.in(influencer_id)`. */
+/**
+ * Daily TAP + Spin do canal influencers no período. Pagina PostgREST; lotes `.in(influencer_id)`.
+ * `influencerIds: null` = todos; `[]` = escopo fechado vazio (não buscar).
+ */
 export async function fetchJogadoresAbaDaily(filtro: JogadoresAbaQueryFiltro): Promise<JogadorAbaDailyFact[]> {
   if (filtro.operadoraSlugs && filtro.operadoraSlugs.length === 0) return [];
   if (filtro.influencerIds && filtro.influencerIds.length === 0) return [];

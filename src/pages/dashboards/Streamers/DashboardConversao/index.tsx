@@ -24,7 +24,7 @@ import { TabelaPaginacaoBar } from "../../../../components/TabelaPaginacaoBar";
 import { SelectListaComBusca } from "../../../../components/SelectListaComBusca";
 import { placeholderPesquisaFiltro } from "../../../../lib/searchBarConstants";
 import { slicePage, TABELA_PAGE_SIZE_STREAMERS } from "../../../../lib/tablePagination";
-import { MSG_ERRO_STREAMERS } from "../streamersInfluencerFilterHelpers";
+import { MSG_ERRO_STREAMERS, streamersInfluencerIdsQuery } from "../streamersInfluencerFilterHelpers";
 import {
   Award,
   Check,
@@ -513,12 +513,7 @@ export default function DashboardConversao() {
           : escoposVisiveis.semRestricaoEscopo
             ? null
             : escoposVisiveis.operadorasVisiveis;
-      const influencerIdsQuery =
-        filtroInfluencer !== "todos"
-          ? [filtroInfluencer]
-          : escoposVisiveis.vêTodosInfluencers
-            ? null
-            : escoposVisiveis.influencersVisiveis;
+      const influencerIdsQuery = streamersInfluencerIdsQuery(filtroInfluencer, escoposVisiveis);
 
       try {
         const analytics = await fetchInfluencerAnalyticsPeriodoCached({

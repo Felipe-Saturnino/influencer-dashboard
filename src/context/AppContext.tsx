@@ -65,7 +65,7 @@ export interface EscoposVisiveis {
   influencersVisiveis: string[];  // UUIDs
   operadorasVisiveis:  string[];  // slugs
   semRestricaoEscopo?: boolean;   // true = admin e perfis sem restrição de escopo
-  vêTodosInfluencers?: boolean;   // true = executivo, staff Spin, gestores de departamento
+  vêTodosInfluencers?: boolean;   // true = admin, executivo, staff Spin, gestores de departamento, operador
   /** Áreas de prestador (user_scopes prestador_tipo); menu vs prestador_tipo_pages */
   prestadorTiposVisiveis?: string[];
 }
@@ -165,7 +165,12 @@ async function carregarEscoposVisiveis(
   role: Role
 ): Promise<EscoposVisiveis> {
   if (role === "admin") {
-    return { influencersVisiveis: [], operadorasVisiveis: [], semRestricaoEscopo: true };
+    return {
+      influencersVisiveis: [],
+      operadorasVisiveis: [],
+      semRestricaoEscopo: true,
+      vêTodosInfluencers: true,
+    };
   }
 
   if (role === "prestador") {

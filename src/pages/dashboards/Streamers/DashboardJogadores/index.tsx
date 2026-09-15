@@ -34,9 +34,8 @@ import { TabelaComPaginacao } from "../../../../components/TabelaPaginacaoBar";
 import { useDataTableBlock } from "../../../../hooks/useDataTableBlock";
 import { getDataTableStyle, getDataTableWrapStyle } from "../../../../lib/dataTableStyles";
 import { compareLocaleTexto, compareNumber } from "../../../../lib/classificacaoSort";
-import { INFLUENCER_FILTRO_TODOS_VALUE } from "../../../../components/FiltroInfluencerSelect";
 import { useStreamersFiltros } from "../StreamersFiltrosContext";
-import { MSG_ERRO_STREAMERS, periodoStreamersFiltro } from "../streamersInfluencerFilterHelpers";
+import { MSG_ERRO_STREAMERS, periodoStreamersFiltro, streamersInfluencerIdsQuery } from "../streamersInfluencerFilterHelpers";
 import { fetchJogadoresAbaDaily } from "../../../../lib/jogadoresAbaQuery";
 import {
   fmtPctJogadores,
@@ -392,12 +391,7 @@ export default function DashboardJogadores() {
           : escoposVisiveis.semRestricaoEscopo
             ? null
             : escoposVisiveis.operadorasVisiveis;
-      const influencerIdsQuery =
-        sf.filtroInfluencer !== INFLUENCER_FILTRO_TODOS_VALUE
-          ? [sf.filtroInfluencer]
-          : escoposVisiveis.vêTodosInfluencers
-            ? null
-            : escoposVisiveis.influencersVisiveis;
+      const influencerIdsQuery = streamersInfluencerIdsQuery(sf.filtroInfluencer, escoposVisiveis);
 
       const nomes = new Map(
         perfis

@@ -79,7 +79,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "A aba Jogadores está vazia ou sem IDs?",
         texto:
-          "Os cadastros por jogador (ID Ext + UTM) entram no mesmo sync da Casa de Apostas que atualiza as métricas consolidadas. Se Overview e Conversão têm números mas Jogadores não, o sync agregado rodou e a fase de IDs falhou — em geral falta permissão de relatório de registros na TAP. Rodadas, GGR Spin e “Jogaram Spin” só aparecem depois do cruzamento com as mesas ao vivo (Revenue Sentinel). Enquanto esse cruzamento não gravar dias Spin, os KPIs de mesa ficam em 0 e os registros TAP continuam visíveis. Se o problema persistir, entre em contato com o suporte.",
+          "Os cadastros por jogador (ID Ext + UTM) entram no mesmo sync da Casa de Apostas que atualiza as métricas consolidadas. A aba Jogadores conta o daily do mês no carrossel — não o acumulado lifetime do cadastro. Se Overview e Conversão têm números mas Jogadores não, o sync agregado rodou e a fase de IDs falhou — em geral falta permissão de relatório de registros na TAP. Rodadas, GGR Spin e “Jogaram Spin” só aparecem depois do cruzamento com as mesas ao vivo (Revenue Sentinel). Enquanto esse cruzamento não gravar dias Spin, os KPIs de mesa ficam em 0 e os registros TAP do período continuam visíveis. Se o problema persistir, entre em contato com o suporte.",
       },
       {
         subtitulo: "Os KPIs mostram valores diferentes entre Overview e Financeiro?",

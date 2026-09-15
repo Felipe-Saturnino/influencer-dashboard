@@ -18,7 +18,7 @@ import { getDataTableWrapStyle, getDataTableStyle } from "../../../../lib/dataTa
 import { TabelaComPaginacao } from "../../../../components/TabelaPaginacaoBar";
 import { fetchInfluencerAnalyticsPeriodoCached } from "../../../../lib/influencerAnalyticsQuery";
 import { buscarInvestimentoPago, filtrosInvestimentoPorEscopo } from "../../../../lib/investimentoPago";
-import { MSG_ERRO_STREAMERS } from "../streamersInfluencerFilterHelpers";
+import { MSG_ERRO_STREAMERS, streamersInfluencerIdsQuery } from "../streamersInfluencerFilterHelpers";
 import {
   fmtBRL,
   getIdxMesCarrosselPadrao,
@@ -292,12 +292,7 @@ export default function DashboardFinanceiro() {
           : escoposVisiveis.semRestricaoEscopo
             ? null
             : escoposVisiveis.operadorasVisiveis;
-      const influencerIdsQuery =
-        filtroInfluencer !== "todos"
-          ? [filtroInfluencer]
-          : escoposVisiveis.vêTodosInfluencers
-            ? null
-            : escoposVisiveis.influencersVisiveis;
+      const influencerIdsQuery = streamersInfluencerIdsQuery(filtroInfluencer, escoposVisiveis);
 
       function calcTotais(arr: FinanceiroRow[], totalInvestimento?: number): TotaisFinanceiros {
         const tFTDs = arr.reduce((s, r) => s + r.ftds, 0);

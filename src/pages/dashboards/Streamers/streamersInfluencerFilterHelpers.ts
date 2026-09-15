@@ -6,6 +6,27 @@ import { fetchInfluencerAnalyticsPeriodoCached } from "../../../lib/influencerAn
 
 export type PerfilInfluencerMin = { id: string; nome_artistico: string | null };
 
+/** Subconjunto de escopo para o filtro de influencer nas abas Streamers. */
+export type EscopoInfluencerQuery = {
+  vêTodosInfluencers?: boolean;
+  semRestricaoEscopo?: boolean;
+  influencersVisiveis: string[];
+};
+
+/**
+ * `null` = sem filtro SQL (admin / gestor / operador).
+ * `[]` = escopo sem nenhum influencer (agência vazia) — a query deve devolver vazio.
+ * Tratar `semRestricaoEscopo` e `vêTodosInfluencers` como visão global (não só o segundo).
+ */
+export function streamersInfluencerIdsQuery(
+  filtroInfluencer: string,
+  escopo: EscopoInfluencerQuery,
+): string[] | null {
+  if (filtroInfluencer !== "todos") return [filtroInfluencer];
+  if (escopo.vêTodosInfluencers === true || escopo.semRestricaoEscopo === true) return null;
+  return escopo.influencersVisiveis;
+}
+
 /** Erro canónico de carga das abas Streamers (não confundir com vazio). */
 export const MSG_ERRO_STREAMERS =
   "Não foi possível carregar os dados. Se o problema persistir, entre em contato com o suporte.";

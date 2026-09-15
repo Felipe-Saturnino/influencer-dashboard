@@ -45,7 +45,7 @@ import { useDataTableBlock } from "../../../../hooks/useDataTableBlock";
 import { getDataTableWrapStyle, getDataTableStyle } from "../../../../lib/dataTableStyles";
 import { TabelaPaginacaoBar } from "../../../../components/TabelaPaginacaoBar";
 import { slicePage, TABELA_PAGE_SIZE_STREAMERS } from "../../../../lib/tablePagination";
-import { MSG_ERRO_STREAMERS } from "../streamersInfluencerFilterHelpers";
+import { MSG_ERRO_STREAMERS, streamersInfluencerIdsQuery } from "../streamersInfluencerFilterHelpers";
 import {
   BarChart2,
   ChevronLeft,
@@ -295,12 +295,7 @@ export default function DashboardOverview() {
           : escoposVisiveis.semRestricaoEscopo
             ? null
             : escoposVisiveis.operadorasVisiveis;
-      const influencerIdsQuery =
-        filtroInfluencer !== "todos"
-          ? [filtroInfluencer]
-          : escoposVisiveis.vêTodosInfluencers
-            ? null
-            : escoposVisiveis.influencersVisiveis;
+      const influencerIdsQuery = streamersInfluencerIdsQuery(filtroInfluencer, escoposVisiveis);
 
       function montaRanking(m: Metrica[], l: LiveData[], r: LiveResultado[], investimentoPorInf: Record<string, number>): RankingRow[] {
         const mapa = new Map<string, RankingRow>();
