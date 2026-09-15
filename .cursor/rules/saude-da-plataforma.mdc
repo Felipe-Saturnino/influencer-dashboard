@@ -68,5 +68,6 @@ Validar **sempre** que a página do ciclo tiver superfície aplicável. Falha = 
 | 10 | Mídias Sociais | **OK** (código 4 tabelas densas; smoke N≤13) | **OK** (Overview Detalhamento: 13 dias únicos Set/2026) |
 | 11 | Overview Influencer + Overview Afiliado | **OK** (código TabelaComPaginacao; smoke N=14 / N=1) | **OK no recheck** (`508a36a3`: Influencer Detalhamento 14 dias únicos 01–14/09; Afiliado por afiliado) |
 | 12 | Headcount + Overview Prestador + Overview Comercial | **OK no recheck** (`ec5ec75f`: Escala «1–20 de 625»; Mesa «1–20 de 93») | **OK no recheck** (HC Histórico 13 meses únicos; Mesa Detalhe 14 dias) |
+| 13 | Agenda | Aguarda commit + recheck | N/A (calendário) |
 
 Alimentar esta tabela quando um ciclo novo revelar gap de processo.

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useApp } from "../../../context/AppContext";
 import { verificarElegibilidadeAgendaLive } from "../../../lib/influencerAgendaGate";
 import { verificarPodeAgendarPorStatus, type PersonaBloqueioAgendaCota } from "../../../lib/influencerHorasCota";
@@ -23,7 +23,7 @@ import {
   FiltroInfluencerSelect,
   FiltroModoVisualizacaoSelect,
 } from "../../../components/dashboard";
-import { ChevronLeft, ChevronRight, X, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, X, Loader2, Clock } from "lucide-react";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { PLAT_COLOR } from "../../../constants/platforms";
 import { ROLES_PARIDADE_INFLUENCER, roleParidadeInfluencer } from "../../../lib/staffRoles";
@@ -134,6 +134,7 @@ export default function Agenda() {
   const [current, setCurrent] = useState(new Date());
   const [lives,   setLives]   = useState<Live[]>([]);
   const [loading, setLoading] = useState(true);
+  const [prontoParaExibir, setProntoParaExibir] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [modal,   setModal]   = useState<{ open: boolean; live?: Live; influencerIdInicial?: string }>({ open: false });
   const [bloqueioNovaLive, setBloqueioNovaLive] = useState<{
@@ -224,7 +225,10 @@ export default function Agenda() {
   const gatePaginaLiberado =
     !perfilInfluencerParidade || gatePagina.kind === "liberado";
 
+  const loadGenRef = useRef(0);
+
   const loadLives = useCallback(async () => {
+    const gen = ++loadGenRef.current;
     setLoading(true);
     setLoadError(null);
     const { start, end } = agendaJanelaDatas(current, view);
@@ -234,7 +238,9 @@ export default function Agenda() {
       !escoposVisiveis.vêTodosInfluencers &&
       escoposVisiveis.influencersVisiveis.length === 0
     ) {
+      if (gen !== loadGenRef.current) return;
       setLives([]);
+      setProntoParaExibir(true);
       setLoading(false);
       return;
     }
@@ -273,6 +279,7 @@ export default function Agenda() {
         if (filterPlat) q = q.eq("plataforma", filterPlat);
         return await q;
       });
+      if (gen !== loadGenRef.current) return;
       const mapped: Live[] = data.map((l) => {
         const profileEmbed = l.profiles;
         const profileName = Array.isArray(profileEmbed)
@@ -293,13 +300,17 @@ export default function Agenda() {
         };
       });
       setLives(mapped.filter((l) => podeVerInfluencer(l.influencer_id)));
+      setProntoParaExibir(true);
     } catch (err) {
       console.error("Agenda loadLives:", err);
+      if (gen !== loadGenRef.current) return;
+      setLives([]);
+      setProntoParaExibir(true);
       setLoadError(
         "Não foi possível carregar as lives. Se o problema persistir, entre em contato com o suporte.",
       );
     } finally {
-      setLoading(false);
+      if (gen === loadGenRef.current) setLoading(false);
     }
   }, [
     podeVerInfluencer,
@@ -318,15 +329,37 @@ export default function Agenda() {
   }, [loadLives, gatePaginaLiberado]);
 
   useEffect(() => {
-    if (showFiltroInfluencer || showFiltroOperadora) {
-      Promise.all([
-        showFiltroInfluencer ? supabase.from("profiles").select("id, name").in("role", [...ROLES_PARIDADE_INFLUENCER]).order("name") : Promise.resolve({ data: [] }),
-        showFiltroOperadora  ? supabase.from("operadoras").select("slug, nome").eq("ativo", true).order("nome") : Promise.resolve({ data: [] }),
-      ]).then(([profRes, opsRes]) => {
-        if (showFiltroInfluencer && profRes.data) setInfluencerList(profRes.data);
-        if (showFiltroOperadora)  setOperadorasList((opsRes.data ?? []) as { slug: string; nome: string }[]);
-      });
-    }
+    if (!showFiltroInfluencer && !showFiltroOperadora) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const [profRows, opsRes] = await Promise.all([
+          showFiltroInfluencer
+            ? fetchAllPages<{ id: string; name: string }>(async (from, to) =>
+                supabase
+                  .from("profiles")
+                  .select("id, name")
+                  .in("role", [...ROLES_PARIDADE_INFLUENCER])
+                  .order("name")
+                  .range(from, to),
+              )
+            : Promise.resolve([] as { id: string; name: string }[]),
+          showFiltroOperadora
+            ? supabase.from("operadoras").select("slug, nome").eq("ativo", true).order("nome")
+            : Promise.resolve({ data: [] as { slug: string; nome: string }[] }),
+        ]);
+        if (cancelled) return;
+        if (showFiltroInfluencer) setInfluencerList(profRows);
+        if (showFiltroOperadora) {
+          setOperadorasList((opsRes.data ?? []) as { slug: string; nome: string }[]);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [showFiltroInfluencer, showFiltroOperadora]);
 
   const operadoraEfetiva = operadoraFiltroQuery;
@@ -441,6 +474,24 @@ export default function Agenda() {
     } finally {
       setChecandoNovaLive(false);
     }
+  }
+
+  if (perm.loading) {
+    return (
+      <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
+        <DashboardPageHeader
+          icon={<PageMenuIcon pageKey="agenda" />}
+          title={getPageMenuLabel("agenda")}
+          subtitle={getPageCanonicalSubtitle("agenda")}
+          brand={brand}
+          t={t}
+        />
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, minHeight: 280 }}>
+          <Loader2 className="app-lucide-spin" size={24} color="var(--brand-primary, #7c3aed)" aria-hidden />
+          <span style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>Carregando…</span>
+        </div>
+      </div>
+    );
   }
 
   if (perm.canView === "nao") {
@@ -631,6 +682,16 @@ export default function Agenda() {
                 podeVerOperadora={podeVerOperadora}
               />
             )}
+
+            {loading && prontoParaExibir ? (
+              <span
+                style={{ fontSize: 12, color: t.textMuted, display: "flex", alignItems: "center", gap: 4 }}
+                aria-live="polite"
+              >
+                <Clock size={12} aria-hidden />
+                Carregando…
+              </span>
+            ) : null}
           </div>
           <div className="app-filter-bar-tabs-cta__actions">
             <AjudaContextualAcoes pageKey="agenda" />
@@ -710,7 +771,7 @@ export default function Agenda() {
             </CtaCriarButton>
           )}
         </div>
-        {loading ? (
+        {loading && !prontoParaExibir ? (
           <div
             role="status"
             aria-label="Carregando agenda de lives"
@@ -759,6 +820,7 @@ export default function Agenda() {
         <ModalLive
           live={modal.live}
           influencerIdInicial={modal.influencerIdInicial}
+          influencersCatalog={influencerListVisiveis}
           onClose={() => setModal({ open: false })}
           onSave={() => { setModal({ open: false }); void loadLives(); }}
           onBloqueioInativo={(persona) => {
