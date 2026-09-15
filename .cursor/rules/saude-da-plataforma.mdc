@@ -1,73 +1,121 @@
 ---
-description: Saúde da plataforma — checklist padrão de laudo, smoke e recheck em todo ciclo recorrente.
-alwaysApply: true
+description: Verificação de uma página ou função — contexto (MDC da secção + código), smoke completo e tabela de achados. Usar com /verificacao, varredura ou verificação de um item específico.
+alwaysApply: false
 ---
 
-# Saúde da plataforma
+# Verificação — um item da plataforma
 
-MDC **padrão** para checagens recorrentes (Verificação 2.0 e equivalentes): laudo → implementação → recheck staging. **Não** substitui o MDC da secção (`dashboards.mdc`, `lives.mdc`, …) nem `global.mdc` / `business.mdc` — **complementa** com contratos que já falharam em silêncio e não podem passar de novo.
+O usuário aponta **um item** (página, aba, modal, fluxo ou função). O agente contextualiza, faz smoke completo e devolve uma **tabela curta** de achados. Não é mapa da plataforma, feature nova, nem carga Mesas Spin. Commit/push **só o usuário**.
 
-Fluxo: ler MDC da pasta → smoke staging → laudo 4 eixos → implementar só o aprovado → recheck staging. Commit/push **só o usuário**.
+Gatilho: `/verificacao`, «verificação da Agenda», «varredura do Ranking».
 
-## Resultado esperado de cada ciclo
+**Não** substitui o MDC da secção nem Global / Brand / Business — lê e cobra o contrato.
 
-Além de bugs/usabilidade/mensageria, **toda** página sob ciclo deve sair com **otimização de código** visando **reduzir tempo de carregamento** (first paint / tempo até conteúdo útil), **sem perder dados nem qualidade** (totais, KPIs, janelas, precisão, copy e contratos do MDC intactos).
+---
 
-| Obrigatório no ciclo | Detalhe |
-|----------------------|---------|
-| **Laudo — eixo Otimização** | Sempre listar oportunidades reais da página (fetch, colunas, cache, 2 fases, DOM denso, waterfall). Se não houver ganho material, declarar **«sem alavanca»** com evidência — não inventar micro-refactors. |
-| **Medição** | Registrar **antes** (smoke do laudo) e **depois** (recheck): tempo até conteúdo útil **e/ou** contagem de requests relevantes. Sem número = não afirmar “mais rápido”. |
-| **Regressão proibida** | Otimizar **não** pode omitir linhas, truncar histórico sem Histórico 13, `select("*")` desnecessário, inventar zeros enganosos, ou quebrar P1/P2. |
+## O que procurar (não é o formato da resposta)
 
-## Dois pontos bloqueantes (aprendizado Ciclo 7)
+Usar estes eixos só para **achar** problemas. A resposta é a tabela, não seis blocos de texto.
 
-Validar **sempre** que a página do ciclo tiver superfície aplicável. Falha = ciclo **não** fecha OK.
+| Eixo | Procurar |
+|------|----------|
+| **Eficiência** | Fetch em série, `select("*")`, janela só no cliente, falta de `fetchAllPages`, DOM denso sem paginação 20 |
+| **Carregamento** | First paint / tempo até conteúdo útil; excesso de requests no caminho feliz |
+| **Código** | Duplicação, helper canónico ignorado, hook com import errado, MDC da secção desatualizado |
+| **UI** | Header, filtros, tabela, modal, CTA, identidade de jogo vs Global + Brand + MDC da pasta |
+| **Usabilidade** | Busca no painel, teclado, paginação visível, vazio/loading/sem permissão, filtro «Todos» |
+| **UX** | Hierarquia, copy PT-BR, erros, Ajuda se o fluxo mudou |
 
-| # | Ponto | Falha se… | Como provar no staging |
-|---|--------|-----------|-------------------------|
-| **P1** | **Paginação de vista = 20** | Bloco que o MDC manda paginar (`TabelaComPaginacao` / `TABELA_PAGE_SIZE`) mostra **>20** itens sem barra «Mostrando X–Y de Z» | Filtro/operadora que gere **>20** itens; contar DOM da **vista**; confirmar barra. Exceção só se o MDC disser que **não** pagina. |
-| **P2** | **Uma linha por período** | Mesma chave temporal (dia `dd/mm` ou mês) repetida na **mesma** tabela com valores diferentes | Selecionar o filtro que ativa o bloco (ex.: operadora na Overview); auditar 1ª coluna do `tbody`. |
+P1/P2 (abaixo) são bloqueantes: se a superfície tiver e falhar, a verificação **não** fecha OK.
 
-### Onde P1/P2 costumam aplicar
+---
 
-- **P1:** qualquer lista/tabela densa do MDC da secção (ex.: Posicionamento → Ranking / Posição atual / Alertas / heatmap; Detalhamento Diário; listagens RH/Escala).
-- **P2:** canais **consolidados** ou merges (ex.: Overview Spin aba Overview = Dedicado + Network → `linhasMesaAgregadasPorDia` / por mês no Histórico).
+## Fluxo (obrigatório)
 
-**Proibido:** smoke só em «Todas Operadoras» / agregador se o bloco denso só estoura com valor específico.
+1. **Alvo** — se faltar, perguntar. Um item só.
+2. **MDC da secção** — Read **antes** do código (`lives.mdc`, `dashboards.mdc`, …). Personas, filtros, exceções, o que não pagina. `business.mdc` só se tocar estúdio/operadora/mesa.
+3. **Código** — pasta da página + hooks da página (secção abaixo). Inventário curto no retorno (`N` ficheiros).
+4. **Smoke completo** — lista abaixo. UI no staging, no browser. Função/Edge: teste ou curl. Bloqueio → parar e dizer; não inventar.
+5. **Tabela** — formato abaixo. **Parar.** Não implementar até o usuário escolher linhas.
+6. **Aplicar** — só o aprovado. Recheck dos smokes tocados + P1/P2 se couber. Sem número, não dizer «mais rápido».
 
-## Checklist transversal (todo ciclo)
+---
 
-1. Listar no laudo os contratos testáveis do MDC da pasta (paginação, P2, filtros canónicos, identidade de jogo, duas fases, strings de vazio) **e** as alavancas de **otimização de carga** (§ Resultado esperado).
-2. Smoke: caminho feliz **e** caso especial do MDC (filtro específico, Histórico, Próprios); anotar tempo/requests **antes**.
-3. Páginas **críticas** (Overview Spin / investidor): smoke mais fundo; regressão P1/P2 no DOM = bloqueante.
-4. Recheck: IDs High/Medium **+** P1/P2 aplicáveis **+** hotfixes **+** tempo/requests **depois** (comparar com o antes).
-5. Evidência no DOM contradiz OK → **corrigir o veredito** (não fechar).
+## Código a ler
+
+**Inclui**
+
+- Todos os `.ts` / `.tsx` da **pasta da página** (ex.: `src/pages/lives/Agenda/`), exceto `*.test.ts`.
+- **Hooks da página:** `use*.ts(x)` nessa pasta **e** ficheiros em `src/hooks/` que a página importa.
+- Alvo = **uma aba:** ficheiros da aba + shell da página (filtros/estado partilhado) + os mesmos hooks.
+
+Pasta com muitos ficheiros: ordem `index` → hooks → UI da aba pedida → resto da pasta. **Não pular** ficheiro da pasta.
+
+**Não inclui** (salvo o achado apontar para lá)
+
+- `src/lib/**` partilhado (`dashboardHelpers`, `filterBarStyles`, …)
+- Componentes genéricos (`FiltroOperadoraSelect`, `ModalBase`, …)
+- Páginas irmãs da secção
+- Read de Global/Brand inteiros — entram pelo glob ao tocar `src/`, ou um trecho se o achado exigir
+
+---
+
+## Smoke completo
+
+«Aba abriu» **não** conta. Exercitar o que existir no alvo:
+
+- Caminho feliz de ponta a ponta (filtrar, clicar, submeter).
+- Filtro **específico** (não só o agregador «Todas / Todos»).
+- Histórico, Próprios, vazio, loading — se a superfície tiver.
+- Aba ou rota que **partilha estado** com o alvo.
+- P1 e P2 quando houver tabela / período.
+
+Anotar no retorno o que foi exercitado. Se não deu (login, sem staging), dizer.
+
+---
+
+## Retorno (só isto)
+
+Cabeçalho curto, depois **uma tabela**. Células = ideia geral (uma linha). Sem ensaio, sem `ficheiro:linha`, sem colar DOM.
+
+```
+Verificação: {alvo}
+MDC: {secção} · Código: {N} ficheiros (pasta + hooks)
+Smoke: {o que foi exercitado}
+```
+
+| Item | Problema | Prioridade | Sugestão de alteração | Risco da alteração |
+|------|----------|------------|----------------------|-------------------|
+| Superfície (filtro, tabela, boot…) | O que está mal, em uma frase | Alta / Média / Baixa | O que fazer, em uma frase | O que pode quebrar, em uma frase |
+
+- **Alta** — contrato, P1, P2, dado errado, a11y grave.
+- **Média** — UI / uso / UX visível.
+- **Baixa** — higiene de código sem impacto claro no usuário.
+
+Uma linha = um problema. Sem linha inventada. Eixos sem achado: uma frase (`Sem alavanca: código, UX`). P1/P2 falho = **Alta**. Depois da tabela, **parar**.
+
+---
+
+## P1 / P2
+
+| # | Falha se… |
+|---|-----------|
+| **P1** | Tabela que o MDC manda paginar mostra **>20** itens sem «Mostrando X–Y de Z» (exceção só se o MDC disser que não pagina) |
+| **P2** | O mesmo dia/mês repetido na **mesma** tabela com valores diferentes |
+
+Provar com o filtro que estoura o caso — não só o agregador.
+
+---
 
 ## Anti-patterns
 
-- «Aba abriu» = smoke OK.
-- Ignorar evidência já no CDP/snapshot (dias duplicados, lista sem «Mostrando»).
-- Assumir agregador = mesmo risco que filtro específico.
-- Fechar sem recheck staging após hotfix.
-- Declarar página «mais rápida» sem medição antes/depois.
-- Otimizar cortando dado ou qualidade (totais incompletos, buracos no calendário, payload incompleto na UI).
+- Smoke só no agregador; varrer várias páginas; implementar sem aprovação.
+- Laudo em seis eixos no chat; tabela longa e detalhada.
+- Ler `src/lib/**` ou a secção inteira «por contexto».
+- «Mais rápido» sem medição; otimizar cortando dado.
 
-## Memória — ciclos 1–12 (P1 / P2)
+---
 
-| Ciclo | Escopo | P1 paginação 20 | P2 uma linha/período |
-|-------|--------|-----------------|----------------------|
-| 1 | Login + Home | N/A | N/A |
-| 2 | Configurações + Ajuda (+ Homes) | N/A | N/A |
-| 3 | Simulador + Gestão de Usuários | **Feito** (lista 20/página) | N/A |
-| 4 | Canal de Denúncias | N/A | N/A |
-| 5 | Painel de Notícias | N/A (TV, não tabela 20) | N/A |
-| 6 | Torneio CDA | Ignorado | Ignorado |
-| 7 | Overview Spin | **OK no recheck** (`1e22c12e`: Ranking Blaze/Network = 20 itens + «1–20 de 269»; `RankingConcorrentesLista`) | **OK no recheck** (Overview Blaze: BJ1/BJ2/Speed Baccarat/Roleta/Futebol — 13 dias únicos; hotfix `e40a4baa`) |
-| 8 | Streamers | **OK** (Ranking/Taxas/Financeiro 20) | N/A (por influencer) |
-| 9 | Dash Afiliados | **OK** (código 4 tabelas; smoke N=1) | N/A (por afiliado) |
-| 10 | Mídias Sociais | **OK** (código 4 tabelas densas; smoke N≤13) | **OK** (Overview Detalhamento: 13 dias únicos Set/2026) |
-| 11 | Overview Influencer + Overview Afiliado | **OK** (código TabelaComPaginacao; smoke N=14 / N=1) | **OK no recheck** (`508a36a3`: Influencer Detalhamento 14 dias únicos 01–14/09; Afiliado por afiliado) |
-| 12 | Headcount + Overview Prestador + Overview Comercial | **OK no recheck** (`ec5ec75f`: Escala «1–20 de 625»; Mesa «1–20 de 93») | **OK no recheck** (HC Histórico 13 meses únicos; Mesa Detalhe 14 dias) |
-| 13 | Agenda | Aguarda commit + recheck | N/A (calendário) |
+## Campanha Verificação 2.0
 
-Alimentar esta tabela quando um ciclo novo revelar gap de processo.
+Histórico de ciclos: `.cursor/skills/verificacao/historico-verificacao-2.md`. Só se o usuário nomear um **ciclo** dessa campanha.

@@ -18,7 +18,7 @@ import { getDataTableWrapStyle, getDataTableStyle } from "../../../../lib/dataTa
 import { TabelaComPaginacao } from "../../../../components/TabelaPaginacaoBar";
 import { fetchInfluencerAnalyticsPeriodoCached } from "../../../../lib/influencerAnalyticsQuery";
 import { buscarInvestimentoPago, filtrosInvestimentoPorEscopo } from "../../../../lib/investimentoPago";
-import { MSG_ERRO_STREAMERS, streamersInfluencerIdsQuery } from "../streamersInfluencerFilterHelpers";
+import { MSG_ERRO_STREAMERS, streamersInfluencerIdsQuery, streamersOperadoraSlugsQuery, travarRecortePropriosStreamers } from "../streamersInfluencerFilterHelpers";
 import {
   fmtBRL,
   getIdxMesCarrosselPadrao,
@@ -285,14 +285,16 @@ export default function DashboardFinanceiro() {
       const { inicio: periodoInicio, fim: periodoFim } = historico || !mesSelecionado
         ? getPeriodoHistoricoCompetencias()
         : getPeriodoComparativoMoM(mesSelecionado.ano, mesSelecionado.mes).atual;
-      const operadoraSlugsQuery = operadoraSlugsForcado?.length
-        ? operadoraSlugsForcado
-        : operadoraFiltro !== "todas"
-          ? [operadoraFiltro]
-          : escoposVisiveis.semRestricaoEscopo
-            ? null
-            : escoposVisiveis.operadorasVisiveis;
-      const influencerIdsQuery = streamersInfluencerIdsQuery(filtroInfluencer, escoposVisiveis);
+      let operadoraSlugsQuery = streamersOperadoraSlugsQuery(operadoraFiltro, escoposVisiveis, operadoraSlugsForcado);
+      let influencerIdsQuery = streamersInfluencerIdsQuery(filtroInfluencer, escoposVisiveis);
+      if (perm.canView === "proprios") {
+        const travado = travarRecortePropriosStreamers(
+          { influencerIds: influencerIdsQuery, operadoraSlugs: operadoraSlugsQuery },
+          escoposVisiveis,
+        );
+        influencerIdsQuery = travado.influencerIds;
+        operadoraSlugsQuery = travado.operadoraSlugs;
+      }
 
       function calcTotais(arr: FinanceiroRow[], totalInvestimento?: number): TotaisFinanceiros {
         const tFTDs = arr.reduce((s, r) => s + r.ftds, 0);
@@ -473,6 +475,7 @@ export default function DashboardFinanceiro() {
     operadoraFiltro,
     mesSelecionado,
     podeVerInfluencer,
+    perm.canView,
     operadoraSlugsForcado,
     operadoraForApi,
     perfis,

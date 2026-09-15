@@ -45,7 +45,7 @@ import { useDataTableBlock } from "../../../../hooks/useDataTableBlock";
 import { getDataTableWrapStyle, getDataTableStyle } from "../../../../lib/dataTableStyles";
 import { TabelaPaginacaoBar } from "../../../../components/TabelaPaginacaoBar";
 import { slicePage, TABELA_PAGE_SIZE_STREAMERS } from "../../../../lib/tablePagination";
-import { MSG_ERRO_STREAMERS, streamersInfluencerIdsQuery } from "../streamersInfluencerFilterHelpers";
+import { MSG_ERRO_STREAMERS, streamersInfluencerIdsQuery, streamersOperadoraSlugsQuery, travarRecortePropriosStreamers } from "../streamersInfluencerFilterHelpers";
 import {
   BarChart2,
   ChevronLeft,
@@ -288,14 +288,16 @@ export default function DashboardOverview() {
       setTotaisAnt({ ggr: 0, investimento: 0, roi: 0, ftds: 0, registros: 0, acessos: 0, views: 0, custoPorFTD: 0, custoPorRegistro: 0, lives: 0, horas: 0, influencers: 0, depositos_qtd: 0, depositos_valor: 0 });
 
       const perfisLista: InfluencerPerfil[] = perfis;
-      const operadoraSlugsQuery = operadoraSlugsForcado?.length
-        ? operadoraSlugsForcado
-        : filtroOperadora !== "todas"
-          ? [filtroOperadora]
-          : escoposVisiveis.semRestricaoEscopo
-            ? null
-            : escoposVisiveis.operadorasVisiveis;
-      const influencerIdsQuery = streamersInfluencerIdsQuery(filtroInfluencer, escoposVisiveis);
+      let operadoraSlugsQuery = streamersOperadoraSlugsQuery(filtroOperadora, escoposVisiveis, operadoraSlugsForcado);
+      let influencerIdsQuery = streamersInfluencerIdsQuery(filtroInfluencer, escoposVisiveis);
+      if (perm.canView === "proprios") {
+        const travado = travarRecortePropriosStreamers(
+          { influencerIds: influencerIdsQuery, operadoraSlugs: operadoraSlugsQuery },
+          escoposVisiveis,
+        );
+        influencerIdsQuery = travado.influencerIds;
+        operadoraSlugsQuery = travado.operadoraSlugs;
+      }
 
       function montaRanking(m: Metrica[], l: LiveData[], r: LiveResultado[], investimentoPorInf: Record<string, number>): RankingRow[] {
         const mapa = new Map<string, RankingRow>();
@@ -456,6 +458,7 @@ export default function DashboardOverview() {
     idxMes,
     mesSelecionado,
     podeVerInfluencer,
+    perm.canView,
     filtroOperadora,
     operadoraSlugsForcado,
     operadoraSlugParaApi,

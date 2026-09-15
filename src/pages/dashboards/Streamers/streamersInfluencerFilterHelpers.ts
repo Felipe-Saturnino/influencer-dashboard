@@ -13,18 +13,83 @@ export type EscopoInfluencerQuery = {
   influencersVisiveis: string[];
 };
 
+export type EscopoOperadoraQuery = {
+  semRestricaoEscopo?: boolean;
+  operadorasVisiveis: string[];
+};
+
+function visaoGlobalInfluencers(escopo: EscopoInfluencerQuery): boolean {
+  return escopo.vêTodosInfluencers === true || escopo.semRestricaoEscopo === true;
+}
+
 /**
- * `null` = sem filtro SQL (admin / gestor / operador).
- * `[]` = escopo sem nenhum influencer (agência vazia) — a query deve devolver vazio.
- * Tratar `semRestricaoEscopo` e `vêTodosInfluencers` como visão global (não só o segundo).
+ * Agregador **Todos Influencers** = universo do escopo, nunca a plataforma inteira.
+ * `null` = visão global (admin / gestor / operador).
+ * `[]` = escopo fechado vazio — a query deve devolver vazio (não é “todos”).
+ * ID fora do escopo → `[]` (perfil `proprios` / agência).
  */
 export function streamersInfluencerIdsQuery(
   filtroInfluencer: string,
   escopo: EscopoInfluencerQuery,
 ): string[] | null {
-  if (filtroInfluencer !== "todos") return [filtroInfluencer];
-  if (escopo.vêTodosInfluencers === true || escopo.semRestricaoEscopo === true) return null;
+  const global = visaoGlobalInfluencers(escopo);
+  if (filtroInfluencer !== "todos") {
+    if (global || escopo.influencersVisiveis.includes(filtroInfluencer)) return [filtroInfluencer];
+    return [];
+  }
+  if (global) return null;
   return escopo.influencersVisiveis;
+}
+
+/**
+ * Agregador **Todas Operadoras** = casas do escopo, nunca todas as parceiras da plataforma.
+ * `null` = visão global (admin / gestor). Operador usa `operadoraSlugsForcado`.
+ * Slug fora do escopo → `[]`.
+ */
+export function streamersOperadoraSlugsQuery(
+  filtroOperadora: string,
+  escopo: EscopoOperadoraQuery,
+  operadoraSlugsForcado: string[] | null,
+): string[] | null {
+  if (operadoraSlugsForcado?.length) {
+    if (filtroOperadora !== "todas" && operadoraSlugsForcado.includes(filtroOperadora)) {
+      return [filtroOperadora];
+    }
+    return [...operadoraSlugsForcado];
+  }
+  if (filtroOperadora !== "todas") {
+    if (escopo.semRestricaoEscopo === true || escopo.operadorasVisiveis.includes(filtroOperadora)) {
+      return [filtroOperadora];
+    }
+    return [];
+  }
+  if (escopo.semRestricaoEscopo === true) return null;
+  return escopo.operadorasVisiveis;
+}
+
+/**
+ * Ver **próprios**: nunca ampliar para `null` (plataforma). Lista vazia continua vazia.
+ * Influencer sem casas no `user_scopes` e com IDs próprios: não filtra operadora no SQL
+ * (o recorte de influencer já isola o cadastro).
+ */
+export function travarRecortePropriosStreamers(
+  recorte: { influencerIds: string[] | null; operadoraSlugs: string[] | null },
+  escopo: EscopoInfluencerQuery & EscopoOperadoraQuery,
+): { influencerIds: string[] | null; operadoraSlugs: string[] | null } {
+  const infPermitidos = new Set(escopo.influencersVisiveis);
+  let influencerIds = recorte.influencerIds;
+  if (!influencerIds) influencerIds = escopo.influencersVisiveis;
+  else influencerIds = influencerIds.filter((id) => infPermitidos.has(id));
+
+  const opPermitidos = new Set(escopo.operadorasVisiveis);
+  let operadoraSlugs = recorte.operadoraSlugs;
+  if (!operadoraSlugs) {
+    operadoraSlugs = escopo.operadorasVisiveis.length > 0 ? escopo.operadorasVisiveis : influencerIds.length > 0 ? null : [];
+  } else if (escopo.operadorasVisiveis.length > 0) {
+    operadoraSlugs = operadoraSlugs.filter((slug) => opPermitidos.has(slug));
+  }
+
+  return { influencerIds, operadoraSlugs };
 }
 
 /** Erro canónico de carga das abas Streamers (não confundir com vazio). */

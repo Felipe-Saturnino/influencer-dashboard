@@ -24,7 +24,7 @@ import { TabelaPaginacaoBar } from "../../../../components/TabelaPaginacaoBar";
 import { SelectListaComBusca } from "../../../../components/SelectListaComBusca";
 import { placeholderPesquisaFiltro } from "../../../../lib/searchBarConstants";
 import { slicePage, TABELA_PAGE_SIZE_STREAMERS } from "../../../../lib/tablePagination";
-import { MSG_ERRO_STREAMERS, streamersInfluencerIdsQuery } from "../streamersInfluencerFilterHelpers";
+import { MSG_ERRO_STREAMERS, streamersInfluencerIdsQuery, streamersOperadoraSlugsQuery, travarRecortePropriosStreamers } from "../streamersInfluencerFilterHelpers";
 import {
   Award,
   Check,
@@ -506,14 +506,16 @@ export default function DashboardConversao() {
       const { inicio, fim } = historico || !mesSelecionado
         ? getPeriodoHistoricoCompetencias()
         : getDatasDoMes(mesSelecionado.ano, mesSelecionado.mes);
-      const operadoraSlugsQuery = operadoraSlugsForcado?.length
-        ? operadoraSlugsForcado
-        : filtroOperadora !== "todas"
-          ? [filtroOperadora]
-          : escoposVisiveis.semRestricaoEscopo
-            ? null
-            : escoposVisiveis.operadorasVisiveis;
-      const influencerIdsQuery = streamersInfluencerIdsQuery(filtroInfluencer, escoposVisiveis);
+      let operadoraSlugsQuery = streamersOperadoraSlugsQuery(filtroOperadora, escoposVisiveis, operadoraSlugsForcado);
+      let influencerIdsQuery = streamersInfluencerIdsQuery(filtroInfluencer, escoposVisiveis);
+      if (perm.canView === "proprios") {
+        const travado = travarRecortePropriosStreamers(
+          { influencerIds: influencerIdsQuery, operadoraSlugs: operadoraSlugsQuery },
+          escoposVisiveis,
+        );
+        influencerIdsQuery = travado.influencerIds;
+        operadoraSlugsQuery = travado.operadoraSlugs;
+      }
 
       try {
         const analytics = await fetchInfluencerAnalyticsPeriodoCached({
@@ -603,6 +605,7 @@ export default function DashboardConversao() {
     idxMes,
     mesSelecionado,
     podeVerInfluencer,
+    perm.canView,
     operadoraSlugsForcado,
     filtroOperadora,
     filtroInfluencer,

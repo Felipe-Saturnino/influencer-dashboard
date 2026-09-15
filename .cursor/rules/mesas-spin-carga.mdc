@@ -1,11 +1,13 @@
 ---
-description: Padrão de atualização diária Mesas Spin (Superset → Supabase) quando o usuário pedir atualizar/carregar dados
-alwaysApply: true
+description: Padrão de atualização diária Mesas Spin (Superset → JSON → UPSERT --gravar). Frente /carga-mesas — não always-on.
+alwaysApply: false
 ---
 
 # Mesas Spin — atualização diária (padrão)
 
-**Gatilho:** pedidos como «atualizar», «atualizar os dados», «carregar Mesas Spin», «rodar a carga», «atualizar desde …».
+**Frente:** skill `/carga-mesas` (Custom Mode no chat diário de carga). Este ficheiro é a lei — o skill só aponta para cá.
+
+**Gatilho:** `/carga-mesas` ou «atualizar», «atualizar os dados», «carregar Mesas Spin», «rodar a carga», «atualizar desde …».
 
 **Contrato:** extract no Superset (dashboard 15, sessão logada no browser Cursor) → JSON em `tmp/` → UPSERT **direto** no Supabase com `--gravar`. **Não** pedir ao usuário colar SQL no Editor (salvo falha de `--gravar` ou pedido explícito).
 

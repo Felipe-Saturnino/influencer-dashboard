@@ -44,7 +44,9 @@ Antes de criar ou alterar **job Telecom / monitor de lobby** (`scripts/monitor-l
 | **Brand** | `--brand-*`, `useDashboardBrand()`, headers, filtros com ícone, carrossel, CTAs, toolbar vs linha — **não** whitelabel para jogos Spin (ver Global § Identidade por jogo) — **não** inclui `vite.config` nem chunks de produção |
 | **Emails** | **Envio de e-mail** — Resend + Edge Functions: template HTML (crons), secrets remetente/destinatários, `sendResendEmail`, formatos de data — **`emails.mdc`** (consultar em todo fluxo que envia e-mail) |
 | **Telecom** | Jobs de monitor de lobby (máquina Telecom + Edge) — IDs só na Gestão de Estúdios; um script por operadora; expansão sem novo desenvolvimento Telecom — **`telecom.mdc`** |
-| **Carga Mesas Spin** | Extract Superset → JSON → UPSERT `--gravar` — **`mesas-spin-carga.mdc`** (quando o pedido for atualizar/carregar dados das mesas) |
+| **Carga Mesas Spin** | Extract Superset → JSON → UPSERT `--gravar` — **`mesas-spin-carga.mdc`** + skill `/carga-mesas` (chat diário) |
+| **Nova feature** | Página ou feature nova no contrato Global + Brand + secção — skill `/nova-feature` |
+| **Verificação** | Um item: MDC da secção + pasta/hooks, smoke completo, tabela de achados — **`saude-da-plataforma.mdc`** + skill `/verificacao` |
 | **Secção** | Personas, modais, fluxos, validações e exceções da pasta |
 
 **Fonte da verdade (temas que atravessam vários MDCs):** se um ficheiro de secção contradisser a coluna da esquerda, **vale a fonte** — atualizar a secção, não inventar exceção silenciosa.
@@ -53,6 +55,7 @@ Antes de criar ou alterar **job Telecom / monitor de lobby** (`scripts/monitor-l
 |------|-------|-----------|
 | Estúdio vs operadora, Dedicada/Network, glossário de mesas | `business.mdc` | UX da pasta |
 | Carga Mesas Spin (extract → `--gravar`) | `mesas-spin-carga.mdc` | — |
+| Verificação de página/função (tabela de achados) | `saude-da-plataforma.mdc` | UX da pasta |
 | Busca no painel do filtro (**sempre**, não “se >5”) | este Global § Pesquisa dentro do filtro | listas/rótulos do domínio |
 | Paginação de vista **20** (`TABELA_PAGE_SIZE`) | este Global § Eficiência de fetch §6 | **quais** tabelas paginam; Calendário Presença/Justificativas **não** paginam (`escala.mdc`) |
 | Lista pesquisável em **modal** (portal `fixed`) | este Global § Lista pesquisável em modal | rótulos do domínio |

@@ -45,12 +45,18 @@ function canonical(values: string[] | null | undefined): string[] | null {
   return [...new Set(values)].sort();
 }
 
+const ANALYTICS_VAZIO: InfluencerAnalyticsPeriodo = { metricas: [], lives: [], resultados: [] };
+
 export async function fetchInfluencerAnalyticsPeriodoCached(params: {
   inicio: string;
   fim: string;
   operadoraSlugs?: string[] | null;
   influencerIds?: string[] | null;
 }): Promise<InfluencerAnalyticsPeriodo> {
+  // `[]` = escopo fechado vazio (proprios/agência). Não converter em “todos” via canonical.
+  if (params.operadoraSlugs && params.operadoraSlugs.length === 0) return ANALYTICS_VAZIO;
+  if (params.influencerIds && params.influencerIds.length === 0) return ANALYTICS_VAZIO;
+
   const operadoraSlugs = canonical(params.operadoraSlugs);
   const influencerIds = canonical(params.influencerIds);
 

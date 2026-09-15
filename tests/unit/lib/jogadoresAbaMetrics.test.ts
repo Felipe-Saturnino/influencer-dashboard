@@ -6,6 +6,7 @@ import {
   mesasJogadoresAba,
   pctJogadores,
   rankingJogadoresAba,
+  recortarJogadoresAbaDaily,
   type JogadorAbaDailyFact,
 } from "@/lib/jogadoresAbaMetrics";
 
@@ -124,5 +125,33 @@ describe("pctJogadores / fmtPctJogadores", () => {
     expect(pctJogadores(1, 0)).toBeNull();
     expect(fmtPctJogadores(null)).toBe("—");
     expect(fmtPctJogadores(62.6)).toBe("62,6%");
+  });
+});
+
+describe("recortarJogadoresAbaDaily", () => {
+  const rows: JogadorAbaDailyFact[] = [
+    fact({ ext_customer_id: "1", influencer_id: "inf-eu", operadora_slug: "casa_apostas", registration_count: 1 }),
+    fact({ ext_customer_id: "2", influencer_id: "inf-outro", operadora_slug: "casa_apostas", registration_count: 1 }),
+    fact({ ext_customer_id: "3", influencer_id: "inf-eu", operadora_slug: "blaze", registration_count: 1 }),
+    fact({ ext_customer_id: "4", influencer_id: null, operadora_slug: "casa_apostas", registration_count: 1 }),
+  ];
+
+  it("proprios: KPIs só do influencer e da operadora do escopo (sem ID sem mapeamento)", () => {
+    const visivel = recortarJogadoresAbaDaily(rows, {
+      influencerIds: ["inf-eu"],
+      operadoraSlugs: ["casa_apostas"],
+      incluirSemInfluencer: false,
+    });
+    expect(kpisJogadoresAba(visivel).registros).toBe(1);
+    expect(visivel.every((r) => r.influencer_id === "inf-eu" && r.operadora_slug === "casa_apostas")).toBe(true);
+  });
+
+  it("visão global com Todos: inclui ID Ext ainda sem influencer_id", () => {
+    const visivel = recortarJogadoresAbaDaily(rows, {
+      influencerIds: null,
+      operadoraSlugs: null,
+      incluirSemInfluencer: true,
+    });
+    expect(kpisJogadoresAba(visivel).registros).toBe(4);
   });
 });

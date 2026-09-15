@@ -126,6 +126,31 @@ function foldPlayers(rows: JogadorAbaDailyFact[]): Map<string, PlayerFold> {
   return map;
 }
 
+/**
+ * Recorte pós-fetch: KPIs, ranking e mesas usam o mesmo universo dos filtros.
+ * `influencerIds`/`operadoraSlugs` `null` = sem filtro nessa dimensão.
+ * `incluirSemInfluencer` só na visão global (admin/gestor/operador) — `proprios` não conta ID Ext sem `influencer_id`.
+ */
+export function recortarJogadoresAbaDaily(
+  rows: JogadorAbaDailyFact[],
+  recorte: {
+    influencerIds: string[] | null;
+    operadoraSlugs: string[] | null;
+    incluirSemInfluencer: boolean;
+  },
+): JogadorAbaDailyFact[] {
+  if (recorte.operadoraSlugs && recorte.operadoraSlugs.length === 0) return [];
+  if (recorte.influencerIds && recorte.influencerIds.length === 0) return [];
+  const inf = recorte.influencerIds ? new Set(recorte.influencerIds) : null;
+  const ops = recorte.operadoraSlugs ? new Set(recorte.operadoraSlugs) : null;
+  return rows.filter((r) => {
+    if (ops && !ops.has(r.operadora_slug)) return false;
+    if (inf) return Boolean(r.influencer_id && inf.has(r.influencer_id));
+    if (!recorte.incluirSemInfluencer && !r.influencer_id) return false;
+    return true;
+  });
+}
+
 export function kpisJogadoresAba(rows: JogadorAbaDailyFact[]): JogadorAbaKpis {
   const players = foldPlayers(rows);
   let registros = 0;

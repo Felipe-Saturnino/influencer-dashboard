@@ -35,7 +35,7 @@ import { useDataTableBlock } from "../../../../hooks/useDataTableBlock";
 import { getDataTableStyle, getDataTableWrapStyle } from "../../../../lib/dataTableStyles";
 import { compareLocaleTexto, compareNumber } from "../../../../lib/classificacaoSort";
 import { useStreamersFiltros } from "../StreamersFiltrosContext";
-import { MSG_ERRO_STREAMERS, periodoStreamersFiltro, streamersInfluencerIdsQuery } from "../streamersInfluencerFilterHelpers";
+import { MSG_ERRO_STREAMERS, periodoStreamersFiltro, streamersInfluencerIdsQuery, streamersOperadoraSlugsQuery, travarRecortePropriosStreamers } from "../streamersInfluencerFilterHelpers";
 import { fetchJogadoresAbaDaily } from "../../../../lib/jogadoresAbaQuery";
 import {
   fmtPctJogadores,
@@ -44,6 +44,7 @@ import {
   kpisVaziosJogadoresAba,
   mesasJogadoresAba,
   rankingJogadoresAba,
+  recortarJogadoresAbaDaily,
   type JogadorAbaInfluencerRow,
   type JogadorAbaKpis,
   type JogadorAbaMesaBar,
@@ -384,14 +385,19 @@ export default function DashboardJogadores() {
         fim = h.fim;
       }
 
-      const operadoraSlugsQuery = operadoraSlugsForcado?.length
-        ? operadoraSlugsForcado
-        : sf.filtroOperadora !== "todas"
-          ? [sf.filtroOperadora]
-          : escoposVisiveis.semRestricaoEscopo
-            ? null
-            : escoposVisiveis.operadorasVisiveis;
-      const influencerIdsQuery = streamersInfluencerIdsQuery(sf.filtroInfluencer, escoposVisiveis);
+      let influencerIdsQuery = streamersInfluencerIdsQuery(sf.filtroInfluencer, escoposVisiveis);
+      let operadoraSlugsQuery = streamersOperadoraSlugsQuery(sf.filtroOperadora, escoposVisiveis, operadoraSlugsForcado);
+      if (perm.canView === "proprios") {
+        const travado = travarRecortePropriosStreamers(
+          { influencerIds: influencerIdsQuery, operadoraSlugs: operadoraSlugsQuery },
+          escoposVisiveis,
+        );
+        influencerIdsQuery = travado.influencerIds;
+        operadoraSlugsQuery = travado.operadoraSlugs;
+      }
+      const incluirSemInfluencer =
+        perm.canView !== "proprios" &&
+        (escoposVisiveis.vêTodosInfluencers === true || escoposVisiveis.semRestricaoEscopo === true);
 
       const nomes = new Map(
         perfis
@@ -399,13 +405,23 @@ export default function DashboardJogadores() {
           .map((p) => [p.id, (p.nome_artistico ?? "").trim() || "—"] as const),
       );
 
-      try {
-        const daily = await fetchJogadoresAbaDaily({
-          inicio,
-          fim,
-          operadoraSlugs: operadoraSlugsQuery,
+      function aplicarRecorte(daily: Awaited<ReturnType<typeof fetchJogadoresAbaDaily>>) {
+        return recortarJogadoresAbaDaily(daily, {
           influencerIds: influencerIdsQuery,
+          operadoraSlugs: operadoraSlugsQuery,
+          incluirSemInfluencer,
         });
+      }
+
+      try {
+        const daily = aplicarRecorte(
+          await fetchJogadoresAbaDaily({
+            inicio,
+            fim,
+            operadoraSlugs: operadoraSlugsQuery,
+            influencerIds: influencerIdsQuery,
+          }),
+        );
         if (cancelled) return;
         const rank = rankingJogadoresAba(daily, nomes);
         setKpis(kpisJogadoresAba(daily));
@@ -423,12 +439,14 @@ export default function DashboardJogadores() {
 
         if (mom) {
           try {
-            const dailyAnt = await fetchJogadoresAbaDaily({
-              inicio: mom.anterior.inicio,
-              fim: mom.anterior.fim,
-              operadoraSlugs: operadoraSlugsQuery,
-              influencerIds: influencerIdsQuery,
-            });
+            const dailyAnt = aplicarRecorte(
+              await fetchJogadoresAbaDaily({
+                inicio: mom.anterior.inicio,
+                fim: mom.anterior.fim,
+                operadoraSlugs: operadoraSlugsQuery,
+                influencerIds: influencerIdsQuery,
+              }),
+            );
             if (cancelled) return;
             setKpisAnt(kpisJogadoresAba(dailyAnt));
           } catch (err) {
@@ -461,6 +479,7 @@ export default function DashboardJogadores() {
     sf.filtroOperadora,
     operadoraSlugsForcado,
     escoposVisiveis,
+    perm.canView,
     podeVerInfluencer,
     perfis,
     reloadTick,
