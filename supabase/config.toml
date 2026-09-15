@@ -44,6 +44,10 @@ verify_jwt = false
 verify_jwt = false
 # Integração CDA (Casa de Apostas): sync de métricas. Chamada pelo app e workflow diário.
 
+[functions.sync-revenue-sentinel]
+verify_jwt = false
+# Revenue Sentinel Data Export API (POST /v1/jogadores/spin). Secrets RS_API_URL + RS_API_KEY.
+
 [functions.trigger-social-kpis]
 verify_jwt = false
 # Dispara o workflow GitHub Actions Sync Social Media KPIs

@@ -73,7 +73,8 @@ DECLARE
     'daily-sync-spin-na-rede-rss',
     'daily-sync-comercial-spa-lista',
     'daily-validate-comercial-dominios',
-    'daily-enrich-comercial-cnpj'
+    'daily-enrich-comercial-cnpj',
+    'daily-sync-revenue-sentinel'
   ];
 BEGIN
   FOREACH nome IN ARRAY nomes
@@ -170,6 +171,22 @@ SELECT cron.schedule(
   '30 11 * * *',
   $$
   SELECT public._cron_edge_http_post('enrich-comercial-cnpj', '{}'::jsonb);
+  $$
+);
+
+-- ~4h20 BRT = 07:20 UTC — Revenue Sentinel (depois do TAP Influencers)
+SELECT cron.schedule(
+  'daily-sync-revenue-sentinel',
+  '20 7 * * *',
+  $$
+  SELECT public._cron_edge_http_post(
+    'sync-revenue-sentinel',
+    jsonb_build_object(
+      'data_inicio', '2025-12-01',
+      'data_fim', ((timezone('America/Sao_Paulo', now()))::date - 1)::text,
+      'cda_conta', 'influencers'
+    )
+  );
   $$
 );
 

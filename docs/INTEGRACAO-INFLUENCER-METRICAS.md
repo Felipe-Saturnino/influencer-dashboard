@@ -51,7 +51,23 @@ Métricas e UTMs gravam sempre com `operadora_slug = casa_apostas`. Cron diário
 
 - Edge Function `sync-metricas-cda` implantada (v2.2.0+)
 
-**Fase jogadores (IDs por UTM):** no mesmo sync da Reporting API, após o agregado `group_by=utm_source`, a função chama `group_by=utm_source,ext_customer_id` e faz upsert em `jogadores` / `jogadores_metricas_diarias` (`origem_tipo=tap_utm`, `origem`=utm_source, `ext_customer_id`). Sem PII. Falha desta fase não bloqueia `influencer_metricas`. `skip_jogadores: true` no body pula a fase. Colunas Spin (`ggr_spin`, `rodadas_spin`, …) ficam vazias até o job Revenue Sentinel.
+**Fase jogadores (IDs por UTM):** no mesmo sync da Reporting API, após o agregado `group_by=utm_source`, a função chama `group_by=utm_source,ext_customer_id` e faz upsert em `jogadores` / `jogadores_metricas_diarias` (`origem_tipo=tap_utm`, `origem`=utm_source, `ext_customer_id`). Sem PII. Falha desta fase não bloqueia `influencer_metricas`. `skip_jogadores: true` no body pula a fase. Colunas Spin (`ggr_spin`, `rodadas_spin`, …) ficam vazias até o job **Revenue Sentinel** (`sync-revenue-sentinel`).
+
+### Revenue Sentinel (Jogadores Spin)
+
+Data Export API (`POST /v1/jogadores/spin`, header `X-API-Key`, lotes máx. 500). Cruza IDs TAP (`ext_customer_id`) com `external_id` OnAir (`CDA-{crm}`). GGR gravado é **Spin**, não TAP.
+
+| Item | Valor |
+|------|--------|
+| Edge | `sync-revenue-sentinel` (`index.ts` + `revenueSentinelJogadores.ts`) |
+| Secrets | `RS_API_URL` (opcional) + `RS_API_KEY` |
+| Cron | `daily-sync-revenue-sentinel` ~4h20 BRT (depois do TAP Influencers) |
+| Status Técnico | Integrações Externas → **Revenue Sentinel — Jogadores Spin** → Sync |
+| SQL | `enriquecer_jogadores_spin_diario` / `_cadastro` (só `service_role`) |
+
+`jogou_outros` = jogador TAP com depósito e **zero** rodadas Spin no RS. Operadora do POST: `casa_apostas` (Casa de Apostas). IDs ausentes no RS devolvem 200 + `missing` — não é falha.
+
+Migrações: `supabase/migrations/20260915180000_integrations_revenue_sentinel.sql` e `20260915181000_cron_sync_revenue_sentinel.sql`.
 
 ### Erro "Edge Function returned a non-2xx status code"
 

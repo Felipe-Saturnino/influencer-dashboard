@@ -81,8 +81,39 @@ export default function Headcount() {
 
       {dados.erro ? (
         <div style={pageBox}>
-          <div role="alert" aria-live="polite" style={{ color: "#e84025", fontSize: 13, fontFamily: FONT.body, textAlign: "center", padding: 40 }}>
-            {dados.erro}
+          <div
+            role="alert"
+            aria-live="polite"
+            style={{
+              color: "#e84025",
+              fontSize: 13,
+              fontFamily: FONT.body,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 12,
+              flexWrap: "wrap",
+              padding: 40,
+            }}
+          >
+            <span>{dados.erro}</span>
+            <button
+              type="button"
+              onClick={dados.recarregar}
+              style={{
+                fontFamily: FONT.body,
+                fontSize: 13,
+                fontWeight: 700,
+                padding: "8px 14px",
+                borderRadius: 10,
+                border: "1px solid rgba(232,64,37,0.35)",
+                background: "transparent",
+                color: "#e84025",
+                cursor: "pointer",
+              }}
+            >
+              Tentar de novo
+            </button>
           </div>
         </div>
       ) : (

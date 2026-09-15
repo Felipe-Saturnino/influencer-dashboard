@@ -1608,7 +1608,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Painel de integrações",
         texto:
-          "Exibe o status de cada pipeline de dados (**CDA Influencers**, **CDA Afiliados**, Social Media, Spin na Rede RSS, **Painel de Notícias RSS**, automações do Pipeline B2B — **Lista SPA**, **Validação de domínios de Marcas** e **Estado / Cidade** por CNPJ — Lobby, e-mails agendados e transacionais) e a linha **Diagnóstico da Plataforma**, com horário da última execução, volume de verificações/envios e erros. **Estado / Cidade** consulta a Brasil API e preenche município e UF no cadastro da empresa (execução diária, por volta das 8h30). E-mails de **Relatório** e **Agenda** têm ação **Enviar**; **Boas-vindas** e **Reset de senha** são só acompanhamento (disparo automático ao criar conta ou redefinir senha). O diagnóstico manual fica **OK** quando a execução conclui; achados (avisos e falhas de credenciais ou integrações) aparecem na coluna Erros e em **Logs Recentes**. Com permissão de Editar, use **Executar** na linha de diagnóstico ou **Sync** nas integrações com botão.\n\nA TV do **Painel de Notícias** abre no endereço público `/painel-noticias` (sem login). O Sync do Painel de Notícias RSS atualiza as matérias dessa tela.",
+          "Exibe o status de cada pipeline de dados (**CDA Influencers**, **CDA Afiliados**, Social Media, Spin na Rede RSS, **Painel de Notícias RSS**, automações do Pipeline B2B — **Lista SPA**, **Validação de domínios de Marcas** e **Estado / Cidade** por CNPJ —, **Revenue Sentinel — Jogadores Spin**, Lobby, e-mails agendados e transacionais) e a linha **Diagnóstico da Plataforma**, com horário da última execução, volume de verificações/envios e erros. **Estado / Cidade** consulta a Brasil API e preenche município e UF no cadastro da empresa (execução diária, por volta das 8h30). **Revenue Sentinel** cruza os IDs TAP com as mesas Spin (execução diária, por volta das 4h20). E-mails de **Relatório** e **Agenda** têm ação **Enviar**; **Boas-vindas** e **Reset de senha** são só acompanhamento (disparo automático ao criar conta ou redefinir senha). O diagnóstico manual fica **OK** quando a execução conclui; achados (avisos e falhas de credenciais ou integrações) aparecem na coluna Erros e em **Logs Recentes**. Com permissão de Editar, use **Executar** na linha de diagnóstico ou **Sync** nas integrações com botão.\n\nA TV do **Painel de Notícias** abre no endereço público `/painel-noticias` (sem login). O Sync do Painel de Notícias RSS atualiza as matérias dessa tela.",
       },
       {
         subtitulo: "Logs Recentes",
@@ -1618,7 +1618,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Fluxo de dados",
         texto:
-          "Gráfico de barras empilhadas com os últimos 14 dias. Cada cor representa uma fonte de dados — incluindo **Estado / Cidade** (empresas do Pipeline B2B enriquecidas com município/UF por CNPJ). Passe o cursor sobre uma barra para ver o detalhamento por fonte naquele dia.",
+          "Gráfico de barras empilhadas com os últimos 14 dias. Cada cor representa uma fonte de dados — incluindo **Estado / Cidade** (empresas do Pipeline B2B enriquecidas com município/UF por CNPJ) e **Revenue Sentinel** (dias de Jogadores Spin gravados). Passe o cursor sobre uma barra para ver o detalhamento por fonte naquele dia.",
       },
       {
         subtitulo: "Alertas automáticos",

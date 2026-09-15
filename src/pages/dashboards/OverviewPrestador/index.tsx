@@ -107,7 +107,7 @@ export default function OverviewPrestador() {
         onFiltroTimeChange={dados.setFiltroTimeIds}
         filtroStaffIds={dados.filtroStaffIds}
         onFiltroStaffChange={dados.setFiltroStaffIds}
-        loading={dados.isLoading || dados.loadingSecundario}
+        loading={dados.isLoading}
       />
 
       <div role="tabpanel" id={`panel-overview-prestador-${aba}`} aria-labelledby={`tab-overview-prestador-${aba}`}>

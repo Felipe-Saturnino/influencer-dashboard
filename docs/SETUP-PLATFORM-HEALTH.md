@@ -30,7 +30,7 @@ supabase functions deploy platform-health-check
 |-------|----------|---------|
 | **A — Infra** | PostgREST, Auth, Storage (buckets essenciais), OPTIONS em todas as Edge Functions, pg_cron | Alterar dados |
 | **B — Jobs** | `sync_logs` **por slug**, pipeline social, e-mails do dia, fallback lobby nas 9 operadoras, métricas CDA D-1 | Disparar Sync |
-| **C — Pings** | Resend `/domains`, GitHub repo, Microsoft Graph (Inbox CS), CDA Reporting (1 dia, só GET), Brasil API, HEAD RSS / gov.br SPA | Enviar e-mail ou scrape de lobby |
+| **C — Pings** | Resend `/domains`, GitHub repo, Microsoft Graph (Inbox CS), CDA Reporting (1 dia, só GET), Revenue Sentinel Data Export (GET no POST `/v1/jogadores/spin`, sem gravar), Brasil API, HEAD RSS / gov.br SPA | Enviar e-mail ou scrape de lobby |
 | **D — Conflitos** | Slug esperado sem linha em `integrations`, CIDR de check-in vazio, secret de ingestão de lobby ausente | Corrigir sozinho |
 
 Timeout por ping ~8s; smoke OPTIONS ~4s; orçamento total ~45s (o que não couber vira aviso «não deu tempo»).
@@ -48,6 +48,7 @@ Timeout por ping ~8s; smoke OPTIONS ~4s; orçamento total ~45s (o que não coube
 | Senha padrão | `SENHA_PADRAO` (mín. 8 caracteres) | Erro |
 | Destinatários — Relatório | `RELATORIO_DIRETORIA_DESTINATARIOS` | Aviso |
 | Destinatários — Agenda | `EMAIL_AGENDA_DESTINATARIOS` | Aviso |
+| Configuração Revenue Sentinel | `RS_API_KEY` (`RS_API_URL` opcional) | Erro |
 | Microsoft Graph | `CS_OUTLOOK_TENANT_ID` / `CLIENT_ID` / `CLIENT_SECRET` | Erro se incompleto |
 | Ingestão lobby | `MONITOR_LOBBY_*_INGEST_SECRET` | Aviso se ausente |
 

@@ -65,6 +65,15 @@ Espelho do builder: `src/lib/rhCalendarioIcs.ts`. `verify_jwt = false` no Dashbo
 
 **`enrich-comercial-cnpj`:** deploy com **apenas** `index.ts`. Parser/localidade espelhado em `src/lib/comercialCnpjEnrichment.ts`.
 
+### `index.ts` + `revenueSentinelJogadores.ts`
+
+**Function:** `sync-revenue-sentinel` — POST Data Export API (`/v1/jogadores/spin`, header `X-API-Key`) e UPSERT em `jogadores` / `jogadores_metricas_diarias` (só colunas Spin). Secrets **`RS_API_URL`** (opcional; default `https://api.spingaming.com.br/api/v1/data`) e **`RS_API_KEY`**. Cron `daily-sync-revenue-sentinel` ~4h20 BRT. Status Técnico → Integrações Externas → **Sync**. Espelho do parser: `src/lib/revenueSentinelJogadores.ts`. `verify_jwt = false`.
+
+| Ficheiro |
+|----------|
+| `index.ts` |
+| `revenueSentinelJogadores.ts` |
+
 ### `index.ts` + `platformHealthDiagnostics.ts`
 
 **Function:** `platform-health-check` — diagnóstico Status Técnico (infra, jobs, pings vivos, catálogo). Não dispara sync nem e-mails.
@@ -268,6 +277,7 @@ Com permissão **Editar** em Status Técnico, use **Executar** (com confirmaçã
 - **Social KPIs** → `trigger-social-kpis`
 - **Spin na Rede RSS** → `sync-spin-na-rede-rss`
 - **Painel de Notícias RSS** → `sync-painel-noticias-rss` (secret `PAINEL_NOTICIAS_INGEST_SECRET` no cron; TV em `/painel-noticias`)
+- **Revenue Sentinel — Jogadores Spin** → `sync-revenue-sentinel` (secrets `RS_API_URL` / `RS_API_KEY`; publicar também `revenueSentinelJogadores.ts`)
 - **Lobby Blaze** → `monitor-lobby-blaze`
 
 E-mails cron (enviam de verdade): botões de teste na mesma página → `relatorio-diario-diretoria`, `email-agenda-diaria` (use destinatário de teste se configurado).

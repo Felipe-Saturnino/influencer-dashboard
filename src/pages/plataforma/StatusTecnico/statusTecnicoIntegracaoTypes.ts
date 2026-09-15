@@ -13,6 +13,7 @@ export type StatusIntegracaoSyncTipo =
   | "comercial_spa"
   | "comercial_dominio"
   | "comercial_cnpj"
+  | "revenue_sentinel"
   | "lobby_blaze"
   | "lobby_cda"
   | "lobby_esportiva"

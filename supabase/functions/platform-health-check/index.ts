@@ -339,6 +339,7 @@ serve(async (req) => {
   const passouHorarioComercialSpa = hora >= DIAGNOSTICO_HORARIO_CORTE.comercialSpa;
   const passouHorarioComercialDominio = hora >= DIAGNOSTICO_HORARIO_CORTE.comercialDominio;
   const passouHorarioComercialCnpj = hora >= DIAGNOSTICO_HORARIO_CORTE.comercialCnpj;
+  const passouHorarioRevenueSentinel = hora >= DIAGNOSTICO_HORARIO_CORTE.revenueSentinel;
   const desde24h = new Date(Date.now() - MS_24H).toISOString();
   const envGet = (key: string) => Deno.env.get(key);
 
@@ -868,6 +869,48 @@ serve(async (req) => {
   await pingCda("CDA Influencers — Reporting API", cdaKey, "casa_apostas");
   await pingCda("CDA Afiliados — Reporting API", cdaAfilKey, "casa_apostas_afiliados");
 
+  const rsKey = envGet("RS_API_KEY")?.trim() ?? "";
+  const rsBase = (envGet("RS_API_URL") ?? "https://api.spingaming.com.br/api/v1/data").replace(/\/$/, "");
+  if (rsKey) {
+    if (Date.now() - budgetStart > DIAGNOSTICO_BUDGET_MS) {
+      extras.push(
+        extra(
+          "Revenue Sentinel — Data Export API",
+          "aviso",
+          "Não deu tempo de pingar a Data Export API nesta execução.",
+          "revenue_sentinel",
+        ),
+      );
+    } else {
+      const { res: rsRes, aborted: rsAbort } = await fetchTimeout(
+        `${rsBase}/v1/jogadores/spin`,
+        { method: "GET", headers: { "X-API-Key": rsKey } },
+        DIAGNOSTICO_PING_TIMEOUT_MS,
+      );
+      const rsStatus = rsRes?.status ?? 0;
+      if (!rsAbort && (rsStatus === 405 || (rsStatus >= 200 && rsStatus < 400))) {
+        extras.push(
+          extra(
+            "Revenue Sentinel — Data Export API",
+            "ok",
+            "Data Export API alcançável (sem gravar Jogadores Spin).",
+            "revenue_sentinel",
+          ),
+        );
+      } else {
+        const cls = classificarHttpSmoke(rsStatus, rsAbort || !rsRes);
+        extras.push(
+          extra(
+            "Revenue Sentinel — Data Export API",
+            cls.severidade,
+            cls.severidade === "ok" ? "Data Export API respondeu." : cls.detalhe,
+            "revenue_sentinel",
+          ),
+        );
+      }
+    }
+  }
+
   const { res: brasilRes, aborted: brasilAbort } = await fetchTimeout(
     `https://brasilapi.com.br/api/cnpj/v1/${DIAGNOSTICO_BRASIL_API_CNPJ_PING}`,
     {},
@@ -959,6 +1002,7 @@ serve(async (req) => {
     passouHorarioComercialSpa,
     passouHorarioComercialDominio,
     passouHorarioComercialCnpj,
+    passouHorarioRevenueSentinel,
     secrets,
     integracoes,
     extras,

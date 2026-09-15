@@ -229,7 +229,9 @@ export function HeadcountAbaDistrato({ historico, metricas, anterior, loading }:
       </div>
 
       <div style={pageBox}>
-        <SectionTitle sub="desligamentos do mês">Distratos</SectionTitle>
+        <SectionTitle sub={historico ? "desligamentos do período histórico" : "desligamentos do mês"}>
+          Listagem
+        </SectionTitle>
         <TabelaComPaginacao
           items={rows}
           t={t}

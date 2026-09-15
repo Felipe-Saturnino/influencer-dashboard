@@ -35,7 +35,7 @@ function pad2(n: number): string {
 }
 
 export function fmtDiaMesTurnoHome(diaIso: string): { dia: string; mesCurto: string; dataCurta: string } {
-  const [y, m, d] = diaIso.split("-").map(Number);
+  const [, m, d] = diaIso.split("-").map(Number);
   const mesIdx = (m ?? 1) - 1;
   return {
     dia: pad2(d ?? 1),

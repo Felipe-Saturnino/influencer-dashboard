@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "../../../lib/supabase";
 import { fetchAllPages, fetchInBatched } from "../../../lib/supabasePaginate";
 import {
@@ -218,6 +218,7 @@ export function useOverviewPrestadorGpKpi(opts: {
   const [incAnterior, setIncAnterior] = useState<EstudioIncidenteRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const [reloadTick, setReloadTick] = useState(0);
 
   const idsKey = funcionarioIds.slice().sort().join("|");
 
@@ -237,6 +238,7 @@ export function useOverviewPrestadorGpKpi(opts: {
     setErro(null);
 
     void (async () => {
+      let fase1Ok = false;
       try {
         const fetchPar = async (ini: string, fim: string) => {
           const fimD1 = fimPeriodoKpisMesaD1(fim);
@@ -264,21 +266,25 @@ export function useOverviewPrestadorGpKpi(opts: {
           setRowsAnt([]);
           setIncAtual(inc);
           setIncAnterior([]);
+          fase1Ok = true;
         } else if (mesSelecionado) {
           const mom = getPeriodoComparativoMesCompleto(mesSelecionado.ano, mesSelecionado.mes);
-          const [atual, ant] = await Promise.all([
-            fetchPar(mom.atual.inicio, mom.atual.fim),
-            fetchPar(mom.anterior.inicio, mom.anterior.fim),
-          ]);
+          const atual = await fetchPar(mom.atual.inicio, mom.atual.fim);
           if (cancelled) return;
           setRowsAtual(atual.kpi);
-          setRowsAnt(ant.kpi);
           setIncAtual(atual.inc);
+          setRowsAnt([]);
+          setIncAnterior([]);
+          setLoading(false);
+          fase1Ok = true;
+          const ant = await fetchPar(mom.anterior.inicio, mom.anterior.fim);
+          if (cancelled) return;
+          setRowsAnt(ant.kpi);
           setIncAnterior(ant.inc);
         }
       } catch (e) {
         console.error(e);
-        if (!cancelled) {
+        if (!cancelled && !fase1Ok) {
           setRowsAtual([]);
           setRowsAnt([]);
           setIncAtual([]);
@@ -297,7 +303,7 @@ export function useOverviewPrestadorGpKpi(opts: {
     };
     // idsKey cobre funcionarioIds sem recriar array a cada render
     // eslint-disable-next-line react-hooks/exhaustive-deps -- idsKey
-  }, [enabled, idsKey, mesSelecionado, historico, carregaKpiGrafana, carregaIncidentes]);
+  }, [enabled, idsKey, mesSelecionado, historico, carregaKpiGrafana, carregaIncidentes, reloadTick]);
 
   const agregado = useMemo(() => agregarGpKpiRows(rowsAtual), [rowsAtual]);
   const aggAnterior = useMemo(() => agregarGpKpiRows(rowsAnt), [rowsAnt]);
@@ -365,9 +371,14 @@ export function useOverviewPrestadorGpKpi(opts: {
     [incAtual, prestadores],
   );
 
+  const recarregar = useCallback(() => {
+    setReloadTick((n) => n + 1);
+  }, []);
+
   return {
     loading,
     erro,
+    recarregar,
     agregado,
     aggAnterior,
     metricasJogo,

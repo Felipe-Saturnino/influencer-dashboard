@@ -35,6 +35,8 @@ export interface PlatformHealthSecretsSnapshot {
   destinatariosRelatorioConfigurado: boolean;
   /** `EMAIL_AGENDA_DESTINATARIOS` — lista não vazia com @. */
   destinatariosAgendaConfigurado: boolean;
+  /** Data Export API — `RS_API_KEY` (+ `RS_API_URL` opcional). */
+  revenueSentinelConfigurado: boolean;
 }
 
 export type PlatformHealthJobKind =
@@ -45,6 +47,7 @@ export type PlatformHealthJobKind =
   | "comercialSpa"
   | "comercialDominio"
   | "comercialCnpj"
+  | "revenueSentinel"
   | "lobby"
   | "outro";
 
@@ -79,6 +82,7 @@ export interface PlatformHealthSnapshot {
   passouHorarioComercialSpa?: boolean;
   passouHorarioComercialDominio?: boolean;
   passouHorarioComercialCnpj?: boolean;
+  passouHorarioRevenueSentinel?: boolean;
   secrets: PlatformHealthSecretsSnapshot;
   integracoes: PlatformHealthIntegrationSnapshot[];
   extras?: PlatformHealthExtraProbe[];
@@ -91,6 +95,7 @@ export const DIAGNOSTICO_HORARIO_CORTE = {
   comercialSpa: 7,
   comercialDominio: 8,
   comercialCnpj: 9,
+  revenueSentinel: 8,
 } as const;
 
 /** Edge Functions publicadas — smoke OPTIONS (sem disparar lógica). */
@@ -103,6 +108,7 @@ export const DIAGNOSTICO_EDGE_FUNCTIONS = [
   "sync-comercial-spa-lista",
   "validate-comercial-dominios",
   "enrich-comercial-cnpj",
+  "sync-revenue-sentinel",
   "ingest-cs-atendimento-outlook",
   "monitor-lobby-blaze",
   "monitor-lobby-cda",
@@ -142,6 +148,7 @@ export const DIAGNOSTICO_SYNC_SLUGS = [
   "comercial_spa_lista",
   "comercial_dominio_validacao",
   "comercial_cnpj_enriquecimento",
+  "revenue_sentinel",
   "cs_atendimento_outlook",
   "lobby_blaze",
   "lobby_cda",
@@ -175,6 +182,7 @@ export const DIAGNOSTICO_CRON_JOBS = [
   "daily-sync-comercial-spa-lista",
   "daily-validate-comercial-dominios",
   "daily-enrich-comercial-cnpj",
+  "daily-sync-revenue-sentinel",
   "ingest-cs-atendimento-outlook-5min",
 ] as const;
 
@@ -207,6 +215,7 @@ export function jobKindFromSlug(slug: string | null | undefined): PlatformHealth
   if (slug === "comercial_spa_lista") return "comercialSpa";
   if (slug === "comercial_dominio_validacao") return "comercialDominio";
   if (slug === "comercial_cnpj_enriquecimento") return "comercialCnpj";
+  if (slug === "revenue_sentinel") return "revenueSentinel";
   if (slug.startsWith("lobby_")) return "lobby";
   return "outro";
 }
@@ -294,6 +303,7 @@ export function readPlatformHealthSecrets(
       trimEnv(get, "RELATORIO_DIRETORIA_DESTINATARIOS"),
     ),
     destinatariosAgendaConfigurado: hasDestinatariosList(trimEnv(get, "EMAIL_AGENDA_DESTINATARIOS")),
+    revenueSentinelConfigurado: !!trimEnv(get, "RS_API_KEY"),
   };
 }
 
@@ -385,6 +395,15 @@ export function buildPlatformHealthTechLogs(snapshot: PlatformHealthSnapshot): T
     descricaoFail: "CDA_AFILIADOS_API_KEY ausente — sync da conta Afiliados falhará.",
     integracaoSlugFk: "casa_apostas_afiliados",
     ok: s.cdaAfiliadosConfigurado,
+  });
+
+  probeSecret(out, counters, {
+    nome: "Configuração Revenue Sentinel",
+    severidade: "erro",
+    descricaoOk: "RS_API_KEY presente.",
+    descricaoFail: "RS_API_KEY ausente — sync de Jogadores Spin falhará.",
+    integracaoSlugFk: "revenue_sentinel",
+    ok: s.revenueSentinelConfigurado,
   });
 
   probeSecret(out, counters, {
@@ -499,6 +518,7 @@ function passouCorteDoJob(
   if (kind === "comercialSpa") return snapshot.passouHorarioComercialSpa ?? false;
   if (kind === "comercialDominio") return snapshot.passouHorarioComercialDominio ?? snapshot.passouHorarioCda;
   if (kind === "comercialCnpj") return snapshot.passouHorarioComercialCnpj ?? false;
+  if (kind === "revenueSentinel") return snapshot.passouHorarioRevenueSentinel ?? snapshot.passouHorarioCda;
   return false;
 }
 
@@ -510,6 +530,7 @@ function mensagemAtrasoJob(kind: PlatformHealthJobKind): string {
   if (kind === "comercialSpa") return "Job diário (7h30 BRT) ainda não registrou sucesso hoje.";
   if (kind === "comercialDominio") return "Job diário (8h BRT) ainda não registrou sucesso hoje.";
   if (kind === "comercialCnpj") return "Job diário (8h30 BRT) ainda não registrou sucesso hoje.";
+  if (kind === "revenueSentinel") return "Job diário (~4h20 BRT) ainda não registrou sucesso hoje.";
   return "Sem sucesso registrado na data civil de hoje.";
 }
 

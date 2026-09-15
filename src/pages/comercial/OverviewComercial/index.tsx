@@ -6,6 +6,7 @@ import { usePermission } from "../../../hooks/usePermission";
 import { useRouteTab } from "../../../hooks/useRouteTab";
 import { FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
+import { fetchAllPages } from "../../../lib/supabasePaginate";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
@@ -63,6 +64,16 @@ import {
   type OverviewIntegracaoHistorico,
   type OverviewIntegracaoRow,
 } from "./helpersIntegracoes";
+
+const MSG_ERRO_COMERCIAL =
+  "Não foi possível carregar o Overview Comercial. Se o problema persistir, entre em contato com o suporte.";
+
+const MARCAS_SELECT = `
+  id, nome, dominio, status_dominio, status_pipeline, status_folha, comercial_user_id, agregadora, ultimo_contato, ultima_comunicacao, created_at,
+  empresa:comercial_empresas(id, razao_social, cnpj, portaria, portaria_retificacoes, requerimento_numero, requerimento_ano, cidade, estado),
+  contatos:comercial_marca_contatos(id, marca_id, nome, telefones, emails, linkedin, instagram, data_nascimento, ordem),
+  produtos:comercial_marca_produtos(produto, status_produto)
+`;
 
 function mapOverviewRow(
   raw: Record<string, unknown>,
@@ -134,156 +145,187 @@ export default function OverviewComercial() {
   const [integracoes, setIntegracoes] = useState<OverviewIntegracaoRow[]>([]);
   const [integracaoHist, setIntegracaoHist] = useState<OverviewIntegracaoHistorico[]>([]);
   const [loading, setLoading] = useState(true);
+  const [erroCarga, setErroCarga] = useState<string | null>(null);
+  const [reloadTick, setReloadTick] = useState(0);
 
   const pageBox = getPageContentBoxStyle(brand, t);
   const filterBox = getPageFilterBoxStyle(brand, t);
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-    const [marcasRes, gestoresRes, histRes, aggRes, aggHistRes, intRes, intHistRes] =
-      await Promise.all([
-      supabase
-        .from("comercial_marcas")
-        .select(
-          `
-          id, nome, dominio, status_dominio, status_pipeline, status_folha, comercial_user_id, agregadora, ultimo_contato, ultima_comunicacao, created_at,
-          empresa:comercial_empresas(id, razao_social, cnpj, portaria, portaria_retificacoes, requerimento_numero, requerimento_ano, cidade, estado),
-          contatos:comercial_marca_contatos(id, marca_id, nome, telefones, emails, linkedin, instagram, data_nascimento, ordem),
-          produtos:comercial_marca_produtos(produto, status_produto)
-        `,
-        )
-        .order("nome"),
-      supabase
-        .from("profiles")
-        .select("id, name")
-        .in("name", [...PIPELINE_COMERCIAL_NOMES])
-        .or("ativo.is.null,ativo.eq.true"),
-      supabase
-        .from("comercial_marca_historico")
-        .select("campo, valor_novo, marca_id, marca:comercial_marcas(nome)")
-        .gte("created_at", cutoff),
-      supabase
-        .from("comercial_agregadoras")
-        .select("id, nome, status_pipeline, comercial_user_id, jogos")
-        .order("nome")
-        .limit(500),
-      supabase
-        .from("comercial_agregadora_historico")
-        .select(
-          "agregadora_id, campo, valor_novo, agregadora:comercial_agregadoras(nome)",
-        )
-        .gte("created_at", cutoff)
-        .limit(2000),
-      supabase
-        .from("comercial_integracoes")
-        .select("id, operador_nome, prioridade, tipo, status, caminho, agregadora, created_at")
-        .order("operador_nome")
-        .limit(2000),
-      supabase
-        .from("comercial_integracao_historico")
-        .select("integracao_id, campo, valor_novo, created_at")
-        .eq("campo", "status")
-        .limit(10000),
-    ]);
-
-    if (marcasRes.error) console.error(marcasRes.error);
-    if (gestoresRes.error) console.error(gestoresRes.error);
-    if (histRes.error) console.error(histRes.error);
-    if (aggRes.error) console.error(aggRes.error);
-    if (aggHistRes.error) console.error(aggHistRes.error);
-    if (intRes.error) console.error(intRes.error);
-    if (intHistRes.error) console.error(intHistRes.error);
-
-    const comercialList = buildPipelineComerciais(gestoresRes.data ?? []);
-    setComerciais(comercialList);
-    const names = Object.fromEntries(
-      comercialList.flatMap((c) => (c.id ? [[c.id, c.name] as const] : [])),
-    );
-    setRows((marcasRes.data ?? []).map((r) => mapOverviewRow(r as Record<string, unknown>, names)));
-    setHistorico(
-      (histRes.data ?? []).map((h) => {
-        const raw = h as Record<string, unknown>;
-        const marcaRaw = raw.marca as { nome?: string } | null;
-        return {
-          marca_id: String(raw.marca_id ?? ""),
-          marca_nome: String(marcaRaw?.nome ?? "—"),
-          campo: String(raw.campo ?? ""),
-          valor_novo: raw.valor_novo != null ? String(raw.valor_novo) : null,
-        };
-      }),
-    );
-
-    setAgregadoras(
-      (aggRes.data ?? []).map((r) => {
-        const raw = r as Record<string, unknown>;
-        const cid = raw.comercial_user_id ? String(raw.comercial_user_id) : null;
-        const nomeC = cid ? names[cid] ?? null : null;
-        return {
-          id: String(raw.id),
-          nome: String(raw.nome ?? ""),
-          status_pipeline: raw.status_pipeline as StatusPipelineAgregadora,
-          comercial_user_id: cid,
-          comercial_nome:
-            nomeC && (PIPELINE_COMERCIAL_NOMES as readonly string[]).includes(nomeC)
-              ? nomeC
-              : null,
-          jogos: raw.jogos == null ? null : Number(raw.jogos),
-        };
-      }),
-    );
-
-    setAgregadoraHist(
-      (aggHistRes.data ?? []).map((h) => {
-        const raw = h as Record<string, unknown>;
-        const emb = raw.agregadora as { nome?: string } | { nome?: string }[] | null;
-        const nome =
-          emb && typeof emb === "object"
-            ? String((Array.isArray(emb) ? emb[0]?.nome : emb.nome) ?? "—")
-            : "—";
-        return {
-          agregadora_id: String(raw.agregadora_id ?? ""),
-          agregadora_nome: nome,
-          campo: String(raw.campo ?? ""),
-          valor_novo: raw.valor_novo != null ? String(raw.valor_novo) : null,
-        };
-      }),
-    );
-
-    setIntegracoes(
-      (intRes.data ?? []).map((r) => {
-        const raw = r as Record<string, unknown>;
-        return {
-          id: String(raw.id),
-          operador_nome: String(raw.operador_nome ?? ""),
-          prioridade: raw.prioridade as PrioridadeIntegracao,
-          tipo: raw.tipo as TipoIntegracao,
-          status: raw.status as StatusIntegracao,
-          caminho: raw.caminho ? String(raw.caminho) : null,
-          agregadora: raw.agregadora ? String(raw.agregadora) : null,
-          created_at: raw.created_at ? String(raw.created_at) : null,
-        };
-      }),
-    );
-
-    setIntegracaoHist(
-      (intHistRes.data ?? []).map((h) => {
-        const raw = h as Record<string, unknown>;
-        return {
-          integracao_id: String(raw.integracao_id ?? ""),
-          campo: String(raw.campo ?? ""),
-          valor_novo: raw.valor_novo != null ? String(raw.valor_novo) : null,
-          created_at: String(raw.created_at ?? ""),
-        };
-      }),
-    );
-
-    setLoading(false);
-  }, []);
-
   useEffect(() => {
-    void loadData();
-  }, [loadData]);
+    if (perm.loading || perm.canView === "nao") return;
+
+    let cancelled = false;
+    setLoading(true);
+    setErroCarga(null);
+
+    void (async () => {
+      try {
+        const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+
+        const [marcasRows, gestoresRes, histRows, aggRows, aggHistRows, intRows, intHistRows] =
+          await Promise.all([
+            fetchAllPages(async (from, to) =>
+              supabase
+                .from("comercial_marcas")
+                .select(MARCAS_SELECT)
+                .order("nome")
+                .range(from, to),
+            ),
+            supabase
+              .from("profiles")
+              .select("id, name")
+              .in("name", [...PIPELINE_COMERCIAL_NOMES])
+              .or("ativo.is.null,ativo.eq.true"),
+            fetchAllPages(async (from, to) =>
+              supabase
+                .from("comercial_marca_historico")
+                .select("campo, valor_novo, marca_id, marca:comercial_marcas(nome)")
+                .gte("created_at", cutoff)
+                .order("created_at", { ascending: false })
+                .range(from, to),
+            ),
+            fetchAllPages(async (from, to) =>
+              supabase
+                .from("comercial_agregadoras")
+                .select("id, nome, status_pipeline, comercial_user_id, jogos")
+                .order("nome")
+                .range(from, to),
+            ),
+            fetchAllPages(async (from, to) =>
+              supabase
+                .from("comercial_agregadora_historico")
+                .select(
+                  "agregadora_id, campo, valor_novo, agregadora:comercial_agregadoras(nome)",
+                )
+                .gte("created_at", cutoff)
+                .order("created_at", { ascending: false })
+                .range(from, to),
+            ),
+            fetchAllPages(async (from, to) =>
+              supabase
+                .from("comercial_integracoes")
+                .select("id, operador_nome, prioridade, tipo, status, caminho, agregadora, created_at")
+                .order("operador_nome")
+                .range(from, to),
+            ),
+            fetchAllPages(async (from, to) =>
+              supabase
+                .from("comercial_integracao_historico")
+                .select("integracao_id, campo, valor_novo, created_at")
+                .eq("campo", "status")
+                .order("created_at", { ascending: false })
+                .range(from, to),
+            ),
+          ]);
+
+        if (cancelled) return;
+
+        if (gestoresRes.error) throw new Error(gestoresRes.error.message);
+
+        const comercialList = buildPipelineComerciais(gestoresRes.data ?? []);
+        const names = Object.fromEntries(
+          comercialList.flatMap((c) => (c.id ? [[c.id, c.name] as const] : [])),
+        );
+
+        setComerciais(comercialList);
+        setRows(marcasRows.map((r) => mapOverviewRow(r as Record<string, unknown>, names)));
+        setHistorico(
+          histRows.map((h) => {
+            const raw = h as Record<string, unknown>;
+            const marcaRaw = raw.marca as { nome?: string } | null;
+            return {
+              marca_id: String(raw.marca_id ?? ""),
+              marca_nome: String(marcaRaw?.nome ?? "—"),
+              campo: String(raw.campo ?? ""),
+              valor_novo: raw.valor_novo != null ? String(raw.valor_novo) : null,
+            };
+          }),
+        );
+        setAgregadoras(
+          aggRows.map((r) => {
+            const raw = r as Record<string, unknown>;
+            const cid = raw.comercial_user_id ? String(raw.comercial_user_id) : null;
+            const nomeC = cid ? names[cid] ?? null : null;
+            return {
+              id: String(raw.id),
+              nome: String(raw.nome ?? ""),
+              status_pipeline: raw.status_pipeline as StatusPipelineAgregadora,
+              comercial_user_id: cid,
+              comercial_nome:
+                nomeC && (PIPELINE_COMERCIAL_NOMES as readonly string[]).includes(nomeC)
+                  ? nomeC
+                  : null,
+              jogos: raw.jogos == null ? null : Number(raw.jogos),
+            };
+          }),
+        );
+        setAgregadoraHist(
+          aggHistRows.map((h) => {
+            const raw = h as Record<string, unknown>;
+            const emb = raw.agregadora as { nome?: string } | { nome?: string }[] | null;
+            const nome =
+              emb && typeof emb === "object"
+                ? String((Array.isArray(emb) ? emb[0]?.nome : emb.nome) ?? "—")
+                : "—";
+            return {
+              agregadora_id: String(raw.agregadora_id ?? ""),
+              agregadora_nome: nome,
+              campo: String(raw.campo ?? ""),
+              valor_novo: raw.valor_novo != null ? String(raw.valor_novo) : null,
+            };
+          }),
+        );
+        setIntegracoes(
+          intRows.map((r) => {
+            const raw = r as Record<string, unknown>;
+            return {
+              id: String(raw.id),
+              operador_nome: String(raw.operador_nome ?? ""),
+              prioridade: raw.prioridade as PrioridadeIntegracao,
+              tipo: raw.tipo as TipoIntegracao,
+              status: raw.status as StatusIntegracao,
+              caminho: raw.caminho ? String(raw.caminho) : null,
+              agregadora: raw.agregadora ? String(raw.agregadora) : null,
+              created_at: raw.created_at ? String(raw.created_at) : null,
+            };
+          }),
+        );
+        setIntegracaoHist(
+          intHistRows.map((h) => {
+            const raw = h as Record<string, unknown>;
+            return {
+              integracao_id: String(raw.integracao_id ?? ""),
+              campo: String(raw.campo ?? ""),
+              valor_novo: raw.valor_novo != null ? String(raw.valor_novo) : null,
+              created_at: String(raw.created_at ?? ""),
+            };
+          }),
+        );
+      } catch (e) {
+        console.error(e);
+        if (!cancelled) {
+          setErroCarga(MSG_ERRO_COMERCIAL);
+          setRows([]);
+          setComerciais([]);
+          setHistorico([]);
+          setAgregadoras([]);
+          setAgregadoraHist([]);
+          setIntegracoes([]);
+          setIntegracaoHist([]);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [perm.loading, perm.canView, reloadTick]);
+
+  const recarregar = useCallback(() => {
+    setReloadTick((n) => n + 1);
+  }, []);
 
   const filteredOperadoras = useMemo(
     () => filterOverviewRows(rows, comercialFiltro, comerciais),
@@ -302,6 +344,32 @@ export default function OverviewComercial() {
 
   function handleSelectAba(next: OverviewComercialTab) {
     setAba(next);
+  }
+
+  if (perm.loading) {
+    return (
+      <div
+        className="app-page-shell"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          minHeight: 400,
+          fontFamily: FONT.body,
+        }}
+      >
+        <div style={{ textAlign: "center", color: t.textMuted }}>
+          <Loader2
+            size={24}
+            className="app-lucide-spin"
+            color="var(--brand-primary, #7c3aed)"
+            aria-hidden
+            style={{ marginBottom: 12 }}
+          />
+          <div style={{ fontSize: 13 }}>Carregando…</div>
+        </div>
+      </div>
+    );
   }
 
   if (perm.canView === "nao") {
@@ -384,7 +452,44 @@ export default function OverviewComercial() {
         ) : null}
       </div>
 
-      {loading ? (
+      {erroCarga ? (
+        <div style={pageBox}>
+          <div
+            role="alert"
+            aria-live="polite"
+            style={{
+              color: "#e84025",
+              fontSize: 13,
+              fontFamily: FONT.body,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 12,
+              flexWrap: "wrap",
+              padding: 40,
+            }}
+          >
+            <span>{erroCarga}</span>
+            <button
+              type="button"
+              onClick={recarregar}
+              style={{
+                fontFamily: FONT.body,
+                fontSize: 13,
+                fontWeight: 700,
+                padding: "8px 14px",
+                borderRadius: 10,
+                border: "1px solid rgba(232,64,37,0.35)",
+                background: "transparent",
+                color: "#e84025",
+                cursor: "pointer",
+              }}
+            >
+              Tentar de novo
+            </button>
+          </div>
+        </div>
+      ) : loading ? (
         <div
           style={{
             display: "flex",

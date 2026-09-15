@@ -1195,7 +1195,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Integração (Status Técnico)",
         definicao:
-          "Pipeline automático de dados monitorado na página Status Técnico — CDA Influencers, CDA Afiliados, Social Media, Spin na Rede, Painel de Notícias RSS, automações do Pipeline B2B, Lobby e envios de e-mail — com horário da última execução, volume processado e erros.",
+          "Pipeline automático de dados monitorado na página Status Técnico — CDA Influencers, CDA Afiliados, Social Media, Spin na Rede, Painel de Notícias RSS, automações do Pipeline B2B, Revenue Sentinel (Jogadores Spin), Lobby e envios de e-mail — com horário da última execução, volume processado e erros.",
         referencia: "Status Técnico",
       },
       {
@@ -1215,9 +1215,15 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         referencia: "docs/SETUP-TORNEIO-CDA-BKO.md · /TorneioCDA",
       },
       {
+        termo: "Revenue Sentinel",
+        definicao:
+          "Integração que cruza os IDs TAP dos jogadores de influencer com as rodadas nas mesas Spin. O GGR desta vista é o das mesas Spin, não o GGR da TAP. Roda após o sync CDA e aparece em Status Técnico na linha Revenue Sentinel — Jogadores Spin.",
+        referencia: "Status Técnico · Streamers",
+      },
+      {
         termo: "Sync manual",
         definicao:
-          "Execução sob demanda de uma integração, disponível para quem tem permissão de Editar em Status Técnico (inclui Painel de Notícias RSS). Lobby Blaze, Lobby CDA, Lobby Esportiva Bet, Lobby Jonbet, Lobby Bateu Bet, Lobby Rico Bet, Lobby BRX Bet, Lobby Donald Bet e Lobby BetPontoBet rodam por job automatizado e não têm essa ação.",
+          "Execução sob demanda de uma integração, disponível para quem tem permissão de Editar em Status Técnico (inclui Painel de Notícias RSS e Revenue Sentinel — Jogadores Spin). Lobby Blaze, Lobby CDA, Lobby Esportiva Bet, Lobby Jonbet, Lobby Bateu Bet, Lobby Rico Bet, Lobby BRX Bet, Lobby Donald Bet e Lobby BetPontoBet rodam por job automatizado e não têm essa ação.",
         referencia: "Status Técnico",
       },
       {

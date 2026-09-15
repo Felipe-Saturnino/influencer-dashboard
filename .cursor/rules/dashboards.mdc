@@ -235,6 +235,7 @@ Mockup: `docs/mockups/streamers-aba-jogadores-mockup.html`. GGR desta aba = **GG
 | Ranking / Comparativo de Taxas | denominador Registros + UTM | numeradores Spin |
 
 - **Sync:** mesma Edge `sync-metricas-cda` (v2.2.0). Após o `group_by=utm_source` (agregados), segunda chamada `group_by=utm_source,ext_customer_id`. Falha desta fase **não** aborta o sync de `influencer_metricas`. Flag `skip_jogadores` para pular. Sem PII (sem username/e-mail).
+- **Revenue Sentinel:** Edge `sync-revenue-sentinel` (POST `/v1/jogadores/spin`, lotes de 500, header `X-API-Key`). Enriquece só colunas Spin em `jogadores` / `jogadores_metricas_diarias` (não apaga visita/FTD/depósito TAP). `jogou_outros` = depósito TAP e zero rodadas Spin. Cron ~4h20 BRT após TAP; Status Técnico → Integrações Externas → Sync. Secrets `RS_API_URL` / `RS_API_KEY`.
 - **Tabelas:** `jogadores` (dimensão, unique `(operadora_slug, ext_customer_id)`, first-touch em `origem`) e `jogadores_metricas_diarias` (fato TAP + colunas Spin nulas). Trigger preenche o cadastro. `aplicar_mapeamento_utm` também atualiza `influencer_id` nestas tabelas.
 - **Proibido:** inflar `influencer_metricas` com linha por jogador; gravar GGR TAP em `ggr_spin`; tratar `ext_customer_id` como `player_id` BKO.
 
