@@ -120,7 +120,7 @@ function foldPlayers(rows: JogadorAbaDailyFact[]): Map<string, PlayerFold> {
     p.rodadas += rodadas;
     p.ggr += n(r.ggr_spin);
     p.turnover += n(r.turnover_spin);
-    if (r.jogou_spin === true || rodadas > 0) p.spin = true;
+    if (rodadas > 0) p.spin = true;
     if (r.jogou_outros === true || n(r.deposit_count) > 0) p.casa = true;
   }
   return map;

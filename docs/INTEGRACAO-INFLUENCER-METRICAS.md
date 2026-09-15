@@ -65,7 +65,7 @@ Data Export API (`POST /v1/jogadores/spin`, header `X-API-Key`, lotes máx. 500)
 | Status Técnico | Integrações Externas → **Revenue Sentinel — Jogadores Spin** → Sync |
 | SQL | `enriquecer_jogadores_spin_diario` / `_cadastro` (só `service_role`) |
 
-`jogou_outros` = jogador TAP com depósito e **zero** rodadas Spin no RS. Operadora do POST: `casa_apostas` (Casa de Apostas). IDs ausentes no RS devolvem 200 + `missing` — não é falha.
+`jogou_spin` só com **rodadas Spin > 0** no retorno (`round_count` / `bet_count`). Estar no lake do RS sem rodada não conta — o RS pode passar a ter outras fontes. `jogou_outros` = jogador TAP com depósito e **zero** rodadas Spin no RS. Operadora do POST: `casa_apostas` (Casa de Apostas). IDs ausentes no RS devolvem 200 + `missing` — não é falha.
 
 Migrações: `supabase/migrations/20260915180000_integrations_revenue_sentinel.sql` e `20260915181000_cron_sync_revenue_sentinel.sql`.
 

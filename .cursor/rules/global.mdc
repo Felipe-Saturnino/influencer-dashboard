@@ -45,6 +45,7 @@ Antes de criar ou alterar **job Telecom / monitor de lobby** (`scripts/monitor-l
 | **Emails** | **Envio de e-mail** — Resend + Edge Functions: template HTML (crons), secrets remetente/destinatários, `sendResendEmail`, formatos de data — **`emails.mdc`** (consultar em todo fluxo que envia e-mail) |
 | **Telecom** | Jobs de monitor de lobby (máquina Telecom + Edge) — IDs só na Gestão de Estúdios; um script por operadora; expansão sem novo desenvolvimento Telecom — **`telecom.mdc`** |
 | **Carga Mesas Spin** | Extract Superset → JSON → UPSERT `--gravar` — **`mesas-spin-carga.mdc`** + skill `/carga-mesas` (chat diário) |
+| **Carga Grafana** | GP KPI + sinais SM → Supabase — **`grafana-carga.mdc`** + skill `/carga-grafana` (chat diário; não misturar com Mesas) |
 | **Nova feature** | Página ou feature nova no contrato Global + Brand + secção — skill `/nova-feature` |
 | **Verificação** | Um item: MDC da secção + pasta/hooks, smoke completo, tabela de achados — **`saude-da-plataforma.mdc`** + skill `/verificacao` |
 | **Secção** | Personas, modais, fluxos, validações e exceções da pasta |

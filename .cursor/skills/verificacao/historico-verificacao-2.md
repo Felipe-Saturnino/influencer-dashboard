@@ -18,6 +18,7 @@ P1 = paginação de vista 20. P2 = uma linha por período.
 | 10 | Mídias Sociais | OK (código 4 tabelas densas; smoke N≤13) | OK (Overview Detalhamento: 13 dias únicos Set/2026) |
 | 11 | Overview Influencer + Overview Afiliado | OK (código TabelaComPaginacao; smoke N=14 / N=1) | OK no recheck (`508a36a3`: Influencer Detalhamento 14 dias únicos) |
 | 12 | Headcount + Overview Prestador + Overview Comercial | OK no recheck (`ec5ec75f`: Escala «1–20 de 625»; Mesa «1–20 de 93») | OK no recheck (HC Histórico 13 meses únicos; Mesa Detalhe 14 dias) |
-| 13 | Agenda | Aguarda commit + recheck | N/A (calendário) |
+| 13 | Agenda | OK no recheck (commit pós-implantação) | N/A (calendário) |
+| 14 | Resultados + Feedback | OK no recheck (`5b764fae`: Feedback Histórico «1–20 de 1.262»; filtro Realizada «1–20 de 922») | N/A |
 
 Alimentar quando um ciclo **desta campanha** revelar gap de processo. P1/P2 permanentes estão no MDC `saude-da-plataforma.mdc`.

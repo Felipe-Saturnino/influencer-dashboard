@@ -220,13 +220,13 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Jogaram Spin",
         definicao:
-          "Cadastros do canal que apostaram em mesas Spin no período. A taxa de ativação compara este conjunto com quem jogou outros produtos da casa. O GGR desta vista é o das mesas Spin, não o GGR TAP.",
+          "Cadastros do canal com **pelo menos 1 rodada** nas mesas Spin no período, segundo o `round_count` / `bet_count` do Revenue Sentinel. Estar no lake do RS sem rodada Spin não conta. A taxa de ativação compara este conjunto com quem só depositou na TAP. O GGR desta vista é o das mesas Spin, não o GGR TAP.",
         referencia: "Streamers → Jogadores",
       },
       {
         termo: "Jogaram Outros",
         definicao:
-          "Cadastros do canal que depositaram ou jogaram outros produtos da casa no período, sem apostar nas mesas Spin. No KPI, um aumento neste número é tratado como alerta (não como resultado positivo).",
+          "Cadastros do canal que depositaram na TAP no período e tiveram **zero rodadas** Spin no Revenue Sentinel. Podem ter jogado outros jogos da casa. No KPI, um aumento neste número é tratado como alerta (não como resultado positivo).",
         referencia: "Streamers → Jogadores",
       },
       {

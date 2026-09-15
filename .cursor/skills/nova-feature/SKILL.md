@@ -23,16 +23,17 @@ O `/nova-feature` laranja no campo **é** a invocação. Badge/Alt+Enter só na 
 
 1. Confirmar: **página nova** ou **feature em página existente**. Uma frase do que o usuário vê.
 2. Read da lei (acima).
-3. **Página nova** — checklist Global: `PageKey`, `PAGES`, `menu.ts`, `ALL_PAGE_KEYS`, `App.tsx`, rotas se houver aba, permissões **Não** para não-admin, `usePermission`, `PageHeader` + subtítulo = label do menu, Ajuda/glossário, MDC da secção.
-4. **Feature existente** — não recriar a página; reusar filtros/tabela/modal canónicos; atualizar MDC da secção + Ajuda se o fluxo visível mudar.
+3. **Discutir primeiro** — viabilidade, desenho e impacto. **Não** criar/editar código até o usuário pedir expressamente para implementar.
+4. **Só depois da aprovação explícita:** página nova → checklist Global (`PageKey`, `PAGES`, `menu.ts`, `ALL_PAGE_KEYS`, `App.tsx`, rotas se houver aba, permissões **Não** para não-admin, `usePermission`, `PageHeader` + subtítulo = label do menu, Ajuda/glossário, MDC da secção). Feature existente → não recriar a página; reusar filtros/tabela/modal canónicos; atualizar MDC da secção + Ajuda se o fluxo visível mudar.
 5. Copy PT-BR. Não reinventar componentes que já existem (`CtaCriarButton`, `FiltroOperadoraSelect`, `useDataTableBlock`, …).
-6. Verificar o fluxo novo no browser. `typecheck` na superfície tocada.
+6. Após implementar: verificar o fluxo novo no browser. `typecheck` na superfície tocada.
 7. Commit/push **não**. Não virar `/verificacao` neste chat.
 
 ## Fora desta frente
 
 - Verificação / varredura → `/verificacao`
 - Carga Mesas Spin → `/carga-mesas`
+- Carga Grafana → `/carga-grafana`
 
 ## Exemplos
 

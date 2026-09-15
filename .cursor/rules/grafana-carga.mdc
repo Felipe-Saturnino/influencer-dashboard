@@ -1,0 +1,56 @@
+---
+description: Carga diária Grafana → Supabase (GP KPI e sinais SM). Frente /carga-grafana — não always-on.
+alwaysApply: false
+---
+
+# Grafana — atualização diária (GP KPI + sinais SM)
+
+**Frente:** skill `/carga-grafana` (chat diário desta carga). **Não** misturar com `/carga-mesas` (Superset).
+
+**Contrato:** sessão logada no Grafana (browser Cursor) → JSON em `tmp/` → runner com `--arquivo=` (UPSERT). Preferir extract na aba logada. **Nunca** colar cookie Pomerium no chat, git ou e-mail.
+
+**Proibido:** commit/push; carregar **D-0** incompleto; tratar filtro Studio do Grafana como `estudio_slug`; inventar vínculo de mesa ou staff.
+
+Detalhe de setup e troubleshooting: `docs/SETUP-GP-KPI-GRAFANA.md`. Env: `.env.gp-kpi` (`SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY`).
+
+---
+
+## Dois pipelines (rotina = os dois, salvo o usuário pedir só um)
+
+| Pipeline | Dashboard | Destino | Runner |
+|----------|-----------|---------|--------|
+| **GP KPI** | `GP KPI` (`/d/n80wq82Vs/gp-kpi`) | `gp_kpi_diario` | `scripts/grafana-gp-kpi-run.mjs` / `run-gp-kpi-grafana.ps1` |
+| **Sinais SM** | S&SM Reports | `sm_sinais` (trigger atualiza `sm_sinais_resumo_diario`) | `scripts/grafana-sm-sinais-run.mjs` / `run-sm-sinais-grafana.ps1` |
+
+`--ate` nos helpers de extract é **inclusivo** (dia BR). Não D-0: hoje 15/09 → carregar até **14/09**.
+
+---
+
+## Fluxo operacional (agent)
+
+1. **Browser** — Grafana Pomerium logado (`spingaming2.grafana.proxylive.tech`). 302/401 → parar e pedir login na aba; não recapturar cookie no chat.
+2. Janela: último dia em `gp_kpi_diario` e em `sm_sinais` (ou resumo diário). Só dias completos em falta, ou reload se o usuário pedir `--de`/`--ate`.
+3. **GP KPI**
+   - `node scripts/gp-kpi-write-extract-expr.mjs --de=YYYY-MM-DD --ate=YYYY-MM-DD`
+   - Na página GP KPI: avaliar a expr (`tmp/gp-kpi-extract-expr.js`) → gravar `tmp/gp-kpi-*.json`
+   - Dry-run depois gravar: `.\scripts\run-gp-kpi-grafana.ps1 --arquivo=tmp/gp-kpi-….json` (omitir `--dry-run` na carga real)
+4. **Sinais SM**
+   - `node scripts/sm-sinais-write-extract-expr.mjs --de=YYYY-MM-DD --ate=YYYY-MM-DD`
+   - Na página S&SM: expr `tmp/sm-sinais-extract-expr.js` → `tmp/sm-sinais-*.json`
+   - `node scripts/grafana-sm-sinais-run.mjs --arquivo=tmp/sm-sinais-….json` (dry-run primeiro se a janela for nova)
+5. Informar dias, volume e **órfãos** (mesa sem cadastro, Work ID sem ID operacional). **Não** inventar UUID. Cadastro: Gestão de Estúdios → Mesas; Gestão de Staff → ID operacional = Work ID Grafana.
+6. Commit/push **não**.
+
+Upsert GP: chave `dia_brt, ambiente, table_id, game_presenter_id` (idempotente). Sinais: `ambiente, signal_id`. Excluir `autoWheel` no GP.
+
+`table_id` ClickHouse = `mesas_spin_cadastro.mesa_identificacao`. Estúdio vem do cadastro Spin, **não** do regex Studio do Grafana.
+
+---
+
+## Anti-patterns
+
+- Cookie no chat / `.env` commitado.
+- Cron inventado (não há credencial de máquina).
+- Média de médias (a tabela guarda soma + amostras de propósito).
+- Confundir esta carga com Mesas Spin / Superset.
+- Corrigir órfãos no SQL em vez de apontar o cadastro em falta.

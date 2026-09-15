@@ -136,6 +136,8 @@ export function summarizeRsPayload(payload: unknown): {
   n_items: number;
   spin_kind?: string;
   spin_keys?: string[];
+  bko_kind?: string;
+  bko_keys?: string[];
   n_spin_days?: number;
   spin_day_keys?: string[];
 } {
@@ -154,11 +156,13 @@ export function summarizeRsPayload(payload: unknown): {
   const items = flattenItems(payload);
   const first = asRecord(items[0]);
   const spinNode = first?.spin;
+  const bkoNode = first?.bko;
   const spinRec = asRecord(spinNode);
+  const bkoRec = asRecord(bkoNode);
   const harvested: RsSpinDia[] = [];
-  if (spinNode != null && first) {
-    harvestDatedMetrics(spinNode, str(first.ext_customer_id), harvested, 0);
-  }
+  const ext = first ? str(first.ext_customer_id) : "";
+  if (bkoNode != null && first) harvestDatedMetrics(bkoNode, ext, harvested, 0);
+  if (harvested.length === 0 && spinNode != null && first) harvestDatedMetrics(spinNode, ext, harvested, 0);
   const firstDay = harvested[0];
   return {
     kind: "object",
@@ -167,6 +171,8 @@ export function summarizeRsPayload(payload: unknown): {
     n_items: items.length,
     spin_kind: Array.isArray(spinNode) ? "array" : spinNode == null ? "null" : typeof spinNode,
     spin_keys: spinRec ? Object.keys(spinRec).slice(0, 24) : Array.isArray(spinNode) ? ["(array)"] : [],
+    bko_kind: Array.isArray(bkoNode) ? "array" : bkoNode == null ? "null" : typeof bkoNode,
+    bko_keys: bkoRec ? Object.keys(bkoRec).slice(0, 24) : Array.isArray(bkoNode) ? ["(array)"] : [],
     n_spin_days: harvested.length,
     spin_day_keys: firstDay ? ["data", "ggr_spin", "turnover_spin", "rodadas_spin"] : [],
   };
@@ -193,12 +199,6 @@ function mesaFromRow(row: Record<string, unknown>): { mesa: string; jogo: string
   };
 }
 
-function truthyFlag(v: unknown): boolean {
-  if (v === true) return true;
-  const s = str(v).toLowerCase();
-  return s === "true" || s === "1" || s === "sim";
-}
-
 function diaFromFlat(row: Record<string, unknown>, fallbackExt: string): RsSpinDia | null {
   const external = str(pick(row, ["external_id", "player_id_bko", "player_external_id", "onair_id"]));
   const tap = tapIdFromRsExternal(
@@ -208,6 +208,11 @@ function diaFromFlat(row: Record<string, unknown>, fallbackExt: string): RsSpinD
     "snapshot_date",
     "snapshotDate",
     "round_date",
+    "round_day",
+    "game_date",
+    "bet_date",
+    "played_at",
+    "created_at",
     "data",
     "dia",
     "date",
@@ -229,7 +234,7 @@ function diaFromFlat(row: Record<string, unknown>, fallbackExt: string): RsSpinD
   }).filter((m) => m.mesa || (m.rodadas > 0));
   const apostas = num(pick(row, ["bet_count", "apostas", "apostas_spin", "bets", "hand_count", "n_hands"])) ?? porMesa.reduce((s, m) => s + m.rodadas, 0);
   const roundsAsNum = Array.isArray(row.rounds) ? null : num(row.rounds);
-  const rodadasRaw = num(pick(row, ["rodadas_spin", "rodadas", "round_count", "n_rounds", "hands_count"])) ?? roundsAsNum;
+  const rodadasRaw = num(pick(row, ["round_count", "rodadas_spin", "rodadas", "n_rounds", "hands_count"])) ?? roundsAsNum;
   const rodadas = rodadasRaw ?? apostas;
   const ggr = num(pick(row, ["ggr", "ggr_spin", "spin_ggr"]));
   const turnover = num(pick(row, ["turnover", "turnover_spin", "spin_turnover"]));
@@ -239,9 +244,8 @@ function diaFromFlat(row: Record<string, unknown>, fallbackExt: string): RsSpinD
   } else {
     mergeJogo(porJogo, jogoIdentidadeDeMesa(str(pick(row, ["game_name", "jogo", "table_name", "mesa"]))), rodadas);
   }
-  const flag = truthyFlag(pick(row, ["jogou_spin", "jogou", "played", "has_spin", "played_spin"]));
-  const jogou = flag || rodadas > 0 || apostas > 0 || (ggr != null && ggr !== 0) || (turnover != null && turnover !== 0);
-  if (!jogou && !flag) return null;
+  const jogou = rodadas > 0 || apostas > 0;
+  if (!jogou) return null;
   return {
     ext_customer_id: tap,
     data,
@@ -276,9 +280,30 @@ function lifetimeDateFromSpin(spin: Record<string, unknown>): string | null {
   ]));
 }
 
+function windowTotalsFromBlock(rec: Record<string, unknown> | null): {
+  rodadas: number;
+  apostas: number;
+  ggr: number | null;
+  turnover: number | null;
+} | null {
+  if (!rec) return null;
+  const apostas = num(pick(rec, ["bet_count", "apostas", "apostas_spin", "bets", "hand_count"])) ?? 0;
+  const roundsAsNum = Array.isArray(rec.rounds) ? null : num(rec.rounds);
+  const rodadas = num(pick(rec, ["round_count", "rodadas_spin", "rodadas", "n_rounds"])) ?? roundsAsNum ?? 0;
+  const ggr = num(pick(rec, ["ggr", "ggr_spin", "spin_ggr"]));
+  const turnover = num(pick(rec, ["turnover", "turnover_spin"]));
+  if (rodadas <= 0 && apostas <= 0) return null;
+  return {
+    rodadas: rodadas > 0 ? rodadas : apostas,
+    apostas: apostas > 0 ? apostas : rodadas,
+    ggr,
+    turnover,
+  };
+}
+
 /**
- * Percorre `jogadores[].spin` (não `bko`) e coleta fatos com data.
- * Mapas chaveados por YYYY-MM-DD e listas `dias`/`days` entram.
+ * Percorre fatos datados em `spin` e, se não houver rodada, em `bko`.
+ * Só persiste dia com round_count / bet_count > 0.
  */
 function harvestDatedMetrics(node: unknown, fallbackExt: string, acc: RsSpinDia[], depth: number): void {
   if (depth > 8 || node == null) return;
@@ -294,7 +319,6 @@ function harvestDatedMetrics(node: unknown, fallbackExt: string, acc: RsSpinDia[
     return;
   }
   for (const [k, v] of Object.entries(rec)) {
-    if (k === "bko") continue;
     const inner = asRecord(v);
     if (inner && isoDate(k)) {
       harvestDatedMetrics(
@@ -309,23 +333,43 @@ function harvestDatedMetrics(node: unknown, fallbackExt: string, acc: RsSpinDia[
   }
 }
 
-function diasDoJogadorRs(row: Record<string, unknown>): RsSpinDia[] {
+function soComRodadaSpin(dias: RsSpinDia[]): RsSpinDia[] {
+  return dias
+    .filter((d) => d.rodadas_spin > 0 || d.apostas_spin > 0)
+    .map((d) => ({ ...d, jogou_spin: true }));
+}
+
+function diaTotaisJanela(
+  ext: string,
+  data: string,
+  totals: { rodadas: number; apostas: number; ggr: number | null; turnover: number | null },
+  playerIdBko: string | null,
+): RsSpinDia | null {
+  if (totals.rodadas <= 0 && totals.apostas <= 0) return null;
+  return diaFromFlat({
+    ext_customer_id: ext,
+    data,
+    snapshot_date: data,
+    external_id: playerIdBko ?? "",
+    round_count: totals.rodadas,
+    bet_count: totals.apostas,
+    ggr: totals.ggr,
+    turnover: totals.turnover,
+  }, ext);
+}
+
+function diasDoJogadorRs(row: Record<string, unknown>, fallbackAte: string | null): RsSpinDia[] {
   const fallbackExt = str(pick(row, ["ext_customer_id", "external_id", "crm_id"]));
   const acc: RsSpinDia[] = [];
-  if (row.spin != null) {
-    harvestDatedMetrics(row.spin, fallbackExt, acc, 0);
-    if (acc.length === 0) {
-      const spinRec = asRecord(row.spin);
-      if (spinRec) {
-        const data = lifetimeDateFromSpin(spinRec);
-        if (data) {
-          const one = diaFromFlat({ ...spinRec, data, snapshot_date: data, ext_customer_id: fallbackExt }, fallbackExt);
-          if (one) acc.push(one);
-        }
-      }
-    }
-    return acc;
+  // Rodadas Spin vêm do bloco `spin` (round_count). `bko` só entra se tiver rodada > 0.
+  if (row.spin != null) harvestDatedMetrics(row.spin, fallbackExt, acc, 0);
+  if (soComRodadaSpin(acc).length === 0 && row.bko != null) {
+    acc.length = 0;
+    harvestDatedMetrics(row.bko, fallbackExt, acc, 0);
   }
+  const comRodada = soComRodadaSpin(acc);
+  if (comRodada.length > 0) return comRodada;
+
   const nestedDias = [
     ...asList(row.dias),
     ...asList(row.days),
@@ -338,24 +382,47 @@ function diasDoJogadorRs(row: Record<string, unknown>): RsSpinDia[] {
     for (const d of nestedDias) {
       const inner = asRecord(d);
       if (!inner) continue;
-      const parsed = diaFromFlat({ ...row, ...inner, bko: undefined }, fallbackExt);
+      const parsed = diaFromFlat({ ...row, ...inner }, fallbackExt);
       if (parsed) acc.push(parsed);
     }
-    return acc;
+    const nested = soComRodadaSpin(acc);
+    if (nested.length > 0) return nested;
   }
+
   const nestedRounds = asArray(row.rounds);
   if (nestedRounds.length > 0 && !isoDate(pick(row, ["snapshot_date", "data", "date"]))) {
     for (const r of nestedRounds) {
       const inner = asRecord(r);
       if (!inner) continue;
-      const parsed = diaFromFlat({ ...row, ...inner, bko: undefined }, fallbackExt);
+      const parsed = diaFromFlat({ ...row, ...inner }, fallbackExt);
       if (parsed) acc.push(parsed);
     }
-    return acc;
+    const fromRounds = soComRodadaSpin(acc);
+    if (fromRounds.length > 0) return fromRounds;
   }
+
   const flat = diaFromFlat(row, fallbackExt);
-  if (flat) acc.push(flat);
-  return acc;
+  if (flat && (flat.rodadas_spin > 0 || flat.apostas_spin > 0)) {
+    return soComRodadaSpin([flat]);
+  }
+
+  // Totais da janela de/ate — só se round_count / bet_count > 0. Presença no RS não conta.
+  const spinRec = asRecord(row.spin);
+  const bkoRec = asRecord(row.bko);
+  const data =
+    lifetimeDateFromSpin(spinRec ?? {}) ||
+    lifetimeDateFromSpin(bkoRec ?? {}) ||
+    fallbackAte;
+  if (!fallbackExt || !data) return [];
+  const totals = windowTotalsFromBlock(spinRec) || windowTotalsFromBlock(bkoRec);
+  if (!totals) return [];
+  const one = diaTotaisJanela(
+    fallbackExt,
+    data,
+    totals,
+    str(pick(row, ["external_id", "player_id_bko"])) || null,
+  );
+  return one ? soComRodadaSpin([one]) : [];
 }
 
 /** Normaliza o JSON do POST (formato ainda evolui no RS). */
@@ -363,9 +430,13 @@ export function parseJogadoresSpinResponse(payload: unknown): RsJogadoresSpinPar
   const missing = collectMissing(payload);
   const dias: RsSpinDia[] = [];
   const seen = new Set<string>();
+  const root = asRecord(payload);
+  const ateJanela = root ? isoDate(root.ate) : null;
 
   const push = (d: RsSpinDia | null) => {
     if (!d) return;
+    if (d.rodadas_spin <= 0 && d.apostas_spin <= 0) return;
+    d.jogou_spin = true;
     const k = `${d.ext_customer_id}|${d.data}`;
     const prev = dias.find((x) => `${x.ext_customer_id}|${x.data}` === k);
     if (!prev) {
@@ -389,7 +460,7 @@ export function parseJogadoresSpinResponse(payload: unknown): RsJogadoresSpinPar
   for (const item of flattenItems(payload)) {
     const row = asRecord(item);
     if (!row) continue;
-    for (const d of diasDoJogadorRs(row)) push(d);
+    for (const d of diasDoJogadorRs(row, ateJanela)) push(d);
   }
 
   return { dias, missing };

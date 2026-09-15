@@ -47,6 +47,15 @@ describe("kpisJogadoresAba", () => {
     expect(k.taxaAtivacao).toBeCloseTo(100 / 3, 5);
   });
 
+  it("Jogaram Spin só com rodadas_spin > 0", () => {
+    const rows = [
+      fact({ ext_customer_id: "1", jogou_spin: true, rodadas_spin: 0, deposit_count: 1 }),
+    ];
+    const k = kpisJogadoresAba(rows);
+    expect(k.jogaramSpin).toBe(0);
+    expect(k.jogaramOutros).toBe(1);
+  });
+
   it("não conta como Outros quem jogou Spin no período", () => {
     const rows = [
       fact({ ext_customer_id: "1", deposit_count: 1, jogou_outros: true }),

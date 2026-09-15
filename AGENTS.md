@@ -4,6 +4,7 @@ Constituição **não** vive aqui. Este ficheiro só aponta a frente. Chat novo 
 
 ```
 /carga-mesas Atualizar os dados até D-1.
+/carga-grafana Atualizar até D-1.
 /nova-feature {o que o usuário vê}
 /verificacao {página, aba ou função}
 ```
@@ -13,16 +14,19 @@ O `/skill` **laranja** no input **é** a invocação. Alt+Enter / badge só na A
 | Frente | Skill | Lei (Read quando a frente estiver ativa) |
 |--------|--------|------------------------------------------|
 | Carga diária Mesas Spin | `/carga-mesas` | `.cursor/rules/mesas-spin-carga.mdc` |
+| Carga diária Grafana (GP + sinais SM) | `/carga-grafana` | `.cursor/rules/grafana-carga.mdc` |
 | Página ou fluxo novo | `/nova-feature` | `global.mdc` + `brand-css-variables.mdc` + MDC da secção; `business.mdc` se for estúdio/operadora/mesa |
 | Varredura de um item | `/verificacao` | `saude-da-plataforma.mdc` + MDC da secção |
 
-Não misturar frentes no mesmo chat. Bugfix na mesma página: glob da secção basta, sem skill.
+Não misturar frentes no mesmo chat. Dois chats diários de carga: **Mesas** (`/carga-mesas`) e **Grafana** (`/carga-grafana`) — nunca os dois no mesmo compositor. Bugfix na mesma página: glob da secção basta, sem skill.
 
 ## Trilhos duros (sempre)
 
 - **Git:** nunca `commit` / `push` / PR. Só o usuário. (`.cursor/rules/no-agent-git-commit.mdc`)
-- **Carga:** nunca o dia corrente incompleto (D-0). `ATE` no Superset é exclusivo.
-- **Operadora ≠ estúdio.** Sports Club não é `operadora_slug`. Split EsportivaBet: lei na carga, não agregar tudo em `esportiva_bet`.
+- **Código:** não criar nem editar ficheiros de produto até o usuário **pedir expressamente** para implementar (ex.: «pode implementar», «aplica», «pode gravar»). Antes disso: discutir ideia, viabilidade e desenho para ele **aprovar**. Cargas `/carga-mesas` e `/carga-grafana` são exceção operacional — extract e gravação no Supabase seguem o MDC da frente.
+- **Carga:** nunca o dia corrente incompleto (D-0). Mesas: `ATE` no Superset é exclusivo. Grafana: `--ate` inclusivo no extract, só até D-1.
+- **Operadora ≠ estúdio.** Sports Club não é `operadora_slug`. Split EsportivaBet: lei na carga Mesas. Grafana: estúdio vem do cadastro Spin, não do filtro Studio do painel.
+- **Segredo:** nunca colar cookie Pomerium/Grafana no chat ou git.
 - **UI nova:** reusar componentes canónicos; copy PT-BR. Não reinventar filtro/tabela/modal.
 
 ## Onde está o resto
@@ -30,6 +34,7 @@ Não misturar frentes no mesmo chat. Bugfix na mesma página: glob da secção b
 - Domínio (estúdio, Dedicada/Network, glossário): `business.mdc`
 - UI / permissões / fetch / copy: `global.mdc` + Brand
 - Pasta da página: `.cursor/rules/<secao>.mdc` (`lives`, `dashboards`, `rh`, …)
+- Carga Grafana (detalhe): `grafana-carga.mdc` · setup: `docs/SETUP-GP-KPI-GRAFANA.md`
 - E-mail: `emails.mdc` · Lobby Telecom: `telecom.mdc`
 
 Commit/push **não**. Alterações locais; o usuário publica.

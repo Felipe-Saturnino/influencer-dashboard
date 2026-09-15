@@ -237,6 +237,7 @@ serve(async (req: Request) => {
     };
 
     for (const d of todosDias) {
+      if (d.rodadas_spin <= 0 && d.apostas_spin <= 0) continue;
       const a = ensure(d.ext_customer_id);
       a.player_id_bko = a.player_id_bko || d.player_id_bko;
       a.identity_key = a.identity_key || d.identity_key;
@@ -244,7 +245,7 @@ serve(async (req: Request) => {
       a.apostas += d.apostas_spin;
       a.ggr += d.ggr_spin ?? 0;
       a.turnover += d.turnover_spin ?? 0;
-      a.jogou = a.jogou || d.jogou_spin;
+      a.jogou = a.rodadas > 0 || a.apostas > 0;
       for (const [j, n] of Object.entries(d.rodadas_por_jogo)) {
         a.jogos[j] = (a.jogos[j] ?? 0) + n;
       }
@@ -257,21 +258,24 @@ serve(async (req: Request) => {
       if (!porId.has(id)) ensure(id);
     }
 
-    const cadastro = [...porId.entries()].map(([ext, a]) => ({
-      ext_customer_id: ext,
-      player_id_bko: a.player_id_bko,
-      identity_key: a.identity_key,
-      rodadas_spin: a.rodadas,
-      apostas_spin: a.apostas,
-      ggr_spin: a.jogou ? a.ggr : null,
-      turnover_spin: a.jogou ? a.turnover : null,
-      jogou_spin: a.jogou,
-      jogou_outros: !a.jogou && comDeposito.has(ext),
-      rodadas_por_jogo: a.jogos,
-      rodadas_por_mesa: a.mesas,
-      primeira_rodada_spin: a.minData ? `${a.minData}T00:00:00-03:00` : null,
-      ultima_rodada_spin: a.maxData ? `${a.maxData}T00:00:00-03:00` : null,
-    }));
+    const cadastro = [...porId.entries()].map(([ext, a]) => {
+      const jogouSpin = a.rodadas > 0 || a.apostas > 0;
+      return {
+        ext_customer_id: ext,
+        player_id_bko: a.player_id_bko,
+        identity_key: a.identity_key,
+        rodadas_spin: a.rodadas,
+        apostas_spin: a.apostas,
+        ggr_spin: jogouSpin ? a.ggr : null,
+        turnover_spin: jogouSpin ? a.turnover : null,
+        jogou_spin: jogouSpin,
+        jogou_outros: !jogouSpin && comDeposito.has(ext),
+        rodadas_por_jogo: a.jogos,
+        rodadas_por_mesa: a.mesas,
+        primeira_rodada_spin: jogouSpin && a.minData ? `${a.minData}T00:00:00-03:00` : null,
+        ultima_rodada_spin: jogouSpin && a.maxData ? `${a.maxData}T00:00:00-03:00` : null,
+      };
+    });
 
     let diarioUpsert = 0;
     let cadastroUpsert = 0;
@@ -314,7 +318,7 @@ serve(async (req: Request) => {
 
     return json(req, {
       ok: status === "ok",
-      versao: "v1.1.0",
+      versao: "v1.3.0",
       integracao: INTEGRACAO_SLUG,
       dry_run: dryRun,
       periodo: { data_inicio: dataInicio, data_fim: dataFim },

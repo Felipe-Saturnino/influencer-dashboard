@@ -40,6 +40,7 @@ Reload histórico (`--de` / `--ate` explícitos) só se o usuário pedir; aí o 
 
 - UI / página nova → `/nova-feature`
 - Varredura → `/verificacao`
+- Grafana (GP KPI / sinais SM) → `/carga-grafana`
 
 ## Exemplos
 

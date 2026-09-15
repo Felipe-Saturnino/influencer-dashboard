@@ -228,7 +228,7 @@ Mockup: `docs/mockups/streamers-aba-jogadores-mockup.html`. GGR desta aba = **GG
 |---|---|
 | Registros | IDs Ext únicos com `registration_count > 0` no período |
 | Jogaram | união Spin + Outros (depósito TAP ou `jogou_outros`, sem dupla contagem) |
-| Jogaram Spin | `jogou_spin` ou `rodadas_spin > 0` no período |
+| Jogaram Spin | `rodadas_spin > 0` ou `jogou_spin` no período (só com rodada Spin no RS) |
 | Jogaram Outros | depósito/`jogou_outros` e **não** jogou Spin no período (`isInverso` no KPI) |
 | Taxa de ativação | Spin ÷ (Spin + Outros) |
 | Rodadas, média, GGR, Turnover | soma `rodadas_spin` / `ggr_spin` / `turnover_spin` (média = rodadas ÷ Jogaram Spin) |
@@ -237,7 +237,7 @@ Mockup: `docs/mockups/streamers-aba-jogadores-mockup.html`. GGR desta aba = **GG
 
 - **Fetch:** `fetchJogadoresAbaDaily` — colunas explícitas, `cda_conta = influencers`, janela no SQL, `fetchAllPages` + lotes `.in(influencer_id)`. **Todos Influencers / Todas Operadoras** = agregadores do **escopo** (`streamersInfluencerIdsQuery` / `streamersOperadoraSlugsQuery`), nunca dump da plataforma. `influencerIds`/`operadoraSlugs` `null` = visão global (admin/gestor; operador vê todos os influencers das **suas** casas via `operadoraSlugsForcado`). `[]` = escopo vazio ou ID/slug fora da permissão — query vazia (não passar por `canonical` que transformava `[]` em todos). Ver **próprios**: `travarRecortePropriosStreamers` impede `null` global; KPIs/ranking/mesas passam por `recortarJogadoresAbaDaily` (mesmo universo do SQL; sem contar ID Ext sem `influencer_id`). Fase 1 = período atual; fase 2 = MoM (`getPeriodoComparativoMoM`). KPIs leem o **daily do mês** (MTD), não flags lifetime em `jogadores`.
 - **Sync TAP:** mesma Edge `sync-metricas-cda` (v2.2.0). Após o `group_by=utm_source` (agregados), segunda chamada `group_by=utm_source,ext_customer_id`. Falha desta fase **não** aborta o sync de `influencer_metricas`. Flag `skip_jogadores` para pular. Sem PII (sem username/e-mail).
-- **Revenue Sentinel:** Edge `sync-revenue-sentinel` (POST `/v1/jogadores/spin`, lotes de 500, header `X-API-Key`). Parser lê `jogadores[].spin` (dias/days ou lista); **ignora `bko`**. Enriquece só colunas Spin em `jogadores` / `jogadores_metricas_diarias` (não apaga visita/FTD/depósito TAP). `jogou_outros` = depósito TAP e zero rodadas Spin. Cron ~4h20 BRT após TAP; Status Técnico → Integrações Externas → Sync. Secrets `RS_API_URL` / `RS_API_KEY`. Publicar `index.ts` **e** `revenueSentinelJogadores.ts`.
+- **Revenue Sentinel:** Edge `sync-revenue-sentinel` (POST `/v1/jogadores/spin`, lotes de 500, header `X-API-Key`). Grava `round_count` / `bet_count` de `spin` (fallback `bko` se o Spin não trouxer rodada). **`jogou_spin` só se rodadas Spin > 0** — presença no lake RS não conta (o RS pode passar a ter outras fontes). Sem lista por dia, totais da janela no `ate` **somente** com `round_count`/`bet_count` > 0. `jogou_outros` = depósito TAP e zero rodadas Spin. Cron ~4h20 BRT após TAP; Status Técnico → Integrações Externas → Sync. Secrets `RS_API_URL` / `RS_API_KEY`. Publicar `index.ts` **e** `revenueSentinelJogadores.ts` (v1.3.0+).
 - **Tabelas:** `jogadores` (dimensão, unique `(operadora_slug, ext_customer_id)`, first-touch em `origem`) e `jogadores_metricas_diarias` (fato TAP + colunas Spin nulas). Trigger preenche o cadastro. `aplicar_mapeamento_utm` também atualiza `influencer_id` nestas tabelas.
 - **Proibido:** inflar `influencer_metricas` com linha por jogador; gravar GGR TAP em `ggr_spin`; tratar `ext_customer_id` como `player_id` BKO.
 
