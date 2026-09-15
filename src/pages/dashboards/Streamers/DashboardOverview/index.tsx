@@ -12,6 +12,8 @@ import {
   getPageFilterBoxStyle,
 } from "../../../../lib/pageContentBoxStyles";
 import { fetchInfluencerAnalyticsPeriodoCached } from "../../../../lib/influencerAnalyticsQuery";
+import { fetchJogadoresRegistrosUnicos } from "../../../../lib/jogadoresAbaQuery";
+import { aplicarRegistrosUnicosPorInfluencer } from "../../../../lib/jogadoresAbaMetrics";
 import { buscarInvestimentoPago, filtrosInvestimentoPorEscopo } from "../../../../lib/investimentoPago";
 import {
   BRAND,
@@ -366,7 +368,7 @@ export default function DashboardOverview() {
           { operadora_slug: operadoraSlugParaApi, filtroInfluencer }
         );
 
-        const [analytics, investimentoPago] = await Promise.all([
+        const [analytics, investimentoPago, registrosUnicos] = await Promise.all([
           fetchInfluencerAnalyticsPeriodoCached({
             inicio: periodo.inicio,
             fim: periodo.fim,
@@ -374,6 +376,12 @@ export default function DashboardOverview() {
             influencerIds: influencerIdsQuery,
           }),
           buscarInvestimentoPago(periodo, filtrosInvest),
+          fetchJogadoresRegistrosUnicos({
+            inicio: periodo.inicio,
+            fim: periodo.fim,
+            operadoraSlugs: operadoraSlugsQuery,
+            influencerIds: influencerIdsQuery,
+          }),
         ]);
 
         if (historico) {
@@ -392,7 +400,10 @@ export default function DashboardOverview() {
           resultados = analytics.resultados;
         }
         if (cancelled) return;
-        const rows = montaRanking(metricas, lives, resultados, investimentoPago.porInfluencer);
+        const rows = aplicarRegistrosUnicosPorInfluencer(
+          montaRanking(metricas, lives, resultados, investimentoPago.porInfluencer),
+          registrosUnicos.porInfluencer,
+        );
         const rowsVisiveis = rows.filter((r) => podeVerInfluencer(r.influencer_id));
         setRanking(rowsVisiveis);
         setTotais(calculaTotais(rowsVisiveis, investimentoPago.total));
@@ -401,7 +412,7 @@ export default function DashboardOverview() {
         if (mom) {
           try {
             const periodoAnt = mom.anterior;
-            const [investAnt, analyticsAnt] = await Promise.all([
+            const [investAnt, analyticsAnt, registrosUnicosAnt] = await Promise.all([
               buscarInvestimentoPago(
                 periodoAnt,
                 filtrosInvestimentoPorEscopo(
@@ -419,13 +430,22 @@ export default function DashboardOverview() {
                 operadoraSlugs: operadoraSlugsQuery,
                 influencerIds: influencerIdsQuery,
               }),
+              fetchJogadoresRegistrosUnicos({
+                inicio: periodoAnt.inicio,
+                fim: periodoAnt.fim,
+                operadoraSlugs: operadoraSlugsQuery,
+                influencerIds: influencerIdsQuery,
+              }),
             ]);
             if (cancelled) return;
-            const rowsAnt = montaRanking(
-              analyticsAnt.metricas,
-              analyticsAnt.lives,
-              analyticsAnt.resultados,
-              investAnt.porInfluencer,
+            const rowsAnt = aplicarRegistrosUnicosPorInfluencer(
+              montaRanking(
+                analyticsAnt.metricas,
+                analyticsAnt.lives,
+                analyticsAnt.resultados,
+                investAnt.porInfluencer,
+              ),
+              registrosUnicosAnt.porInfluencer,
             ).filter((r) => podeVerInfluencer(r.influencer_id));
             setRankingAnt(rowsAnt);
             setTotaisAnt(calculaTotais(rowsAnt, investAnt.total));

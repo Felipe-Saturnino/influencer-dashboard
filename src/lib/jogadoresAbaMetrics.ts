@@ -22,6 +22,7 @@ export type JogadorAbaKpis = {
   registros: number;
   jogaramSpin: number;
   jogaramOutros: number;
+  naoJogaram: number;
   jogaram: number;
   taxaAtivacao: number | null;
   rodadas: number;
@@ -36,6 +37,8 @@ export type JogadorAbaInfluencerRow = {
   registros: number;
   jogaram: number;
   jogaramSpin: number;
+  jogaramOutros: number;
+  naoJogaram: number;
   pctRegJog: number | null;
   pctJogSpin: number | null;
   pctRegSpin: number | null;
@@ -57,7 +60,7 @@ type PlayerFold = {
   influencer_id: string | null;
   registrou: boolean;
   spin: boolean;
-  casa: boolean;
+  depositou: boolean;
   rodadas: number;
   ggr: number;
   turnover: number;
@@ -107,7 +110,7 @@ function foldPlayers(rows: JogadorAbaDailyFact[]): Map<string, PlayerFold> {
         influencer_id: r.influencer_id,
         registrou: false,
         spin: false,
-        casa: false,
+        depositou: false,
         rodadas: 0,
         ggr: 0,
         turnover: 0,
@@ -116,12 +119,12 @@ function foldPlayers(rows: JogadorAbaDailyFact[]): Map<string, PlayerFold> {
     }
     if (!p.influencer_id && r.influencer_id) p.influencer_id = r.influencer_id;
     if (n(r.registration_count) > 0) p.registrou = true;
+    if (n(r.deposit_count) > 0) p.depositou = true;
     const rodadas = n(r.rodadas_spin);
     p.rodadas += rodadas;
     p.ggr += n(r.ggr_spin);
     p.turnover += n(r.turnover_spin);
     if (rodadas > 0) p.spin = true;
-    if (r.jogou_outros === true || n(r.deposit_count) > 0) p.casa = true;
   }
   return map;
 }
@@ -156,25 +159,27 @@ export function kpisJogadoresAba(rows: JogadorAbaDailyFact[]): JogadorAbaKpis {
   let registros = 0;
   let jogaramSpin = 0;
   let jogaramOutros = 0;
+  let naoJogaram = 0;
   let rodadas = 0;
   let ggrSpin = 0;
   let turnoverSpin = 0;
   for (const p of players.values()) {
-    if (p.registrou) registros += 1;
-    if (p.spin) jogaramSpin += 1;
-    else if (p.casa) jogaramOutros += 1;
     rodadas += p.rodadas;
     ggrSpin += p.ggr;
     turnoverSpin += p.turnover;
+    if (!p.registrou) continue;
+    registros += 1;
+    if (p.spin) jogaramSpin += 1;
+    else if (p.depositou) jogaramOutros += 1;
+    else naoJogaram += 1;
   }
-  const jogaram = jogaramSpin + jogaramOutros;
-  const denAtiv = jogaramSpin + jogaramOutros;
   return {
     registros,
     jogaramSpin,
     jogaramOutros,
-    jogaram,
-    taxaAtivacao: denAtiv === 0 ? null : (jogaramSpin / denAtiv) * 100,
+    naoJogaram,
+    jogaram: jogaramSpin + jogaramOutros,
+    taxaAtivacao: registros === 0 ? null : (jogaramSpin / registros) * 100,
     rodadas,
     mediaRodadas: jogaramSpin === 0 ? null : rodadas / jogaramSpin,
     ggrSpin,
@@ -198,7 +203,14 @@ export function rankingJogadoresAba(
   const players = foldPlayers(rows);
   const byInf = new Map<
     string,
-    { registros: Set<string>; jogaram: Set<string>; spin: Set<string>; rodadas: number; ggr: number; turnover: number }
+    {
+      registros: Set<string>;
+      outros: Set<string>;
+      spin: Set<string>;
+      rodadas: number;
+      ggr: number;
+      turnover: number;
+    }
   >();
 
   for (const [key, p] of players) {
@@ -206,12 +218,12 @@ export function rankingJogadoresAba(
     if (!inf || !nomes.has(inf)) continue;
     let g = byInf.get(inf);
     if (!g) {
-      g = { registros: new Set(), jogaram: new Set(), spin: new Set(), rodadas: 0, ggr: 0, turnover: 0 };
+      g = { registros: new Set(), outros: new Set(), spin: new Set(), rodadas: 0, ggr: 0, turnover: 0 };
       byInf.set(inf, g);
     }
     if (p.registrou) g.registros.add(key);
-    if (p.spin) g.spin.add(key);
-    if (p.spin || p.casa) g.jogaram.add(key);
+    if (p.registrou && p.spin) g.spin.add(key);
+    if (p.registrou && !p.spin && p.depositou) g.outros.add(key);
     g.rodadas += p.rodadas;
     g.ggr += p.ggr;
     g.turnover += p.turnover;
@@ -220,16 +232,19 @@ export function rankingJogadoresAba(
   const out: JogadorAbaInfluencerRow[] = [];
   for (const [influencer_id, g] of byInf) {
     const registros = g.registros.size;
-    const jogaram = g.jogaram.size;
     const jogaramSpin = g.spin.size;
+    const jogaramOutros = g.outros.size;
+    const naoJogaram = Math.max(0, registros - jogaramSpin - jogaramOutros);
     out.push({
       influencer_id,
       nome: nomes.get(influencer_id) ?? "—",
       registros,
-      jogaram,
+      jogaram: jogaramSpin + jogaramOutros,
       jogaramSpin,
-      pctRegJog: pctJogadores(jogaram, registros),
-      pctJogSpin: pctJogadores(jogaramSpin, jogaram),
+      jogaramOutros,
+      naoJogaram,
+      pctRegJog: pctJogadores(jogaramSpin, registros),
+      pctJogSpin: pctJogadores(jogaramSpin, registros),
       pctRegSpin: pctJogadores(jogaramSpin, registros),
       rodadas: g.rodadas,
       ggrSpin: g.ggr,
@@ -282,11 +297,51 @@ export function mesasJogadoresAba(rows: JogadorAbaDailyFact[]): JogadorAbaMesaBa
     .sort((a, b) => b.rodadas - a.rodadas);
 }
 
+export type JogadoresRegistrosUnicos = {
+  total: number;
+  porInfluencer: Map<string, number>;
+};
+
+export function registrosUnicosVazios(): JogadoresRegistrosUnicos {
+  return { total: 0, porInfluencer: new Map() };
+}
+
+/**
+ * IDs Ext únicos com cadastro TAP no período (first-touch no influencer).
+ * Mesmo recorte da aba Jogadores: só quem tem `influencer_id`.
+ */
+export function contarRegistrosUnicosJogadores(
+  rows: Array<Pick<JogadorAbaDailyFact, "operadora_slug" | "ext_customer_id" | "influencer_id" | "registration_count">>,
+): JogadoresRegistrosUnicos {
+  const seen = new Map<string, string>();
+  for (const r of rows) {
+    if (!r.influencer_id) continue;
+    if (n(r.registration_count) <= 0) continue;
+    const ext = (r.ext_customer_id ?? "").trim();
+    if (!ext) continue;
+    const k = playerKey(r.operadora_slug, ext);
+    if (!seen.has(k)) seen.set(k, r.influencer_id);
+  }
+  const porInfluencer = new Map<string, number>();
+  for (const inf of seen.values()) {
+    porInfluencer.set(inf, (porInfluencer.get(inf) ?? 0) + 1);
+  }
+  return { total: seen.size, porInfluencer };
+}
+
+export function aplicarRegistrosUnicosPorInfluencer<T extends { influencer_id: string; registros: number }>(
+  rows: T[],
+  porInfluencer: Map<string, number>,
+): T[] {
+  return rows.map((r) => ({ ...r, registros: porInfluencer.get(r.influencer_id) ?? 0 }));
+}
+
 export function kpisVaziosJogadoresAba(): JogadorAbaKpis {
   return {
     registros: 0,
     jogaramSpin: 0,
     jogaramOutros: 0,
+    naoJogaram: 0,
     jogaram: 0,
     taxaAtivacao: null,
     rodadas: 0,

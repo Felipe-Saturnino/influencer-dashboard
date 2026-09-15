@@ -20,6 +20,7 @@ import { FiltroHistoricoButton, FiltroInfluencerSelect, FiltroOperadoraSelect, S
 import { useDataTableBlock } from "../../../../hooks/useDataTableBlock";
 import { getDataTableWrapStyle, getDataTableStyle } from "../../../../lib/dataTableStyles";
 import { fetchInfluencerAnalyticsPeriodoCached } from "../../../../lib/influencerAnalyticsQuery";
+import { fetchJogadoresRegistrosUnicos } from "../../../../lib/jogadoresAbaQuery";
 import { TabelaPaginacaoBar } from "../../../../components/TabelaPaginacaoBar";
 import { SelectListaComBusca } from "../../../../components/SelectListaComBusca";
 import { placeholderPesquisaFiltro } from "../../../../lib/searchBarConstants";
@@ -518,12 +519,20 @@ export default function DashboardConversao() {
       }
 
       try {
-        const analytics = await fetchInfluencerAnalyticsPeriodoCached({
-          inicio,
-          fim,
-          operadoraSlugs: operadoraSlugsQuery,
-          influencerIds: influencerIdsQuery,
-        });
+        const [analytics, registrosUnicos] = await Promise.all([
+          fetchInfluencerAnalyticsPeriodoCached({
+            inicio,
+            fim,
+            operadoraSlugs: operadoraSlugsQuery,
+            influencerIds: influencerIdsQuery,
+          }),
+          fetchJogadoresRegistrosUnicos({
+            inicio,
+            fim,
+            operadoraSlugs: operadoraSlugsQuery,
+            influencerIds: influencerIdsQuery,
+          }),
+        ]);
         let metricas = analytics.metricas;
         if (historico) {
           const { buscarMetricasDeAliases, mesclarMetricasComAliases } = await import("../../../../lib/metricasAliases");
@@ -576,6 +585,13 @@ export default function DashboardConversao() {
           row.acaoLabel = getAcao(row).label;
           resultado.push(row);
         });
+
+        for (const row of resultado) {
+          row.registros = registrosUnicos.porInfluencer.get(row.influencer_id) ?? 0;
+          row.pctAcessoReg = pct(row.registros, row.acessos);
+          row.pctRegFTD = pct(row.ftds, row.registros);
+          row.acaoLabel = getAcao(row).label;
+        }
 
         resultado.sort((a, b) => b.ftds - a.ftds);
         if (cancelled) return;

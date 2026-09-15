@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { GAME_IDENTITY_HEX } from "@/lib/gameIdentityColors";
 import {
+  aplicarRegistrosUnicosPorInfluencer,
+  contarRegistrosUnicosJogadores,
   fmtPctJogadores,
   kpisJogadoresAba,
   mesasJogadoresAba,
@@ -28,18 +30,21 @@ function fact(partial: Partial<JogadorAbaDailyFact> & Pick<JogadorAbaDailyFact, 
 }
 
 describe("kpisJogadoresAba", () => {
-  it("conta ID Ext único com registro e separa Spin vs Outros", () => {
+  it("deduplica ID Ext e parte Registros em Spin, Outros e Não Jogaram", () => {
     const rows: JogadorAbaDailyFact[] = [
       fact({ ext_customer_id: "1", registration_count: 1 }),
       fact({ ext_customer_id: "1", deposit_count: 1, jogou_outros: true }),
       fact({ ext_customer_id: "2", registration_count: 1, rodadas_spin: 10, jogou_spin: true, ggr_spin: 50, turnover_spin: 400 }),
       fact({ ext_customer_id: "3", deposit_count: 2 }),
+      fact({ ext_customer_id: "4", registration_count: 1 }),
     ];
     const k = kpisJogadoresAba(rows);
-    expect(k.registros).toBe(2);
+    expect(k.registros).toBe(3);
     expect(k.jogaramSpin).toBe(1);
-    expect(k.jogaramOutros).toBe(2);
-    expect(k.jogaram).toBe(3);
+    expect(k.jogaramOutros).toBe(1);
+    expect(k.naoJogaram).toBe(1);
+    expect(k.jogaramSpin + k.jogaramOutros + k.naoJogaram).toBe(k.registros);
+    expect(k.jogaram).toBe(2);
     expect(k.rodadas).toBe(10);
     expect(k.ggrSpin).toBe(50);
     expect(k.turnoverSpin).toBe(400);
@@ -47,23 +52,27 @@ describe("kpisJogadoresAba", () => {
     expect(k.taxaAtivacao).toBeCloseTo(100 / 3, 5);
   });
 
-  it("Jogaram Spin só com rodadas_spin > 0", () => {
+  it("Jogaram Spin só com rodadas_spin > 0 entre quem registrou", () => {
     const rows = [
-      fact({ ext_customer_id: "1", jogou_spin: true, rodadas_spin: 0, deposit_count: 1 }),
+      fact({ ext_customer_id: "1", registration_count: 1, jogou_spin: true, rodadas_spin: 0, deposit_count: 1 }),
     ];
     const k = kpisJogadoresAba(rows);
+    expect(k.registros).toBe(1);
     expect(k.jogaramSpin).toBe(0);
     expect(k.jogaramOutros).toBe(1);
+    expect(k.naoJogaram).toBe(0);
   });
 
   it("não conta como Outros quem jogou Spin no período", () => {
     const rows = [
-      fact({ ext_customer_id: "1", deposit_count: 1, jogou_outros: true }),
+      fact({ ext_customer_id: "1", registration_count: 1, deposit_count: 1, jogou_outros: true }),
       fact({ ext_customer_id: "1", rodadas_spin: 3, jogou_spin: true }),
     ];
     const k = kpisJogadoresAba(rows);
+    expect(k.registros).toBe(1);
     expect(k.jogaramSpin).toBe(1);
     expect(k.jogaramOutros).toBe(0);
+    expect(k.naoJogaram).toBe(0);
     expect(k.jogaram).toBe(1);
   });
 
@@ -91,8 +100,10 @@ describe("rankingJogadoresAba", () => {
     expect(ranking.map((r) => r.influencer_id)).toEqual(["inf-b", "inf-a"]);
     expect(ranking[0].rodadas).toBe(20);
     expect(ranking[0].registros).toBe(2);
-    expect(ranking[0].jogaram).toBe(2);
+    expect(ranking[0].jogaramOutros).toBe(1);
     expect(ranking[0].jogaramSpin).toBe(1);
+    expect(ranking[0].naoJogaram).toBe(0);
+    expect(ranking[0].jogaramSpin + ranking[0].jogaramOutros + ranking[0].naoJogaram).toBe(ranking[0].registros);
     expect(ranking[1].pctRegSpin).toBe(100);
   });
 
@@ -155,12 +166,39 @@ describe("recortarJogadoresAbaDaily", () => {
     expect(visivel.every((r) => r.influencer_id === "inf-eu" && r.operadora_slug === "casa_apostas")).toBe(true);
   });
 
-  it("visão global com Todos: inclui ID Ext ainda sem influencer_id", () => {
+  it("visão global da aba Jogadores: UTMs de influencer — sem ID Ext órfão", () => {
     const visivel = recortarJogadoresAbaDaily(rows, {
       influencerIds: null,
       operadoraSlugs: null,
-      incluirSemInfluencer: true,
+      incluirSemInfluencer: false,
     });
-    expect(kpisJogadoresAba(visivel).registros).toBe(4);
+    expect(kpisJogadoresAba(visivel).registros).toBe(3);
+  });
+});
+
+describe("contarRegistrosUnicosJogadores", () => {
+  it("deduplica o mesmo ID em dois dias e atribui first-touch ao influencer", () => {
+    const u = contarRegistrosUnicosJogadores([
+      fact({ ext_customer_id: "1", registration_count: 1, influencer_id: "inf-a" }),
+      fact({ ext_customer_id: "1", registration_count: 1, influencer_id: "inf-b" }),
+      fact({ ext_customer_id: "2", registration_count: 1, influencer_id: "inf-a" }),
+      fact({ ext_customer_id: "3", registration_count: 0, influencer_id: "inf-a" }),
+      fact({ ext_customer_id: "4", registration_count: 1, influencer_id: null }),
+    ]);
+    expect(u.total).toBe(2);
+    expect(u.porInfluencer.get("inf-a")).toBe(2);
+    expect(u.porInfluencer.has("inf-b")).toBe(false);
+  });
+
+  it("substitui a soma TAP no ranking pelo único por influencer", () => {
+    const rows = aplicarRegistrosUnicosPorInfluencer(
+      [
+        { influencer_id: "inf-a", registros: 99 },
+        { influencer_id: "inf-b", registros: 7 },
+      ],
+      new Map([["inf-a", 2]]),
+    );
+    expect(rows[0].registros).toBe(2);
+    expect(rows[1].registros).toBe(0);
   });
 });

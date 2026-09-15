@@ -10,7 +10,7 @@ import {
   TrendingUp,
   Trophy,
   UserCheck,
-  UserPlus,
+  UserX,
 } from "lucide-react";
 import { useApp } from "../../../../context/AppContext";
 import { useDashboardBrand } from "../../../../hooks/useDashboardBrand";
@@ -79,11 +79,19 @@ const PODIO_ICONS = [
 
 const FUNIL_STEPS = [
   { key: "registros", label: "Registros" },
-  { key: "jogaram", label: "Jogaram" },
   { key: "spin", label: "Jogaram Spin" },
 ] as const;
 
-type TaxasSortCol = "nome" | "registros" | "pctRegJog" | "jogaram" | "pctJogSpin" | "jogaramSpin" | "turnoverSpin" | "ggrSpin" | "rodadas";
+type TaxasSortCol =
+  | "nome"
+  | "registros"
+  | "pctRegJog"
+  | "jogaramOutros"
+  | "jogaramSpin"
+  | "naoJogaram"
+  | "turnoverSpin"
+  | "ggrSpin"
+  | "rodadas";
 
 function cmpNullable(a: number | null, b: number | null, mul: number): number {
   if (a == null && b == null) return 0;
@@ -108,13 +116,13 @@ function FunilJogadoresSvg({
 }) {
   const { theme: t } = useApp();
   const W = 220;
-  const H = 230;
-  const levels = 3;
+  const H = 160;
+  const levels = 2;
   const stepH = H / levels;
-  const widths = [1.0, 0.76, 0.48].map((f) => f * W);
-  const values = [row.registros, row.jogaram, row.jogaramSpin];
-  const taxas = [undefined, fmtPctJogadores(row.pctRegJog), fmtPctJogadores(row.pctJogSpin)];
-  const aria = `Funil de ${row.nome}: ${values[0].toLocaleString("pt-BR")} registros, ${values[1].toLocaleString("pt-BR")} jogaram, ${values[2].toLocaleString("pt-BR")} jogaram Spin`;
+  const widths = [1.0, 0.52].map((f) => f * W);
+  const values = [row.registros, row.jogaramSpin];
+  const taxas = [undefined, fmtPctJogadores(row.pctRegSpin)];
+  const aria = `Funil de ${row.nome}: ${values[0].toLocaleString("pt-BR")} registros, ${values[1].toLocaleString("pt-BR")} jogaram Spin`;
 
   return (
     <div style={{ display: "flex", gap: 12, alignItems: "flex-start", flexWrap: "wrap" }}>
@@ -158,9 +166,9 @@ function FunilJogadoresSvg({
           Taxas de Conversão
         </div>
         {[
-          { label: "Registro → Jogaram", val: fmtPctJogadores(row.pctRegJog), hl: false },
-          { label: "Jogaram → Jogaram Spin", val: fmtPctJogadores(row.pctJogSpin), hl: false },
           { label: "Registros → Jogaram Spin", val: fmtPctJogadores(row.pctRegSpin), hl: true },
+          { label: "Jogaram Outros", val: row.jogaramOutros.toLocaleString("pt-BR"), hl: false },
+          { label: "Não Jogaram", val: row.naoJogaram.toLocaleString("pt-BR"), hl: false },
         ].map((r) => (
           <div
             key={r.label}
@@ -395,9 +403,7 @@ export default function DashboardJogadores() {
         influencerIdsQuery = travado.influencerIds;
         operadoraSlugsQuery = travado.operadoraSlugs;
       }
-      const incluirSemInfluencer =
-        perm.canView !== "proprios" &&
-        (escoposVisiveis.vêTodosInfluencers === true || escoposVisiveis.semRestricaoEscopo === true);
+      const incluirSemInfluencer = false;
 
       const nomes = new Map(
         perfis
@@ -496,8 +502,6 @@ export default function DashboardJogadores() {
           return compareLocaleTexto(a.nome, b.nome, sortTaxas.dir);
         case "pctRegJog":
           return cmpNullable(a.pctRegJog, b.pctRegJog, mul);
-        case "pctJogSpin":
-          return cmpNullable(a.pctJogSpin, b.pctJogSpin, mul);
         case "ggrSpin":
           return compareNumber(a.ggrSpin, b.ggrSpin, sortTaxas.dir);
         case "turnoverSpin":
@@ -506,10 +510,12 @@ export default function DashboardJogadores() {
           return compareNumber(a.rodadas, b.rodadas, sortTaxas.dir);
         case "registros":
           return compareNumber(a.registros, b.registros, sortTaxas.dir);
-        case "jogaram":
-          return compareNumber(a.jogaram, b.jogaram, sortTaxas.dir);
+        case "jogaramOutros":
+          return compareNumber(a.jogaramOutros, b.jogaramOutros, sortTaxas.dir);
         case "jogaramSpin":
           return compareNumber(a.jogaramSpin, b.jogaramSpin, sortTaxas.dir);
+        case "naoJogaram":
+          return compareNumber(a.naoJogaram, b.naoJogaram, sortTaxas.dir);
         default:
           return 0;
       }
@@ -578,13 +584,14 @@ export default function DashboardJogadores() {
           <>
             <div className="app-grid-kpi-4" style={{ gap: 12, marginBottom: 12 }}>
               <KpiCard
-                label="Registros"
-                value={kpis.registros.toLocaleString("pt-BR")}
-                icon={<UserPlus size={16} aria-hidden />}
+                label="Não Jogaram"
+                value={kpis.naoJogaram.toLocaleString("pt-BR")}
+                icon={<UserX size={16} aria-hidden />}
                 accentVar="--brand-action"
                 accentColor={BRAND.transacao}
-                atual={kpis.registros}
-                anterior={kpisAnt.registros}
+                atual={kpis.naoJogaram}
+                anterior={kpisAnt.naoJogaram}
+                isInverso
                 isHistorico={isHistoricoKpi}
               />
               <KpiCard
@@ -851,9 +858,9 @@ export default function DashboardJogadores() {
                     <tr>
                       <SortTableTh<TaxasSortCol> label="Influencer" col="nome" sortCol={sortTaxas.col} sortDir={sortTaxas.dir} onSort={onSortTaxas} thStyle={dataTable.thHeaderSticky} align="center" />
                       <SortTableTh label="Registros" col="registros" sortCol={sortTaxas.col} sortDir={sortTaxas.dir} onSort={onSortTaxas} thStyle={dataTable.thHeader} align="center" />
-                      <SortTableTh label="Reg>Jog" col="pctRegJog" sortCol={sortTaxas.col} sortDir={sortTaxas.dir} onSort={onSortTaxas} thStyle={dataTable.thHeader} align="center" />
-                      <SortTableTh label="Jogaram" col="jogaram" sortCol={sortTaxas.col} sortDir={sortTaxas.dir} onSort={onSortTaxas} thStyle={dataTable.thHeader} align="center" />
-                      <SortTableTh label="Jog>Spin" col="pctJogSpin" sortCol={sortTaxas.col} sortDir={sortTaxas.dir} onSort={onSortTaxas} thStyle={dataTable.thHeader} align="center" />
+                      <SortTableTh label="Reg>Spin" col="pctRegJog" sortCol={sortTaxas.col} sortDir={sortTaxas.dir} onSort={onSortTaxas} thStyle={dataTable.thHeader} align="center" />
+                      <SortTableTh label="Outros" col="jogaramOutros" sortCol={sortTaxas.col} sortDir={sortTaxas.dir} onSort={onSortTaxas} thStyle={dataTable.thHeader} align="center" />
+                      <SortTableTh label="Não Jogaram" col="naoJogaram" sortCol={sortTaxas.col} sortDir={sortTaxas.dir} onSort={onSortTaxas} thStyle={dataTable.thHeader} align="center" />
                       <SortTableTh label="Spin" col="jogaramSpin" sortCol={sortTaxas.col} sortDir={sortTaxas.dir} onSort={onSortTaxas} thStyle={dataTable.thHeader} align="center" />
                       <SortTableTh label="Turnover Spin" col="turnoverSpin" sortCol={sortTaxas.col} sortDir={sortTaxas.dir} onSort={onSortTaxas} thStyle={dataTable.thHeader} align="center" />
                       <SortTableTh label="GGR Spin" col="ggrSpin" sortCol={sortTaxas.col} sortDir={sortTaxas.dir} onSort={onSortTaxas} thStyle={dataTable.thHeader} align="center" />
@@ -862,7 +869,6 @@ export default function DashboardJogadores() {
                   <tbody>
                     {linhas.map((r, i) => {
                       const hlReg = r.pctRegJog != null && r.pctRegJog < JOGADORES_TAXA_BAIXA_PCT;
-                      const hlSpin = r.pctJogSpin != null && r.pctJogSpin < JOGADORES_TAXA_BAIXA_PCT;
                       return (
                         <tr
                           key={r.influencer_id}
@@ -899,19 +905,8 @@ export default function DashboardJogadores() {
                           >
                             {fmtPctJogadores(r.pctRegJog)}
                           </td>
-                          <td style={dataTable.tdCenter}>{r.jogaram.toLocaleString("pt-BR")}</td>
-                          <td
-                            style={{
-                              ...dataTable.tdCenter,
-                              fontSize: 12,
-                              fontWeight: hlSpin ? 700 : 400,
-                              color: hlSpin ? "#a855f7" : t.textMuted,
-                              borderLeft: hlSpin ? "3px solid rgba(168,85,247,0.7)" : undefined,
-                              background: hlSpin ? "rgba(168,85,247,0.08)" : undefined,
-                            }}
-                          >
-                            {fmtPctJogadores(r.pctJogSpin)}
-                          </td>
+                          <td style={dataTable.tdCenter}>{r.jogaramOutros.toLocaleString("pt-BR")}</td>
+                          <td style={dataTable.tdCenter}>{r.naoJogaram.toLocaleString("pt-BR")}</td>
                           <td style={dataTable.tdCenter}>{r.jogaramSpin.toLocaleString("pt-BR")}</td>
                           <td style={dataTable.tdCenter}>{fmtBRL(r.turnoverSpin)}</td>
                           <td style={{ ...dataTable.tdCenter, color: r.ggrSpin >= 0 ? BRAND.verde : BRAND.vermelho, fontWeight: 700 }}>

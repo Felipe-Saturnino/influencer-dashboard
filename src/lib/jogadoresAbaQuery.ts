@@ -1,6 +1,11 @@
 import { supabase } from "./supabase";
 import { fetchAllPages, fetchInBatched } from "./supabasePaginate";
-import type { JogadorAbaDailyFact } from "./jogadoresAbaMetrics";
+import {
+  contarRegistrosUnicosJogadores,
+  registrosUnicosVazios,
+  type JogadorAbaDailyFact,
+  type JogadoresRegistrosUnicos,
+} from "./jogadoresAbaMetrics";
 
 const COLS =
   "data,operadora_slug,ext_customer_id,influencer_id,registration_count,deposit_count,rodadas_spin,ggr_spin,turnover_spin,jogou_spin,jogou_outros,rodadas_por_jogo,rodadas_por_mesa,cda_conta";
@@ -95,4 +100,69 @@ export async function fetchJogadoresAbaDaily(filtro: JogadoresAbaQueryFiltro): P
   }
 
   return fetchPaginas(filtro);
+}
+
+const COLS_REGISTROS = "operadora_slug,ext_customer_id,influencer_id,registration_count";
+
+type RegistroRow = {
+  operadora_slug: string;
+  ext_customer_id: string;
+  influencer_id: string | null;
+  registration_count: number | null;
+};
+
+function baseQueryRegistros(filtro: JogadoresAbaQueryFiltro, influencerSlice?: string[]) {
+  let q = supabase
+    .from("jogadores_metricas_diarias")
+    .select(COLS_REGISTROS)
+    .eq("cda_conta", "influencers")
+    .gt("registration_count", 0)
+    .not("influencer_id", "is", null)
+    .gte("data", filtro.inicio)
+    .lte("data", filtro.fim);
+  if (filtro.operadoraSlugs?.length === 1) {
+    q = q.eq("operadora_slug", filtro.operadoraSlugs[0]);
+  } else if (filtro.operadoraSlugs && filtro.operadoraSlugs.length > 1) {
+    q = q.in("operadora_slug", filtro.operadoraSlugs);
+  }
+  if (influencerSlice?.length) {
+    q = q.in("influencer_id", influencerSlice);
+  }
+  return q;
+}
+
+async function fetchPaginasRegistros(
+  filtro: JogadoresAbaQueryFiltro,
+  influencerSlice?: string[],
+): Promise<RegistroRow[]> {
+  return fetchAllPages<RegistroRow>(async (from, to) => {
+    const { data, error } = await baseQueryRegistros(filtro, influencerSlice).range(from, to);
+    return { data: (data as RegistroRow[] | null) ?? null, error };
+  });
+}
+
+/** IDs Ext únicos mapeados (UTM de influencer) no período — Overview / Conversão alinhados à aba Jogadores. */
+export async function fetchJogadoresRegistrosUnicos(
+  filtro: JogadoresAbaQueryFiltro,
+): Promise<JogadoresRegistrosUnicos> {
+  if (filtro.operadoraSlugs && filtro.operadoraSlugs.length === 0) return registrosUnicosVazios();
+  if (filtro.influencerIds && filtro.influencerIds.length === 0) return registrosUnicosVazios();
+
+  const rows = filtro.influencerIds?.length
+    ? await fetchInBatched(
+        filtro.influencerIds,
+        INFLUENCER_IN_CHUNK,
+        (slice) => fetchPaginasRegistros(filtro, slice),
+        2,
+      )
+    : await fetchPaginasRegistros(filtro);
+
+  return contarRegistrosUnicosJogadores(
+    rows.map((r) => ({
+      operadora_slug: r.operadora_slug,
+      ext_customer_id: r.ext_customer_id,
+      influencer_id: r.influencer_id,
+      registration_count: r.registration_count ?? 0,
+    })),
+  );
 }

@@ -201,14 +201,14 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Registros",
         definicao:
-          "Número de novos cadastros realizados via link do influencer. Um acesso que resulta em cadastro completo conta como 1 registro.",
-        referencia: "Streamers → Conversão · Streamers → Overview · Overview Influencer · Mídias Sociais",
+          "Número de novos cadastros via link do influencer. Em Streamers (Overview, Conversão e Jogadores) conta IDs Ext únicos no período, não eventos TAP repetidos.",
+        referencia: "Streamers → Conversão · Streamers → Overview · Streamers → Jogadores · Overview Influencer · Mídias Sociais",
       },
       {
         termo: "ID Ext",
         definicao:
           "Identificador do jogador na Casa de Apostas, o mesmo ID Ext da plataforma de afiliados. Não é o ID interno das mesas Spin — o cruzamento com quem jogou live cassino usa este ID como ponte.",
-        nota: "Na aba Jogadores, cada cadastro do canal conta como um ID Ext único no período.",
+        nota: "Em Streamers (Overview, Conversão e Jogadores), cada cadastro do canal (UTM de influencer) conta como um ID Ext único no período. `sem_utm` e UTM sem mapeamento não entram — o número é de pessoas, não de eventos TAP.",
         referencia: "Streamers → Jogadores",
       },
       {
@@ -220,20 +220,26 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Jogaram Spin",
         definicao:
-          "Cadastros do canal com **pelo menos 1 rodada** nas mesas Spin no período, segundo o `round_count` / `bet_count` do Revenue Sentinel. Estar no lake do RS sem rodada Spin não conta. A taxa de ativação compara este conjunto com quem só depositou na TAP. O GGR desta vista é o das mesas Spin, não o GGR TAP.",
+          "Cadastros do canal (UTM de influencer) com **pelo menos 1 rodada** nas mesas Spin no período, segundo o `round_count` / `bet_count` do Revenue Sentinel. É um recorte dos Registros da aba — não inclui quem só existe no lake do RS sem rodada. O GGR desta vista é o das mesas Spin, não o GGR TAP.",
         referencia: "Streamers → Jogadores",
       },
       {
         termo: "Jogaram Outros",
         definicao:
-          "Cadastros do canal que depositaram na TAP no período e tiveram **zero rodadas** Spin no Revenue Sentinel. Podem ter jogado outros jogos da casa. No KPI, um aumento neste número é tratado como alerta (não como resultado positivo).",
+          "Cadastros do canal (UTM de influencer) com pelo menos 1 depósito e sem rodada Spin no período. Quem jogou Spin tem prioridade e não é contado novamente neste grupo.",
+        referencia: "Streamers → Jogadores",
+      },
+      {
+        termo: "Não Jogaram",
+        definicao:
+          "Cadastros únicos das UTMs mapeadas a influencer que não tiveram depósito nem rodada Spin no período. Spin + Outros + Não Jogaram = total de Registros únicos.",
         referencia: "Streamers → Jogadores",
       },
       {
         termo: "Taxa de ativação",
         definicao:
-          "Percentual de quem jogou nas mesas Spin entre quem jogou na casa (Spin + Outros) no período. Não usa o GGR TAP.",
-        formula: "Jogaram Spin ÷ (Jogaram Spin + Jogaram Outros) × 100",
+          "Percentual dos cadastros do canal que sentaram em mesa Spin no período. Não usa o GGR TAP.",
+        formula: "Jogaram Spin ÷ Registros × 100",
         referencia: "Streamers → Jogadores",
       },
       {
