@@ -77,6 +77,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
           "Quando não há influencers com lives ou métricas no período (e filtros de Influencer/Operadora), os blocos de KPI, Funil e Ranking mostram a mensagem canónica de período vazio — não R$ 0,00. Se o período tem dados mas um chip de status/ação zera a tabela, a mensagem passa a ser 'Sem dados para o filtro selecionado'. Troque o mês, ative Histórico ou limpe o chip.",
       },
       {
+        subtitulo: "A aba Jogadores está vazia ou sem IDs?",
+        texto:
+          "Os cadastros por jogador (ID Ext + UTM) entram no mesmo sync da Casa de Apostas que atualiza as métricas consolidadas. Se Overview e Conversão têm números mas Jogadores não, o sync agregado rodou e a fase de IDs falhou — em geral falta permissão de relatório de registros na TAP. Rodadas, GGR Spin e “Jogaram Spin” só aparecem depois do cruzamento com as mesas ao vivo. Se o problema persistir, entre em contato com o suporte.",
+      },
+      {
         subtitulo: "Os KPIs mostram valores diferentes entre Overview e Financeiro?",
         texto:
           "As três abas usam a mesma busca linha a linha de métricas e lives do período. Diferenças entre Overview e Financeiro costumam vir do recorte exibido (ex.: investimento de agentes no Overview, PVI e perfil de jogador no Financeiro), não de um procedimento especial do banco. Se a divergência parecer inconsistente para o mesmo filtro e mês, entre em contato com o suporte informando o mês e os valores observados.",

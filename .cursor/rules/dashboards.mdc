@@ -16,7 +16,7 @@ alwaysApply: false
 
 | Área | Caminho principal |
 |---|---|
-| Streamers (3 abas) | `src/pages/dashboards/Streamers/index.tsx` — container, FilterBar partilhada e tabs; conteúdo lazy em `Streamers/DashboardOverview`, `Streamers/DashboardConversao`, `Streamers/DashboardFinanceiro`; estado partilhado em `Streamers/StreamersFiltrosContext.tsx` |
+| Streamers (3 abas hoje; Jogadores em implantação) | `src/pages/dashboards/Streamers/index.tsx` — container, FilterBar partilhada e tabs; conteúdo lazy em `Streamers/DashboardOverview`, `Streamers/DashboardConversao`, `Streamers/DashboardFinanceiro`; estado partilhado em `Streamers/StreamersFiltrosContext.tsx`. Cadastro TAP por jogador: `jogadores` + `jogadores_metricas_diarias` (`src/lib/jogadores.ts`). |
 | Afiliados (3 abas) | `src/pages/dashboards/AfiliadosDash/index.tsx` — métricas CDA conta afiliados; `FiltroAfiliadoSelect` com cadastro `role=afiliado`; funil 3 etapas (sem Views) |
 | Overview Influencer | `src/pages/dashboards/DashboardOverviewInfluencer/index.tsx` |
 | Overview Afiliado | `src/pages/dashboards/DashboardOverviewAfiliado/index.tsx` — métricas CDA afiliados; sem Lives/Views; catálogo + `useAfiliadosDashboardData` |
@@ -43,7 +43,7 @@ alwaysApply: false
 - **Filtro operadora:** fonte da verdade = SQL (`operadora_slug`); sem refiltro cliente pela junction `influencer_operadoras`.
 
 
-- Uma permissão/rota; **três abas** (Overview, Conversão, Financeiro) com **filtros partilhados** (mês, Histórico, influencer, operadora). Alterações nos filtros aplicam-se à aba visível e mantêm-se ao mudar de aba.
+- Uma permissão/rota; **três abas hoje** (Overview, Conversão, Financeiro) com **filtros partilhados** (mês, Histórico, influencer, operadora). Alterações nos filtros aplicam-se à aba visível e mantêm-se ao mudar de aba. Aba **Jogadores** (mockup `docs/mockups/streamers-aba-jogadores-mockup.html`) — cadastro TAP já no sync; UI e cruzamento Revenue Sentinel no passo seguinte.
 - **Catálogos e analytics:** `useDashboardCatalogos` partilha perfis, operadoras ativas e vínculos; `fetchInfluencerAnalyticsPeriodoCached` partilha métricas, lives e resultados por período/escopo entre Overview, Conversão, Financeiro e Overview Influencer. A chave deve incluir período, operadoras e influencers efetivamente permitidos.
 - **Loading na FilterBar (modo embed):** cada aba chama `setIsLoading(true/false)` no `StreamersFiltrosContext` durante o fetch; o container (`Streamers/index.tsx`) mostra o indicador quando `sf.isLoading`.
 - **Tabs:** `role="tablist"` / `role="tab"` / `aria-selected`; `tabIndex={ativo ? 0 : -1}` nas abas inativas; **setas ← →** mudam de aba e devolvem foco ao botão da aba destino.
@@ -59,6 +59,7 @@ alwaysApply: false
 | Streamers → Overview | Gestor / Executivo; Operador; Agência; Influencer (próprios dados) | KPIs Executivos (GGR, Investimento, ROI) |
 | Streamers → Conversão | Idem | Comparativo de Funil |
 | Streamers → Financeiro | Idem | KPIs Financeiros |
+| Streamers → Jogadores (em implantação) | Idem | Ativação em mesa Spin |
 | Social Media | Gestor de Marketing | KPIs Consolidados (GGR, Registros, GGR por Jogador) |
 | Overview Spin (`mesas_spin`) | Gerente de Operações; Operador (escopo mesa) | KPIs Consolidados das Mesas |
 | Overview Influencer | Influencer; Agência; Executivo (escopo); Admin / Gestor | KPIs Executivos (GGR, Investimento, ROI) |
@@ -218,6 +219,24 @@ Nenhuma exceção documentada. Comparativo de Jogo, Comparativo de mesa e Dados 
 - **Erro de carga:** mensagem canónica + **Tentar de novo** (`erroCarga` / `reloadTick`) — não tratar falha como vazio.
 - **Tabelas densas:** Ranking Overview, Comparativo de Taxas e Ranking Financeiro usam `TabelaPaginacaoBar` + `TABELA_PAGE_SIZE` (20); KPIs usam o conjunto completo. Em **Afiliados**: Ranking de Afiliados, Comparativo de Taxas (não o Funil), **Investimento por Afiliado** e Ranking Financeiro. Em **Overview Influencer**: Detalhamento Diário/Mensal. Em **Overview Afiliado**: Detalhamento por Afiliado.
 - **Conversão:** `influencerIds` do filtro da barra entra no fetch (igual Overview/Financeiro).
+
+### Streamers → Jogadores (dados; UI no passo seguinte)
+
+Mockup: `docs/mockups/streamers-aba-jogadores-mockup.html`. GGR desta aba = **GGR Spin**, nunca GGR TAP (`pl`).
+
+| Peça da UI | Fonte TAP (já no sync) | Fonte Revenue Sentinel (depois) |
+|---|---|---|
+| Registros | IDs Ext únicos com `registration_count > 0` no período (`jogadores_metricas_diarias` / `jogadores.registrado_em`) | — |
+| Origem | `origem_tipo = tap_utm` + `origem` = utm_source | outras origens (`campanha`, `afiliado`, `direto`, `rs_attribution`) |
+| Influencer | `influencer_id` via `utm_aliases` / perfil (mesmo mapa do sync agregado) | — |
+| Jogaram Spin / Jogaram Outros / taxa | — | `jogou_spin` / `jogou_outros` |
+| Rodadas, média, GGR Spin, Turnover | — | `rodadas_spin`, `ggr_spin`, `turnover_spin` |
+| Rodadas por mesa / por jogo | — | `rodadas_por_mesa` / `rodadas_por_jogo` |
+| Ranking / Comparativo de Taxas | denominador Registros + UTM | numeradores Spin |
+
+- **Sync:** mesma Edge `sync-metricas-cda` (v2.2.0). Após o `group_by=utm_source` (agregados), segunda chamada `group_by=utm_source,ext_customer_id`. Falha desta fase **não** aborta o sync de `influencer_metricas`. Flag `skip_jogadores` para pular. Sem PII (sem username/e-mail).
+- **Tabelas:** `jogadores` (dimensão, unique `(operadora_slug, ext_customer_id)`, first-touch em `origem`) e `jogadores_metricas_diarias` (fato TAP + colunas Spin nulas). Trigger preenche o cadastro. `aplicar_mapeamento_utm` também atualiza `influencer_id` nestas tabelas.
+- **Proibido:** inflar `influencer_metricas` com linha por jogador; gravar GGR TAP em `ggr_spin`; tratar `ext_customer_id` como `player_id` BKO.
 
 ---
 

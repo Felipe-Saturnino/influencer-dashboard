@@ -205,6 +205,25 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         referencia: "Streamers → Conversão · Streamers → Overview · Overview Influencer · Mídias Sociais",
       },
       {
+        termo: "ID Ext",
+        definicao:
+          "Identificador do jogador na Casa de Apostas, o mesmo ID Ext da plataforma de afiliados. Não é o ID interno das mesas Spin — o cruzamento com quem jogou live cassino usa este ID como ponte.",
+        nota: "Na aba Jogadores, cada cadastro do canal conta como um ID Ext único no período.",
+        referencia: "Streamers → Jogadores",
+      },
+      {
+        termo: "Origem",
+        definicao:
+          "Canal que trouxe o jogador. Na TAP da Casa de Apostas a origem é o UTM (utm_source) do link. Outras origens (campanha, afiliado, direto) entram em trabalhos futuros.",
+        referencia: "Streamers → Jogadores · Gestão de Links",
+      },
+      {
+        termo: "Jogaram Spin",
+        definicao:
+          "Cadastros do canal que apostaram em mesas Spin no período. A taxa de ativação compara este conjunto com quem jogou outros produtos da casa. O GGR desta vista é o das mesas Spin, não o GGR TAP.",
+        referencia: "Streamers → Jogadores",
+      },
+      {
         termo: "FTD (First Time Deposit)",
         definicao:
           "Primeiro depósito de um novo jogador — um por jogador. Representa a conversão final do funil: o jogador acessou, se cadastrou e depositou pela primeira vez.",

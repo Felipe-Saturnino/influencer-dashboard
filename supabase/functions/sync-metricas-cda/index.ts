@@ -20,6 +20,10 @@ interface SyncRequest {
    * Métricas gravam sempre com operadora_slug = casa_apostas.
    */
   conta?: 'influencers' | 'afiliados'
+  /** Só leitura: Reporting API com group_by utm_source,ext_customer_id. Não grava. */
+  probe_ext_customer?: boolean
+  /** Pula a fase jogadores (IDs por UTM). O sync agregado continua. */
+  skip_jogadores?: boolean
 }
 
 interface DailyMetric {
@@ -97,6 +101,122 @@ function reportingItemToDailyMetric(item: ReportingApiDataItem): DailyMetric {
     net_deposit_total: item.net_deposit_total ?? 0,
     pl: item.pl ?? 0,
     commissions_total: item.commissions_total ?? 0,
+  }
+}
+
+function mascaraIdTap(id: unknown): string {
+  const s = String(id ?? '').trim()
+  if (!s) return '(vazio)'
+  if (s.length <= 4) return '****'
+  return `${s.slice(0, 2)}***${s.slice(-2)}`
+}
+
+type ReportingRawMeta = {
+  ok: boolean
+  endpoint: string
+  omitLabel: boolean
+  httpStatus: number
+  erro?: string
+  linhas: number
+  chavesPrimeiraLinha: string[]
+}
+
+async function fetchReportingRaw(
+  dataInicio: string,
+  dataFim: string,
+  apiKey: string,
+  baseUrl: string,
+  authFormat: 'Bearer' | 'direct',
+  endpoint: 'af2_media_report_af' | 'af2_media_report_op',
+  labelId: string,
+  omitLabel: boolean,
+  groupBy: string,
+): Promise<{ meta: ReportingRawMeta; data: Record<string, unknown>[] }> {
+  const dateTo = new Date(dataFim)
+  dateTo.setDate(dateTo.getDate() + 1)
+  const dateToStr = dateTo.toISOString().split('T')[0]
+  const params = new URLSearchParams({
+    aggregation_period: 'DAY',
+    group_by: groupBy,
+    date_from: dataInicio,
+    date_to: dateToStr,
+  })
+  if (!omitLabel) {
+    params.set('label_id', labelId)
+    params.set('lbl', labelId)
+  }
+  const authHeader = authFormat === 'direct' ? apiKey : `Bearer ${apiKey}`
+  const url = `${baseUrl.replace(/\/$/, '')}/api/${endpoint}?${params}`
+  const headers: Record<string, string> = { authorization: authHeader }
+  if (!omitLabel) {
+    headers['Active_label_id'] = labelId
+    headers['X-Smartico-Active-Label-Id'] = labelId
+    headers['Referer'] = `https://admin.aff.casadeapostas.bet.br/${labelId}/`
+  }
+  const response = await fetch(url, { method: 'GET', headers })
+  const httpStatus = response.status
+  let json: Record<string, unknown> = {}
+  try {
+    json = await response.json() as Record<string, unknown>
+  } catch {
+    json = {}
+  }
+  const errorCode = json?.errorCode
+  const errorMsg = json?.message
+  const dataRaw = json?.data ?? json?.result
+  const data = Array.isArray(dataRaw) ? dataRaw as Record<string, unknown>[] : []
+  const erro = !response.ok
+    ? `HTTP ${httpStatus}`
+    : (errorCode != null || errorMsg != null)
+      ? `Reporting API erro: ${errorCode ?? 'N/A'} - ${String(errorMsg ?? 'sem detalhes')}`
+      : undefined
+  const primeira = data[0] ?? {}
+  return {
+    meta: {
+      ok: !erro,
+      endpoint,
+      omitLabel,
+      httpStatus,
+      erro,
+      linhas: data.length,
+      chavesPrimeiraLinha: Object.keys(primeira),
+    },
+    data,
+  }
+}
+
+function resumirProbeExtCustomer(data: Record<string, unknown>[], groupBy: string) {
+  const utms = new Set<string>()
+  const ids = new Set<string>()
+  let comId = 0
+  let semId = 0
+  let somaRegistros = 0
+  const amostra: Array<{ utm: string; ext: string; regs: number }> = []
+  for (const row of data) {
+    const utm = String(row.utm_source ?? row.utmSource ?? '').trim()
+    const ext = String(row.ext_customer_id ?? row.extCustomerId ?? '').trim()
+    const regs = Number(row.registration_count ?? 0)
+    if (utm) utms.add(utm)
+    if (ext) {
+      ids.add(ext)
+      comId++
+    } else {
+      semId++
+    }
+    somaRegistros += Number.isFinite(regs) ? regs : 0
+    if (amostra.length < 5) {
+      amostra.push({ utm: utm || '(sem utm)', ext: mascaraIdTap(ext), regs })
+    }
+  }
+  return {
+    group_by: groupBy,
+    linhas: data.length,
+    utms_distintos: utms.size,
+    ext_customer_id_distintos: ids.size,
+    linhas_com_ext_customer_id: comId,
+    linhas_sem_ext_customer_id: semId,
+    soma_registration_count: somaRegistros,
+    amostra_mascarada: amostra,
   }
 }
 
@@ -437,6 +557,108 @@ async function upsertUtmMetricasDiarias(
   return { inseridos: rows.length, erros: [] }
 }
 
+const JOGADORES_UPSERT_CHUNK = 400
+const JOGADOR_ORIGEM_SEM_UTM = 'sem_utm'
+
+function numTap(v: unknown): number {
+  const n = Number(v ?? 0)
+  return Number.isFinite(n) ? n : 0
+}
+
+function influencerIdPorUtm(map: Map<string, string>, utm: string): string | null {
+  const exact = map.get(utm)
+  if (exact) return exact
+  const u = utm.toLowerCase()
+  for (const [k, v] of map) {
+    if (k.toLowerCase() === u) return v
+  }
+  return null
+}
+
+type JogadorMetricaDiariaUpsert = {
+  data: string
+  operadora_slug: string
+  origem_tipo: 'tap_utm'
+  origem: string
+  ext_customer_id: string
+  registration_id: string | null
+  cda_conta: 'influencers' | 'afiliados'
+  influencer_id: string | null
+  visit_count: number
+  registration_count: number
+  ftd_count: number
+  ftd_total: number
+  deposit_count: number
+  deposit_total: number
+  withdrawal_count: number
+  withdrawal_total: number
+  fonte: 'tap'
+}
+
+function reportingRowsToJogadoresDiarias(
+  data: Record<string, unknown>[],
+  utmToInfluencerId: Map<string, string>,
+  conta: 'influencers' | 'afiliados',
+): { rows: JogadorMetricaDiariaUpsert[]; ids: number } {
+  const rows: JogadorMetricaDiariaUpsert[] = []
+  const ids = new Set<string>()
+  for (const row of data) {
+    const ext = String(row.ext_customer_id ?? row.extCustomerId ?? '').trim()
+    if (!ext) continue
+    const dataDia = String(row.dt ?? row.date ?? '').split('T')[0]
+    if (!dataDia) continue
+    const utmRaw = String(row.utm_source ?? row.utmSource ?? '').trim()
+    const origem = utmRaw && utmRaw.toLowerCase() !== 'empty' ? utmRaw : JOGADOR_ORIGEM_SEM_UTM
+    const registrationId = String(row.registration_id ?? row.registrationId ?? '').trim() || null
+    ids.add(ext)
+    rows.push({
+      data: dataDia,
+      operadora_slug: 'casa_apostas',
+      origem_tipo: 'tap_utm',
+      origem,
+      ext_customer_id: ext,
+      registration_id: registrationId,
+      cda_conta: conta,
+      influencer_id: origem === JOGADOR_ORIGEM_SEM_UTM ? null : influencerIdPorUtm(utmToInfluencerId, origem),
+      visit_count: Math.round(numTap(row.visit_count)),
+      registration_count: Math.round(numTap(row.registration_count)),
+      ftd_count: Math.round(numTap(row.ftd_count)),
+      ftd_total: parseFloat(numTap(row.ftd_total).toFixed(2)),
+      deposit_count: Math.round(numTap(row.deposit_count)),
+      deposit_total: parseFloat(numTap(row.deposit_total).toFixed(2)),
+      withdrawal_count: Math.round(numTap(row.withdrawal_count)),
+      withdrawal_total: parseFloat(numTap(row.withdrawal_total).toFixed(2)),
+      fonte: 'tap',
+    })
+  }
+  return { rows, ids: ids.size }
+}
+
+async function upsertJogadoresTap(
+  supabase: ReturnType<typeof createClient>,
+  data: Record<string, unknown>[],
+  utmToInfluencerId: Map<string, string>,
+  conta: 'influencers' | 'afiliados',
+): Promise<{ inseridos: number; ids: number; erros: string[] }> {
+  const { rows, ids } = reportingRowsToJogadoresDiarias(data, utmToInfluencerId, conta)
+  if (rows.length === 0) return { inseridos: 0, ids: 0, erros: [] }
+  const erros: string[] = []
+  let inseridos = 0
+  for (let i = 0; i < rows.length; i += JOGADORES_UPSERT_CHUNK) {
+    const slice = rows.slice(i, i + JOGADORES_UPSERT_CHUNK)
+    const { error } = await supabase.from('jogadores_metricas_diarias').upsert(slice, {
+      onConflict: 'data,operadora_slug,origem_tipo,origem,ext_customer_id',
+      ignoreDuplicates: false,
+    })
+    if (error) {
+      erros.push(`jogadores_metricas_diarias: ${error.message}`)
+      break
+    }
+    inseridos += slice.length
+  }
+  return { inseridos, ids, erros }
+}
+
 /** Agrega métricas de múltiplas UTMs por (influencer_id, data) e faz upsert. Múltiplas UTMs são SOMADAS. */
 async function upsertMetricasAgregadas(
   supabase: ReturnType<typeof createClient>,
@@ -590,11 +812,54 @@ serve(async (req: Request) => {
       throw new Error(`Reporting API exige ${secretNameApiKey}.`)
     }
 
-    console.log(`[sync-metricas-cda] v2.1.2 CDA conta=${conta} | ${useReportingApi ? 'Reporting API' : 'Plywood'} | Período: ${dataInicio} → ${dataFim}`)
+    console.log(`[sync-metricas-cda] v2.2.0 CDA conta=${conta} | ${useReportingApi ? 'Reporting API' : 'Plywood'} | Período: ${dataInicio} → ${dataFim}`)
+
+    if (params.probe_ext_customer) {
+      if (!cdaApiKey) {
+        throw new Error(`Probe ext_customer_id exige ${secretNameApiKey}.`)
+      }
+      const cors = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+      const strategies: { ep: 'af2_media_report_op' | 'af2_media_report_af'; omitLabel: boolean }[] =
+        endpoint === 'af2_media_report_op'
+          ? [{ ep: 'af2_media_report_op', omitLabel: false }, { ep: 'af2_media_report_af', omitLabel: false }, { ep: 'af2_media_report_af', omitLabel: true }]
+          : [{ ep: 'af2_media_report_af', omitLabel: false }, { ep: 'af2_media_report_af', omitLabel: true }]
+      const tentativas: ReportingRawMeta[] = []
+      let baseline: ReturnType<typeof resumirProbeExtCustomer> | null = null
+      let jogadores: ReturnType<typeof resumirProbeExtCustomer> | null = null
+      let metaOk: ReportingRawMeta | null = null
+      for (const { ep, omitLabel } of strategies) {
+        const base = await fetchReportingRaw(
+          dataInicio, dataFim, cdaApiKey, reportingBaseUrl, authFormat, ep, labelId, omitLabel, 'utm_source',
+        )
+        tentativas.push(base.meta)
+        if (!base.meta.ok) continue
+        const jog = await fetchReportingRaw(
+          dataInicio, dataFim, cdaApiKey, reportingBaseUrl, authFormat, ep, labelId, omitLabel, 'utm_source,ext_customer_id',
+        )
+        tentativas.push(jog.meta)
+        if (!jog.meta.ok) continue
+        baseline = resumirProbeExtCustomer(base.data, 'utm_source')
+        jogadores = resumirProbeExtCustomer(jog.data, 'utm_source,ext_customer_id')
+        metaOk = jog.meta
+        break
+      }
+      console.log(`[sync-metricas-cda] probe_ext_customer conta=${conta} linhas=${jogadores?.linhas ?? 0} ids=${jogadores?.ext_customer_id_distintos ?? 0}`)
+      return new Response(JSON.stringify({
+        ok: Boolean(jogadores),
+        probe: true,
+        conta,
+        periodo: { de: dataInicio, ate_inclusivo: dataFim },
+        endpoint_ok: metaOk,
+        tentativas,
+        agregado_utm_source: baseline,
+        por_jogador: jogadores,
+      }), { status: 200, headers: cors })
+    }
 
     const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '')
 
     let reportingCache: Map<string, DailyMetric[]> | null = null
+    let reportingStrategy: { ep: 'af2_media_report_op' | 'af2_media_report_af'; omitLabel: boolean } | null = null
     if (useReportingApi && cdaApiKey) {
       const strategies: { ep: 'af2_media_report_op' | 'af2_media_report_af'; omitLabel: boolean }[] =
         endpoint === 'af2_media_report_op'
@@ -604,6 +869,7 @@ serve(async (req: Request) => {
       for (const { ep, omitLabel } of strategies) {
         try {
           reportingCache = await fetchMetricasReportingAPI(dataInicio, dataFim, cdaApiKey, reportingBaseUrl, authFormat, ep, labelId, omitLabel)
+          reportingStrategy = { ep, omitLabel }
           console.log(`[sync-metricas-cda] Reporting API (${conta}): ${reportingCache.size} UTMs`)
           lastErr = null
           break
@@ -688,6 +954,40 @@ serve(async (req: Request) => {
       else if (diarias > 0) console.log(`[sync-metricas-cda] utm_metricas_diarias: ${diarias} linhas`)
     }
 
+    let faseJogadores: { ok: boolean; linhas: number; ids: number; erro?: string } | null = null
+    if (!params.skip_jogadores && useReportingApi && cdaApiKey && reportingStrategy) {
+      try {
+        const jog = await fetchReportingRaw(
+          dataInicio,
+          dataFim,
+          cdaApiKey,
+          reportingBaseUrl,
+          authFormat,
+          reportingStrategy.ep,
+          labelId,
+          reportingStrategy.omitLabel,
+          'utm_source,ext_customer_id',
+        )
+        if (!jog.meta.ok) {
+          faseJogadores = { ok: false, linhas: 0, ids: 0, erro: jog.meta.erro }
+          console.warn(`[sync-metricas-cda] jogadores TAP (${conta}): ${jog.meta.erro}`)
+        } else {
+          const r = await upsertJogadoresTap(supabase, jog.data, utmToInfluencerId, conta)
+          faseJogadores = {
+            ok: r.erros.length === 0,
+            linhas: r.inseridos,
+            ids: r.ids,
+            erro: r.erros[0],
+          }
+          console.log(`[sync-metricas-cda] jogadores TAP (${conta}): ${r.inseridos} linhas / ${r.ids} ids`)
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        faseJogadores = { ok: false, linhas: 0, ids: 0, erro: msg }
+        console.warn(`[sync-metricas-cda] jogadores TAP (${conta}) falhou (sync agregado segue): ${msg}`)
+      }
+    }
+
     let totalInseridos = 0
     const todosErros: string[] = []
     const resultados: Array<{ utm_source: string; nome: string; dias_sincronizados: number; erros: string[] }> = []
@@ -762,11 +1062,12 @@ serve(async (req: Request) => {
 
     return new Response(JSON.stringify({
       ok: true,
-      versao: 'v2.1.2',
+      versao: 'v2.2.0',
       integracao: integracaoSlug,
       conta,
       api_usada: useReportingApi ? 'Reporting API' : 'Plywood',
       periodo: { data_inicio: dataInicio, data_fim: dataFim },
+      fase_jogadores: faseJogadores ?? 'pulada',
       fase1_influencers: {
         total: infToUtms.size,
         registros_upserted: totalInseridos,

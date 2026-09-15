@@ -49,7 +49,9 @@ Métricas e UTMs gravam sempre com `operadora_slug = casa_apostas`. Cron diário
 - **CDA_AFILIADOS_REPORTING_ENDPOINT:** (opcional) endpoint da conta Afiliados; senão `CDA_REPORTING_ENDPOINT` / default.
 - **CDA_AUTH_FORMAT:** (opcional) `Bearer` (default) ou `direct` — para API key (vale para Plywood e Reporting API).
 
-- Edge Function `sync-metricas-cda` implantada (v2.1.0+)
+- Edge Function `sync-metricas-cda` implantada (v2.2.0+)
+
+**Fase jogadores (IDs por UTM):** no mesmo sync da Reporting API, após o agregado `group_by=utm_source`, a função chama `group_by=utm_source,ext_customer_id` e faz upsert em `jogadores` / `jogadores_metricas_diarias` (`origem_tipo=tap_utm`, `origem`=utm_source, `ext_customer_id`). Sem PII. Falha desta fase não bloqueia `influencer_metricas`. `skip_jogadores: true` no body pula a fase. Colunas Spin (`ggr_spin`, `rodadas_spin`, …) ficam vazias até o job Revenue Sentinel.
 
 ### Erro "Edge Function returned a non-2xx status code"
 

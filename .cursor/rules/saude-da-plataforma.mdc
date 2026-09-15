@@ -52,7 +52,7 @@ Validar **sempre** que a página do ciclo tiver superfície aplicável. Falha = 
 - Declarar página «mais rápida» sem medição antes/depois.
 - Otimizar cortando dado ou qualidade (totais incompletos, buracos no calendário, payload incompleto na UI).
 
-## Memória — ciclos 1–10 (P1 / P2)
+## Memória — ciclos 1–11 (P1 / P2)
 
 | Ciclo | Escopo | P1 paginação 20 | P2 uma linha/período |
 |-------|--------|-----------------|----------------------|
@@ -66,5 +66,6 @@ Validar **sempre** que a página do ciclo tiver superfície aplicável. Falha = 
 | 8 | Streamers | **OK** (Ranking/Taxas/Financeiro 20) | N/A (por influencer) |
 | 9 | Dash Afiliados | **OK** (código 4 tabelas; smoke N=1) | N/A (por afiliado) |
 | 10 | Mídias Sociais | **OK** (código 4 tabelas densas; smoke N≤13) | **OK** (Overview Detalhamento: 13 dias únicos Set/2026) |
+| 11 | Overview Influencer + Overview Afiliado | **OK** (código TabelaComPaginacao; smoke N=14 / N=1) | **OK no recheck** (`508a36a3`: Influencer Detalhamento 14 dias únicos 01–14/09; Afiliado por afiliado) |
 
 Alimentar esta tabela quando um ciclo novo revelar gap de processo.

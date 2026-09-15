@@ -4,7 +4,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "O dashboard de Streamers consolida a performance do canal de influencers em três dimensões: visão executiva (financeiro e operação), análise de conversão e ranking financeiro. Todas as abas compartilham os mesmos filtros de período, influencer e operadora.",
+          "O dashboard de Streamers consolida a performance do canal de influencers: visão executiva (financeiro e operação), análise de conversão, ranking financeiro e, em implantação, a aba Jogadores (cadastros únicos e quem sentou nas mesas Spin). Todas as abas compartilham os mesmos filtros de período, influencer e operadora.",
       },
       {
         subtitulo: "Filtros e Navegação",
@@ -25,6 +25,11 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "Aba Financeiro — PVI e Ranking",
         texto:
           "Apresenta os KPIs financeiros detalhados: FTD (valor total e ticket médio), Depósitos, Saques, WD Ratio, GGR por Jogador e PVI (Player Value Index, escala 0–100 pts — exibido em pontos, não em percentual).\n\nO gráfico de Investimento por Influencer exibe a distribuição proporcional do investimento pago. Investimentos via agentes são agrupados em 'Outros' quando aplicável.\n\nO Ranking Financeiro lista todos os influencers com métricas financeiras e perfil de jogador (Whales, Core, Recreativos, Caçadores de Bônus). Clique nos cabeçalhos para ordenar por qualquer coluna. No modo Histórico, KPIs Financeiros, Investimento e Ranking usam o subtítulo \"acumulado\".",
+      },
+      {
+        subtitulo: "Aba Jogadores — cadastro e mesas Spin",
+        texto:
+          "A aba Jogadores (em implantação) responde quem o canal cadastrou e quem de fato jogou nas mesas Spin. Os cadastros já são gravados por jogador (ID Ext da casa) e origem (UTM do link). O cruzamento com rodadas, GGR Spin, turnover e mesas entra no passo seguinte, com os dados das mesas ao vivo.\n\nGGR desta aba é o das mesas Spin — não o GGR TAP. A taxa de ativação compara quem jogou Spin com quem jogou outros produtos da casa. Os filtros de período, influencer e operadora são os mesmos das outras abas.",
       },
     ],
   },

@@ -134,6 +134,10 @@ Quando o usuário pedir **atualizar / carregar** dados Mesas Spin neste chat: se
 3. Soma UAP por jogo **pode** exceder UAP daily (overlap entre verticais) — **não** é discrepância.
 4. Monthly só atualiza quando o print Monthly mudar; evitar sobrescrever `arpu` sem valor explícito.
 
+### Jogador do canal (TAP → mesas Spin)
+
+Streamers/Afiliados medem o canal de aquisição em **agregado** (`influencer_metricas`). A aba **Jogadores** precisa do **ID Ext** TAP (`ext_customer_id`) por UTM (`origem`) para cruzar com quem jogou mesas Spin. TAP ID ≠ `player_id` BKO; a ponte é o ID Ext + CRM/identity_map. GGR desta vista = GGR **Spin**, não GGR TAP. Cadastro: `jogadores` + `jogadores_metricas_diarias` no sync CDA (`sync-metricas-cda`); enriquecimento Spin no job Revenue Sentinel. **Não** despejar o lago BKO no Supabase nem inflar `influencer_metricas` com linha por jogador.
+
 ### Visão analítica alvo (pós-migração estúdios)
 
 - Filtro principal do parceiro: **operadora** (mantém).
