@@ -4,12 +4,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "O dashboard de Streamers consolida a performance do canal de influencers: visão executiva (financeiro e operação), análise de conversão, ranking financeiro e, em implantação, a aba Jogadores (cadastros únicos e quem sentou nas mesas Spin). Todas as abas compartilham os mesmos filtros de período, influencer e operadora.",
+          "O dashboard de Streamers consolida a performance do canal de influencers: visão executiva (financeiro e operação), análise de conversão, cadastros e mesas Spin na aba Jogadores, e ranking financeiro. Todas as abas compartilham os mesmos filtros de período, influencer e operadora.",
       },
       {
         subtitulo: "Filtros e Navegação",
         texto:
-          "Use as setas para navegar entre os meses disponíveis. O botão Histórico exibe o acumulado de 13 competências mensais — a atual e as 12 anteriores — permitindo comparar futuramente a competência atual com a mesma competência do ano anterior. Nesse modo a navegação de mês fica desativada e os subtítulos dos blocos principais passam a mostrar \"acumulado\" (o comparativo MoM do mês anterior deixa de aparecer nos KPIs Executivos).\n\nO filtro de influencer restringe todas as abas ao influencer selecionado. O filtro de operadora restringe aos influencers vinculados àquela operadora. Ambos os filtros são aplicados simultaneamente em todas as abas ao trocar de aba.\n\nEnquanto uma aba carrega dados, a barra de filtros pode exibir \"Carregando…\" — os filtros permanecem os mesmos ao mudar entre Overview, Conversão e Financeiro.\n\nCom o foco em uma aba, use as setas ← → do teclado para alternar entre Overview, Conversão e Financeiro (padrão de acessibilidade das abas).",
+          "Use as setas para navegar entre os meses disponíveis. O botão Histórico exibe o acumulado de 13 competências mensais — a atual e as 12 anteriores — permitindo comparar futuramente a competência atual com a mesma competência do ano anterior. Nesse modo a navegação de mês fica desativada e os subtítulos dos blocos principais passam a mostrar \"acumulado\" (o comparativo MoM do mês anterior deixa de aparecer nos KPIs Executivos).\n\nO filtro de influencer restringe todas as abas ao influencer selecionado. O filtro de operadora restringe aos influencers vinculados àquela operadora. Ambos os filtros são aplicados simultaneamente em todas as abas ao trocar de aba.\n\nEnquanto uma aba carrega dados, a barra de filtros pode exibir \"Carregando…\" — os filtros permanecem os mesmos ao mudar entre Overview, Conversão, Jogadores e Financeiro.\n\nCom o foco em uma aba, use as setas ← → do teclado para alternar entre Overview, Conversão, Jogadores e Financeiro (padrão de acessibilidade das abas).",
       },
       {
         subtitulo: "Aba Overview — KPIs e Ranking",
@@ -29,7 +29,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Aba Jogadores — cadastro e mesas Spin",
         texto:
-          "A aba Jogadores (em implantação) responde quem o canal cadastrou e quem de fato jogou nas mesas Spin. Os cadastros já são gravados por jogador (ID Ext da casa) e origem (UTM do link). O cruzamento com rodadas, GGR Spin, turnover e mesas entra no passo seguinte, com os dados das mesas ao vivo.\n\nGGR desta aba é o das mesas Spin — não o GGR TAP. A taxa de ativação compara quem jogou Spin com quem jogou outros produtos da casa. Os filtros de período, influencer e operadora são os mesmos das outras abas.",
+          "Responde quem o canal cadastrou e quem de fato jogou nas mesas Spin. Os cadastros vêm da TAP (ID Ext da casa + UTM do link). Rodadas, GGR Spin, turnover e mesas vêm do cruzamento com o Revenue Sentinel.\n\nO primeiro bloco (Ativação em mesa Spin) mostra registros únicos, quem jogou Spin, quem jogou outros produtos da casa e a taxa de ativação (Spin ÷ Spin + Outros), além de rodadas, média, GGR e turnover — o GGR desta aba é o das mesas Spin, não o da TAP.\n\nO Comparativo de Funil coloca dois influencers lado a lado (Registros → Jogaram → Jogaram Spin). Rodadas por Mesa usa as cores fixas de Blackjack, Roleta, Baccarat e Futebol Brasileiro. O Ranking e o Comparativo de Taxas listam os influencers por volume em mesa; a tabela pagina 20 linhas.\n\nOs filtros de período, influencer e operadora são os mesmos das outras abas. No modo Histórico o comparativo MoM some e os subtítulos passam a \"acumulado\".",
       },
     ],
   },

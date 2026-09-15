@@ -145,6 +145,7 @@ export const APP_ROUTE_CATALOG: AppRouteDef[] = [
   page("Streamers", "streamers", "Streamers", [
     { tabId: "overview", slug: "Overview", label: "Overview", access: "always" },
     { tabId: "conversao", slug: "Conversao", label: "Conversão", access: "always" },
+    { tabId: "jogadores", slug: "Jogadores", label: "Jogadores", access: "always" },
     { tabId: "financeiro", slug: "Financeiro", label: "Financeiro", access: "always" },
   ]),
   page("Afiliados", "dash_afiliados", "DashAfiliados", [

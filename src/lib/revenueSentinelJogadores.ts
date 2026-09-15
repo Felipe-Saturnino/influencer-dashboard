@@ -82,18 +82,76 @@ function mergeJogo(into: Record<string, number>, jogo: string | null, n: number)
   into[jogo] = (into[jogo] ?? 0) + n;
 }
 
+function asList(v: unknown): unknown[] {
+  if (Array.isArray(v)) return v;
+  const rec = asRecord(v);
+  if (!rec) return [];
+  const keys = Object.keys(rec);
+  if (keys.length === 0) return [];
+  const allDates = keys.every((k) => /^\d{4}-\d{2}-\d{2}$/.test(k));
+  const allIds = keys.every((k) => /^\d+$/.test(k) || /CDA-\d+/i.test(k) || k.includes("."));
+  const allObjects = keys.every((k) => asRecord(rec[k]) != null || Array.isArray(rec[k]));
+  if (!allDates && !allIds && !allObjects) return [];
+  return keys.map((k) => {
+    const inner = rec[k];
+    const obj = asRecord(inner);
+    if (allDates && obj) return { ...obj, snapshot_date: obj.snapshot_date || k, data: obj.data || k };
+    if ((allIds || allObjects) && obj) {
+      return {
+        ...obj,
+        ext_customer_id: obj.ext_customer_id || obj.crm_id || (/^\d+$/.test(k) ? k : obj.ext_customer_id),
+      };
+    }
+    return inner;
+  });
+}
+
 function flattenItems(payload: unknown): unknown[] {
   const root = asRecord(payload);
   if (!root) return asArray(payload);
   const direct = [
-    ...asArray(root.items),
-    ...asArray(root.jogadores),
-    ...asArray(root.players),
-    ...asArray(root.data),
-    ...asArray(root.rows),
-  ];
+    "items",
+    "jogadores",
+    "players",
+    "data",
+    "rows",
+    "found",
+    "results",
+    "hits",
+    "jogadores_spin",
+  ].flatMap((k) => asList(root[k]));
   if (direct.length > 0) return direct;
-  return [];
+  if (asArray(root.missing).length > 0 || asArray(root.missing_ids).length > 0) return [];
+  return asList(payload);
+}
+
+/** Chaves do JSON RS — sem valores, para dry_run / log. */
+export function summarizeRsPayload(payload: unknown): {
+  kind: string;
+  keys: string[];
+  item_keys: string[];
+  n_items: number;
+} {
+  if (payload == null) return { kind: "null", keys: [], item_keys: [], n_items: 0 };
+  if (Array.isArray(payload)) {
+    const first = asRecord(payload[0]);
+    return {
+      kind: "array",
+      keys: [],
+      item_keys: first ? Object.keys(first).slice(0, 24) : [],
+      n_items: payload.length,
+    };
+  }
+  const root = asRecord(payload);
+  if (!root) return { kind: typeof payload, keys: [], item_keys: [], n_items: 0 };
+  const items = flattenItems(payload);
+  const first = asRecord(items[0]);
+  return {
+    kind: "object",
+    keys: Object.keys(root).slice(0, 24),
+    item_keys: first ? Object.keys(first).slice(0, 24) : [],
+    n_items: items.length,
+  };
 }
 
 function collectMissing(payload: unknown): string[] {
@@ -122,7 +180,7 @@ function diaFromFlat(row: Record<string, unknown>, fallbackExt: string): RsSpinD
   const tap = tapIdFromRsExternal(
     str(pick(row, ["ext_customer_id", "crm_id", "tap_id", "customer_id"])) || external || fallbackExt,
   );
-  const data = isoDate(pick(row, ["snapshot_date", "round_date", "data", "dia", "date", "day"]));
+  const data = isoDate(pick(row, ["snapshot_date", "snapshotDate", "round_date", "data", "dia", "date", "day"]));
   if (!tap || !data) return null;
   const nestedMesas = [
     ...asArray(row.rounds),
@@ -198,10 +256,12 @@ export function parseJogadoresSpinResponse(payload: unknown): RsJogadoresSpinPar
     const row = asRecord(item);
     if (!row) continue;
     const nestedDias = [
-      ...asArray(row.dias),
-      ...asArray(row.days),
-      ...asArray(row.snapshots),
-      ...asArray(row.daily),
+      ...asList(row.dias),
+      ...asList(row.days),
+      ...asList(row.snapshots),
+      ...asList(row.daily),
+      ...asList(row.by_day),
+      ...asList(row.por_dia),
     ];
     const fallbackExt = str(pick(row, ["ext_customer_id", "external_id", "crm_id"]));
     if (nestedDias.length > 0) {

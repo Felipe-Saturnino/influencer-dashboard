@@ -37,6 +37,23 @@ describe("parseJogadoresSpinResponse", () => {
     expect(r.dias[0]?.apostas_spin).toBe(12);
     expect(r.dias[0]?.ggr_spin).toBe(80);
   });
+
+  it("lê mapa de jogadores + dias por data", () => {
+    const r = parseJogadoresSpinResponse({
+      missing: [],
+      found: {
+        "2112839": {
+          days: {
+            "2026-09-14": { ggr: 10, turnover: 100, bet_count: 3 },
+          },
+        },
+      },
+    });
+    expect(r.dias).toHaveLength(1);
+    expect(r.dias[0]?.ext_customer_id).toBe("2112839");
+    expect(r.dias[0]?.data).toBe("2026-09-14");
+    expect(r.dias[0]?.ggr_spin).toBe(10);
+  });
 });
 
 describe("chunkIds", () => {

@@ -4,6 +4,7 @@ import {
   chunkIds,
   parseJogadoresSpinResponse,
   RS_OPERADORA_SLUG_CDA,
+  summarizeRsPayload,
   type RsSpinDia,
 } from "./revenueSentinelJogadores.ts";
 
@@ -103,6 +104,7 @@ serve(async (req: Request) => {
   const gravarLog = async (opts: {
     status: "ok" | "falha";
     registros_inseridos: number;
+    registros_atualizados?: number;
     erros_count: number;
     mensagem_erro?: string;
   }) => {
@@ -110,7 +112,7 @@ serve(async (req: Request) => {
       integracao_slug: INTEGRACAO_SLUG,
       status: opts.status,
       registros_inseridos: opts.registros_inseridos,
-      registros_atualizados: 0,
+      registros_atualizados: opts.registros_atualizados ?? 0,
       erros_count: opts.erros_count,
       mensagem_erro: opts.mensagem_erro ?? null,
       duracao_ms: Date.now() - inicioMs,
@@ -152,6 +154,7 @@ serve(async (req: Request) => {
     const missing = new Set<string>();
     const erros: string[] = [];
     let httpOk = 0;
+    let payloadShape: ReturnType<typeof summarizeRsPayload> | null = null;
 
     for (const lote of chunks) {
       const ctrl = new AbortController();
@@ -183,6 +186,10 @@ serve(async (req: Request) => {
           continue;
         }
         httpOk += 1;
+        if (!payloadShape) {
+          payloadShape = summarizeRsPayload(payload);
+          console.log("[sync-revenue-sentinel] payload", JSON.stringify(payloadShape));
+        }
         const parsed = parseJogadoresSpinResponse(payload);
         todosDias.push(...parsed.dias);
         for (const m of parsed.missing) missing.add(m);
@@ -291,12 +298,17 @@ serve(async (req: Request) => {
     }
 
     const status: "ok" | "falha" = erros.length > 0 && httpOk === 0 ? "falha" : "ok";
+    const shapeNota =
+      todosDias.length === 0 && httpOk > 0
+        ? `Data Export 200 sem dias Spin. missing=${missing.size}/${ids.length}${payloadShape ? `; chaves=${payloadShape.keys.join(",") || payloadShape.kind}` : ""}`
+        : undefined;
     if (!dryRun) {
       await gravarLog({
         status,
         registros_inseridos: diarioUpsert,
+        registros_atualizados: cadastroUpsert,
         erros_count: erros.length,
-        mensagem_erro: erros.length > 0 ? erros.slice(0, 3).join("; ") : undefined,
+        mensagem_erro: erros.length > 0 ? erros.slice(0, 3).join("; ") : shapeNota,
       });
     }
 
@@ -315,6 +327,7 @@ serve(async (req: Request) => {
       jogaram_outros: cadastro.filter((c) => c.jogou_outros).length,
       diario_upsert: diarioUpsert,
       cadastro_upsert: cadastroUpsert,
+      payload_shape: payloadShape,
       erros,
     });
   } catch (err) {

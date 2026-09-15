@@ -42,7 +42,7 @@ export type StreamersFiltrosContextValue = {
   irMesAnterior: () => void;
   irMesProximo: () => void;
   toggleHistorico: () => void;
-  /** True enquanto a aba ativa (Overview / Conversão / Financeiro) está a carregar dados. */
+  /** True enquanto a aba ativa (Overview / Conversão / Jogadores / Financeiro) está a carregar dados. */
   isLoading: boolean;
   setIsLoading: (v: boolean) => void;
 };

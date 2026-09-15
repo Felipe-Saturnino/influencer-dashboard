@@ -54,6 +54,17 @@ export const JOGOS_IDENTIDADE_LISTA = (
   cor: GAME_IDENTITY_HEX[key],
 }));
 
+/** Infere o jogo da paleta canónica a partir de nome de mesa / chave RS. */
+export function gameIdentityFromTexto(texto: string): GameIdentityKey | null {
+  const n = texto.trim().toLowerCase();
+  if (!n) return null;
+  if (n.includes("futebol") || n.includes("football")) return "futebol_brasileiro";
+  if (n.includes("baccarat") || n.includes("bacará") || n.includes("bacara")) return "baccarat";
+  if (n.includes("roleta") || n.includes("roulette")) return "roleta";
+  if (n.includes("blackjack") || /\bbj\b/.test(n) || n === "blackjack") return "blackjack";
+  return null;
+}
+
 /** Mix de fundo/borda/texto — faixa de título ou borda de select (Overview Spin). */
 export function getGameMesaTituloMix(hex: string) {
   const borderMix = `color-mix(in srgb, ${hex} 35%, transparent)`;

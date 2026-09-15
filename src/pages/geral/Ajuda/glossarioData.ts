@@ -224,6 +224,19 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         referencia: "Streamers → Jogadores",
       },
       {
+        termo: "Jogaram Outros",
+        definicao:
+          "Cadastros do canal que depositaram ou jogaram outros produtos da casa no período, sem apostar nas mesas Spin. No KPI, um aumento neste número é tratado como alerta (não como resultado positivo).",
+        referencia: "Streamers → Jogadores",
+      },
+      {
+        termo: "Taxa de ativação",
+        definicao:
+          "Percentual de quem jogou nas mesas Spin entre quem jogou na casa (Spin + Outros) no período. Não usa o GGR TAP.",
+        formula: "Jogaram Spin ÷ (Jogaram Spin + Jogaram Outros) × 100",
+        referencia: "Streamers → Jogadores",
+      },
+      {
         termo: "FTD (First Time Deposit)",
         definicao:
           "Primeiro depósito de um novo jogador — um por jogador. Representa a conversão final do funil: o jogador acessou, se cadastrou e depositou pela primeira vez.",

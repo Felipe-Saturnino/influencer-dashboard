@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   GAME_IDENTITY_HEX,
   GAME_IDENTITY_LABEL,
+  gameIdentityFromTexto,
   gameIdentityTextColor,
   getGameMesaTituloMix,
   getGameTagChipStyle,
@@ -46,6 +47,16 @@ describe("getGameTagChipStyle", () => {
 describe("gameIdentityTextColor", () => {
   it("varia entre light e dark", () => {
     expect(gameIdentityTextColor("roleta", false)).not.toBe(gameIdentityTextColor("roleta", true));
+  });
+});
+
+describe("gameIdentityFromTexto", () => {
+  it("reconhece nomes de mesa e chaves RS", () => {
+    expect(gameIdentityFromTexto("Speed Baccarat")).toBe("baccarat");
+    expect(gameIdentityFromTexto("Blackjack 2")).toBe("blackjack");
+    expect(gameIdentityFromTexto("Roleta")).toBe("roleta");
+    expect(gameIdentityFromTexto("Futebol Brasileiro")).toBe("futebol_brasileiro");
+    expect(gameIdentityFromTexto("slots")).toBeNull();
   });
 });
 
