@@ -202,18 +202,56 @@
     }
     .hl-b .taxa-v { color: var(--cor-b); }
 
-    .game-row { display: flex; flex-direction: column; gap: 12px; max-width: 720px; }
-    .game-item { display: grid; grid-template-columns: 140px 1fr 72px; gap: 12px; align-items: center; }
-    .game-tag {
-      display: inline-flex; align-items: center; justify-content: center;
-      padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 700;
+    .duo-blocks {
+      display: grid;
+      gap: 14px;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+      margin-bottom: 14px;
+    }
+    .duo-blocks > .content-box { margin-bottom: 0; }
+
+    .game-row { display: flex; flex-direction: column; gap: 12px; }
+    .game-item { display: grid; grid-template-columns: minmax(148px, 1.15fr) 1fr 64px; gap: 10px; align-items: center; }
+    .mesa-label {
+      display: flex; flex-direction: column; gap: 1px;
+      text-align: left; min-width: 0;
+    }
+    .mesa-estudio {
+      font-size: 10px; font-weight: 600; color: var(--text-muted);
+      letter-spacing: .04em; text-transform: uppercase;
+    }
+    .mesa-nome {
+      font-size: 12px; font-weight: 700; color: var(--text); line-height: 1.25;
     }
     .bar { height: 8px; border-radius: 999px; background: var(--input-bg); overflow: hidden; }
     .bar > i { display: block; height: 100%; border-radius: 999px; }
     .game-n { text-align: right; font-variant-numeric: tabular-nums; font-weight: 700; font-size: 12px; }
 
+    .podio { display: flex; align-items: flex-end; justify-content: center; gap: 12px; min-width: 320px; overflow-x: auto; margin-bottom: 22px; }
+    .podio-col { display: flex; flex-direction: column; align-items: center; width: 110px; flex-shrink: 0; }
+    .podio-nome { font-size: 12px; font-weight: 700; margin-bottom: 4px; text-align: center; }
+    .podio-val { font-size: 18px; font-weight: 900; margin-bottom: 8px; font-variant-numeric: tabular-nums; }
+    .podio-base {
+      width: 100%; border-radius: 12px 12px 0 0;
+      display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+      padding-top: 12px;
+    }
+    .podio-rank { font-size: 11px; font-weight: 700; margin-top: 6px; }
+
+    .rank-list { display: flex; flex-direction: column; gap: 6px; }
+    .rank-pair { display: grid; grid-template-columns: 1fr; gap: 6px; }
+    .rank-item {
+      display: flex; align-items: center; gap: 10px; padding: 7px 10px;
+      border-radius: 10px; border: 1px solid var(--card-border); background: rgba(255,255,255,0.02);
+    }
+    .rank-pos { width: 22px; font-size: 11px; font-weight: 700; color: var(--text-muted); text-align: right; flex-shrink: 0; }
+    .rank-nome { font-size: 12px; font-weight: 600; width: 72px; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .rank-bar { flex: 1; height: 5px; background: var(--card-border); border-radius: 999px; overflow: hidden; }
+    .rank-bar > i { display: block; height: 100%; background: var(--brand-action); opacity: .65; border-radius: 999px; }
+    .rank-n { font-size: 12px; font-weight: 700; color: #a78bfa; flex-shrink: 0; width: 52px; text-align: right; font-variant-numeric: tabular-nums; }
+
     .table-wrap { border-radius: 14px; overflow-x: auto; }
-    table.data { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 880px; }
+    table.data { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 960px; }
     table.data th {
       font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
       text-align: center; padding: 9px 12px;
@@ -226,10 +264,25 @@
     }
     table.data tbody tr:nth-child(odd) { background: #fff; }
     table.data tbody tr:nth-child(even) { background: color-mix(in srgb, #fff 92%, var(--brand-primary) 8%); }
-    table.data td.left { text-align: left; }
+    table.data td.left { text-align: left; font-weight: 600; }
+    table.data td.rate { font-size: 12px; font-weight: 400; color: var(--text-muted); }
+    table.data td.hl-am {
+      font-weight: 700; color: #f59e0b;
+      border-left: 3px solid rgba(245,158,11,0.7);
+      background: rgba(245,158,11,0.08);
+    }
+    table.data td.hl-rx {
+      font-weight: 700; color: #a855f7;
+      border-left: 3px solid rgba(168,85,247,0.7);
+      background: rgba(168,85,247,0.08);
+    }
+    table.data td.hl-az {
+      font-weight: 700; color: #1e36f8;
+      border-left: 3px solid rgba(30,54,248,0.7);
+      background: rgba(30,54,248,0.08);
+    }
     .ggr-pos { color: #22c55e; font-weight: 700; }
     .pager { margin-top: 12px; font-size: 12px; color: var(--text-muted); }
-    .note { font-size: 12px; color: var(--text-muted); margin-top: 10px; }
   </style>
 </head>
 <body>
@@ -280,13 +333,13 @@
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 3h5v5M8 3H3v5M21 16v5h-5M3 16v5h5M21 3l-7 7M3 21l7-7"/></svg>
             Conversão
           </span>
-          <span class="chip" role="tab" aria-selected="false">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>
-            Financeiro
-          </span>
           <span class="chip active" role="tab" aria-selected="true">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
             Jogadores
+          </span>
+          <span class="chip" role="tab" aria-selected="false">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>
+            Financeiro
           </span>
         </div>
         <span></span>
@@ -311,7 +364,7 @@
               <span class="kpi-label">Registros</span>
             </div>
             <div class="kpi-value">1.842</div>
-            <div class="kpi-mom" style="color:#22c55e">+14,4% <span>vs jul · IDs únicos TAP</span></div>
+            <div class="kpi-mom" style="color:#22c55e">+14,4% <span>vs jul</span></div>
           </div>
         </article>
         <article class="kpi">
@@ -337,7 +390,7 @@
               <span class="kpi-label">Jogaram Outros</span>
             </div>
             <div class="kpi-value">428</div>
-            <div class="kpi-mom" style="color:#e84025">+8,1% <span>vs jul · GGR TAP, sem Spin</span></div>
+            <div class="kpi-mom" style="color:#e84025">+8,1% <span>vs jul</span></div>
           </div>
         </article>
         <article class="kpi">
@@ -350,7 +403,7 @@
               <span class="kpi-label">Taxa de ativação</span>
             </div>
             <div class="kpi-value">58,8%</div>
-            <div class="kpi-mom" style="color:#22c55e">+4,1 pp <span>vs jul · Spin ÷ (Spin + Outros)</span></div>
+            <div class="kpi-mom" style="color:#22c55e">+4,1 pp <span>vs jul</span></div>
           </div>
         </article>
       </div>
@@ -366,7 +419,7 @@
               <span class="kpi-label">Rodadas</span>
             </div>
             <div class="kpi-value">48.220</div>
-            <div class="kpi-mom" style="color:#22c55e">+20,2% <span>vs jul · origem influencer</span></div>
+            <div class="kpi-mom" style="color:#22c55e">+20,2% <span>vs jul</span></div>
           </div>
         </article>
         <article class="kpi">
@@ -379,7 +432,7 @@
               <span class="kpi-label">Média de Rodadas</span>
             </div>
             <div class="kpi-value">78,9</div>
-            <div class="kpi-mom" style="color:#e84025">−2,0% <span>vs jul · rodadas ÷ Jogaram Spin</span></div>
+            <div class="kpi-mom" style="color:#e84025">−2,0% <span>vs jul</span></div>
           </div>
         </article>
         <article class="kpi">
@@ -392,7 +445,7 @@
               <span class="kpi-label">GGR</span>
             </div>
             <div class="kpi-value">R$ 187.000</div>
-            <div class="kpi-mom" style="color:#22c55e">+23,0% <span>vs jul · origem influencer · Spin</span></div>
+            <div class="kpi-mom" style="color:#22c55e">+23,0% <span>vs jul</span></div>
           </div>
         </article>
         <article class="kpi">
@@ -405,7 +458,7 @@
               <span class="kpi-label">Turnover</span>
             </div>
             <div class="kpi-value">R$ 2.140.000</div>
-            <div class="kpi-mom" style="color:#22c55e">+18,6% <span>vs jul · origem influencer · Spin</span></div>
+            <div class="kpi-mom" style="color:#22c55e">+18,6% <span>vs jul</span></div>
           </div>
         </article>
       </div>
@@ -446,36 +499,122 @@
       </div>
     </section>
 
-    <section class="content-box">
-      <div class="section-head">
-        <div class="section-title">Rodadas por jogo</div>
-        <span class="section-dash">—</span>
-        <div class="section-sub">quem jogou mesa Spin · origem influencer</div>
-      </div>
-      <div class="game-row">
-        <div class="game-item">
-          <span class="game-tag" style="background:#22c55e22;color:#15803d;border:1px solid #22c55e44">Blackjack</span>
-          <div class="bar"><i style="width:44%;background:#22c55e"></i></div>
-          <span class="game-n">21.400</span>
+    <div class="duo-blocks">
+      <section class="content-box">
+        <div class="section-head">
+          <div class="section-title">Rodadas por Mesa</div>
+          <span class="section-dash">—</span>
+          <div class="section-sub">Estúdio - Nome da Mesa</div>
         </div>
-        <div class="game-item">
-          <span class="game-tag" style="background:#1e36f822;color:#1631c4;border:1px solid #1e36f844">Baccarat</span>
-          <div class="bar"><i style="width:27%;background:#1e36f8"></i></div>
-          <span class="game-n">12.800</span>
+        <div class="game-row">
+          <div class="game-item">
+            <span class="mesa-label">
+              <span class="mesa-estudio">Casa de Apostas</span>
+              <span class="mesa-nome">Blackjack 2</span>
+            </span>
+            <div class="bar"><i style="width:44%;background:#22c55e"></i></div>
+            <span class="game-n">21.400</span>
+          </div>
+          <div class="game-item">
+            <span class="mesa-label">
+              <span class="mesa-estudio">Sports Club</span>
+              <span class="mesa-nome">Speed Baccarat</span>
+            </span>
+            <div class="bar"><i style="width:27%;background:#1e36f8"></i></div>
+            <span class="game-n">12.800</span>
+          </div>
+          <div class="game-item">
+            <span class="mesa-label">
+              <span class="mesa-estudio">Casa de Apostas</span>
+              <span class="mesa-nome">Roleta</span>
+            </span>
+            <div class="bar"><i style="width:19%;background:#eab308"></i></div>
+            <span class="game-n">9.100</span>
+          </div>
+          <div class="game-item">
+            <span class="mesa-label">
+              <span class="mesa-estudio">Sports Club</span>
+              <span class="mesa-nome">Futebol Brasileiro</span>
+            </span>
+            <div class="bar"><i style="width:10%;background:#ea580c"></i></div>
+            <span class="game-n">4.920</span>
+          </div>
         </div>
-        <div class="game-item">
-          <span class="game-tag" style="background:#eab30822;color:#a16207;border:1px solid #eab30844">Roleta</span>
-          <div class="bar"><i style="width:19%;background:#eab308"></i></div>
-          <span class="game-n">9.100</span>
+      </section>
+
+      <section class="content-box">
+        <div class="section-head">
+          <div class="section-title">Ranking de Influencers</div>
+          <span class="section-dash">—</span>
+          <div class="section-sub">rodadas Spin dos jogadores originados</div>
         </div>
-        <div class="game-item">
-          <span class="game-tag" style="background:#ea580c22;color:#c2410c;border:1px solid #ea580c44">Futebol BR</span>
-          <div class="bar"><i style="width:10%;background:#ea580c"></i></div>
-          <span class="game-n">4.920</span>
+        <div class="podio" role="img" aria-label="Pódio de rodadas Spin: 1º Gabs Live (14.820), 2º Lua Cassino (9.640), 3º Rico Play (7.210)">
+          <div class="podio-col">
+            <div class="podio-nome">Lua</div>
+            <div class="podio-val" style="color:#70cae4">9.640</div>
+            <div class="podio-base" style="height:90px;background:rgba(112,202,228,0.13);border:1px solid rgba(112,202,228,0.35);color:#70cae4">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="8" r="6"/><path d="M8.21 13.89L7 23l5-3 5 3-1.21-9.12"/></svg>
+              <span class="podio-rank">#2</span>
+            </div>
+          </div>
+          <div class="podio-col">
+            <div class="podio-nome">Gabs</div>
+            <div class="podio-val" style="color:#f59e0b">14.820</div>
+            <div class="podio-base" style="height:130px;background:rgba(245,158,11,0.13);border:1px solid rgba(245,158,11,0.38);color:#f59e0b">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.46.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
+              <span class="podio-rank">#1</span>
+            </div>
+          </div>
+          <div class="podio-col">
+            <div class="podio-nome">Rico</div>
+            <div class="podio-val" style="color:#a78bfa">7.210</div>
+            <div class="podio-base" style="height:70px;background:rgba(74,32,130,0.18);border:1px solid rgba(74,32,130,0.40);color:#a78bfa">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>
+              <span class="podio-rank">#3</span>
+            </div>
+          </div>
         </div>
-      </div>
-      <p class="note">Identidade de jogo canônica (não whitelabel). Fonte: rodadas BKO agregadas no Revenue Sentinel.</p>
-    </section>
+        <div class="rank-list">
+          <div class="rank-pair">
+            <div class="rank-item">
+              <div class="rank-pos">#4</div>
+              <div class="rank-nome">Nanda</div>
+              <div class="rank-bar"><i style="width:35%"></i></div>
+              <div class="rank-n">5.180</div>
+            </div>
+            <div class="rank-item">
+              <div class="rank-pos">#5</div>
+              <div class="rank-nome">Bia</div>
+              <div class="rank-bar"><i style="width:28%"></i></div>
+              <div class="rank-n">4.090</div>
+            </div>
+          </div>
+          <div class="rank-pair">
+            <div class="rank-item">
+              <div class="rank-pos">#6</div>
+              <div class="rank-nome">Kaio</div>
+              <div class="rank-bar"><i style="width:19%"></i></div>
+              <div class="rank-n">2.760</div>
+            </div>
+            <div class="rank-item">
+              <div class="rank-pos">#7</div>
+              <div class="rank-nome">Theo</div>
+              <div class="rank-bar"><i style="width:16%"></i></div>
+              <div class="rank-n">2.410</div>
+            </div>
+          </div>
+          <div class="rank-pair">
+            <div class="rank-item">
+              <div class="rank-pos">#8</div>
+              <div class="rank-nome">Demais</div>
+              <div class="rank-bar"><i style="width:14%"></i></div>
+              <div class="rank-n">2.110</div>
+            </div>
+            <div></div>
+          </div>
+        </div>
+      </section>
+    </div>
 
     <section class="content-box">
       <div class="section-head">
@@ -495,40 +634,40 @@
               <th scope="col">Jog&gt;Spin</th>
               <th scope="col">Spin</th>
               <th scope="col">Turnover Spin</th>
-              <th scope="col">GGR</th>
+              <th scope="col">GGR Spin</th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td class="left">Gabs Live</td><td>412</td><td>62,6%</td><td>258</td><td>65,1%</td><td>168</td>
+              <td class="left">Gabs Live</td><td>412</td><td class="rate">62,6%</td><td>258</td><td class="rate">65,1%</td><td>168</td>
               <td>R$ 712.000</td><td class="ggr-pos">R$ 62.400</td>
             </tr>
             <tr>
-              <td class="left">Lua Cassino</td><td>298</td><td>64,1%</td><td>191</td><td>63,4%</td><td>121</td>
+              <td class="left">Lua Cassino</td><td>298</td><td class="rate">64,1%</td><td>191</td><td class="rate">63,4%</td><td>121</td>
               <td>R$ 468.000</td><td class="ggr-pos">R$ 41.100</td>
             </tr>
             <tr>
-              <td class="left">Rico Play</td><td>221</td><td>61,5%</td><td>136</td><td>64,7%</td><td>88</td>
+              <td class="left">Rico Play</td><td>221</td><td class="rate">61,5%</td><td>136</td><td class="rate">64,7%</td><td>88</td>
               <td>R$ 330.000</td><td class="ggr-pos">R$ 28.900</td>
             </tr>
             <tr>
-              <td class="left">Nanda Bet</td><td>256</td><td>52,0%</td><td>133</td><td>53,4%</td><td>71</td>
+              <td class="left">Nanda Bet</td><td>256</td><td class="rate">52,0%</td><td>133</td><td class="rate">53,4%</td><td>71</td>
               <td>R$ 207.000</td><td class="ggr-pos">R$ 18.200</td>
             </tr>
             <tr>
-              <td class="left">Bia Night</td><td>174</td><td>53,4%</td><td>93</td><td>59,1%</td><td>55</td>
+              <td class="left">Bia Night</td><td>174</td><td class="rate">53,4%</td><td>93</td><td class="rate">59,1%</td><td>55</td>
               <td>R$ 162.000</td><td class="ggr-pos">R$ 14.200</td>
             </tr>
             <tr>
-              <td class="left">Kaio Slots</td><td>189</td><td>51,3%</td><td>97</td><td>43,3%</td><td>42</td>
+              <td class="left">Kaio Slots</td><td>189</td><td class="rate">51,3%</td><td>97</td><td class="rate hl-rx">43,3%</td><td>42</td>
               <td>R$ 96.000</td><td class="ggr-pos">R$ 8.400</td>
             </tr>
             <tr>
-              <td class="left">Theo Stream</td><td>156</td><td>44,9%</td><td>70</td><td>54,3%</td><td>38</td>
+              <td class="left">Theo Stream</td><td>156</td><td class="rate hl-am">44,9%</td><td>70</td><td class="rate">54,3%</td><td>38</td>
               <td>R$ 81.000</td><td class="ggr-pos">R$ 7.100</td>
             </tr>
             <tr>
-              <td class="left">Demais</td><td>136</td><td>44,9%</td><td>61</td><td>45,9%</td><td>28</td>
+              <td class="left">Demais</td><td>136</td><td class="rate hl-am">44,9%</td><td>61</td><td class="rate">45,9%</td><td>28</td>
               <td>R$ 76.000</td><td class="ggr-pos">R$ 6.700</td>
             </tr>
           </tbody>

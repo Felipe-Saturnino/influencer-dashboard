@@ -52,7 +52,7 @@ Validar **sempre** que a página do ciclo tiver superfície aplicável. Falha = 
 - Declarar página «mais rápida» sem medição antes/depois.
 - Otimizar cortando dado ou qualidade (totais incompletos, buracos no calendário, payload incompleto na UI).
 
-## Memória — ciclos 1–9 (P1 / P2)
+## Memória — ciclos 1–10 (P1 / P2)
 
 | Ciclo | Escopo | P1 paginação 20 | P2 uma linha/período |
 |-------|--------|-----------------|----------------------|
@@ -65,5 +65,6 @@ Validar **sempre** que a página do ciclo tiver superfície aplicável. Falha = 
 | 7 | Overview Spin | **OK no recheck** (`1e22c12e`: Ranking Blaze/Network = 20 itens + «1–20 de 269»; `RankingConcorrentesLista`) | **OK no recheck** (Overview Blaze: BJ1/BJ2/Speed Baccarat/Roleta/Futebol — 13 dias únicos; hotfix `e40a4baa`) |
 | 8 | Streamers | **OK** (Ranking/Taxas/Financeiro 20) | N/A (por influencer) |
 | 9 | Dash Afiliados | **OK** (código 4 tabelas; smoke N=1) | N/A (por afiliado) |
+| 10 | Mídias Sociais | **OK** (código 4 tabelas densas; smoke N≤13) | **OK** (Overview Detalhamento: 13 dias únicos Set/2026) |
 
 Alimentar esta tabela quando um ciclo novo revelar gap de processo.

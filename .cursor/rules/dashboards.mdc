@@ -261,6 +261,7 @@ Nenhuma exceção documentada. Comparativo de Jogo, Comparativo de mesa e Dados 
 - **Campanhas inativas:** RPCs `get_campanhas_performance` / funil — no **mês** do carrossel, inativa só aparece (e entra nos totais) se gerou métricas no período; com **Histórico**, inativas **sempre** entram na listagem (`p_modo_historico`). Funil e série temporal somam UTMs mapeadas a campanhas ativas **ou** inativas.
 - **`getMesesDisponiveis`:** importar de `lib/dashboardHelpers` com `MES_INICIO` local (Jan/2026) — não declarar cópia local da função.
 - **Tabelas densas:** Detalhamento diário/mensal, Comparativo de campanha, Comparativo de taxas e Detalhamento por anúncio usam `TabelaComPaginacao` + `TABELA_PAGE_SIZE` (20); KPIs e Comparativo de funil no conjunto completo.
+- **Re-varredura (Verificação 2.0):** Ciclo **46** no mapa — após ajustes de integração Social Media; inclui UI das 4 abas **e** ETL/SYNC (`docs/ETL-SOCIAL-MEDIAS.md`, workflows `sync-social-kpis-daily` / backfill, consumo `kpi_daily` + posts + Meta Ads). Ciclo 10 permanece fechado até o 46 abrir.
 
 ---
 

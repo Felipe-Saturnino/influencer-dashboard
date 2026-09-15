@@ -186,8 +186,10 @@ export default function DashboardOverviewAfiliado() {
           minHeight: "100vh",
           fontFamily: FONT.body,
           display: "flex",
+          flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
+          gap: 12,
         }}
       >
         <Loader2
@@ -196,6 +198,7 @@ export default function DashboardOverviewAfiliado() {
           color="var(--brand-action, #7c3aed)"
           aria-hidden="true"
         />
+        <span style={{ fontSize: 13, color: t.textMuted }}>Carregando…</span>
       </div>
     );
   }

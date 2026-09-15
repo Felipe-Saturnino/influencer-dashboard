@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mockup — Home Service Manager (proposta · família Estúdio)</title>
+  <style>
+    :root {
+      --brand-primary: #7c3aed;
+      --brand-secondary: #1e36f8;
+      --brand-accent: #7c3aed;
+      --brand-roxo: #4a2082;
+      --brand-azul: #1e36f8;
+      --vermelho: #e84025;
+      --amarelo: #f59e0b;
+      --verde: #22c55e;
+      --rosa: #ec4899;
+
+      --page-bg: #f4f4f8;
+      --card-bg: #ffffff;
+      --card-border: #e8e8f0;
+      --input-bg: #f8f8fc;
+      --text: #1a1a2e;
+      --text-muted: #666688;
+      --section-title: #1a1a2e;
+      --box-radius: 14px;
+      --box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+
+      --font: "Segoe UI", system-ui, -apple-system, sans-serif;
+      --font-title: "Segoe UI Semibold", "Segoe UI", system-ui, sans-serif;
+    }
+
+    body.dark {
+      --page-bg: #0f0f1a;
+      --card-bg: #1a1a2e;
+      --card-border: #2a2a4e;
+      --input-bg: rgba(255,255,255,0.07);
+      --text: #ffffff;
+      --text-muted: #e5dce1;
+      --section-title: #ffffff;
+      --box-radius: 18px;
+      --box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font);
+      background: var(--page-bg);
+      color: var(--text);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .mock-banner {
+      background: linear-gradient(135deg, #4a2082, #1e36f8);
+      color: #fff; padding: 10px 16px; font-size: 12px; font-weight: 600;
+      display: flex; align-items: center; justify-content: center; gap: 16px; flex-wrap: wrap;
+    }
+    .mock-banner button {
+      border: 1px solid rgba(255,255,255,.5); background: rgba(255,255,255,.12); color: #fff;
+      padding: 5px 12px; border-radius: 999px; font-size: 11px; font-weight: 700; cursor: pointer;
+      font-family: var(--font);
+    }
+
+    .page-shell {
+      max-width: 1100px; margin: 0 auto; padding: 24px 20px 40px;
+      display: flex; flex-direction: column; gap: 14px;
+    }
+
+    .block-tag {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+      color: var(--brand-primary); background: rgba(124, 58, 237, 0.12);
+      border: 1px dashed rgba(124, 58, 237, 0.45);
+      padding: 3px 8px; border-radius: 999px; margin-bottom: -6px; width: max-content;
+    }
+    body.dark .block-tag { color: #70cae4; }
+
+    .welcome-card, .hero-card {
+      position: relative; overflow: hidden;
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: 20px; padding: 28px; box-shadow: var(--box-shadow);
+    }
+    .welcome-card .topbar, .hero-card .topbar {
+      position: absolute; top: 0; left: 0; right: 0; height: 4px;
+    }
+    .topbar-brand { background: linear-gradient(90deg, var(--brand-primary), var(--brand-azul)); }
+    .topbar-alert { background: linear-gradient(90deg, var(--vermelho), var(--amarelo)); }
+    .topbar-mkt { background: linear-gradient(90deg, var(--amarelo), #fbbf24); }
+
+    .welcome-row { display: flex; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+    .avatar {
+      width: 56px; height: 56px; border-radius: 50%; flex-shrink: 0;
+      background: linear-gradient(135deg, var(--brand-roxo), var(--brand-azul));
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-weight: 800; font-size: 20px;
+      border: 2px solid rgba(124, 58, 237, 0.45);
+    }
+    .welcome-card h1, .hero-card h1 {
+      font-family: var(--font-title); font-size: 22px; font-weight: 800;
+      letter-spacing: .02em; margin: 0 0 6px;
+    }
+    .role-label { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; }
+    .welcome-sub { font-size: 14px; color: var(--text-muted); line-height: 1.55; white-space: pre-line; }
+
+    .title-row { display: flex; align-items: center; gap: 8px; min-width: 0; }
+    .icon-box {
+      width: 32px; height: 32px; border-radius: 9px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(74,32,130,0.18); border: 1px solid rgba(74,32,130,0.30);
+      color: var(--brand-accent);
+    }
+    .icon-box.alert {
+      background: rgba(232,64,37,0.12); border-color: rgba(232,64,37,0.35); color: var(--vermelho);
+    }
+    .icon-box.warn {
+      background: rgba(245,158,11,0.14); border-color: rgba(245,158,11,0.4); color: var(--amarelo);
+    }
+    .hero-card h2 {
+      font-family: var(--font-title); font-size: 20px; font-weight: 800;
+      letter-spacing: .02em; line-height: 1.3; margin: 0;
+    }
+    .hero-body { font-size: 13px; line-height: 1.55; color: var(--text-muted); margin: 12px 0 0; }
+    .cta-alert {
+      display: inline-flex; align-items: center; margin-top: 16px;
+      padding: 10px 20px; border-radius: 10px;
+      border: 1px solid rgba(232,64,37,0.45); background: rgba(232,64,37,0.12);
+      color: var(--vermelho); font-size: 13px; font-weight: 700; text-decoration: none;
+    }
+    .cta-warn {
+      display: inline-flex; align-items: center; margin-top: 16px;
+      padding: 10px 20px; border-radius: 10px;
+      border: 1px solid rgba(245,158,11,0.5); background: rgba(245,158,11,0.14);
+      color: #a16207; font-size: 13px; font-weight: 700; text-decoration: none;
+    }
+    body.dark .cta-warn { color: var(--amarelo); }
+
+    .content-box {
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: var(--box-radius); box-shadow: var(--box-shadow); padding: 20px;
+    }
+    .section-title {
+      font-family: var(--font-title); font-size: 13px; font-weight: 800;
+      letter-spacing: .08em; text-transform: uppercase; color: var(--section-title);
+      margin: 0 0 4px;
+    }
+    .mes-sub { font-size: 12px; color: var(--text-muted); margin: 0 0 14px; }
+
+    .grid-kpi-3 {
+      display: grid; gap: 12px;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .grid-kpi-4 {
+      display: grid; gap: 12px;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+    @media (max-width: 900px) {
+      .grid-kpi-3, .grid-kpi-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    .kpi-card {
+      position: relative; overflow: hidden;
+      background: var(--input-bg); border: 1px solid var(--card-border);
+      border-radius: 12px; min-height: 110px;
+    }
+    .kpi-bar { height: 3px; background: var(--brand-primary); }
+    .kpi-bar.ok { background: var(--verde); }
+    .kpi-bar.warn { background: var(--amarelo); }
+    .kpi-bar.sec { background: var(--brand-azul); }
+    .kpi-body { padding: 14px 14px 16px; }
+    .kpi-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+    .kpi-ic {
+      width: 28px; height: 28px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(124,58,237,0.12); color: var(--brand-accent); font-size: 12px; font-weight: 800;
+    }
+    .kpi-ic.ok { background: rgba(34,197,94,0.12); color: var(--verde); }
+    .kpi-ic.warn { background: rgba(245,158,11,0.14); color: var(--amarelo); }
+    .kpi-ic.sec { background: rgba(30,54,248,0.12); color: var(--brand-azul); }
+    .kpi-label { font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--text-muted); }
+    .kpi-value { font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.2; }
+    .kpi-hint { margin-top: 6px; font-size: 11px; color: var(--text-muted); }
+    .kpi-mom {
+      margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--card-border);
+      font-size: 11px;
+    }
+    .kpi-mom .row { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+    .kpi-mom .up { color: var(--verde); font-weight: 700; }
+    .kpi-mom .down { color: var(--vermelho); font-weight: 700; }
+    .kpi-mom .up.inv { color: var(--vermelho); }
+    .kpi-mom .down.inv { color: var(--verde); }
+
+    .turno-destaque {
+      display: flex; gap: 16px; flex-wrap: wrap; align-items: stretch;
+      padding: 16px 18px; border-radius: 14px;
+      border: 1px solid color-mix(in srgb, var(--brand-primary) 35%, var(--card-border));
+      background: color-mix(in srgb, var(--brand-primary) 8%, var(--input-bg));
+      margin-bottom: 14px;
+    }
+    .turno-when {
+      min-width: 120px; padding: 12px 14px; border-radius: 12px;
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      text-align: center;
+    }
+    .turno-when .dia { font-size: 28px; font-weight: 800; line-height: 1; }
+    .turno-when .mes { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); margin-top: 4px; }
+    .turno-when .hora { margin-top: 8px; font-size: 13px; font-weight: 700; color: var(--brand-accent); }
+    .turno-meta h3 { font-size: 16px; font-weight: 800; margin: 0 0 6px; }
+    .turno-meta p { font-size: 13px; color: var(--text-muted); margin: 0 0 4px; }
+    .turno-cta {
+      display: inline-flex; margin-top: 12px; padding: 8px 14px; border-radius: 10px;
+      border: 1px solid rgba(124,58,237,0.35); background: rgba(124,58,237,0.12);
+      color: var(--brand-accent); font-size: 12px; font-weight: 700; text-decoration: none;
+    }
+
+    .lista-turnos { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+    .lista-turnos li {
+      display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+      padding: 12px 14px; border-radius: 12px;
+      border: 1px solid var(--card-border); background: var(--input-bg);
+    }
+    .lista-turnos .tit { font-weight: 700; font-size: 13px; }
+    .lista-turnos .sub { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+    .pill {
+      align-self: center; font-size: 10px; font-weight: 700; padding: 3px 9px; border-radius: 20px;
+      background: rgba(34,197,94,0.12); color: var(--verde); border: 1px solid rgba(34,197,94,0.35);
+      white-space: nowrap;
+    }
+    .pill.mkt {
+      background: rgba(245,158,11,0.14); color: #a16207; border-color: rgba(245,158,11,0.4);
+    }
+    body.dark .pill.mkt { color: var(--amarelo); }
+
+    .feed-list { list-style: none; display: flex; flex-direction: column; gap: 12px; }
+    .feed-card {
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: 14px; padding: 16px 18px; box-shadow: var(--box-shadow);
+    }
+    .feed-card h3 { font-size: 15px; font-weight: 800; margin: 0; color: var(--text); }
+    .feed-body { margin-top: 12px; font-size: 13px; line-height: 1.55; color: var(--text); }
+    .feed-body a { font-weight: 700; color: var(--brand-accent); text-decoration: underline; }
+    .feed-footer { font-size: 12px; color: var(--text-muted); margin: 14px 0 0; }
+    .btn-li-ocultar {
+      display: inline-flex; align-items: center; margin-top: 14px;
+      padding: 8px 14px; border-radius: 10px;
+      border: 1px solid var(--card-border);
+      background: rgba(124, 58, 237, 0.12);
+      color: var(--brand-accent); font-size: 12px; font-weight: 700; cursor: pointer;
+      font-family: var(--font);
+    }
+
+    .hint { font-size: 13px; line-height: 1.55; color: var(--text-muted); margin-bottom: 16px; }
+    .grid-atalhos {
+      display: grid; gap: 12px;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+    }
+    .atalho {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 16px 18px; border-radius: 12px;
+      border: 1px solid var(--card-border); background: var(--input-bg);
+      color: var(--text); text-decoration: none;
+    }
+    .atalho:hover { border-color: var(--brand-primary); background: rgba(124, 58, 237, 0.08); }
+    .atalho .ic {
+      width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
+      background: rgba(74,32,130,0.2); color: var(--brand-accent);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .atalho .tit { display: flex; align-items: flex-start; gap: 8px; }
+    .atalho .tit span { flex: 1; font-size: 14px; font-weight: 700; line-height: 1.35; }
+    .atalho .tit svg { color: var(--text-muted); flex-shrink: 0; margin-top: 2px; }
+    .atalho p { margin: 8px 0 0; font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+
+    .nota-mock {
+      display: flex; align-items: flex-start; gap: 6px; margin-top: 12px;
+      font-size: 11px; font-weight: 700; padding: 6px 10px; border-radius: 8px;
+      background: rgba(245,158,11,.12); color: #a16207; border: 1px dashed rgba(245,158,11,.55);
+    }
+    body.dark .nota-mock { color: var(--amarelo); }
+
+    .footer-hint { margin-top: 14px; font-size: 12px; color: var(--text-muted); }
+    .footer-hint a { color: var(--brand-accent); font-weight: 700; }
+
+    .legenda { max-width: 1100px; margin: 0 auto; padding: 0 20px 48px; }
+    .legenda .content-box { font-size: 12px; color: var(--text-muted); }
+    .legenda ul { padding-left: 18px; margin-top: 10px; }
+    .legenda li { margin-bottom: 6px; }
+    .legenda strong { color: var(--text); }
+    .removed { text-decoration: line-through; opacity: .7; }
+    code { font-size: 11px; }
+  </style>
+</head>
+<body>
+  <div class="mock-banner">
+    <span>Mockup 4/6 — Home · perfil <strong>Service Manager</strong> · família Estúdio (proposta · paridade SL)</span>
+    <button type="button" id="btn-tema">Alternar tema claro / escuro</button>
+  </div>
+
+  <div class="page-shell">
+
+    <span class="block-tag">Bloco 1 · Boas-vindas</span>
+    <div class="welcome-card">
+      <div class="topbar topbar-brand"></div>
+      <div class="welcome-row">
+        <div class="avatar" aria-hidden="true">R</div>
+        <div style="flex:1;min-width:200px">
+          <h1>Olá, Rafael Lima!</h1>
+          <p class="role-label">Service Manager</p>
+          <p class="welcome-sub">Você garante que cada jogo aconteça com confiança.
+Seu turno, a operação e o que precisa de ação — primeiro.</p>
+        </div>
+      </div>
+    </div>
+
+    <span class="block-tag">Bloco 2 · Atualização cadastral (compartilhado · só quando pendente)</span>
+    <div class="hero-card">
+      <div class="topbar topbar-alert"></div>
+      <div class="title-row">
+        <div class="icon-box alert" aria-hidden="true">!</div>
+        <h2>Rafael, AÇÃO NECESSÁRIA!</h2>
+      </div>
+      <p class="hero-body">Sua atualização cadastral de 6 meses está pendente. Acesse Dados de Cadastro, revise seus dados e documentos ou confirme que nada mudou no período.</p>
+      <a class="cta-alert" href="#">Ir para Dados de Cadastro</a>
+      <p class="nota-mock">Componente compartilhado staff (`AtualizacaoCadastralStaffHome`). Ocultar se em dia. No mock de aprovação, manter para lembrar a regra.</p>
+    </div>
+
+    <span class="block-tag">Bloco 3 · Marketplace (compartilhado · GP / Shuffler / SL / SM · só se houver)</span>
+    <div class="hero-card">
+      <div class="topbar topbar-mkt"></div>
+      <div class="title-row">
+        <div class="icon-box warn" aria-hidden="true">⇄</div>
+        <h2>Oferta aguardando a sua aprovação</h2>
+      </div>
+      <p class="hero-body">Você tem uma <strong>troca de turno</strong> em <strong>16/09/2026</strong> aguardando a sua aprovação.</p>
+      <a class="cta-warn" href="#">Abrir Marketplace</a>
+      <p class="nota-mock">Já existe (`MarketplaceAlertasStaffHome`): proposta Em análise do ofertante <strong>ou</strong> lembrete de oferta aceita até o início do turno. Sem «Li e Ocultar».</p>
+    </div>
+
+    <span class="block-tag">Bloco 4 · Principais KPIs — escala própria + OCR (mês civil)</span>
+    <div class="content-box">
+      <h2 class="section-title">Principais KPIs</h2>
+      <p class="mes-sub">Setembro 2026 · seus turnos + seus KPIs de OCR</p>
+
+      <p style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin:0 0 10px">Linha 1 · Escala</p>
+      <div class="grid-kpi-3" style="margin-bottom:14px">
+        <article class="kpi-card">
+          <div class="kpi-bar sec"></div>
+          <div class="kpi-body">
+            <div class="kpi-head">
+              <span class="kpi-ic sec" aria-hidden="true">📅</span>
+              <span class="kpi-label">Turnos no mês</span>
+            </div>
+            <div class="kpi-value">14</div>
+            <p class="kpi-hint"><strong>Escalados</strong> · 11 realizados</p>
+          </div>
+        </article>
+        <article class="kpi-card">
+          <div class="kpi-bar"></div>
+          <div class="kpi-body">
+            <div class="kpi-head">
+              <span class="kpi-ic" aria-hidden="true">⏱</span>
+              <span class="kpi-label">Horas no mês</span>
+            </div>
+            <div class="kpi-value">112:00</div>
+            <p class="kpi-hint"><strong>Escaladas</strong> · 88:00 realizadas</p>
+          </div>
+        </article>
+        <article class="kpi-card">
+          <div class="kpi-bar ok"></div>
+          <div class="kpi-body">
+            <div class="kpi-head">
+              <span class="kpi-ic ok" aria-hidden="true">📖</span>
+              <span class="kpi-label">Ciências pendentes</span>
+            </div>
+            <div class="kpi-value">2</div>
+            <p class="kpi-hint">1 Manuais e 1 Políticas</p>
+          </div>
+        </article>
+      </div>
+
+      <p style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin:0 0 10px">Linha 2 · KPIs de OCR</p>
+      <div class="grid-kpi-3">
+        <article class="kpi-card">
+          <div class="kpi-bar" style="background:#a78bfa"></div>
+          <div class="kpi-body">
+            <div class="kpi-head">
+              <span class="kpi-ic" style="background:rgba(167,139,250,.14);color:#a78bfa" aria-hidden="true">◎</span>
+              <span class="kpi-label">Sinais</span>
+            </div>
+            <div class="kpi-value">128</div>
+            <div class="kpi-mom">
+              <div class="row"><span style="color:var(--text-muted)">Mês anterior</span><span style="font-weight:600">112</span></div>
+              <div><span class="up">↑ +14,3%</span> <span style="color:var(--text-muted);font-size:10px">vs mês ant.</span></div>
+            </div>
+          </div>
+        </article>
+        <article class="kpi-card">
+          <div class="kpi-bar sec"></div>
+          <div class="kpi-body">
+            <div class="kpi-head">
+              <span class="kpi-ic sec" aria-hidden="true">⏱</span>
+              <span class="kpi-label">TMA Total</span>
+            </div>
+            <div class="kpi-value">04:32</div>
+            <div class="kpi-mom">
+              <div class="row"><span style="color:var(--text-muted)">Mês anterior</span><span style="font-weight:600">05:10</span></div>
+              <div><span class="down inv">↓ −12,3%</span> <span style="color:var(--text-muted);font-size:10px">vs mês ant. · menor = melhor</span></div>
+            </div>
+          </div>
+        </article>
+        <article class="kpi-card">
+          <div class="kpi-bar warn"></div>
+          <div class="kpi-body">
+            <div class="kpi-head">
+              <span class="kpi-ic warn" aria-hidden="true">🎫</span>
+              <span class="kpi-label">Tickets</span>
+            </div>
+            <div class="kpi-value">23</div>
+            <div class="kpi-mom">
+              <div class="row"><span style="color:var(--text-muted)">Mês anterior</span><span style="font-weight:600">19</span></div>
+              <div><span class="up">↑ +21,1%</span> <span style="color:var(--text-muted);font-size:10px">vs mês ant.</span></div>
+            </div>
+          </div>
+        </article>
+      </div>
+
+      <p class="footer-hint">Quer saber mais? <a href="#">Overview Prestador</a> · <a href="#">Calendário</a> · <a href="#">Marketplace</a> · <a href="#">Controle de Turno</a> · <a href="#">Portal da Academy</a> · <a href="#">Portal de RH</a></p>
+      <p class="nota-mock"><strong>Linha 1:</strong> Turnos / Horas / Ciências — iguais ao GP (próprios). <strong>Linha 2:</strong> Sinais · TMA Total · Tickets — Overview Prestador → <strong>KPIs de OCR</strong>, só deste SM, mês civil atual + MoM vs mês anterior (paridade <code>KpiCard</code>; TMA com <code>isInverso</code>). Formato TMA = <code>fmtDuracaoMs</code>.</p>
+    </div>
+
+    <span class="block-tag">Bloco 5 · Próximos turnos (próprios · até 3 · ocultar se vazio)</span>
+    <div class="content-box">
+      <h2 class="section-title">Próximos turnos</h2>
+      <p class="mes-sub">Do Calendário · Compromissos</p>
+
+      <div class="turno-destaque">
+        <div class="turno-when" aria-hidden="true">
+          <div class="dia">15</div>
+          <div class="mes">Set</div>
+          <div class="hora">14:00–22:00</div>
+        </div>
+        <div class="turno-meta" style="flex:1;min-width:200px">
+          <h3>Próximo turno</h3>
+          <p><strong>Turno Tarde</strong> · Sports Club</p>
+          <p>Área Service Manager · escala aprovada</p>
+          <a class="turno-cta" href="#">Abrir Calendário</a>
+        </div>
+      </div>
+
+      <ul class="lista-turnos">
+        <li>
+          <div>
+            <div class="tit">16/09 · 14:00–22:00 · Turno Tarde</div>
+            <div class="sub">Sports Club · via Marketplace (compra)</div>
+          </div>
+          <span class="pill mkt">Marketplace</span>
+        </li>
+        <li>
+          <div>
+            <div class="tit">18/09 · 06:00–14:00 · Turno Manhã</div>
+            <div class="sub">Sports Club · escala</div>
+          </div>
+          <span class="pill">Escala</span>
+        </li>
+      </ul>
+      <p class="nota-mock">Análogo a «Próximas lives» do Influencer. Máx. <strong>3</strong> próximos (incluindo o destaque). Origem: compromissos de turno do usuário no Calendário. Sem turno futuro → ocultar bloco inteiro.</p>
+    </div>
+
+    <span class="block-tag">Bloco 6 · Informações (compartilhado · Informativos + Portal RH)</span>
+    <div class="content-box">
+      <h2 class="section-title">Informações</h2>
+      <ul class="feed-list">
+        <li>
+          <article class="feed-card">
+            <h3>Integridade de mesa — checklist SM</h3>
+            <div class="feed-body">
+              <p>Antes do turno, confirme incidentes abertos e a escala no <a href="#">Controle de Turno</a>. Em dúvida, alinhe com o Shift Leader.</p>
+            </div>
+            <p class="feed-footer">Equipe Operações · 12/09/26 - 09:15</p>
+            <button type="button" class="btn-li-ocultar">Li e Ocultar</button>
+          </article>
+        </li>
+      </ul>
+      <p class="nota-mock">`InformacoesStaffHome`: informativos <code>service_manager</code> (10 dias) + Portal RH. Bloco oculto se vazio.</p>
+    </div>
+
+    <span class="block-tag">Bloco 7 · Central Academy (compartilhado · só Estúdio)</span>
+    <div class="content-box">
+      <h2 class="section-title">Central Academy</h2>
+      <ul class="feed-list">
+        <li>
+          <article class="feed-card">
+            <h3>Manual de Integridade e OCR</h3>
+            <div class="feed-body">
+              <p>Ciência obrigatória pendente. Acesse o <a href="#">Portal da Academy</a>.</p>
+            </div>
+            <p class="feed-footer">Academy · 10/09/26 - 16:40</p>
+            <p class="nota-mock">Manual com ciência pendente: fica até o aceite — <strong>sem</strong> «Li e Ocultar».</p>
+          </article>
+        </li>
+      </ul>
+    </div>
+
+    <span class="block-tag">Bloco 8 · Blogueiro Spin (compartilhado · ocultar se vazio)</span>
+    <div class="content-box">
+      <h2 class="section-title">Blogueiro Spin</h2>
+      <p class="hint">Galeria + Spin na Rede · últimos 10 dias · «Li e Ocultar».</p>
+      <p class="nota-mock">Mesmo componente das demais Homes de Estúdio/Escritório. Sem item → ocultar.</p>
+    </div>
+
+    <span class="block-tag">Bloco 9 · Acesso rápido (curado · Service Manager)</span>
+    <div class="content-box">
+      <h2 class="section-title">Acesso rápido</h2>
+      <p class="hint">Clique em um atalho abaixo para ir diretamente à página desejada.</p>
+      <div class="grid-atalhos">
+        <a class="atalho" href="#">
+          <span class="ic" aria-hidden="true">📅</span>
+          <div style="flex:1;min-width:0">
+            <div class="tit"><span>Calendário</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
+            <p>Organize a rotina operacional com visibilidade completa de turnos e compromissos.</p>
+          </div>
+        </a>
+        <a class="atalho" href="#">
+          <span class="ic" aria-hidden="true">🛒</span>
+          <div style="flex:1;min-width:0">
+            <div class="tit"><span>Marketplace</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
+            <p>Ofertas P2P, Ofertas Spin e cobertura de turnos.</p>
+          </div>
+        </a>
+        <a class="atalho" href="#">
+          <span class="ic" aria-hidden="true">📊</span>
+          <div style="flex:1;min-width:0">
+            <div class="tit"><span>Overview Prestador</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
+            <p>Escala e KPIs de OCR (Sinais, TMA e Tickets) do seu perfil.</p>
+          </div>
+        </a>
+        <a class="atalho" href="#">
+          <span class="ic" aria-hidden="true">🎓</span>
+          <div style="flex:1;min-width:0">
+            <div class="tit"><span>Performance Hub</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
+            <p>Avaliações, feedback e acompanhamento de performance da equipe.</p>
+          </div>
+        </a>
+        <a class="atalho" href="#">
+          <span class="ic" aria-hidden="true">⏱</span>
+          <div style="flex:1;min-width:0">
+            <div class="tit"><span>Controle de Turno</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
+            <p>Acompanhe rotação, escala/presença e notificações do turno.</p>
+          </div>
+        </a>
+        <a class="atalho" href="#">
+          <span class="ic" aria-hidden="true">⚠</span>
+          <div style="flex:1;min-width:0">
+            <div class="tit"><span>Incidentes</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
+            <p>Registre e acompanhe incidentes operacionais do estúdio.</p>
+          </div>
+        </a>
+        <a class="atalho" href="#">
+          <span class="ic" aria-hidden="true">📖</span>
+          <div style="flex:1;min-width:0">
+            <div class="tit"><span>Portal da Academy</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
+            <p>Comunicados, dicas e manuais com ciência obrigatória.</p>
+          </div>
+        </a>
+        <a class="atalho" href="#">
+          <span class="ic" aria-hidden="true">📰</span>
+          <div style="flex:1;min-width:0">
+            <div class="tit"><span>Portal de RH</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
+            <p>Comunicados, políticas e RH Talks aplicáveis a você.</p>
+          </div>
+        </a>
+        <a class="atalho" href="#">
+          <span class="ic" aria-hidden="true">?</span>
+          <div style="flex:1;min-width:0">
+            <div class="tit"><span>Ajuda</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
+            <p>Conheça as funcionalidades da plataforma, o glossário, tutoriais e soluções para problemas comuns.</p>
+          </div>
+        </a>
+        <a class="atalho" href="#">
+          <span class="ic" aria-hidden="true">◎</span>
+          <div style="flex:1;min-width:0">
+            <div class="tit"><span>Organograma</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
+            <p>Conheça a empresa, os times e as pessoas da operação.</p>
+          </div>
+        </a>
+      </div>
+      <p class="nota-mock">Atalhos de liderança + <strong>Overview Prestador</strong> (fonte dos KPIs OCR). Só com Ver liberado.</p>
+    </div>
+
+  </div>
+
+  <div class="legenda">
+    <div class="content-box">
+      <h2 class="section-title">Notas para aprovação — Home Service Manager</h2>
+      <ul>
+        <li><strong>Linha 1 KPIs:</strong> Turnos · Horas · Ciências (paridade GP) — <strong>sem</strong> Feedbacks pendentes.</li>
+        <li><strong>Linha 2 KPIs:</strong> Sinais · TMA Total · Tickets — Overview Prestador → <strong>KPIs de OCR</strong>, só deste prestador, mês atual + comparativo vs mês anterior.</li>
+        <li><strong>Sem</strong> alerta de Ofertas Spin.</li>
+        <li><strong>Área</strong> nos turnos: Service Manager · informativos <code>service_manager</code>.</li>
+        <li><strong>Fluxo:</strong> aprove → próximo = <strong>Performance Coach</strong>.</li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById("btn-tema").addEventListener("click", function () {
+      document.body.classList.toggle("dark");
+    });
+  </script>
+</body>
+</html>

@@ -6,12 +6,10 @@ import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
-import { supabase } from "../../../lib/supabase";
-import { fetchAllPages } from "../../../lib/supabasePaginate";
 import { fetchInfluencerAnalyticsPeriodoCached } from "../../../lib/influencerAnalyticsQuery";
 import { buscarInvestimentoPago } from "../../../lib/investimentoPago";
 import { buscarMetricasDeAliases, mesclarMetricasComAliases } from "../../../lib/metricasAliases";
-import { BRAND, MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
+import { BRAND, MSG_SEM_DADOS_FILTRO, MSG_SEM_DADOS_PERIODO } from "../../../lib/dashboardConstants";
 import {
   fmt,
   fmtBRL,
@@ -47,6 +45,7 @@ import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTable
 import { TabelaComPaginacao } from "../../../components/TabelaPaginacaoBar";
 import {
   AlertTriangle,
+  Loader2,
   ArrowDownToLine,
   ArrowUpFromLine,
   BarChart2,
@@ -114,12 +113,6 @@ interface LiveResultado {
   duracao_min: number;
   media_views: number;
   max_views?: number | null;
-}
-
-interface InfluencerPerfil {
-  id: string;
-  nome_artistico: string;
-  cache_hora: number;
 }
 
 interface TotaisData {
@@ -465,6 +458,9 @@ function cel(v: number, isBRL = false) {
 }
 
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
+const MSG_ERRO_OVERVIEW_INFLUENCER =
+  "Não foi possível carregar os dados. Se o problema persistir, entre em contato com o suporte.";
+
 export default function DashboardOverviewInfluencer() {
   const { theme: t, podeVerInfluencer, podeVerOperadora, escoposVisiveis } = useApp();
   const { showFiltroInfluencer, showFiltroOperadora } = useDashboardFiltros();
@@ -476,12 +472,14 @@ export default function DashboardOverviewInfluencer() {
   const [idxMes, setIdxMes] = useState(idxInicial);
   const [historico, setHistorico] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [momPronto, setMomPronto] = useState(false);
+  const [erroCarga, setErroCarga] = useState<string | null>(null);
+  const [reloadTick, setReloadTick] = useState(0);
   const [filtroInfluencer, setFiltroInfluencer] = useState<string>("todos");
   const [filtroOperadora, setFiltroOperadora] = useState<string>("todas");
   const {
     perfis,
     operadoras,
-    operadoraInfluencers,
     isPending: catalogosPending,
     error: catalogosError,
   } = useDashboardCatalogos();
@@ -525,14 +523,21 @@ export default function DashboardOverviewInfluencer() {
     if (catalogosPending) return;
     if (catalogosError) {
       console.error("[OverviewInfluencer] catálogos:", catalogosError);
+      setErroCarga(MSG_ERRO_OVERVIEW_INFLUENCER);
       setLoading(false);
+      setMomPronto(false);
       return;
     }
+    let cancelled = false;
     async function carregar() {
       setLoading(true);
+      setErroCarga(null);
+      setMomPronto(false);
       setMetricasComparativo([]);
       setLivesComparativo([]);
       setLiveResultadosComparativo([]);
+      setTotaisAnt({ ggr: 0, investimento: 0, roi: 0, ftds: 0, ftd_total: 0, registros: 0, acessos: 0, views: 0, depositos_qtd: 0, depositos_valor: 0, saques_qtd: 0, saques_valor: 0, lives: 0, horas: 0 });
+      try {
 
       const mom =
         !historico && mesSelecionado
@@ -542,18 +547,19 @@ export default function DashboardOverviewInfluencer() {
         ? getPeriodoHistoricoCompetencias()
         : mom!.atual;
 
-      const infIdsFiltro = influencersVisiveis.length === 0 ? [] : influencersVisiveis;
-      const infIds = filtroInfluencer !== "todos"
-        ? [filtroInfluencer]
-        : filtroOperadora !== "todas"
-          ? (operadoraInfluencers[filtroOperadora] || []).filter((id) => infIdsFiltro.length === 0 || infIdsFiltro.includes(id))
-          : infIdsFiltro;
-
-      const infIdsQuery = infIds.length > 0 ? infIds : perfis.map((p: InfluencerPerfil) => p.id);
+      // SQL (operadora_slug) é a fonte da verdade — não refiltrar pela junction.
       const influencerIdsAnalytics =
-        filtroInfluencer !== "todos" || filtroOperadora !== "todas" || infIdsFiltro.length > 0
-          ? infIdsQuery
-          : null;
+        filtroInfluencer !== "todos"
+          ? [filtroInfluencer]
+          : influencersVisiveis.length === 0
+            ? null
+            : influencersVisiveis;
+      const investInfluencerIds =
+        filtroInfluencer !== "todos"
+          ? [filtroInfluencer]
+          : influencersVisiveis.length === 0
+            ? undefined
+            : influencersVisiveis;
 
       const operadoraSlugsQuery =
         filtroOperadora !== "todas"
@@ -561,20 +567,34 @@ export default function DashboardOverviewInfluencer() {
           : escoposVisiveis.semRestricaoEscopo
             ? null
             : escoposVisiveis.operadorasVisiveis;
-      const analytics = await fetchInfluencerAnalyticsPeriodoCached({
-        inicio,
-        fim,
-        operadoraSlugs: operadoraSlugsQuery,
-        influencerIds: influencerIdsAnalytics,
-      });
+
+      const [analytics, investAtual] = await Promise.all([
+        fetchInfluencerAnalyticsPeriodoCached({
+          inicio,
+          fim,
+          operadoraSlugs: operadoraSlugsQuery,
+          influencerIds: influencerIdsAnalytics,
+        }),
+        buscarInvestimentoPago(
+          { inicio, fim },
+          {
+            influencerIds: investInfluencerIds,
+            operadora_slug: filtroOperadora !== "todas" ? filtroOperadora : undefined,
+            includeAgentes: false,
+          },
+        ),
+      ]);
+      if (cancelled) return;
+
       let metricas: Metrica[] = analytics.metricas;
       if (historico) {
         const aliasesSinteticas = await buscarMetricasDeAliases({
           operadora_slug: filtroOperadora !== "todas" ? filtroOperadora : undefined,
-          influencerIds: infIdsQuery.length > 0 ? infIdsQuery : undefined,
+          influencerIds: investInfluencerIds,
           dataInicio: inicio,
           dataFim: fim,
         });
+        if (cancelled) return;
         metricas = mesclarMetricasComAliases(metricas, aliasesSinteticas, fim, podeVerInfluencer);
       }
 
@@ -583,31 +603,12 @@ export default function DashboardOverviewInfluencer() {
 
       const rows = metricas.filter((m) => podeVerInfluencer(m.influencer_id));
       const liveRows = lives.filter((l) => podeVerInfluencer(l.influencer_id));
+      const investTotal = investAtual.total;
 
-      // Investimento apenas de pagamentos com status PAGO (valores revisados no Financeiro)
-      const { total: investTotal } = await buscarInvestimentoPago(
-        { inicio, fim },
-        {
-          influencerIds: infIdsQuery.length > 0 ? infIdsQuery : undefined,
-          operadora_slug: filtroOperadora !== "todas" ? filtroOperadora : undefined,
-          includeAgentes: false,
-        }
-      );
-
-      // Incluir influencers com métricas, lives OU aliases mapeados (caso só tenham tráfego via Gestão de Links)
-      let idsComDados = [...new Set([...rows.map((m) => m.influencer_id), ...liveRows.map((l) => l.influencer_id)])];
-      const aliasesMapeados = await fetchAllPages<{ influencer_id: string }>(async (from, to) =>
-        supabase
-          .from("utm_aliases")
-          .select("influencer_id")
-          .eq("status", "mapeado")
-          .not("influencer_id", "is", null)
-          .order("influencer_id", { ascending: true })
-          .range(from, to)
-      );
-      const idsAliases = [...new Set(aliasesMapeados.map((a) => a.influencer_id).filter((id) => podeVerInfluencer(id)))];
-      idsComDados = [...new Set([...idsComDados, ...idsAliases])];
-      setInfluencersComDadosIds(idsComDados);
+      // IDs do filtro = atividade no período (evita dump all-time de utm_aliases).
+      setInfluencersComDadosIds([
+        ...new Set([...rows.map((m) => m.influencer_id), ...liveRows.map((l) => l.influencer_id)]),
+      ]);
 
       function calcTotais(m: Metrica[], l: LiveData[], r: LiveResultado[], investimentoPago: number): TotaisData {
         const ggr = m.reduce((s, x) => s + (x.ggr || 0), 0);
@@ -640,34 +641,6 @@ export default function DashboardOverviewInfluencer() {
       }
 
       setTotais(calcTotais(rows, liveRows, resultados, investTotal));
-
-      if (mom) {
-        const { inicio: iA, fim: fA } = mom.anterior;
-        const [investAnt, analyticsAnt] = await Promise.all([
-          buscarInvestimentoPago(
-            { inicio: iA, fim: fA },
-            {
-              influencerIds: infIdsQuery.length > 0 ? infIdsQuery : undefined,
-              operadora_slug: filtroOperadora !== "todas" ? filtroOperadora : undefined,
-              includeAgentes: false,
-            }
-          ),
-          fetchInfluencerAnalyticsPeriodoCached({
-            inicio: iA,
-            fim: fA,
-            operadoraSlugs: operadoraSlugsQuery,
-            influencerIds: influencerIdsAnalytics,
-          }),
-        ]);
-        const mA: Metrica[] = analyticsAnt.metricas;
-        const lA: LiveData[] = analyticsAnt.lives;
-        const rA: LiveResultado[] = analyticsAnt.resultados;
-        const rowsA = mA.filter((m) => podeVerInfluencer(m.influencer_id));
-        const liveA = lA.filter((l) => podeVerInfluencer(l.influencer_id));
-        setTotaisAnt(calcTotais(rowsA, liveA, rA, investAnt.total));
-      } else {
-        setTotaisAnt({ ggr: 0, investimento: 0, roi: 0, ftds: 0, ftd_total: 0, registros: 0, acessos: 0, views: 0, depositos_qtd: 0, depositos_valor: 0, saques_qtd: 0, saques_valor: 0, lives: 0, horas: 0 });
-      }
 
       // Bloco 5: Detalhamento Mensal (histórico) ou Detalhamento Diário (mês no carrossel)
       if (historico) {
@@ -789,8 +762,55 @@ export default function DashboardOverviewInfluencer() {
       setLiveResultadosComparativo(resultados);
 
       setLoading(false);
+
+      // Fase 2 — MoM em background (não bloqueia first paint)
+      if (mom) {
+        try {
+          const { inicio: iA, fim: fA } = mom.anterior;
+          const [investAnt, analyticsAnt] = await Promise.all([
+            buscarInvestimentoPago(
+              { inicio: iA, fim: fA },
+              {
+                influencerIds: investInfluencerIds,
+                operadora_slug: filtroOperadora !== "todas" ? filtroOperadora : undefined,
+                includeAgentes: false,
+              },
+            ),
+            fetchInfluencerAnalyticsPeriodoCached({
+              inicio: iA,
+              fim: fA,
+              operadoraSlugs: operadoraSlugsQuery,
+              influencerIds: influencerIdsAnalytics,
+            }),
+          ]);
+          if (cancelled) return;
+          const mA: Metrica[] = analyticsAnt.metricas;
+          const lA: LiveData[] = analyticsAnt.lives;
+          const rA: LiveResultado[] = analyticsAnt.resultados;
+          const rowsA = mA.filter((m) => podeVerInfluencer(m.influencer_id));
+          const liveA = lA.filter((l) => podeVerInfluencer(l.influencer_id));
+          setTotaisAnt(calcTotais(rowsA, liveA, rA, investAnt.total));
+          setMomPronto(true);
+        } catch (errMom) {
+          console.error("[OverviewInfluencer] MoM:", errMom);
+          if (!cancelled) setMomPronto(false);
+        }
+      } else if (!cancelled) {
+        setMomPronto(true);
+      }
+      } catch (err) {
+        console.error("[OverviewInfluencer] carga:", err);
+        if (!cancelled) {
+          setErroCarga(MSG_ERRO_OVERVIEW_INFLUENCER);
+          setLoading(false);
+          setMomPronto(false);
+        }
+      }
     }
-    carregar();
+    void carregar();
+    return () => {
+      cancelled = true;
+    };
   }, [
     historico,
     idxMes,
@@ -803,8 +823,7 @@ export default function DashboardOverviewInfluencer() {
     mesSelecionado,
     catalogosPending,
     catalogosError,
-    operadoraInfluencers,
-    perfis,
+    reloadTick,
   ]);
 
   /** Mês civil atual: só exibe dias até ontem (MTD “fechado”); meses passados = mês inteiro. */
@@ -950,6 +969,32 @@ export default function DashboardOverviewInfluencer() {
   const isPrimeiro = idxMes === 0;
   const isUltimo = idxMes === mesesDisponiveis.length - 1;
 
+  if (perm.loading) {
+    return (
+      <div
+        className="app-page-shell"
+        style={{
+          background: t.bg,
+          minHeight: "100vh",
+          fontFamily: FONT.body,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 12,
+        }}
+      >
+        <Loader2
+          size={24}
+          className="app-lucide-spin"
+          color="var(--brand-action, #7c3aed)"
+          aria-hidden="true"
+        />
+        <span style={{ fontSize: 13, color: t.textMuted }}>Carregando…</span>
+      </div>
+    );
+  }
+
   if (perm.canView === "nao") {
     return <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>Você não tem permissão para visualizar esta página.</div>;
   }
@@ -1053,6 +1098,44 @@ export default function DashboardOverviewInfluencer() {
       )}
 
       {/* ─── BLOCO 2: KPIs Executivos ─────────────────────────────────────────── */}
+      {erroCarga ? (
+        <div
+          role="alert"
+          aria-live="polite"
+          style={{
+            ...card,
+            color: "#e84025",
+            fontSize: 13,
+            fontFamily: FONT.body,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 12,
+            flexWrap: "wrap",
+            marginBottom: 14,
+          }}
+        >
+          <span>{erroCarga}</span>
+          <button
+            type="button"
+            onClick={() => setReloadTick((n) => n + 1)}
+            style={{
+              fontFamily: FONT.body,
+              fontSize: 13,
+              fontWeight: 700,
+              padding: "8px 14px",
+              borderRadius: 10,
+              border: "1px solid rgba(232,64,37,0.35)",
+              background: "transparent",
+              color: "#e84025",
+              cursor: "pointer",
+            }}
+          >
+            Tentar de novo
+          </button>
+        </div>
+      ) : null}
+
       <div style={card}>
         <SectionTitle
           sub={historico ? "acumulado" : "comparativo MTD vs mesmo período do mês anterior"}
@@ -1088,7 +1171,7 @@ export default function DashboardOverviewInfluencer() {
                 atual={totais.ggr}
                 anterior={totaisAnt.ggr}
                 isBRL
-                isHistorico={historico}
+                isHistorico={historico || !momPronto}
               />
               <KpiCard
                 label="Investimento"
@@ -1099,7 +1182,7 @@ export default function DashboardOverviewInfluencer() {
                 atual={totais.investimento}
                 anterior={totaisAnt.investimento}
                 isBRL
-                isHistorico={historico}
+                isHistorico={historico || !momPronto}
               />
               <KpiCard
                 label="ROI"
@@ -1110,7 +1193,7 @@ export default function DashboardOverviewInfluencer() {
                 }
                 atual={totais.roi}
                 anterior={totaisAnt.roi}
-                isHistorico={historico}
+                isHistorico={historico || !momPronto}
               />
             </div>
             <div className="app-grid-kpi-3" style={{ marginBottom: 12 }}>
@@ -1122,7 +1205,7 @@ export default function DashboardOverviewInfluencer() {
                 accentColor={BRAND.azul}
                 atual={totais.lives}
                 anterior={totaisAnt.lives}
-                isHistorico={historico}
+                isHistorico={historico || !momPronto}
               />
               <KpiCard
                 label="Horas Realizadas"
@@ -1132,7 +1215,7 @@ export default function DashboardOverviewInfluencer() {
                 accentColor={BRAND.azul}
                 atual={totais.horas}
                 anterior={totaisAnt.horas}
-                isHistorico={historico}
+                isHistorico={historico || !momPronto}
               />
               <KpiCard
                 label="Média de Views"
@@ -1142,7 +1225,7 @@ export default function DashboardOverviewInfluencer() {
                 accentColor={BRAND.ciano}
                 atual={totais.views}
                 anterior={totaisAnt.views}
-                isHistorico={historico}
+                isHistorico={historico || !momPronto}
               />
             </div>
             <div className="app-grid-kpi-4">
@@ -1154,7 +1237,7 @@ export default function DashboardOverviewInfluencer() {
                 accentColor={BRAND.roxo}
                 atual={totais.registros}
                 anterior={totaisAnt.registros}
-                isHistorico={historico}
+                isHistorico={historico || !momPronto}
                 subValue={subValueReg}
               />
               <KpiCard
@@ -1165,7 +1248,7 @@ export default function DashboardOverviewInfluencer() {
                 accentColor={BRAND.roxo}
                 atual={totais.ftds}
                 anterior={totaisAnt.ftds}
-                isHistorico={historico}
+                isHistorico={historico || !momPronto}
                 subValue={{ label: "valor", value: fmtBRL(totais.ftd_total) }}
               />
               <KpiCard
@@ -1176,7 +1259,7 @@ export default function DashboardOverviewInfluencer() {
                 accentColor={BRAND.amarelo}
                 atual={totais.depositos_qtd}
                 anterior={totaisAnt.depositos_qtd}
-                isHistorico={historico}
+                isHistorico={historico || !momPronto}
                 subValue={{ label: "valor", value: fmtBRL(totais.depositos_valor) }}
               />
               <KpiCard
@@ -1186,7 +1269,7 @@ export default function DashboardOverviewInfluencer() {
                 accentColor={BRAND.amarelo}
                 atual={totais.saques_qtd}
                 anterior={totaisAnt.saques_qtd}
-                isHistorico={historico}
+                isHistorico={historico || !momPronto}
                 subValue={{ label: "valor", value: fmtBRL(totais.saques_valor) }}
                 isInverso
               />
@@ -1412,7 +1495,7 @@ export default function DashboardOverviewInfluencer() {
                 fontFamily: FONT.body,
               }}
             >
-              {MSG_SEM_DADOS_FILTRO}
+              {MSG_SEM_DADOS_PERIODO}
             </div>
           ) : (
             <div>
