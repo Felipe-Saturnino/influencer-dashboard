@@ -165,13 +165,15 @@ export function kpisJogadoresAba(rows: JogadorAbaDailyFact[]): JogadorAbaKpis {
   let ggrSpin = 0;
   let turnoverSpin = 0;
   for (const p of players.values()) {
-    rodadas += p.rodadas;
-    ggrSpin += p.ggr;
-    turnoverSpin += p.turnover;
     if (!p.registrou) continue;
     registros += 1;
-    if (p.spin) jogaramSpin += 1;
-    else if (p.depositou) jogaramOutros += 1;
+    if (p.spin) {
+      jogaramSpin += 1;
+      // Volume só de quem entra no card Jogaram Spin — mantém Média = Rodadas ÷ Jogaram Spin.
+      rodadas += p.rodadas;
+      ggrSpin += p.ggr;
+      turnoverSpin += p.turnover;
+    } else if (p.depositou) jogaramOutros += 1;
     else naoJogaram += 1;
   }
   return {
@@ -217,17 +219,19 @@ export function rankingJogadoresAba(
   for (const [key, p] of players) {
     const inf = p.influencer_id;
     if (!inf || !nomes.has(inf)) continue;
+    if (!p.registrou) continue;
     let g = byInf.get(inf);
     if (!g) {
       g = { registros: new Set(), outros: new Set(), spin: new Set(), rodadas: 0, ggr: 0, turnover: 0 };
       byInf.set(inf, g);
     }
-    if (p.registrou) g.registros.add(key);
-    if (p.registrou && p.spin) g.spin.add(key);
-    if (p.registrou && !p.spin && p.depositou) g.outros.add(key);
-    g.rodadas += p.rodadas;
-    g.ggr += p.ggr;
-    g.turnover += p.turnover;
+    g.registros.add(key);
+    if (p.spin) {
+      g.spin.add(key);
+      g.rodadas += p.rodadas;
+      g.ggr += p.ggr;
+      g.turnover += p.turnover;
+    } else if (p.depositou) g.outros.add(key);
   }
 
   const out: JogadorAbaInfluencerRow[] = [];
@@ -253,6 +257,23 @@ export function rankingJogadoresAba(
     });
   }
   return out.sort((a, b) => b.rodadas - a.rodadas || a.nome.localeCompare(b.nome, "pt-BR"));
+}
+
+/**
+ * Linhas dos jogadores contados em **Jogaram Spin** (registro e rodada no período).
+ * Mesas e ranking leem daqui para fechar com o card de Rodadas.
+ */
+export function filtrarRowsJogaramSpin(rows: JogadorAbaDailyFact[]): JogadorAbaDailyFact[] {
+  const players = foldPlayers(rows);
+  const elegiveis = new Set<string>();
+  for (const [key, p] of players) {
+    if (p.registrou && p.spin) elegiveis.add(key);
+  }
+  if (elegiveis.size === 0) return [];
+  return rows.filter((r) => {
+    const ext = (r.ext_customer_id ?? "").trim();
+    return ext ? elegiveis.has(playerKey(r.operadora_slug, ext)) : false;
+  });
 }
 
 export function mesasJogadoresAba(rows: JogadorAbaDailyFact[]): JogadorAbaMesaBar[] {

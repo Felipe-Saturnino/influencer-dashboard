@@ -38,6 +38,7 @@ import { useStreamersFiltros } from "../StreamersFiltrosContext";
 import { MSG_ERRO_STREAMERS, periodoStreamersFiltro, streamersInfluencerIdsQuery, streamersOperadoraSlugsQuery, travarRecortePropriosStreamers } from "../streamersInfluencerFilterHelpers";
 import { fetchJogadoresAbaDaily } from "../../../../lib/jogadoresAbaQuery";
 import {
+  filtrarRowsJogaramSpin,
   fmtPctJogadores,
   JOGADORES_TAXA_BAIXA_PCT,
   kpisJogadoresAba,
@@ -88,9 +89,9 @@ type TaxasSortCol =
   | "nome"
   | "registros"
   | "pctRegJog"
-  | "jogaramOutros"
+  | "jogaram"
+  | "pctJogSpin"
   | "jogaramSpin"
-  | "naoJogaram"
   | "turnoverSpin"
   | "ggrSpin"
   | "rodadas";
@@ -104,7 +105,7 @@ function cmpNullable(a: number | null, b: number | null, mul: number): number {
 
 function fmtMedia(v: number | null): string {
   if (v == null) return "—";
-  return v.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  return Math.round(v).toLocaleString("pt-BR");
 }
 
 function FunilJogadoresSvg({
@@ -440,7 +441,7 @@ export default function DashboardJogadores() {
         const rank = rankingJogadoresAba(daily, nomes);
         setKpis(kpisJogadoresAba(daily));
         setRanking(rank);
-        setMesas(mesasJogadoresAba(daily));
+        setMesas(mesasJogadoresAba(filtrarRowsJogaramSpin(daily)));
         setCompA((prevA) => {
           const nextA = rank.some((r) => r.influencer_id === prevA) ? prevA : (rank[0]?.influencer_id ?? "");
           setCompB((prevB) => {
@@ -511,6 +512,10 @@ export default function DashboardJogadores() {
           return compareLocaleTexto(a.nome, b.nome, sortTaxas.dir);
         case "pctRegJog":
           return cmpNullable(a.pctRegJog, b.pctRegJog, mul);
+        case "pctJogSpin":
+          return cmpNullable(a.pctJogSpin, b.pctJogSpin, mul);
+        case "jogaram":
+          return compareNumber(a.jogaram, b.jogaram, sortTaxas.dir);
         case "ggrSpin":
           return compareNumber(a.ggrSpin, b.ggrSpin, sortTaxas.dir);
         case "turnoverSpin":
@@ -519,12 +524,8 @@ export default function DashboardJogadores() {
           return compareNumber(a.rodadas, b.rodadas, sortTaxas.dir);
         case "registros":
           return compareNumber(a.registros, b.registros, sortTaxas.dir);
-        case "jogaramOutros":
-          return compareNumber(a.jogaramOutros, b.jogaramOutros, sortTaxas.dir);
         case "jogaramSpin":
           return compareNumber(a.jogaramSpin, b.jogaramSpin, sortTaxas.dir);
-        case "naoJogaram":
-          return compareNumber(a.naoJogaram, b.naoJogaram, sortTaxas.dir);
         default:
           return 0;
       }
@@ -870,8 +871,8 @@ export default function DashboardJogadores() {
                       <SortTableTh<TaxasSortCol> label="Influencer" col="nome" sortCol={sortTaxas.col} sortDir={sortTaxas.dir} onSort={onSortTaxas} thStyle={dataTable.thHeaderSticky} align="center" />
                       <SortTableTh label="Registros" col="registros" sortCol={sortTaxas.col} sortDir={sortTaxas.dir} onSort={onSortTaxas} thStyle={dataTable.thHeader} align="center" />
                       <SortTableTh label="Reg>Jogaram" col="pctRegJog" sortCol={sortTaxas.col} sortDir={sortTaxas.dir} onSort={onSortTaxas} thStyle={dataTable.thHeader} align="center" />
-                      <SortTableTh label="Outros" col="jogaramOutros" sortCol={sortTaxas.col} sortDir={sortTaxas.dir} onSort={onSortTaxas} thStyle={dataTable.thHeader} align="center" />
-                      <SortTableTh label="Não Jogaram" col="naoJogaram" sortCol={sortTaxas.col} sortDir={sortTaxas.dir} onSort={onSortTaxas} thStyle={dataTable.thHeader} align="center" />
+                      <SortTableTh label="Jogaram" col="jogaram" sortCol={sortTaxas.col} sortDir={sortTaxas.dir} onSort={onSortTaxas} thStyle={dataTable.thHeader} align="center" />
+                      <SortTableTh label="Jogaram>Spin" col="pctJogSpin" sortCol={sortTaxas.col} sortDir={sortTaxas.dir} onSort={onSortTaxas} thStyle={dataTable.thHeader} align="center" />
                       <SortTableTh label="Spin" col="jogaramSpin" sortCol={sortTaxas.col} sortDir={sortTaxas.dir} onSort={onSortTaxas} thStyle={dataTable.thHeader} align="center" />
                       <SortTableTh label="Turnover Spin" col="turnoverSpin" sortCol={sortTaxas.col} sortDir={sortTaxas.dir} onSort={onSortTaxas} thStyle={dataTable.thHeader} align="center" />
                       <SortTableTh label="GGR Spin" col="ggrSpin" sortCol={sortTaxas.col} sortDir={sortTaxas.dir} onSort={onSortTaxas} thStyle={dataTable.thHeader} align="center" />
@@ -880,6 +881,7 @@ export default function DashboardJogadores() {
                   <tbody>
                     {linhas.map((r, i) => {
                       const hlReg = r.pctRegJog != null && r.pctRegJog < JOGADORES_TAXA_BAIXA_PCT;
+                      const hlSpin = r.pctJogSpin != null && r.pctJogSpin < JOGADORES_TAXA_BAIXA_PCT;
                       return (
                         <tr
                           key={r.influencer_id}
@@ -916,8 +918,19 @@ export default function DashboardJogadores() {
                           >
                             {fmtPctJogadores(r.pctRegJog)}
                           </td>
-                          <td style={dataTable.tdCenter}>{r.jogaramOutros.toLocaleString("pt-BR")}</td>
-                          <td style={dataTable.tdCenter}>{r.naoJogaram.toLocaleString("pt-BR")}</td>
+                          <td style={dataTable.tdCenter}>{r.jogaram.toLocaleString("pt-BR")}</td>
+                          <td
+                            style={{
+                              ...dataTable.tdCenter,
+                              fontSize: 12,
+                              fontWeight: hlSpin ? 700 : 400,
+                              color: hlSpin ? BRAND.amarelo : t.textMuted,
+                              borderLeft: hlSpin ? "3px solid rgba(245,158,11,0.7)" : undefined,
+                              background: hlSpin ? "rgba(245,158,11,0.08)" : undefined,
+                            }}
+                          >
+                            {fmtPctJogadores(r.pctJogSpin)}
+                          </td>
                           <td style={dataTable.tdCenter}>{r.jogaramSpin.toLocaleString("pt-BR")}</td>
                           <td style={dataTable.tdCenter}>{fmtBRL(r.turnoverSpin)}</td>
                           <td style={{ ...dataTable.tdCenter, color: r.ggrSpin >= 0 ? BRAND.verde : BRAND.vermelho, fontWeight: 700 }}>

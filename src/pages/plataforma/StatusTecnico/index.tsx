@@ -1235,11 +1235,19 @@ export default function StatusTecnico() {
         setSyncRevenueSentinelExecutando(false);
         return;
       }
-      const hoje = new Date();
-      const dataFim = hoje.toISOString().split("T")[0];
+      // Uma competência por chamada (o RS não devolve quebra diária) e nunca D-0.
+      const dataFim = subDiasIso(hojeIsoBrasil(), 1);
+      const dataInicio = `${dataFim.slice(0, 7)}-01`;
       const { data: resDataRaw, error: invokeError } = await supabase.functions.invoke(
         "sync-revenue-sentinel",
-        { body: { data_inicio: "2025-12-01", data_fim: dataFim, cda_conta: "influencers" } },
+        {
+          body: {
+            data_inicio: dataInicio,
+            data_fim: dataFim,
+            cda_conta: "influencers",
+            atualizar_cadastro: false,
+          },
+        },
       );
       const resData = (resDataRaw ?? {}) as {
         ok?: boolean;
@@ -1283,7 +1291,7 @@ export default function StatusTecnico() {
 
       setSyncRevenueSentinelMensagem({
         tipo: "ok",
-        texto: `${LABEL_UI_REVENUE_SENTINEL}: ${resData.ids_enviados ?? 0} IDs TAP, ${resData.diario_upsert ?? 0} dia(s) gravado(s), ${resData.jogaram_spin ?? 0} jogaram Spin, ${resData.jogaram_outros ?? 0} só em outros jogos${(resData.missing ?? 0) > 0 ? ` (${resData.missing} sem cruzamento)` : ""}.`,
+        texto: `${LABEL_UI_REVENUE_SENTINEL} (${dataInicio} a ${dataFim}): ${resData.ids_enviados ?? 0} IDs TAP, ${resData.diario_upsert ?? 0} dia(s) gravado(s), ${resData.jogaram_spin ?? 0} jogaram Spin, ${resData.jogaram_outros ?? 0} só em outros jogos${(resData.missing ?? 0) > 0 ? ` (${resData.missing} sem cruzamento)` : ""}. Meses anteriores: backfill mês a mês no SQL.`,
       });
       void carregar();
     } catch (e) {

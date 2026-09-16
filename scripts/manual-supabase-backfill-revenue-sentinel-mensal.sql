@@ -65,3 +65,10 @@ SELECT public._cron_edge_http_post(
   'sync-revenue-sentinel',
   '{"data_inicio":"2026-08-01","data_fim":"2026-08-31","cda_conta":"influencers","atualizar_cadastro":false}'::jsonb
 );
+
+-- Competência corrente: a limpeza acima também zerou setembro. Ajuste `data_fim` para D-1
+-- (nunca o dia corrente) ou use o botão Sync do Status Técnico, que já manda mês corrente até D-1.
+SELECT public._cron_edge_http_post(
+  'sync-revenue-sentinel',
+  '{"data_inicio":"2026-09-01","data_fim":"2026-09-15","cda_conta":"influencers","atualizar_cadastro":false}'::jsonb
+);

@@ -3,6 +3,7 @@ import { GAME_IDENTITY_HEX } from "@/lib/gameIdentityColors";
 import {
   aplicarRegistrosUnicosPorInfluencer,
   contarRegistrosUnicosJogadores,
+  filtrarRowsJogaramSpin,
   fmtPctJogadores,
   kpisJogadoresAba,
   mesasJogadoresAba,
@@ -76,6 +77,21 @@ describe("kpisJogadoresAba", () => {
     expect(k.jogaram).toBe(1);
   });
 
+  it("volume conta só quem entrou em Jogaram Spin (registro e rodada no período)", () => {
+    const rows = [
+      fact({ ext_customer_id: "1", registration_count: 1, rodadas_spin: 30, jogou_spin: true, ggr_spin: 90, turnover_spin: 700 }),
+      // Rodou no período, mas cadastrou-se antes — fora da coorte, não infla volume nem média.
+      fact({ ext_customer_id: "2", rodadas_spin: 500, jogou_spin: true, ggr_spin: 4000, turnover_spin: 20000 }),
+    ];
+    const k = kpisJogadoresAba(rows);
+    expect(k.registros).toBe(1);
+    expect(k.jogaramSpin).toBe(1);
+    expect(k.rodadas).toBe(30);
+    expect(k.ggrSpin).toBe(90);
+    expect(k.turnoverSpin).toBe(700);
+    expect(k.mediaRodadas).toBe(30);
+  });
+
   it("trata o mesmo ID em operadoras distintas como jogadores distintos", () => {
     const rows = [
       fact({ ext_customer_id: "1", operadora_slug: "casa_apostas", registration_count: 1 }),
@@ -107,6 +123,20 @@ describe("rankingJogadoresAba", () => {
     expect(ranking[0].pctRegJog).toBe(100);
     expect(ranking[0].pctJogSpin).toBe(50);
     expect(ranking[1].pctRegSpin).toBe(100);
+  });
+
+  it("ignora no volume do influencer quem jogou sem registro no período", () => {
+    const nomes = new Map([["inf-a", "Gabs Live"]]);
+    const rows = [
+      fact({ ext_customer_id: "1", influencer_id: "inf-a", registration_count: 1, rodadas_spin: 8, jogou_spin: true, ggr_spin: 20, turnover_spin: 120 }),
+      fact({ ext_customer_id: "2", influencer_id: "inf-a", rodadas_spin: 400, jogou_spin: true, ggr_spin: 900, turnover_spin: 5000 }),
+    ];
+    const ranking = rankingJogadoresAba(rows, nomes);
+    expect(ranking).toHaveLength(1);
+    expect(ranking[0].registros).toBe(1);
+    expect(ranking[0].rodadas).toBe(8);
+    expect(ranking[0].ggrSpin).toBe(20);
+    expect(ranking[0].turnoverSpin).toBe(120);
   });
 
   it("omite jogadores sem influencer mapeado", () => {
@@ -148,6 +178,22 @@ describe("mesasJogadoresAba", () => {
     expect(mesas).toEqual([
       expect.objectContaining({ estudio: "—", mesa: "Mesa não informada", rodadas: 25 }),
     ]);
+  });
+});
+
+describe("filtrarRowsJogaramSpin", () => {
+  it("mantém só as linhas de quem registrou e rodou no período", () => {
+    const rows = [
+      fact({ ext_customer_id: "1", registration_count: 1 }),
+      fact({ ext_customer_id: "1", rodadas_spin: 12, jogou_spin: true, rodadas_por_jogo: { roleta: 12 } }),
+      fact({ ext_customer_id: "2", rodadas_spin: 900, jogou_spin: true, rodadas_por_jogo: { roleta: 900 } }),
+      fact({ ext_customer_id: "3", registration_count: 1, deposit_count: 1 }),
+    ];
+    const elegiveis = filtrarRowsJogaramSpin(rows);
+    expect(elegiveis.every((r) => r.ext_customer_id === "1")).toBe(true);
+    expect(mesasJogadoresAba(elegiveis).reduce((s, m) => s + m.rodadas, 0)).toBe(
+      kpisJogadoresAba(rows).rodadas,
+    );
   });
 });
 

@@ -483,6 +483,25 @@ export function ModalAvaliarPerformanceHub({
     setFoco((prev) => ({ alvo: pendencia.alvo, seq: (prev?.seq ?? 0) + 1 }));
   }
 
+  /**
+   * Concluir bloqueado pela validação: grava o que já foi preenchido como rascunho.
+   * Sem isto, fechar o modal depois do erro perde tudo — só o botão Salvar persiste.
+   * Não sobe vídeo pendente aqui; o upload continua no Salvar/Concluir.
+   */
+  async function guardarPreenchimentoPendente() {
+    const urlVideo = videoPerformanceHubPodeAssistir(videoPathSalvo) ? videoPathSalvo : null;
+    try {
+      await onSalvar(montarPayload(urlVideo));
+      setStatusRascunho(`Rascunho salvo às ${horaFormatada()} — o preenchimento não se perde.`);
+    } catch {
+      setStatusRascunho("");
+      setErros((prev) => [
+        ...prev,
+        "Não foi possível guardar o preenchimento automaticamente — clique em Salvar antes de fechar.",
+      ]);
+    }
+  }
+
   async function handleSalvarRascunho() {
     setErros([]);
     setInvalidFields(new Set());
@@ -525,8 +544,8 @@ export function ModalAvaliarPerformanceHub({
         `Faltam campos obrigatórios para publicar — abrimos a aba ${rotuloAba(primeira.aba)} no primeiro deles.`,
         ...mensagens,
       ]);
-      setStatusRascunho("");
       irParaPendencia(primeira);
+      await guardarPreenchimentoPendente();
       return;
     }
     setErros([]);
