@@ -12,10 +12,17 @@ nem backlog de produto eterno. Teto ~40 linhas — fio fechado **sai** daqui.
   Feito: dieta always-on · `AGENTS.md` · 4 skills de frente · este Backlog + `/atualizar-backlog`.
   Próximo: preencher fios dos outros chats (pedir atualização ao fechar cada um).
 
+- **Verificação 2.0 — saúde do código** (uma secção por ciclo, com recheck em staging).
+  Feito: c13 Agenda · c14 Resultados + Feedback (hotfix `lives.titulo`) · c15 Influencers + Scout
+  (`a48b6094`) · c16 Afiliados + Network (`e6ac24f5`) — todos com recheck OK.
+  Padrão que os ciclos aplicam: colunas explícitas + `fetchAllPages`/`fetchInBatched`,
+  `TabelaComPaginacao` (20), `role="alert"` na falha de carga, `BtnIconeAcaoLinha` + `tooltipAcao`,
+  copy «Carregando…» / «Salvando…» — cada ciclo grava o padrão no MDC da secção.
+  Próximo: escolher a secção do ciclo 17.
+
 ## Pausado
 
-- **Verificação 2.0** — parada no ciclo 14 (Resultados + Feedback).
-  Retomar ciclo 15. Checks: `.cursor/skills/verificacao/historico-verificacao-2.md`.
+- (vazio)
 
 ## Próximo
 

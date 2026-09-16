@@ -43,6 +43,7 @@ import {
   kpisJogadoresAba,
   kpisVaziosJogadoresAba,
   mesasJogadoresAba,
+  pctJogadores,
   rankingJogadoresAba,
   recortarJogadoresAbaDaily,
   type JogadorAbaInfluencerRow,
@@ -79,6 +80,7 @@ const PODIO_ICONS = [
 
 const FUNIL_STEPS = [
   { key: "registros", label: "Registros" },
+  { key: "jogaram", label: "Jogaram" },
   { key: "spin", label: "Jogaram Spin" },
 ] as const;
 
@@ -116,13 +118,17 @@ function FunilJogadoresSvg({
 }) {
   const { theme: t } = useApp();
   const W = 220;
-  const H = 160;
-  const levels = 2;
+  const H = 210;
+  const levels = 3;
   const stepH = H / levels;
-  const widths = [1.0, 0.52].map((f) => f * W);
-  const values = [row.registros, row.jogaramSpin];
-  const taxas = [undefined, fmtPctJogadores(row.pctRegSpin)];
-  const aria = `Funil de ${row.nome}: ${values[0].toLocaleString("pt-BR")} registros, ${values[1].toLocaleString("pt-BR")} jogaram Spin`;
+  const widths = [1, 0.72, 0.45].map((f) => f * W);
+  const values = [row.registros, row.jogaram, row.jogaramSpin];
+  const taxas = [
+    undefined,
+    fmtPctJogadores(row.pctRegJog),
+    fmtPctJogadores(pctJogadores(row.jogaramSpin, row.jogaram)),
+  ];
+  const aria = `Funil de ${row.nome}: ${values[0].toLocaleString("pt-BR")} registros, ${values[1].toLocaleString("pt-BR")} jogaram e ${values[2].toLocaleString("pt-BR")} jogaram Spin`;
 
   return (
     <div style={{ display: "flex", gap: 12, alignItems: "flex-start", flexWrap: "wrap" }}>
@@ -166,7 +172,8 @@ function FunilJogadoresSvg({
           Taxas de Conversão
         </div>
         {[
-          { label: "Registros → Jogaram Spin", val: fmtPctJogadores(row.pctRegSpin), hl: true },
+          { label: "Registros → Jogaram", val: fmtPctJogadores(row.pctRegJog), hl: true },
+          { label: "Jogaram → Spin", val: fmtPctJogadores(pctJogadores(row.jogaramSpin, row.jogaram)), hl: true },
           { label: "Jogaram Outros", val: row.jogaramOutros.toLocaleString("pt-BR"), hl: false },
           { label: "Não Jogaram", val: row.naoJogaram.toLocaleString("pt-BR"), hl: false },
         ].map((r) => (
@@ -231,16 +238,17 @@ function PainelFunilJogadores({
 
 function PodioRodadas({ ranking }: { ranking: JogadorAbaInfluencerRow[] }) {
   const { theme: t } = useApp();
-  if (!ranking.length) {
+  const rankingLimitado = ranking.filter((r) => r.rodadas > 0).slice(0, 10);
+  if (!rankingLimitado.length) {
     return (
       <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
         {MSG_SEM_DADOS_PERIODO}
       </div>
     );
   }
-  const top3 = ranking.slice(0, 3);
-  const resto = ranking.slice(3);
-  const maxRod = ranking[0]?.rodadas ?? 0;
+  const top3 = rankingLimitado.slice(0, 3);
+  const resto = rankingLimitado.slice(3);
+  const maxRod = rankingLimitado[0]?.rodadas ?? 0;
   const ariaPodio =
     top3.length >= 1
       ? `Pódio de rodadas Spin: 1º ${top3[0]?.nome ?? "—"} (${top3[0]?.rodadas.toLocaleString("pt-BR")})` +
@@ -496,7 +504,8 @@ export default function DashboardJogadores() {
   const maxMesa = mesas[0]?.rodadas ?? 0;
   const taxasOrdenadas = useMemo(() => {
     const mul = sortTaxas.dir === "asc" ? 1 : -1;
-    return [...ranking].sort((a, b) => {
+    const rows = sf.historico ? ranking : ranking.filter((r) => r.registros > 0);
+    return [...rows].sort((a, b) => {
       switch (sortTaxas.col) {
         case "nome":
           return compareLocaleTexto(a.nome, b.nome, sortTaxas.dir);
@@ -520,7 +529,7 @@ export default function DashboardJogadores() {
           return 0;
       }
     });
-  }, [ranking, sortTaxas]);
+  }, [ranking, sf.historico, sortTaxas]);
 
   const card = getPageContentBoxStyle(brand, t);
   const isHistoricoKpi = sf.historico || !momPronto;
@@ -564,7 +573,7 @@ export default function DashboardJogadores() {
       ) : null}
 
       <div style={card}>
-        <SectionTitle sub={sf.historico ? "acumulado" : "comparativo MTD vs mesmo período do mês anterior"}>
+        <SectionTitle sub={sf.historico ? "acumulado" : "dados do mês · vs mesmo período do mês anterior"}>
           Ativação em mesa Spin
         </SectionTitle>
         {loading ? (
@@ -831,7 +840,9 @@ export default function DashboardJogadores() {
           )}
         </div>
         <div style={{ ...card, marginBottom: 0 }}>
-          <SectionTitle sub="rodadas Spin dos jogadores originados">Ranking de Influencers</SectionTitle>
+          <SectionTitle sub={sf.historico ? "top 10 por rodadas Spin acumuladas" : "top 10 por rodadas Spin no mês"}>
+            Ranking de Influencers
+          </SectionTitle>
           {loading ? (
             <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>Carregando…</div>
           ) : (
@@ -858,7 +869,7 @@ export default function DashboardJogadores() {
                     <tr>
                       <SortTableTh<TaxasSortCol> label="Influencer" col="nome" sortCol={sortTaxas.col} sortDir={sortTaxas.dir} onSort={onSortTaxas} thStyle={dataTable.thHeaderSticky} align="center" />
                       <SortTableTh label="Registros" col="registros" sortCol={sortTaxas.col} sortDir={sortTaxas.dir} onSort={onSortTaxas} thStyle={dataTable.thHeader} align="center" />
-                      <SortTableTh label="Reg>Spin" col="pctRegJog" sortCol={sortTaxas.col} sortDir={sortTaxas.dir} onSort={onSortTaxas} thStyle={dataTable.thHeader} align="center" />
+                      <SortTableTh label="Reg>Jogaram" col="pctRegJog" sortCol={sortTaxas.col} sortDir={sortTaxas.dir} onSort={onSortTaxas} thStyle={dataTable.thHeader} align="center" />
                       <SortTableTh label="Outros" col="jogaramOutros" sortCol={sortTaxas.col} sortDir={sortTaxas.dir} onSort={onSortTaxas} thStyle={dataTable.thHeader} align="center" />
                       <SortTableTh label="Não Jogaram" col="naoJogaram" sortCol={sortTaxas.col} sortDir={sortTaxas.dir} onSort={onSortTaxas} thStyle={dataTable.thHeader} align="center" />
                       <SortTableTh label="Spin" col="jogaramSpin" sortCol={sortTaxas.col} sortDir={sortTaxas.dir} onSort={onSortTaxas} thStyle={dataTable.thHeader} align="center" />

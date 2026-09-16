@@ -104,6 +104,8 @@ describe("rankingJogadoresAba", () => {
     expect(ranking[0].jogaramSpin).toBe(1);
     expect(ranking[0].naoJogaram).toBe(0);
     expect(ranking[0].jogaramSpin + ranking[0].jogaramOutros + ranking[0].naoJogaram).toBe(ranking[0].registros);
+    expect(ranking[0].pctRegJog).toBe(100);
+    expect(ranking[0].pctJogSpin).toBe(50);
     expect(ranking[1].pctRegSpin).toBe(100);
   });
 
@@ -137,6 +139,15 @@ describe("mesasJogadoresAba", () => {
       cor: GAME_IDENTITY_HEX.blackjack,
     });
     expect(mesas[1].cor).toBe(GAME_IDENTITY_HEX.baccarat);
+  });
+
+  it("não deixa o bloco vazio quando o RS não identifica a mesa", () => {
+    const mesas = mesasJogadoresAba([
+      fact({ ext_customer_id: "1", rodadas_spin: 25, rodadas_por_jogo: null, rodadas_por_mesa: [] }),
+    ]);
+    expect(mesas).toEqual([
+      expect.objectContaining({ estudio: "—", mesa: "Mesa não informada", rodadas: 25 }),
+    ]);
   });
 });
 

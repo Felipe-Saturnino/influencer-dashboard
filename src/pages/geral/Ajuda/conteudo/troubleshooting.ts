@@ -79,7 +79,12 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "A aba Jogadores está vazia ou sem IDs?",
         texto:
-          "Os cadastros por jogador (ID Ext + UTM) entram no mesmo sync da Casa de Apostas que atualiza as métricas consolidadas. Overview, Conversão e Jogadores contam IDs únicos das UTMs mapeadas a influencer; `sem_utm` e UTM sem mapeamento não entram. Os grupos da aba Jogadores fecham o total sem duplicação: Spin (rodada Spin > 0), Outros (depósito > 0 sem rodada Spin) e Não Jogaram (sem depósito e sem rodada Spin). Se Overview e Conversão têm números mas Jogadores não, o sync agregado rodou e a fase de IDs falhou — em geral falta permissão de relatório de registros na TAP. Se o Status Técnico mostrar o sync **OK** com 0 registros no dia, republicar a Edge `sync-revenue-sentinel` (parser incluso, v1.3.0+) e rodar o Sync de novo. Se o problema persistir, entre em contato com o suporte.",
+          "Os cadastros por jogador (ID Ext + UTM) entram no mesmo sync da Casa de Apostas que atualiza as métricas consolidadas. Overview, Conversão e Jogadores contam IDs únicos das UTMs mapeadas a influencer; `sem_utm` e UTM sem mapeamento não entram. Os grupos da aba Jogadores fecham o total sem duplicação: Spin (já tem rodada em mesa Spin), Outros (já depositou, sem rodada Spin) e Não Jogaram (sem depósito e sem rodada Spin). Se Overview e Conversão têm números mas Jogadores não, o sync agregado rodou e a fase de IDs falhou — em geral falta permissão de relatório de registros na TAP. Se o Status Técnico mostrar o sync **OK** com 0 registros no dia, republicar a Edge `sync-revenue-sentinel` (parser incluso, v1.3.0+) e rodar o Sync de novo. Se o problema persistir, entre em contato com o suporte.",
+      },
+      {
+        subtitulo: "Na aba Jogadores, por que um mês antigo aparece sem rodadas Spin?",
+        texto:
+          "O Revenue Sentinel entrega totais de uma janela, sem separar por dia. Para respeitar o carrossel, a integração consulta e grava uma competência por vez. Se um mês antigo estiver zerado, o backfill daquela competência ainda não terminou ou falhou. Consulte o último sync em Status Técnico. Depois do backfill, Ativação, Rodadas, GGR, Turnover, mesas e ranking refletem o mês selecionado; Histórico soma as competências.",
       },
       {
         subtitulo: "Os KPIs mostram valores diferentes entre Overview e Financeiro?",
@@ -809,7 +814,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Publiquei a avaliação e ela sumiu?",
         texto:
-          "Ao **Concluir**, a avaliação **sai dos rascunhos** (aba Gerenciamento) e passa a constar na aba **Avaliações** com status **Aguardando** — isso é esperado. A página agora abre a aba Avaliações após publicar.\n\nSe não aparecer: confira o **mês** no carrossel (a data da avaliação precisa estar no mês filtrado) ou ative **Histórico**; confira o filtro de **Time** e de **Staff**. Se a gravação falhar, a mensagem de erro permanece no modal — nesse caso a avaliação **não** foi publicada; tente de novo. Se o problema persistir, entre em contato com o suporte.",
+          "O motivo mais comum é **campo obrigatório pendente**: se faltar uma nota, um comentário, os Pontos Fortes / a Desenvolver ou o vídeo, o **Concluir** não publica e a avaliação continua em **rascunho** no Gerenciamento. Como o campo em falta costuma estar em outra aba do modal, o modal agora **abre a aba do primeiro pendente e rola até ele**, e a mensagem diz o que falta em cada aba (ex.: «Comunicação: faltam 2 notas e 1 comentário»). Preencha os campos em vermelho e clique em Concluir de novo.\n\nQuando publica de verdade, a avaliação **sai dos rascunhos** e passa para a aba **Avaliações** com status **Aguardando** — isso é esperado, e a página já abre nessa aba.\n\nSe ainda não aparecer: confira o **mês** no carrossel (a data da avaliação precisa estar no mês filtrado) ou ative **Histórico**; confira o filtro de **Time** e de **Staff**. Se a gravação falhar, a mensagem de erro permanece no modal — nesse caso a avaliação **não** foi publicada; tente de novo. Se o problema persistir, entre em contato com o suporte.",
       },
       {
         subtitulo: "Alguns prestadores não aparecem para avaliar?",

@@ -205,6 +205,8 @@ Modal **Histórico**: linhas com data/hora, ação e usuário (`academy_performa
 
 Rascunho **não** entra na aba Avaliações. **Concluir** grava **Aguardando** e registra histórico `publicada`. Retenção de vídeo (`concluida_em`) dispara ao entrar em **Aprovado**.
 
+**Validação do Concluir (obrigatório):** o modal tem 5 abas, então erro genérico deixa o campo em falta invisível — rascunhos ficavam presos por 1 nota ou pelos Pontos Fortes numa aba que o coach não estava a ver, e ele lia isso como «a avaliação sumiu». `validarConcluir` devolve `{ mensagens, pendencias }`: mensagem **por aba** nomeando o que falta (`Comunicação: faltam 2 notas e 1 comentário.`) e `pendencias` na ordem das abas. Ao falhar, `irParaPendencia` troca para a aba do **primeiro** pendente e um efeito (dep. `[foco, aba]`, porque `ModalTabPanel` fica montado com `hidden`) rola até ele com foco. Campo de vídeo é input `type=file` oculto — rolar para o `label[for]`, nunca focar o input. **Proibido** publicar com erro genérico sem levar o usuário ao campo.
+
 **Ações só ícone:** `BtnIconeAcaoLinha` + `tooltipAcao` (rótulo da ação, sem nome do avaliado).
 
 ### Formato por time (Game Presenter vs Shuffler)

@@ -18,6 +18,7 @@ export type JogadorAbaDailyFact = {
   rodadas_por_mesa: unknown;
 };
 
+/** Cadastro Spin acumulado (`jogadores`) — atividade em mesa não tem quebra por dia no Revenue Sentinel. */
 export type JogadorAbaKpis = {
   registros: number;
   jogaramSpin: number;
@@ -243,8 +244,8 @@ export function rankingJogadoresAba(
       jogaramSpin,
       jogaramOutros,
       naoJogaram,
-      pctRegJog: pctJogadores(jogaramSpin, registros),
-      pctJogSpin: pctJogadores(jogaramSpin, registros),
+      pctRegJog: pctJogadores(jogaramSpin + jogaramOutros, registros),
+      pctJogSpin: pctJogadores(jogaramSpin, jogaramSpin + jogaramOutros),
       pctRegSpin: pctJogadores(jogaramSpin, registros),
       rodadas: g.rodadas,
       ggrSpin: g.ggr,
@@ -258,10 +259,12 @@ export function mesasJogadoresAba(rows: JogadorAbaDailyFact[]): JogadorAbaMesaBa
   const acc = new Map<string, { estudio: string; mesa: string; rodadas: number; jogo: GameIdentityKey | null }>();
   for (const r of rows) {
     const itens = asMesaItens(r.rodadas_por_mesa);
+    let detalhadas = 0;
     if (itens.length) {
       for (const m of itens) {
         const rodadas = n(m.rodadas);
         if (rodadas <= 0) continue;
+        detalhadas += rodadas;
         const mesa = (m.mesa ?? "").trim() || "Mesa";
         const estudio = (m.estudio ?? "").trim() || "—";
         const jogo = gameIdentityFromTexto(m.jogo ?? "") ?? gameIdentityFromTexto(mesa);
@@ -270,19 +273,27 @@ export function mesasJogadoresAba(rows: JogadorAbaDailyFact[]): JogadorAbaMesaBa
         if (prev) prev.rodadas += rodadas;
         else acc.set(key, { estudio, mesa, rodadas, jogo });
       }
-      continue;
     }
     const jogos = r.rodadas_por_jogo;
-    if (!jogos || typeof jogos !== "object") continue;
-    for (const [jogoRaw, qtd] of Object.entries(jogos)) {
-      const rodadas = n(qtd);
-      if (rodadas <= 0) continue;
-      const jogo = gameIdentityFromTexto(jogoRaw);
-      const mesa = jogo ? GAME_IDENTITY_LABEL[jogo] : jogoRaw;
-      const key = `—\0${mesa}`;
+    if (itens.length === 0 && jogos && typeof jogos === "object") {
+      for (const [jogoRaw, qtd] of Object.entries(jogos)) {
+        const rodadas = n(qtd);
+        if (rodadas <= 0) continue;
+        detalhadas += rodadas;
+        const jogo = gameIdentityFromTexto(jogoRaw);
+        const mesa = jogo ? GAME_IDENTITY_LABEL[jogo] : jogoRaw;
+        const key = `—\0${mesa}`;
+        const prev = acc.get(key);
+        if (prev) prev.rodadas += rodadas;
+        else acc.set(key, { estudio: "—", mesa, rodadas, jogo });
+      }
+    }
+    const semDetalhe = Math.max(0, n(r.rodadas_spin) - detalhadas);
+    if (semDetalhe > 0) {
+      const key = `—\0Mesa não informada`;
       const prev = acc.get(key);
-      if (prev) prev.rodadas += rodadas;
-      else acc.set(key, { estudio: "—", mesa, rodadas, jogo });
+      if (prev) prev.rodadas += semDetalhe;
+      else acc.set(key, { estudio: "—", mesa: "Mesa não informada", rodadas: semDetalhe, jogo: null });
     }
   }
   return [...acc.entries()]

@@ -220,19 +220,19 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Jogaram Spin",
         definicao:
-          "Cadastros do canal (UTM de influencer) com **pelo menos 1 rodada** nas mesas Spin no período, segundo o `round_count` / `bet_count` do Revenue Sentinel. É um recorte dos Registros da aba — não inclui quem só existe no lake do RS sem rodada. O GGR desta vista é o das mesas Spin, não o GGR TAP.",
+          "Cadastros do canal (UTM de influencer) com **pelo menos 1 rodada** nas mesas Spin na competência selecionada, segundo o `round_count` / `bet_count` do Revenue Sentinel. O RS é consultado mês a mês para respeitar o carrossel. Não inclui quem só existe no lake sem rodada. O GGR desta vista é o das mesas Spin, não o GGR TAP.",
         referencia: "Streamers → Jogadores",
       },
       {
         termo: "Jogaram Outros",
         definicao:
-          "Cadastros do canal (UTM de influencer) com pelo menos 1 depósito e sem rodada Spin no período. Quem jogou Spin tem prioridade e não é contado novamente neste grupo.",
+          "Cadastros do canal (UTM de influencer) que depositaram e não tiveram rodada Spin na competência selecionada. Quem jogou Spin tem prioridade e não é contado novamente neste grupo.",
         referencia: "Streamers → Jogadores",
       },
       {
         termo: "Não Jogaram",
         definicao:
-          "Cadastros únicos das UTMs mapeadas a influencer que não tiveram depósito nem rodada Spin no período. Spin + Outros + Não Jogaram = total de Registros únicos.",
+          "Cadastros únicos das UTMs mapeadas a influencer sem depósito nem rodada Spin na competência selecionada. Spin + Outros + Não Jogaram = total de Registros únicos do período.",
         referencia: "Streamers → Jogadores",
       },
       {

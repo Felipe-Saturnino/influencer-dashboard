@@ -227,18 +227,20 @@ Mockup: `docs/mockups/streamers-aba-jogadores-mockup.html`. GGR desta aba = **GG
 | Peça da UI | Fonte |
 |---|---|
 | Registros | IDs Ext únicos com `registration_count > 0` **e** `influencer_id` (UTM de influencer). Overview e Conversão usam a mesma conta (`fetchJogadoresRegistrosUnicos`). Sem `sem_utm` / UTM órfã. |
-| Jogaram Spin | desses registros, quem tem `rodadas_spin > 0` no período |
-| Jogaram Outros | desses registros, quem tem `deposit_count > 0` e **não** jogou Spin |
-| Não Jogaram | desses registros, quem não tem rodada Spin nem depósito |
+| Jogaram Spin | desses registros, quem tem `rodadas_spin > 0` na competência |
+| Jogaram Outros | desses registros, quem tem `deposit_count > 0` e **não** jogou Spin na competência |
+| Não Jogaram | desses registros, quem não tem rodada Spin nem depósito na competência |
 | Jogaram | união Spin + Outros |
 | Taxa de ativação | Spin ÷ **Registros** |
-| Rodadas, média, GGR, Turnover | soma `rodadas_spin` / `ggr_spin` / `turnover_spin` (média = rodadas ÷ Jogaram Spin) |
-| Rodadas por mesa | `rodadas_por_mesa` (fallback `rodadas_por_jogo`); cor via `gameIdentityFromTexto` |
-| Ranking / Comparativo de Taxas | denominador Registros; colunas Outros + Spin; paginação 20 |
+| Rodadas, média, GGR, Turnover | mês do carrossel; Histórico soma competências (média = rodadas ÷ Jogaram Spin) |
+| Rodadas por mesa | `rodadas_por_mesa` (fallback `rodadas_por_jogo`; sem detalhe = “Mesa não informada”); cor via `gameIdentityFromTexto` |
+| Comparativo de Funil | três etapas: Registros → Jogaram (Outros + Spin) → Jogaram Spin |
+| Ranking de Influencers | top 10 por rodadas Spin; mês do carrossel ou acumulado no Histórico |
+| Comparativo de Taxas | denominador Registros; colunas Outros + Spin; no carrossel mensal omite influencer com zero registro |
 
 - **Fetch:** `fetchJogadoresAbaDaily` — colunas explícitas, `cda_conta = influencers`, janela no SQL, `fetchAllPages` + lotes `.in(influencer_id)`. **Todos Influencers / Todas Operadoras** = agregadores do **escopo**. KPIs **não** incluem ID Ext sem `influencer_id` (`incluirSemInfluencer: false`) — cadastro `sem_utm` / UTM pendente não entra. `influencerIds`/`operadoraSlugs` `null` = visão global; `[]` = escopo vazio. Ver **próprios**: `travarRecortePropriosStreamers`. Fase 1 = período atual; fase 2 = MoM. KPIs leem o **daily** do período. Deduplicação por `(operadora_slug, ext_customer_id)`. Partição: **Spin + Outros + Não Jogaram = Registros únicos**.
 - **Sync TAP:** mesma Edge `sync-metricas-cda` (v2.2.0). Após o `group_by=utm_source` (agregados), segunda chamada `group_by=utm_source,ext_customer_id`. Falha desta fase **não** aborta o sync de `influencer_metricas`. Flag `skip_jogadores` para pular. Sem PII (sem username/e-mail).
-- **Revenue Sentinel:** Edge `sync-revenue-sentinel` (POST `/v1/jogadores/spin`, lotes de 500, header `X-API-Key`). Grava `round_count` / `bet_count` de `spin` (fallback `bko` se o Spin não trouxer rodada). **`jogou_spin` só se rodadas Spin > 0** — presença no lake RS não conta (o RS pode passar a ter outras fontes). Sem lista por dia, totais da janela no `ate` **somente** com `round_count`/`bet_count` > 0. `jogou_outros` = depósito TAP e zero rodadas Spin. Cron ~4h20 BRT após TAP; Status Técnico → Integrações Externas → Sync. Secrets `RS_API_URL` / `RS_API_KEY`. Publicar `index.ts` **e** `revenueSentinelJogadores.ts` (v1.3.0+).
+- **Revenue Sentinel:** Edge `sync-revenue-sentinel` (POST `/v1/jogadores/spin`, lotes de 500, header `X-API-Key`). **Uma competência por chamada**; o RS não entrega quebra diária, então totais da janela são gravados no primeiro dia do mês (bucket estável para UPSERT MTD). Cron usa início do mês → D-1 e `atualizar_cadastro=false`; nunca D-0. Backfill executa mês a mês após limpar as colunas Spin antigas (`scripts/manual-supabase-backfill-revenue-sentinel-mensal.sql`). Grava `round_count` / `bet_count` de `spin` (fallback `bko`). **`jogou_spin` só se rodadas Spin > 0**; presença no lake não conta. `jogou_outros` = depósito TAP e zero rodadas Spin. Cron ~4h20 BRT após TAP; Status Técnico → Integrações Externas → Sync. Secrets `RS_API_URL` / `RS_API_KEY`. Publicar `index.ts` **e** `revenueSentinelJogadores.ts` (v1.4.0+).
 - **Tabelas:** `jogadores` (dimensão, unique `(operadora_slug, ext_customer_id)`, first-touch em `origem`) e `jogadores_metricas_diarias` (fato TAP + colunas Spin nulas). Trigger preenche o cadastro. `aplicar_mapeamento_utm` também atualiza `influencer_id` nestas tabelas.
 - **Proibido:** inflar `influencer_metricas` com linha por jogador; gravar GGR TAP em `ggr_spin`; tratar `ext_customer_id` como `player_id` BKO.
 

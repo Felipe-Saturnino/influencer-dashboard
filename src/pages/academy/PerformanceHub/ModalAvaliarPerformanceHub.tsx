@@ -94,6 +94,14 @@ type Props = {
 
 type RespostasPorSlug = Record<string, PerformanceHubCriterioResposta>;
 
+/** Campo obrigatório vazio no Concluir — `chave` pinta a borda, `alvo` é o id no DOM para levar o foco. */
+type PendenciaCampo = { chave: string; aba: ModalTab; alvo: string };
+
+function listarPt(itens: string[]): string {
+  if (itens.length <= 1) return itens[0] ?? "";
+  return `${itens.slice(0, -1).join(", ")} e ${itens[itens.length - 1]}`;
+}
+
 const TABS_GP: { key: ModalTab; label: string; icon: typeof BarChart3 }[] = [
   { key: "dados", label: "Dados da Avaliação", icon: ClipboardList },
   { key: "comunicacao", label: "Comunicação", icon: MessageSquare },
@@ -179,6 +187,7 @@ export function ModalAvaliarPerformanceHub({
   const [erros, setErros] = useState<string[]>([]);
   const [statusRascunho, setStatusRascunho] = useState("");
   const [invalidFields, setInvalidFields] = useState<Set<string>>(new Set());
+  const [foco, setFoco] = useState<{ alvo: string; seq: number } | null>(null);
 
   const jogoMeta = !isShuffler && jogo ? PERFORMANCE_HUB_JOGOS_META[jogo] : null;
   const mesaTipo = jogoMeta?.mesaTipo ?? "cartas";
@@ -241,6 +250,19 @@ export function ModalAvaliarPerformanceHub({
       setJogo(jogosDisponiveis[0]!);
     }
   }, [isShuffler, jogosDisponiveis, jogo, avaliacao.jogo]);
+
+  // Painéis ficam montados com `hidden`; o scroll só funciona depois do render da aba alvo.
+  useEffect(() => {
+    if (!foco) return;
+    const campo = document.getElementById(foco.alvo);
+    if (!campo) return;
+    const ehArquivo = campo.getAttribute("type") === "file";
+    const alvoScroll = ehArquivo
+      ? (document.querySelector<HTMLElement>(`label[for="${foco.alvo}"]`) ?? campo)
+      : campo;
+    alvoScroll.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (!ehArquivo) (campo as HTMLElement).focus({ preventScroll: true });
+  }, [foco, aba]);
 
   const resultado = useMemo(() => {
     const notaComunicacao = calcularNotaDimensao(
@@ -350,65 +372,115 @@ export function ModalAvaliarPerformanceHub({
     return "Enviando…";
   }
 
-  function validarConcluir(): string[] {
-    const lista: string[] = [];
-    const invalid = new Set<string>();
+  function rotuloAba(key: ModalTab): string {
+    return tabsBase.find((tab) => tab.key === key)?.label ?? "";
+  }
+
+  function validarConcluir(): { mensagens: string[]; pendencias: PendenciaCampo[] } {
+    const pendencias: PendenciaCampo[] = [];
+    const camposDados: string[] = [];
 
     if (!turno) {
-      lista.push("Preencha todos os campos em Dados da Avaliação.");
-      invalid.add("turno");
+      camposDados.push("Turno");
+      pendencias.push({ chave: "turno", aba: "dados", alvo: "modalTurno" });
     }
     if (!estudioId) {
-      lista.push("Preencha todos os campos em Dados da Avaliação.");
-      invalid.add("estudioId");
+      camposDados.push("Estúdio");
+      pendencias.push({ chave: "estudioId", aba: "dados", alvo: "modalEstudio" });
     }
     if (!isShuffler) {
       if (!jogo) {
-        lista.push("Preencha todos os campos em Dados da Avaliação.");
-        invalid.add("jogo");
+        camposDados.push("Jogo");
+        pendencias.push({ chave: "jogo", aba: "dados", alvo: "modalJogo" });
       }
       if (mesaId === "") {
-        lista.push("Preencha todos os campos em Dados da Avaliação.");
-        invalid.add("mesaId");
+        camposDados.push("Mesa");
+        pendencias.push({ chave: "mesaId", aba: "dados", alvo: "modalMesa" });
       }
     }
-    if (!videoNome && !videoFile && !videoPerformanceHubPodeAssistir(videoPathSalvo)) {
-      lista.push("Envie o vídeo da avaliação.");
-      invalid.add("video");
+    const semVideo = !videoNome && !videoFile && !videoPerformanceHubPodeAssistir(videoPathSalvo);
+    if (semVideo) {
+      pendencias.push({ chave: "video", aba: "dados", alvo: "modalVideo" });
     }
 
-    const validarCriterios = (prefix: string, criterios: { slug: string; label: string }[], respostas: RespostasPorSlug) => {
+    const pendenciasCriterios = (
+      abaCriterios: ModalTab,
+      prefix: string,
+      criterios: { slug: string; label: string }[],
+      respostas: RespostasPorSlug,
+    ) => {
+      let notas = 0;
+      let comentarios = 0;
       for (const c of criterios) {
         const r = respostas[c.slug];
         if (r?.nota == null) {
-          lista.push("Preencha todas as notas dos critérios.");
-          invalid.add(`${prefix}-${c.slug}-nota`);
+          notas += 1;
+          pendencias.push({
+            chave: `${prefix}-${c.slug}-nota`,
+            aba: abaCriterios,
+            alvo: `${prefix}-${c.slug}-nota`,
+          });
         }
         if (!r?.comentario?.trim()) {
-          lista.push("Preencha todos os comentários dos critérios.");
-          invalid.add(`${prefix}-${c.slug}-comentario`);
+          comentarios += 1;
+          pendencias.push({
+            chave: `${prefix}-${c.slug}-comentario`,
+            aba: abaCriterios,
+            alvo: `${prefix}-${c.slug}-coment`,
+          });
         }
       }
+      return { aba: abaCriterios, notas, comentarios };
     };
 
-    validarCriterios("com", config.comunicacao.criterios, respostasComunicacao);
-    validarCriterios("img", config.imagem.criterios, respostasImagem);
-    if (showMesaTab) validarCriterios("mesa", mesaCriterios, respostasMesa);
-    if (showProcedimentosTab && configSh) {
-      validarCriterios("proc", configSh.procedimentos.criterios, respostasProcedimentos);
-    }
+    const porDimensao = [
+      pendenciasCriterios("comunicacao", "com", config.comunicacao.criterios, respostasComunicacao),
+      pendenciasCriterios("imagem", "img", config.imagem.criterios, respostasImagem),
+      ...(showMesaTab ? [pendenciasCriterios("mesa", "mesa", mesaCriterios, respostasMesa)] : []),
+      ...(showProcedimentosTab && configSh
+        ? [pendenciasCriterios("procedimentos", "proc", configSh.procedimentos.criterios, respostasProcedimentos)]
+        : []),
+    ];
 
+    const camposConsideracoes: string[] = [];
     if (!pontosFortes.trim()) {
-      lista.push("Preencha Pontos Fortes e Pontos a Desenvolver.");
-      invalid.add("pontosFortes");
+      camposConsideracoes.push("Pontos Fortes");
+      pendencias.push({ chave: "pontosFortes", aba: "consideracoes", alvo: "pontosFortes" });
     }
     if (!pontosDesenvolver.trim()) {
-      lista.push("Preencha Pontos Fortes e Pontos a Desenvolver.");
-      invalid.add("pontosDesenvolver");
+      camposConsideracoes.push("Pontos a Desenvolver");
+      pendencias.push({ chave: "pontosDesenvolver", aba: "consideracoes", alvo: "pontosDesenvolver" });
     }
 
-    setInvalidFields(invalid);
-    return [...new Set(lista)];
+    const mensagens: string[] = [];
+    if (camposDados.length > 0) {
+      mensagens.push(`${rotuloAba("dados")}: preencha ${listarPt(camposDados)}.`);
+    }
+    if (semVideo) {
+      mensagens.push(`${rotuloAba("dados")}: envie o vídeo da avaliação.`);
+    }
+    for (const dim of porDimensao) {
+      const partes: string[] = [];
+      if (dim.notas > 0) partes.push(`${dim.notas} ${dim.notas === 1 ? "nota" : "notas"}`);
+      if (dim.comentarios > 0) {
+        partes.push(`${dim.comentarios} ${dim.comentarios === 1 ? "comentário" : "comentários"}`);
+      }
+      if (partes.length === 0) continue;
+      const verbo = dim.notas + dim.comentarios === 1 ? "falta" : "faltam";
+      mensagens.push(`${rotuloAba(dim.aba)}: ${verbo} ${listarPt(partes)}.`);
+    }
+    if (camposConsideracoes.length > 0) {
+      mensagens.push(`${rotuloAba("consideracoes")}: preencha ${listarPt(camposConsideracoes)}.`);
+    }
+
+    setInvalidFields(new Set(pendencias.map((p) => p.chave)));
+    return { mensagens, pendencias };
+  }
+
+  /** Leva o usuário ao primeiro campo pendente — sem isso o campo em falta fica invisível noutra aba. */
+  function irParaPendencia(pendencia: PendenciaCampo) {
+    setAba(pendencia.aba);
+    setFoco((prev) => ({ alvo: pendencia.alvo, seq: (prev?.seq ?? 0) + 1 }));
   }
 
   async function handleSalvarRascunho() {
@@ -446,10 +518,15 @@ export function ModalAvaliarPerformanceHub({
       setStatusRascunho("");
       return;
     }
-    const lista = validarConcluir();
-    if (lista.length > 0) {
-      setErros(lista);
+    const { mensagens, pendencias } = validarConcluir();
+    const primeira = pendencias[0];
+    if (primeira) {
+      setErros([
+        `Faltam campos obrigatórios para publicar — abrimos a aba ${rotuloAba(primeira.aba)} no primeiro deles.`,
+        ...mensagens,
+      ]);
       setStatusRascunho("");
+      irParaPendencia(primeira);
       return;
     }
     setErros([]);
@@ -462,8 +539,9 @@ export function ModalAvaliarPerformanceHub({
         return;
       }
       if (!resolved.url) {
-        setErros(["Envie o vídeo da avaliação."]);
+        setErros([`${rotuloAba("dados")}: envie o vídeo da avaliação.`]);
         setInvalidFields(new Set(["video"]));
+        irParaPendencia({ chave: "video", aba: "dados", alvo: "modalVideo" });
         return;
       }
       try {

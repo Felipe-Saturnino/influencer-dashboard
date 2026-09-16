@@ -81,6 +81,35 @@ describe("parseJogadoresSpinResponse", () => {
     expect(r.dias[0]?.player_id_bko).toBe("casadeapostas.if_dgc.L011_358_56.CDA-2203598");
   });
 
+  it("fixa totais sem dia no bucket mensal sem alterar fatos datados", () => {
+    const totais = parseJogadoresSpinResponse(
+      {
+        ate: "2026-08-31",
+        jogadores: [
+          {
+            ext_customer_id: "2203598",
+            spin: { round_count: 10, bet_count: 10 },
+          },
+        ],
+      },
+      "2026-08-01",
+    );
+    expect(totais.dias[0]?.data).toBe("2026-08-01");
+
+    const datado = parseJogadoresSpinResponse(
+      {
+        jogadores: [
+          {
+            ext_customer_id: "2203598",
+            spin: [{ snapshot_date: "2026-08-17", round_count: 4 }],
+          },
+        ],
+      },
+      "2026-08-01",
+    );
+    expect(datado.dias[0]?.data).toBe("2026-08-17");
+  });
+
   it("BKO com dias é mesa Spin (não é outro produto)", () => {
     const r = parseJogadoresSpinResponse({
       ate: "2026-09-15",

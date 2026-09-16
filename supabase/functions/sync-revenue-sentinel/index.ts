@@ -15,12 +15,12 @@ import {
  * Secrets: RS_API_URL, RS_API_KEY (X-API-Key), SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
  *
  * Body opcional:
- *   { data_inicio, data_fim, dry_run, ext_customer_ids?, cda_conta? }
+ *   { data_inicio, data_fim, dry_run, ext_customer_ids?, cda_conta?, atualizar_cadastro? }
+ * Uma chamada cobre uma única competência. Sem datas, usa mês corrente até D-1.
  */
 
 const INTEGRACAO_SLUG = "revenue_sentinel";
 const DEFAULT_BASE = "https://api.spingaming.com.br/api/v1/data";
-const DEFAULT_DE = "2025-12-01";
 const PAGE = 1000;
 const RPC_CHUNK = 400;
 const FETCH_MS = 45_000;
@@ -31,6 +31,7 @@ type SyncBody = {
   dry_run?: boolean;
   ext_customer_ids?: string[];
   cda_conta?: "influencers" | "afiliados";
+  atualizar_cadastro?: boolean;
 };
 
 function cors(req: Request): Record<string, string> {
@@ -49,8 +50,14 @@ function json(req: Request, data: unknown, status = 200) {
   });
 }
 
-function hojeIsoUtc(): string {
-  return new Date().toISOString().slice(0, 10);
+function ontemIsoSaoPaulo(): string {
+  const agoraSp = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
+  agoraSp.setDate(agoraSp.getDate() - 1);
+  return agoraSp.toISOString().slice(0, 10);
+}
+
+function inicioMes(dataIso: string): string {
+  return `${dataIso.slice(0, 7)}-01`;
 }
 
 async function fetchAllPages<T>(
@@ -96,10 +103,18 @@ serve(async (req: Request) => {
     /* body vazio */
   }
 
-  const dataInicio = params.data_inicio ?? DEFAULT_DE;
-  const dataFim = params.data_fim ?? hojeIsoUtc();
+  const dataFim = params.data_fim ?? ontemIsoSaoPaulo();
+  const dataInicio = params.data_inicio ?? inicioMes(dataFim);
   const dryRun = params.dry_run === true;
+  const atualizarCadastro = params.atualizar_cadastro === true;
   const conta = params.cda_conta === "afiliados" ? "afiliados" : "influencers";
+
+  if (dataInicio.slice(0, 7) !== dataFim.slice(0, 7)) {
+    return json(req, {
+      ok: false,
+      erro: "O sync Revenue Sentinel aceita uma competência por chamada. Informe data_inicio e data_fim no mesmo mês.",
+    }, 200);
+  }
 
   const gravarLog = async (opts: {
     status: "ok" | "falha";
@@ -190,7 +205,9 @@ serve(async (req: Request) => {
           payloadShape = summarizeRsPayload(payload);
           console.log("[sync-revenue-sentinel] payload", JSON.stringify(payloadShape));
         }
-        const parsed = parseJogadoresSpinResponse(payload);
+        // O contrato atual devolve totais da janela sem dia. Cada chamada representa
+        // uma competência; o primeiro dia funciona como bucket estável para o UPSERT.
+        const parsed = parseJogadoresSpinResponse(payload, dataInicio);
         todosDias.push(...parsed.dias);
         for (const m of parsed.missing) missing.add(m);
       } catch (e) {
@@ -290,14 +307,16 @@ serve(async (req: Request) => {
         if (error) throw new Error(`RPC diário: ${error.message}`);
         diarioUpsert += Number(data ?? 0);
       }
-      for (let i = 0; i < cadastro.length; i += RPC_CHUNK) {
-        const slice = cadastro.slice(i, i + RPC_CHUNK);
-        const { data, error } = await supabase.rpc("enriquecer_jogadores_spin_cadastro", {
-          p_operadora_slug: RS_OPERADORA_SLUG_CDA,
-          p_linhas: slice,
-        });
-        if (error) throw new Error(`RPC cadastro: ${error.message}`);
-        cadastroUpsert += Number(data ?? 0);
+      if (atualizarCadastro) {
+        for (let i = 0; i < cadastro.length; i += RPC_CHUNK) {
+          const slice = cadastro.slice(i, i + RPC_CHUNK);
+          const { data, error } = await supabase.rpc("enriquecer_jogadores_spin_cadastro", {
+            p_operadora_slug: RS_OPERADORA_SLUG_CDA,
+            p_linhas: slice,
+          });
+          if (error) throw new Error(`RPC cadastro: ${error.message}`);
+          cadastroUpsert += Number(data ?? 0);
+        }
       }
     }
 
@@ -318,10 +337,11 @@ serve(async (req: Request) => {
 
     return json(req, {
       ok: status === "ok",
-      versao: "v1.3.0",
+      versao: "v1.4.0",
       integracao: INTEGRACAO_SLUG,
       dry_run: dryRun,
       periodo: { data_inicio: dataInicio, data_fim: dataFim },
+      atualizar_cadastro: atualizarCadastro,
       ids_enviados: ids.length,
       lotes: chunks.length,
       lotes_ok: httpOk,

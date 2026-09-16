@@ -425,13 +425,20 @@ function diasDoJogadorRs(row: Record<string, unknown>, fallbackAte: string | nul
   return one ? soComRodadaSpin([one]) : [];
 }
 
-/** Normaliza o JSON do POST (formato ainda evolui no RS). */
-export function parseJogadoresSpinResponse(payload: unknown): RsJogadoresSpinParse {
+/**
+ * Normaliza o JSON do POST (formato ainda evolui no RS).
+ * `dataTotaisSemQuebra` fixa o bucket de totais sem dia (ex.: primeiro dia do mês);
+ * fatos realmente datados preservam a data recebida.
+ */
+export function parseJogadoresSpinResponse(
+  payload: unknown,
+  dataTotaisSemQuebra?: string,
+): RsJogadoresSpinParse {
   const missing = collectMissing(payload);
   const dias: RsSpinDia[] = [];
   const seen = new Set<string>();
   const root = asRecord(payload);
-  const ateJanela = root ? isoDate(root.ate) : null;
+  const ateJanela = isoDate(dataTotaisSemQuebra) ?? (root ? isoDate(root.ate) : null);
 
   const push = (d: RsSpinDia | null) => {
     if (!d) return;
