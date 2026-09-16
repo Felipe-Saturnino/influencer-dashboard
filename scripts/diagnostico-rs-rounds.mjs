@@ -97,7 +97,7 @@ async function rsGet(apiBase, apiKey, path, query = {}) {
   }
   const res = await fetch(url, { headers: { "X-API-Key": apiKey } });
   const text = await res.text();
-  let payload = text;
+  let payload;
   try {
     payload = text ? JSON.parse(text) : null;
   } catch {

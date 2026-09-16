@@ -956,7 +956,7 @@ export function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
           </table>
         </div>
       )}
-      {rows.length > 0 ? (
+      {rows.length > 0 && (
         <TabelaPaginacaoBar
           t={t}
           page={pagCiclo.paginaSafe}
@@ -964,11 +964,6 @@ export function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
           totalItems={pagCiclo.totalItems}
           onPageChange={pagCiclo.setPagina}
         />
-      ) : (
-        /* Fora do wrapper rolável — dentro da tabela o texto era cortado na horizontal. */
-        <p style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, maxWidth: 560, margin: "12px auto 0", textAlign: "center", lineHeight: 1.6 }}>
-          <strong>Confira:</strong> (1) Selecione no dropdown acima o ciclo que contém as datas das suas lives — ex.: lives em 26–28/01 ficam no ciclo 22/01–28/01 (qui–qua). (2) A live foi validada em <strong>Lives → Resultados</strong> com status realizada, operadora e duração? (3) O influencer tem cachê/hora em Lives → Influencers? (4) O filtro de operadora está em &quot;Todas&quot;?
-        </p>
       )}
 
       {/* Modais */}

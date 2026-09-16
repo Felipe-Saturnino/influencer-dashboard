@@ -65,7 +65,7 @@ Data Export API (`POST /v1/jogadores/spin`, header `X-API-Key`, lotes máx. 500)
 | Status Técnico | Integrações Externas → **Revenue Sentinel — Jogadores Spin** → Sync |
 | SQL | `enriquecer_jogadores_spin_diario` / `_cadastro` (só `service_role`) |
 
-`jogou_spin` só com **rodadas Spin > 0** no retorno (`round_count` / `bet_count`). Estar no lake do RS sem rodada não conta — o RS pode passar a ter outras fontes. `jogou_outros` = jogador TAP com depósito e **zero** rodadas Spin no RS. Operadora do POST: `casa_apostas` (Casa de Apostas). IDs ausentes no RS devolvem 200 + `missing` — não é falha.
+`jogou_spin` só com **rodadas Spin > 0** no bloco `spin` do retorno (`round_count` / `bet_count`). O bloco `bko` é o backoffice do operador — todos os produtos — e **não** é fonte de rodada Spin: usá-lo como fallback inflou ago/2026 em 2,2 M de rodadas com turnover de R$ 360 (corrigido na v1.4.1). Estar no lake do RS sem rodada não conta — o RS pode passar a ter outras fontes. `jogou_outros` = jogador TAP com depósito e **zero** rodadas Spin no RS. Operadora do POST: `casa_apostas` (Casa de Apostas). IDs ausentes no RS devolvem 200 + `missing` — não é falha.
 
 O contrato atual entrega totais da janela sem quebra diária. A Edge v1.4.0+ aceita **uma competência por chamada** e fixa esses totais no primeiro dia do mês, permitindo UPSERT do MTD sem somar snapshots cumulativos. O cron consulta início do mês → D-1 com `atualizar_cadastro=false`. O histórico deve ser carregado mês a mês com `scripts/manual-supabase-backfill-revenue-sentinel-mensal.sql`; antes do backfill, o script limpa somente as colunas Spin agregadas antigas e preserva os fatos TAP.
 

@@ -110,7 +110,7 @@ describe("parseJogadoresSpinResponse", () => {
     expect(datado.dias[0]?.data).toBe("2026-08-17");
   });
 
-  it("BKO com dias é mesa Spin (não é outro produto)", () => {
+  it("BKO não vira rodada Spin — é o backoffice do operador, todos os produtos", () => {
     const r = parseJogadoresSpinResponse({
       ate: "2026-09-15",
       jogadores: [
@@ -123,10 +123,27 @@ describe("parseJogadoresSpinResponse", () => {
         },
       ],
     });
-    expect(r.dias).toHaveLength(1);
-    expect(r.dias[0]?.data).toBe("2026-09-14");
-    expect(r.dias[0]?.ggr_spin).toBe(40);
-    expect(r.dias[0]?.apostas_spin).toBe(5);
+    expect(r.dias).toHaveLength(0);
+  });
+
+  it("competência sem Spin não herda o bet_count inflado do BKO", () => {
+    // Assinatura vista em ago/2026: spin zerado na competência e bko com bet_count
+    // enorme — virava 476 mil “rodadas” com turnover de R$ 360.
+    const r = parseJogadoresSpinResponse(
+      {
+        de: "2026-08-01",
+        ate: "2026-08-31",
+        jogadores: [
+          {
+            ext_customer_id: "2203598",
+            spin: { turnover: 0, ggr: 0, bet_count: 0, round_count: 0 },
+            bko: { turnover: 360.25, ggr: 0, bet_count: 476876, days: {} },
+          },
+        ],
+      },
+      "2026-08-01",
+    );
+    expect(r.dias).toHaveLength(0);
   });
 
   it("lê jogadores[].spin.days chaveado por data", () => {

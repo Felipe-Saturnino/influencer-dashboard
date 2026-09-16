@@ -263,6 +263,38 @@ async function main() {
       }),
   );
 
+  // ------------------------- assinatura do fallback BKO (rodadas == apostas, sem GGR)
+  const suspeitas = new Map();
+  for (const r of diarias) {
+    const rodadas = num(r.rodadas_spin);
+    if (rodadas <= 0) continue;
+    const m = mes(r.data);
+    const x = suspeitas.get(m) ?? { linhas: 0, rodadas: 0, susLinhas: 0, susRodadas: 0 };
+    x.linhas += 1;
+    x.rodadas += rodadas;
+    // `windowTotalsFromBlock` cai no bloco `bko` quando o `spin` não tem round_count:
+    // aí rodadas = apostas = bet_count e o GGR Spin vem vazio.
+    const igual = rodadas === num(r.apostas_spin);
+    const semGgr = r.ggr_spin == null || num(r.ggr_spin) === 0;
+    if (igual && semGgr) {
+      x.susLinhas += 1;
+      x.susRodadas += rodadas;
+    }
+    suspeitas.set(m, x);
+  }
+  tabelaTexto(
+    "2b. Fallback BKO suspeito (rodadas == apostas e GGR vazio)",
+    ["mês", "linhas c/ rodada", "rodadas", "linhas suspeitas", "rodadas suspeitas", "% rodadas"],
+    [...suspeitas.entries()].sort().map(([m, x]) => [
+      m,
+      fmt(x.linhas),
+      fmt(x.rodadas),
+      fmt(x.susLinhas),
+      fmt(x.susRodadas),
+      x.rodadas > 0 ? `${((x.susRodadas / x.rodadas) * 100).toFixed(1)}%` : "—",
+    ]),
+  );
+
   // ---------------------------------------- últimos dias com registro (sync TAP)
   const ultimasDatasRegistro = [...porData.entries()]
     .filter(([data, d]) => d.registros > 0 && data >= "2026-08-01")

@@ -161,8 +161,8 @@ export function summarizeRsPayload(payload: unknown): {
   const bkoRec = asRecord(bkoNode);
   const harvested: RsSpinDia[] = [];
   const ext = first ? str(first.ext_customer_id) : "";
-  if (bkoNode != null && first) harvestDatedMetrics(bkoNode, ext, harvested, 0);
-  if (harvested.length === 0 && spinNode != null && first) harvestDatedMetrics(spinNode, ext, harvested, 0);
+  // Só o bloco `spin` — igual ao parser; `bko` fica no shape apenas como diagnóstico.
+  if (spinNode != null && first) harvestDatedMetrics(spinNode, ext, harvested, 0);
   const firstDay = harvested[0];
   return {
     kind: "object",
@@ -302,7 +302,7 @@ function windowTotalsFromBlock(rec: Record<string, unknown> | null): {
 }
 
 /**
- * Percorre fatos datados em `spin` e, se não houver rodada, em `bko`.
+ * Percorre fatos datados dentro do bloco `spin`.
  * Só persiste dia com round_count / bet_count > 0.
  */
 function harvestDatedMetrics(node: unknown, fallbackExt: string, acc: RsSpinDia[], depth: number): void {
@@ -361,12 +361,9 @@ function diaTotaisJanela(
 function diasDoJogadorRs(row: Record<string, unknown>, fallbackAte: string | null): RsSpinDia[] {
   const fallbackExt = str(pick(row, ["ext_customer_id", "external_id", "crm_id"]));
   const acc: RsSpinDia[] = [];
-  // Rodadas Spin vêm do bloco `spin` (round_count). `bko` só entra se tiver rodada > 0.
+  // Rodada Spin sai **só** do bloco `spin`. O `bko` é o backoffice do operador
+  // (todos os produtos) e o `bet_count` dele não é rodada de mesa Spin.
   if (row.spin != null) harvestDatedMetrics(row.spin, fallbackExt, acc, 0);
-  if (soComRodadaSpin(acc).length === 0 && row.bko != null) {
-    acc.length = 0;
-    harvestDatedMetrics(row.bko, fallbackExt, acc, 0);
-  }
   const comRodada = soComRodadaSpin(acc);
   if (comRodada.length > 0) return comRodada;
 
@@ -406,15 +403,12 @@ function diasDoJogadorRs(row: Record<string, unknown>, fallbackAte: string | nul
     return soComRodadaSpin([flat]);
   }
 
-  // Totais da janela de/ate — só se round_count / bet_count > 0. Presença no RS não conta.
+  // Totais da janela de/ate — só do bloco `spin` e só se round_count / bet_count > 0.
+  // Presença no RS não conta, e o `bko` nunca vira rodada Spin.
   const spinRec = asRecord(row.spin);
-  const bkoRec = asRecord(row.bko);
-  const data =
-    lifetimeDateFromSpin(spinRec ?? {}) ||
-    lifetimeDateFromSpin(bkoRec ?? {}) ||
-    fallbackAte;
+  const data = lifetimeDateFromSpin(spinRec ?? {}) || fallbackAte;
   if (!fallbackExt || !data) return [];
-  const totals = windowTotalsFromBlock(spinRec) || windowTotalsFromBlock(bkoRec);
+  const totals = windowTotalsFromBlock(spinRec);
   if (!totals) return [];
   const one = diaTotaisJanela(
     fallbackExt,
