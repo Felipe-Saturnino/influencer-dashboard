@@ -14,6 +14,7 @@ import { textoContemBuscaEmAlgum } from "../../../lib/searchText"
 import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles"
 import { ChevronRight, Loader2 } from "lucide-react"
 import { STATUS_INFLUENCER, STATUS_PAG } from "./financeiroConstants"
+import { PAGAMENTO_COLS } from "./financeiroTypes"
 import type { FinanceiroHistoricoPagRow } from "./financeiroTypes"
 import type { FinanceiroMesData } from "./financeiroMesData"
 import { Badge } from "./financeiroUi"
@@ -64,7 +65,7 @@ export function BlocoConsolidado({
     setLoadingHist(id);
     const { data } = await supabase
       .from("pagamentos")
-      .select("*, ciclos_pagamento(data_inicio, data_fim)")
+      .select(`${PAGAMENTO_COLS}, ciclos_pagamento(data_inicio, data_fim)`)
       .eq("influencer_id", id)
       .order("criado_em", { ascending: false })
       .limit(12);

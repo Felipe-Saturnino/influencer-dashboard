@@ -205,7 +205,8 @@ export function BlocoSolicitacoes({
     const { error } = await supabase.from("banca_jogo_solicitacoes").delete().eq("id", r.id).eq("status", "solicitado");
     setRecusandoId(null);
     if (error) {
-      setRecusarErr(error.message ?? "Não foi possível recusar.");
+      console.error("[Banca de Jogo] Erro ao recusar:", error);
+      setRecusarErr("Não foi possível recusar a solicitação. Se o problema persistir, entre em contato com o suporte.");
       return;
     }
     setConfirmRecusar(null);

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "../../../lib/supabase";
+import { fetchAllPages } from "../../../lib/supabasePaginate";
 import { ROLES_PARIDADE_INFLUENCER } from "../../../lib/staffRoles";
 
 export interface FinanceiroCatalogos {
@@ -16,27 +17,44 @@ export function useFinanceiroCatalogos() {
 
   const recarregarCatalogos = useCallback(async () => {
     setLoadingCatalogos(true);
-    const [profRes, opRes, mapRes] = await Promise.all([
-      supabase.from("profiles").select("id, name").in("role", [...ROLES_PARIDADE_INFLUENCER]),
-      supabase.from("operadoras").select("slug, nome").eq("ativo", true).order("nome"),
-      supabase.from("influencer_operadoras").select("influencer_id, operadora_slug"),
-    ]);
+    try {
+      const [profs, ops, vinculos] = await Promise.all([
+        fetchAllPages<{ id: string; name: string }>(async (from, to) =>
+          await supabase
+            .from("profiles")
+            .select("id, name")
+            .in("role", [...ROLES_PARIDADE_INFLUENCER])
+            .range(from, to),
+        ),
+        fetchAllPages<{ slug: string; nome: string }>(async (from, to) =>
+          await supabase
+            .from("operadoras")
+            .select("slug, nome")
+            .eq("ativo", true)
+            .order("nome")
+            .range(from, to),
+        ),
+        fetchAllPages<{ influencer_id: string; operadora_slug: string }>(async (from, to) =>
+          await supabase
+            .from("influencer_operadoras")
+            .select("influencer_id, operadora_slug")
+            .range(from, to),
+        ),
+      ]);
 
-    if (profRes.data) {
-      setInfluencerList(profRes.data as FinanceiroCatalogos["influencerList"]);
-    }
-    if (opRes.data) {
-      setOperadorasList(opRes.data);
-    }
-    if (mapRes.data) {
+      setInfluencerList(profs);
+      setOperadorasList(ops);
       const map: Record<string, string[]> = {};
-      mapRes.data.forEach((row: { influencer_id: string; operadora_slug: string }) => {
+      vinculos.forEach((row) => {
         if (!map[row.operadora_slug]) map[row.operadora_slug] = [];
         map[row.operadora_slug].push(row.influencer_id);
       });
       setOperadoraInfMap(map);
+    } catch (e) {
+      console.error("[Financeiro] Erro ao carregar catálogos:", e);
+    } finally {
+      setLoadingCatalogos(false);
     }
-    setLoadingCatalogos(false);
   }, []);
 
   useEffect(() => {

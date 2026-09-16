@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react"
+import { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import { Loader2, ChevronLeft, ChevronRight } from "lucide-react"
 import { useApp } from "../../../context/AppContext"
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand"
@@ -9,6 +9,7 @@ import { FONT_TITLE } from "../../../lib/dashboardConstants"
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles"
 import { getPeriodoHistoricoCompetencias } from "../../../lib/dashboardHelpers"
 import { supabase } from "../../../lib/supabase"
+import { fetchAllPages, fetchInBatched, fetchLiveResultadosBatched } from "../../../lib/supabasePaginate"
 import type { CicloPagamento } from "../../../types"
 import { FiltroInfluencerSelect, FiltroHistoricoButton, FiltroOperadoraSelect } from "../../../components/dashboard"
 import { PageHeader } from "../../../components/PageHeader"
@@ -26,6 +27,7 @@ import {
   podeVerPagamentosAgenteFinanceiro,
 } from "./financeiroCiclos"
 import { fecharCiclosExpiradosPendentes } from "./financeiroFecharCiclo"
+import { CICLO_IN_CHUNK, CICLO_PAGAMENTO_COLS } from "./financeiroTypes"
 import type {
   FinanceiroAgenteCicloEscopo,
   FinanceiroLiveEscopoRow,
@@ -46,12 +48,15 @@ export default function Financeiro() {
 
   const [ciclos, setCiclos] = useState<CicloPagamento[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const loadGenRef = useRef(0);
   const [filterInfluencers, setFilterInfluencers] = useState<string[]>([]);
   const [filterOperadora, setFilterOperadora] = useState<string>("todas");
   const {
     influencerList,
     operadorasList,
     operadoraInfMap,
+    loadingCatalogos,
   } = useFinanceiroCatalogos();
 
   const influencerListVisiveis = useMemo(() =>
@@ -108,15 +113,26 @@ export default function Financeiro() {
   function nextMes() {
     if (idxMesAtual > 0) setMesFiltro(MESES_OPCOES[idxMesAtual - 1]?.value ?? "");
   }
-  const { mesData, loadingMes, recarregarMes } = useFinanceiroMes(filtros, podeVerInfluencer, user?.role);
+  const { mesData, loadingMes, erroMes, recarregarMes } = useFinanceiroMes(
+    filtros,
+    podeVerInfluencer,
+    user?.role,
+    !loadingCatalogos,
+  );
 
   const carregarCiclos = useCallback(async () => {
+    const gen = ++loadGenRef.current;
     setLoading(true);
-    const { data } = await supabase
-      .from("ciclos_pagamento")
-      .select("*")
-      .order("data_inicio", { ascending: false });
-    let ciclosExistentes = (data ?? []) as CicloPagamento[];
+    setLoadError(false);
+    try {
+    const data = await fetchAllPages<CicloPagamento>(async (from, to) =>
+      await supabase
+        .from("ciclos_pagamento")
+        .select(CICLO_PAGAMENTO_COLS)
+        .order("data_inicio", { ascending: false })
+        .range(from, to),
+    );
+    let ciclosExistentes = data;
 
     // Ciclos a partir de 19/12 (lives iniciaram): qui 18/12 a qua 24/12 é o primeiro
     const PRIMEIRO_CICLO_INICIO = "2025-12-18";
@@ -131,7 +147,7 @@ export default function Financeiro() {
     const paraInserir = ciclosProativos.filter(c => !existentesInicio.has(c.data_inicio));
 
     if (paraInserir.length > 0) {
-      const { data: inseridos } = await supabase.from("ciclos_pagamento").insert(paraInserir).select("*");
+      const { data: inseridos } = await supabase.from("ciclos_pagamento").insert(paraInserir).select(CICLO_PAGAMENTO_COLS);
       if (inseridos?.length) {
         ciclosExistentes = [...ciclosExistentes, ...(inseridos as CicloPagamento[])].sort(
           (a, b) => (b.data_inicio || "").localeCompare(a.data_inicio || "")
@@ -171,19 +187,22 @@ export default function Financeiro() {
         lista[0].data_fim!,
       );
 
-      const { data: lives } = await supabase
-        .from("lives")
-        .select("id, data, influencer_id, operadora_slug")
-        .eq("status", "realizada")
-        .gte("data", dataMin)
-        .lte("data", dataMax);
-
-      const livesEscopo = (lives ?? []) as FinanceiroLiveEscopoRow[];
+      const livesEscopo = await fetchAllPages<FinanceiroLiveEscopoRow>(async (from, to) =>
+        await supabase
+          .from("lives")
+          .select("id, data, influencer_id, operadora_slug")
+          .eq("status", "realizada")
+          .gte("data", dataMin)
+          .lte("data", dataMax)
+          .range(from, to),
+      );
       const liveIds = livesEscopo.map((l) => l.id);
       let resIds = new Set<string>();
       if (liveIds.length > 0) {
-        const { data: resData } = await supabase.from("live_resultados").select("live_id").in("live_id", liveIds);
-        resIds = new Set((resData ?? []).map((r: { live_id: string }) => String(r.live_id)));
+        const resData = await fetchLiveResultadosBatched<{ live_id: string }>(liveIds, async (ids) =>
+          await supabase.from("live_resultados").select("live_id").in("live_id", ids),
+        );
+        resIds = new Set(resData.map((r) => String(r.live_id)));
       }
 
       return lista.filter((c) =>
@@ -206,15 +225,26 @@ export default function Financeiro() {
       const previewOuAbertos = ciclosFiltrados.filter((c) => !c.fechado_em);
       const fechadoIds = fechadosDefinitivos.map(c => c.id);
 
-      const [pagsRes, agtsRes] = await Promise.all([
-        fechadoIds.length > 0 ? supabase.from("pagamentos").select("ciclo_id, influencer_id, operadora_slug").in("ciclo_id", fechadoIds) : { data: [] as FinanceiroPagamentoCicloEscopo[] },
-        fechadoIds.length > 0 && podeVerPagamentosAgenteFinanceiro(user?.role)
-          ? supabase.from("pagamentos_agentes").select("ciclo_id, operadora_slug").in("ciclo_id", fechadoIds)
-          : { data: [] as FinanceiroAgenteCicloEscopo[] },
+      const [pags, agts] = await Promise.all([
+        fetchInBatched<FinanceiroPagamentoCicloEscopo>(fechadoIds, CICLO_IN_CHUNK, async (slice) => {
+          const { data, error } = await supabase
+            .from("pagamentos")
+            .select("ciclo_id, influencer_id, operadora_slug")
+            .in("ciclo_id", slice);
+          if (error) throw new Error(error.message);
+          return (data ?? []) as FinanceiroPagamentoCicloEscopo[];
+        }),
+        podeVerPagamentosAgenteFinanceiro(user?.role)
+          ? fetchInBatched<FinanceiroAgenteCicloEscopo>(fechadoIds, CICLO_IN_CHUNK, async (slice) => {
+              const { data, error } = await supabase
+                .from("pagamentos_agentes")
+                .select("ciclo_id, operadora_slug")
+                .in("ciclo_id", slice);
+              if (error) throw new Error(error.message);
+              return (data ?? []) as FinanceiroAgenteCicloEscopo[];
+            })
+          : Promise.resolve([] as FinanceiroAgenteCicloEscopo[]),
       ]);
-
-      const pags = (pagsRes.data ?? []) as FinanceiroPagamentoCicloEscopo[];
-      const agts = (agtsRes.data ?? []) as FinanceiroAgenteCicloEscopo[];
 
       const ciclosComPagVisible = new Set<string>();
       for (const p of pags) {
@@ -235,8 +265,16 @@ export default function Financeiro() {
       ciclosFiltrados = ciclosVisiveis.sort((a, b) => (b.data_inicio || "").localeCompare(a.data_inicio || ""));
     }
 
+    if (gen !== loadGenRef.current) return;
     setCiclos(ciclosFiltrados);
-    setLoading(false);
+    } catch (e) {
+      console.error("[Financeiro] Erro ao carregar ciclos:", e);
+      if (gen !== loadGenRef.current) return;
+      setCiclos([]);
+      setLoadError(true);
+    } finally {
+      if (gen === loadGenRef.current) setLoading(false);
+    }
   }, [escoposVisiveis, user?.role, podeVerInfluencer, podeVerOperadora]);
 
   useEffect(() => {
@@ -251,11 +289,19 @@ export default function Financeiro() {
   /** Cria ciclos que faltam para datas de lives realizadas não cobertas pelos existentes */
   async function complementarCiclos(existentes: CicloPagamento[]): Promise<CicloPagamento[]> {
     const PRIMEIRO_CICLO = "2025-12-18";
-    const { data: lives } = await supabase.from("lives").select("data").eq("status", "realizada").not("data", "is", null);
-    if (!lives?.length) return [];
+    const lives = await fetchAllPages<{ data: string }>(async (from, to) =>
+      await supabase
+        .from("lives")
+        .select("data")
+        .eq("status", "realizada")
+        .not("data", "is", null)
+        .gte("data", PRIMEIRO_CICLO)
+        .range(from, to),
+    );
+    if (!lives.length) return [];
     const ciclosParaInserir: { data_inicio: string; data_fim: string }[] = [];
     const ciclosInicioSet = new Set(existentes.map(c => c.data_inicio));
-    for (const l of lives as { data: string }[]) {
+    for (const l of lives) {
       const ciclo = cicloSemanalParaData(l.data);
       if (!ciclo || ciclo.data_inicio < PRIMEIRO_CICLO || ciclosInicioSet.has(ciclo.data_inicio)) continue;
       const estaCoberto = existentes.some(c => l.data >= (c.data_inicio || "") && l.data <= (c.data_fim || ""));
@@ -265,7 +311,7 @@ export default function Financeiro() {
       }
     }
     if (ciclosParaInserir.length === 0) return [];
-    const { data: inseridos, error } = await supabase.from("ciclos_pagamento").insert(ciclosParaInserir).select("*");
+    const { data: inseridos, error } = await supabase.from("ciclos_pagamento").insert(ciclosParaInserir).select(CICLO_PAGAMENTO_COLS);
     if (error) return [];
     return (inseridos ?? []) as CicloPagamento[];
   }
@@ -277,7 +323,7 @@ export default function Financeiro() {
     const semanasAteAgora = Math.floor((hoje.getTime() - baseQuinta.getTime()) / (7 * 24 * 60 * 60 * 1000));
     const semanasAhead = Math.max(1, semanasAteAgora + 1);
     const ciclosProativos = gerarCiclosProativos(baseQuinta, semanasAhead);
-    const { data: inseridos, error } = await supabase.from("ciclos_pagamento").insert(ciclosProativos).select("*");
+    const { data: inseridos, error } = await supabase.from("ciclos_pagamento").insert(ciclosProativos).select(CICLO_PAGAMENTO_COLS);
     if (error) {
       console.warn("Não foi possível criar ciclos automaticamente:", error.message);
       return [];
@@ -298,7 +344,44 @@ export default function Financeiro() {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", minHeight: "400px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, color: t.textMuted, fontFamily: FONT.body }}>
           <Loader2 size={22} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden />
-          Carregando financeiro...
+          Carregando…
+        </div>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="app-page-shell">
+        <PageHeader
+          icon={<PageMenuIcon pageKey="financeiro" />}
+          title={getPageMenuLabel("financeiro")}
+          subtitle="Gerencie os ciclos de pagamento dos influencers e afiliados, do rascunho ao pago."
+          actions={<AjudaContextualAcoes pageKey="financeiro" />}
+        />
+        <div
+          role="alert"
+          aria-live="polite"
+          style={getPageContentBoxStyle(brand, t, { padding: 48, textAlign: "center" })}
+        >
+          <p style={{ fontFamily: FONT_TITLE, fontSize: "18px", fontWeight: 900, color: t.text, marginBottom: "8px" }}>
+            Não foi possível carregar o financeiro
+          </p>
+          <p style={{ fontSize: "13px", color: t.textMuted, fontFamily: FONT.body, marginBottom: "16px" }}>
+            Os valores desta página não foram carregados — não considere os números como zerados. Se o problema persistir, entre em contato com o suporte.
+          </p>
+          <button
+            type="button"
+            onClick={() => { void carregarCiclos(); void recarregarMes(); }}
+            style={{
+              padding: "10px 20px", borderRadius: "10px", border: "none",
+              background: brand.useBrand ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))" : `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`,
+              color: "#fff", fontSize: "13px", fontWeight: 700, fontFamily: FONT.body,
+              cursor: "pointer",
+            }}
+          >
+            Tentar novamente
+          </button>
         </div>
       </div>
     );
@@ -417,6 +500,21 @@ export default function Financeiro() {
           </div>
           </div>
       </div>
+
+      {erroMes && (
+        <div
+          role="alert"
+          aria-live="polite"
+          style={{
+            ...getPageContentBoxStyle(brand, t, { padding: "12px 16px" }),
+            color: "#e84025",
+            fontSize: 13,
+            fontFamily: FONT.body,
+          }}
+        >
+          Não foi possível carregar os valores do período — os totais abaixo não refletem a realidade. Se o problema persistir, entre em contato com o suporte.
+        </div>
+      )}
 
       <BlocoKpis mesData={mesData} loadingMes={loadingMes} />
       <BlocoCiclos ciclos={ciclosFiltradosPorMes} onRecarregar={recarregarFinanceiro} filtros={filtros} />

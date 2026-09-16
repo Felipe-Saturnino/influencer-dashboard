@@ -61,7 +61,8 @@ export function ModalAlterarStatusConta({
     const { error } = await supabase.from("influencer_perfil").update(patch).eq("id", influencerId);
     setSaving(false);
     if (error) {
-      setErr(error.message ?? "Não foi possível atualizar.");
+      console.error("[Banca de Jogo] Erro ao alterar status da conta:", error);
+      setErr("Não foi possível atualizar o status da conta. Se o problema persistir, entre em contato com o suporte.");
       return;
     }
     onSalvo();
@@ -122,7 +123,7 @@ export function ModalAlterarStatusConta({
             color: "#fff",
           }}
         >
-          {saving ? "Salvando..." : "Salvar"}
+          {saving ? "Salvando…" : "Salvar"}
         </button>
       </div>
     </ModalBase>

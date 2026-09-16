@@ -1,9 +1,15 @@
 import { supabase } from "../../../lib/supabase";
+import { fetchAllPages, fetchInBatched } from "../../../lib/supabasePaginate";
 import { buscarInvestimentoPago } from "../../../lib/investimentoPago";
 import { ROLES_PARIDADE_INFLUENCER } from "../../../lib/staffRoles";
 import { getPeriodoHistoricoCompetencias } from "../../../lib/dashboardHelpers";
 import { periodoDoMes, podeVerPagamentosAgenteFinanceiro } from "./financeiroCiclos";
 import type { BlocoFiltros } from "./financeiroFiltros";
+import {
+  CICLO_IN_CHUNK,
+  PAGAMENTO_AGENTE_COLS,
+  PAGAMENTO_COLS,
+} from "./financeiroTypes";
 import type {
   FinanceiroAgenteDbRow,
   FinanceiroPagamentoDbRow,
@@ -153,37 +159,42 @@ export async function loadFinanceiroMesData({
   podeVerInfluencer,
 }: FinanceiroMesLoadParams): Promise<FinanceiroMesData> {
   const { filterInfluencers, filterOperadora, filtroOp, mesFiltro, historico } = filtros;
+  /** Sem mês selecionado, a janela é a das 13 competências — nunca consulta all-time. */
   const periodo = historico
     ? getPeriodoHistoricoCompetencias()
-    : periodoDoMes(mesFiltro);
+    : (periodoDoMes(mesFiltro) ?? getPeriodoHistoricoCompetencias());
   const incluirAgentes = podeVerPagamentosAgenteFinanceiro(userRole);
 
-  let cicloIds: string[] = [];
-  if (periodo) {
-    const { data: ciclos } = await supabase
-      .from("ciclos_pagamento")
-      .select("id")
-      .gte("data_fim", periodo.inicio)
-      .lte("data_fim", periodo.fim);
-    cicloIds = (ciclos ?? []).map((c: { id: string }) => c.id);
-    if (cicloIds.length === 0) {
-      return {
-        kpis: { totalPago: 0, pendente: 0, horas: 0 },
-        consolidadoRows: [],
-        agentesRow: null,
-      };
-    }
+  const { data: ciclos } = await supabase
+    .from("ciclos_pagamento")
+    .select("id")
+    .gte("data_fim", periodo.inicio)
+    .lte("data_fim", periodo.fim);
+  const cicloIds = (ciclos ?? []).map((c: { id: string }) => c.id);
+  if (cicloIds.length === 0) {
+    return {
+      kpis: { totalPago: 0, pendente: 0, horas: 0 },
+      consolidadoRows: [],
+      agentesRow: null,
+    };
   }
 
-  const pQuery = periodo
-    ? supabase.from("pagamentos").select("*").in("ciclo_id", cicloIds)
-    : supabase.from("pagamentos").select("*");
+  const pQuery = fetchInBatched<FinanceiroPagamentoDbRow>(cicloIds, CICLO_IN_CHUNK, async (slice) => {
+    const { data, error } = await supabase.from("pagamentos").select(PAGAMENTO_COLS).in("ciclo_id", slice);
+    if (error) throw new Error(error.message);
+    return (data ?? []) as FinanceiroPagamentoDbRow[];
+  });
 
   const aQuery = incluirAgentes
-    ? periodo
-      ? supabase.from("pagamentos_agentes").select("*").in("ciclo_id", cicloIds)
-      : supabase.from("pagamentos_agentes").select("*")
-    : Promise.resolve({ data: [] as FinanceiroAgenteDbRow[] });
+    ? fetchInBatched<FinanceiroAgenteDbRow>(cicloIds, CICLO_IN_CHUNK, async (slice) => {
+        const { data, error } = await supabase
+          .from("pagamentos_agentes")
+          .select(PAGAMENTO_AGENTE_COLS)
+          .in("ciclo_id", slice);
+        if (error) throw new Error(error.message);
+        return (data ?? []) as FinanceiroAgenteDbRow[];
+      })
+    : Promise.resolve([] as FinanceiroAgenteDbRow[]);
 
   const investimentoPagoPromise = periodo
     ? buscarInvestimentoPago(periodo, {
@@ -197,35 +208,38 @@ export async function loadFinanceiroMesData({
       }).then((r) => r.total)
     : Promise.resolve(null);
 
-  const [{ data: perfis }, { data: profiles }, { data: pags }, { data: agentes }, totalPagoRpc] =
-    await Promise.all([
-      supabase.from("influencer_perfil").select("id, nome_artistico, status").order("nome_artistico"),
-      supabase.from("profiles").select("id, email").in("role", [...ROLES_PARIDADE_INFLUENCER]),
-      pQuery,
-      aQuery,
-      investimentoPagoPromise,
-    ]);
+  const [perfis, profiles, pags, agentes, totalPagoRpc] = await Promise.all([
+    fetchAllPages<FinanceiroPerfilRow>(async (from, to) =>
+      await supabase
+        .from("influencer_perfil")
+        .select("id, nome_artistico, status")
+        .order("nome_artistico")
+        .range(from, to),
+    ),
+    fetchAllPages<FinanceiroProfileRow>(async (from, to) =>
+      await supabase
+        .from("profiles")
+        .select("id, email")
+        .in("role", [...ROLES_PARIDADE_INFLUENCER])
+        .range(from, to),
+    ),
+    pQuery,
+    aQuery,
+    investimentoPagoPromise,
+  ]);
 
   const emailMap: Record<string, string> = {};
-  for (const p of (profiles ?? []) as FinanceiroProfileRow[]) {
+  for (const p of profiles) {
     emailMap[p.id] = p.email ?? "";
   }
 
-  let perfisFiltrados = ((perfis ?? []) as FinanceiroPerfilRow[]).filter((p) =>
-    podeVerInfluencer(p.id),
-  );
+  let perfisFiltrados = perfis.filter((p) => podeVerInfluencer(p.id));
   if (filterInfluencers.length > 0) {
     perfisFiltrados = perfisFiltrados.filter((p) => filterInfluencers.includes(p.id));
   }
 
-  const pagamentosData = filtrarPagamentos(
-    (pags ?? []) as FinanceiroPagamentoDbRow[],
-    filtros,
-    podeVerInfluencer,
-  );
-  const agentesData = incluirAgentes
-    ? filtrarAgentes((agentes ?? []) as FinanceiroAgenteDbRow[], filtros)
-    : [];
+  const pagamentosData = filtrarPagamentos(pags, filtros, podeVerInfluencer);
+  const agentesData = incluirAgentes ? filtrarAgentes(agentes, filtros) : [];
 
   if (filtroOp?.length) {
     const infIdsComPag = [...new Set(pagamentosData.map((p) => p.influencer_id))];

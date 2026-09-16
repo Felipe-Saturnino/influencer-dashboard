@@ -1,5 +1,15 @@
 import type { PagamentoStatus } from "../../../types"
 
+// ── Colunas explícitas (aquisicao.mdc — nunca select("*")) ────────────────────
+
+export const CICLO_PAGAMENTO_COLS = "id, data_inicio, data_fim, fechado_em, criado_em";
+export const PAGAMENTO_COLS =
+  "id, ciclo_id, influencer_id, operadora_slug, horas_realizadas, cache_hora, total, status, pago_em";
+export const PAGAMENTO_AGENTE_COLS =
+  "id, ciclo_id, operadora_slug, total, status, pago_em, descricao, criado_em";
+/** Lote seguro para `.in("ciclo_id", …)` em pagamentos / pagamentos_agentes. */
+export const CICLO_IN_CHUNK = 150;
+
 // ── Tipos locais ───────────────────────────────────────────────────────────────
 
 export interface PagamentoRow {

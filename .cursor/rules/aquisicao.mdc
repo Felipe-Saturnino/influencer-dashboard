@@ -52,14 +52,16 @@ Perfis: Gestor, Operador, Influencer, Agência — escopo e ações por perfil.
 - Responsivo: &lt;768px ocultar Horas; &lt;480px colunas mínimas (ver handoff).
 - **Handoff:** aprovação pagamento, edição manual, consolidado.
 - **Pagamento de agente:** modal grava em `pagamentos_agentes` — **vários agentes por ciclo** (mesma operadora permitida); nome em `descricao` («Nome do agente»). Linha própria na tabela do ciclo (aberto e fechado). Consolidado mantém linha agregada «Agentes».
-- **Carga de dados:** `useFinanceiroCatalogos` (3 queries em `Promise.all`); KPIs + Consolidado via `useFinanceiroMes` → `financeiroMesData.ts` (`loadFinanceiroMesData`, uma rodada de queries partilhada por período/filtros). Ciclos: `carregarCiclos` no `index`; após mutação no ciclo, `onRecarregar` = `recarregarFinanceiro` (ciclos + mês). Expand no Consolidado: histórico por influencer continua fetch local (`toggleExpand`).
+- **Carga de dados:** `useFinanceiroCatalogos` (3 queries em `Promise.all`, todas com `fetchAllPages`); KPIs + Consolidado via `useFinanceiroMes` → `financeiroMesData.ts` (`loadFinanceiroMesData`, uma rodada de queries partilhada por período/filtros). `useFinanceiroMes` só dispara com os **catálogos prontos** (`habilitado`) e descarta resposta antiga por `loadGenRef` — sem isso a rodada inteira repetia quando os filtros remontavam. Ciclos: `carregarCiclos` no `index`; após mutação no ciclo, `onRecarregar` = `recarregarFinanceiro` (ciclos + mês). Expand no Consolidado: histórico por influencer continua fetch local (`toggleExpand`).
+- **Colunas e volume:** `CICLO_PAGAMENTO_COLS` / `PAGAMENTO_COLS` / `PAGAMENTO_AGENTE_COLS` em `financeiroTypes.ts` — **nunca** `select("*")`. Toda listagem usa `fetchAllPages`; `.in("ciclo_id", …)` usa `fetchInBatched` (`CICLO_IN_CHUNK`) e `live_resultados` usa **sempre** `fetchLiveResultadosBatched`, inclusive no filtro de escopo por lives. Sem mês selecionado, a janela cai nas 13 competências — nunca consulta all-time.
+- **Falha de carga ≠ vazio:** erro nos ciclos mostra bloco `role="alert"` «Não foi possível carregar o financeiro» com **Tentar novamente**; erro só do período mostra alerta acima dos blocos avisando que os totais não refletem a realidade. Proibido pintar KPI zerado como se fosse dado real.
 - **Fechar ciclo (`financeiroFecharCiclo.ts`):** `live_resultados` via `fetchLiveResultadosBatched`; `cache_hora` em **um** `.in("id", …)`; **um** `upsert` em lote de `pagamentos` — **proibido** N+1 (perfil + upsert por par influencer×operadora). Fechos expirados no boot: concorrência ≤ 3.
 
 ---
 
 ## Banca de Jogo (`banca_jogo`)
 
-- **Carga de solicitações:** colunas explícitas + filtro SQL na janela de 13 competências (`solicitado_em` **ou** `liberado_em` ≥ início de `getPeriodoHistoricoCompetencias`) — **proibido** `select("*")` all-time no boot. Catálogos (profiles/operadoras/perfis) em `Promise.all`.
+- **Carga de solicitações:** colunas explícitas + filtro SQL na janela de 13 competências (`solicitado_em` **ou** `liberado_em` ≥ início de `getPeriodoHistoricoCompetencias`) — **proibido** `select("*")` all-time no boot. Catálogos (profiles/operadoras/perfis) em `Promise.all` na **mesma** `carregarDados`, todos com `fetchAllPages`; `profiles` vem numa única query `id, name, email` partilhada pelo filtro e pelo mapa de perfis. `loadGenRef` contra corrida; falha mostra bloco `role="alert"` «Não foi possível carregar as bancas» com **Tentar novamente** — nunca KPI R$ 0,00 como se fosse dado real.
 - **Solicitações** e **Consolidado de bancas:** `getPageContentBoxStyle` + **`SectionTitle`**; tabelas no padrão canónico Global (`useDataTableBlock`, `getDataTableWrapStyle`, `getDataTableStyle`); sub-tabela no expand do Consolidado usa `thHeaderSub`.
 - Workflow: Solicitado → Aprovado → Liberado (cores semânticas Global).
 - **CPF** mascarado na tabela (`***.***.***-**`) com `title` no hover para autorizado.
@@ -94,4 +96,6 @@ Perfis: Gestor, Operador, Influencer, Agência — escopo e ações por perfil.
 - Botão Histórico na FilterBar sem `FiltroHistoricoButton` (chip só texto, `chipBase` local).
 - KPI card com Loader2 de loading.
 - Duas colunas “Status” na mesma tabela.
-- Erro com `error.message` na UI.
+- Erro com `error.message` na UI — copy de suporte na tela, detalhe técnico só no `console.error`.
+- `Carregando...` / `Salvando...` em ASCII — elipse Unicode U+2026.
+- Orientação de estado vazio dentro do wrapper rolável da tabela (corta na horizontal).

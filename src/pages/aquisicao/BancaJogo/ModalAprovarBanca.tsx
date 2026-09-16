@@ -46,7 +46,8 @@ export function ModalAprovarBanca({
     }).eq("id", row.id).eq("status", "solicitado");
     setSaving(false);
     if (error) {
-      setErr(error.message ?? "Não foi possível aprovar.");
+      console.error("[Banca de Jogo] Erro ao aprovar:", error);
+      setErr("Não foi possível aprovar a banca. Se o problema persistir, entre em contato com o suporte.");
       return;
     }
     onSucesso();
@@ -92,7 +93,7 @@ export function ModalAprovarBanca({
             color: "#fff",
           }}
         >
-          {saving ? "Salvando..." : "Confirmar aprovação"}
+          {saving ? "Salvando…" : "Confirmar aprovação"}
         </button>
       </div>
     </ModalBase>

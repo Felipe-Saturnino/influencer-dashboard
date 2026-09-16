@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useApp } from "../../../context/AppContext"
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand"
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros"
@@ -7,13 +7,15 @@ import { FONT } from "../../../constants/theme"
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles"
 import { FONT_TITLE } from "../../../lib/dashboardConstants"
 import { supabase } from "../../../lib/supabase"
+import { fetchAllPages } from "../../../lib/supabasePaginate"
 import { FiltroInfluencerSelect, FiltroHistoricoButton, FiltroOperadoraSelect } from "../../../components/dashboard"
 import { PageHeader } from "../../../components/PageHeader"
 import { PageMenuIcon } from "../../../components/PageMenuIcon"
 import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes"
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu"
 import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react"
-import { getPageFilterBoxStyle, getPageKpiSectionGapStyle } from "../../../lib/pageContentBoxStyles"
+import { getPageContentBoxStyle, getPageFilterBoxStyle, getPageKpiSectionGapStyle } from "../../../lib/pageContentBoxStyles"
+import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles"
 import { ROLES_PARIDADE_INFLUENCER, roleParidadeInfluencer } from "../../../lib/staffRoles"
 import { getPeriodoHistoricoCompetencias } from "../../../lib/dashboardHelpers"
 import { fmtMoeda, gerarMeses, periodoDoMes, rowPassaFiltrosKpiBanca } from "./bancaJogoHelpers"
@@ -25,6 +27,16 @@ import { BlocoConsolidadoBanca } from "./BlocoConsolidadoBanca"
 
 const BANCA_SOLICITACAO_COLS =
   "id, influencer_id, operadora_slug, id_operadora_exibicao, valor, status, solicitado_em, aprovado_em, aprovado_por, liberado_em, liberado_por"
+
+type BancaPerfilDbRow = {
+  id: string;
+  nome_artistico?: string | null;
+  cpf?: string | null;
+  banca_status_conta?: string | null;
+  banca_data_bloqueio?: string | null;
+  banca_data_desbloqueio?: string | null;
+  status?: string | null;
+}
 
 export default function BancaJogo() {
   const { theme: t, user } = useApp();
@@ -41,6 +53,8 @@ export default function BancaJogo() {
 
   const [ciclosRows, setCiclosRows] = useState<BancaRowDb[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const loadGenRef = useRef(0);
   const [filterInfluencers, setFilterInfluencers] = useState<string[]>([]);
   const [filterOperadora, setFilterOperadora] = useState("todas");
   const [influencerList, setInfluencerList] = useState<{ id: string; name: string }[]>([]);
@@ -108,65 +122,82 @@ export default function BancaJogo() {
     if (idxMesAtual > 0) setMesFiltro(MESES_OPCOES[idxMesAtual - 1]?.value ?? "");
   }
 
-  async function carregarDados() {
+  /** `profiles` das roles de paridade — partilhado pelo filtro de influencer e pelo mapa de perfis. */
+  const carregarParceiros = useCallback(async () => {
+    return await fetchAllPages<{ id: string; name: string | null; email: string | null }>(async (from, to) =>
+      await supabase
+        .from("profiles")
+        .select("id, name, email")
+        .in("role", [...ROLES_PARIDADE_INFLUENCER])
+        .range(from, to),
+    );
+  }, []);
+
+  const carregarDados = useCallback(async () => {
+    const gen = ++loadGenRef.current;
     setLoading(true);
+    setLoadError(false);
     const { inicio } = getPeriodoHistoricoCompetencias();
-    const { data } = await supabase
-      .from("banca_jogo_solicitacoes")
-      .select(BANCA_SOLICITACAO_COLS)
-      .or(`solicitado_em.gte.${inicio},liberado_em.gte.${inicio}`)
-      .order("solicitado_em", { ascending: false });
-    setCiclosRows((data ?? []) as BancaRowDb[]);
-    setLoading(false);
-  }
+    try {
+      const [solicitacoes, parceiros, operadoras, perfis] = await Promise.all([
+        fetchAllPages<BancaRowDb>(async (from, to) =>
+          await supabase
+            .from("banca_jogo_solicitacoes")
+            .select(BANCA_SOLICITACAO_COLS)
+            .or(`solicitado_em.gte.${inicio},liberado_em.gte.${inicio}`)
+            .order("solicitado_em", { ascending: false })
+            .range(from, to),
+        ),
+        carregarParceiros(),
+        fetchAllPages<{ slug: string; nome: string }>(async (from, to) =>
+          await supabase
+            .from("operadoras")
+            .select("slug, nome")
+            .eq("ativo", true)
+            .order("nome")
+            .range(from, to),
+        ),
+        fetchAllPages<BancaPerfilDbRow>(async (from, to) =>
+          await supabase
+            .from("influencer_perfil")
+            .select("id, nome_artistico, cpf, banca_status_conta, banca_data_bloqueio, banca_data_desbloqueio, status")
+            .range(from, to),
+        ),
+      ]);
+      if (gen !== loadGenRef.current) return;
 
-  useEffect(() => { void carregarDados(); }, []);
+      const emailM: Record<string, string> = {};
+      for (const p of parceiros) emailM[p.id] = p.email ?? "";
 
-  useEffect(() => {
-    void Promise.all([
-      supabase.from("profiles").select("id, name").in("role", [...ROLES_PARIDADE_INFLUENCER]),
-      supabase.from("operadoras").select("slug, nome").eq("ativo", true).order("nome"),
-    ]).then(([infRes, opRes]) => {
-      if (infRes.data) setInfluencerList(infRes.data);
-      if (opRes.data) setOperadorasList(opRes.data);
-    });
-  }, []);
+      const m: Record<string, BancaPerfilMapRow> = {};
+      for (const row of perfis) {
+        const conta: BancaStatusConta = row.banca_status_conta === "bloqueada" ? "bloqueada" : "liberada";
+        m[row.id] = {
+          nome: row.nome_artistico ?? emailM[row.id] ?? row.id,
+          cpf: row.cpf ?? "",
+          email: emailM[row.id] ?? "",
+          banca_status_conta: conta,
+          banca_data_bloqueio: row.banca_data_bloqueio ?? null,
+          banca_data_desbloqueio: row.banca_data_desbloqueio ?? null,
+          perfil_status: row.status ?? null,
+        };
+      }
 
-  const carregarPerfis = useCallback(async () => {
-    const [perfisRes, emailsRes] = await Promise.all([
-      supabase
-        .from("influencer_perfil")
-        .select("id, nome_artistico, cpf, banca_status_conta, banca_data_bloqueio, banca_data_desbloqueio, status"),
-      supabase.from("profiles").select("id, email").in("role", [...ROLES_PARIDADE_INFLUENCER]),
-    ]);
-    const emailM: Record<string, string> = {};
-    for (const e of emailsRes.data ?? []) emailM[(e as { id: string }).id] = (e as { email: string }).email;
-    const m: Record<string, BancaPerfilMapRow> = {};
-    for (const p of perfisRes.data ?? []) {
-      const row = p as {
-        id: string;
-        nome_artistico?: string;
-        cpf?: string;
-        banca_status_conta?: string | null;
-        banca_data_bloqueio?: string | null;
-        banca_data_desbloqueio?: string | null;
-        status?: string | null;
-      };
-      const conta: BancaStatusConta = row.banca_status_conta === "bloqueada" ? "bloqueada" : "liberada";
-      m[row.id] = {
-        nome: row.nome_artistico ?? emailM[row.id] ?? row.id,
-        cpf: row.cpf ?? "",
-        email: emailM[row.id] ?? "",
-        banca_status_conta: conta,
-        banca_data_bloqueio: row.banca_data_bloqueio ?? null,
-        banca_data_desbloqueio: row.banca_data_desbloqueio ?? null,
-        perfil_status: row.status ?? null,
-      };
+      setCiclosRows(solicitacoes);
+      setInfluencerList(parceiros.map((p) => ({ id: p.id, name: p.name ?? p.email ?? p.id })));
+      setOperadorasList(operadoras);
+      setPerfilMap(m);
+    } catch (e) {
+      console.error("[Banca de Jogo] Erro ao carregar:", e);
+      if (gen !== loadGenRef.current) return;
+      setCiclosRows([]);
+      setLoadError(true);
+    } finally {
+      if (gen === loadGenRef.current) setLoading(false);
     }
-    setPerfilMap(m);
-  }, []);
+  }, [carregarParceiros]);
 
-  useEffect(() => { void carregarPerfis(); }, [carregarPerfis]);
+  useEffect(() => { void carregarDados(); }, [carregarDados]);
 
   const staffPodeAcao =
     !!user &&
@@ -206,6 +237,41 @@ export default function BancaJogo() {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 400, gap: 10, color: t.textMuted, fontFamily: FONT.body }}>
         <Loader2 size={22} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden />
         Carregando…
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="app-page-shell">
+        <PageHeader
+          icon={<PageMenuIcon pageKey="banca_jogo" />}
+          title={getPageMenuLabel("banca_jogo")}
+          subtitle="Solicite, aprove e libere bancas de jogo por parceiro e operadora."
+        />
+        <div
+          role="alert"
+          aria-live="polite"
+          style={getPageContentBoxStyle(brand, t, { padding: 48, textAlign: "center" })}
+        >
+          <p style={{ fontFamily: FONT_TITLE, fontSize: 18, fontWeight: 900, color: t.text, marginBottom: 8 }}>
+            Não foi possível carregar as bancas
+          </p>
+          <p style={{ fontSize: 13, color: t.textMuted, fontFamily: FONT.body, marginBottom: 16 }}>
+            Os valores desta página não foram carregados — não considere os números como zerados. Se o problema persistir, entre em contato com o suporte.
+          </p>
+          <button
+            type="button"
+            onClick={() => void carregarDados()}
+            style={{
+              padding: "10px 20px", borderRadius: 10, border: "none",
+              background: getCtaCriarGradient(brand),
+              color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer",
+            }}
+          >
+            Tentar novamente
+          </button>
+        </div>
       </div>
     );
   }
@@ -328,8 +394,8 @@ export default function BancaJogo() {
         staffPodeAcao={staffPodeAcao}
         staffPodeAprovar={staffPodeAprovar}
         podeExcluirLinha={podeExcluirLinha}
-        onRecarregar={carregarDados}
-        onPerfisAtualizados={() => void carregarPerfis()}
+        onRecarregar={() => void carregarDados()}
+        onPerfisAtualizados={() => void carregarDados()}
         influencerListAgencia={influencerListAgenciaModal}
         nomeUsuario={user?.name ?? ""}
       />
@@ -339,7 +405,7 @@ export default function BancaJogo() {
         rowsDb={ciclosRows}
         perfilMap={perfilMap}
         podeEditarStatusConta={staffPodeAcao}
-        onPerfisAtualizados={() => void carregarPerfis()}
+        onPerfisAtualizados={() => void carregarDados()}
       />
     </div>
   );

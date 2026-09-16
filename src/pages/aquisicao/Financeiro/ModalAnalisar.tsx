@@ -233,7 +233,7 @@ export function ModalAnalisar({ row, ciclo, onClose, onConfirm }: {
           {saving ? (
             <>
               <Loader2 size={13} className="app-lucide-spin" color="#fff" aria-hidden />
-              Salvando...
+              Salvando…
             </>
           ) : (
             <>

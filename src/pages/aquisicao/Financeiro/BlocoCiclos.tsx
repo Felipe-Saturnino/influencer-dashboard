@@ -11,7 +11,7 @@ import { useDataTableBlock } from "../../../hooks/useDataTableBlock"
 import { useTabelaPaginacao } from "../../../hooks/useTabelaPaginacao"
 import { TabelaPaginacaoBar } from "../../../components/TabelaPaginacaoBar"
 import { supabase } from "../../../lib/supabase"
-import { fetchLiveResultadosBatched } from "../../../lib/supabasePaginate"
+import { fetchAllPages, fetchLiveResultadosBatched } from "../../../lib/supabasePaginate"
 import { enviarPagamentoEmailCiclo } from "../../../lib/financeiroEnviarPagamentoEmail"
 import type { CicloPagamento, PagamentoStatus } from "../../../types"
 import { SectionTitle, SortTableTh, type SortDir } from "../../../components/dashboard"
@@ -22,7 +22,7 @@ import { STATUS_INFLUENCER, STATUS_PAG } from "./financeiroConstants"
 import { cicloAberto, fmtCicloDatas, podeVerPagamentosAgenteFinanceiro } from "./financeiroCiclos"
 import { filtrarAgentesDoCiclo, mapAgentesParaPagamentoRows } from "./financeiroAgenteLinhas"
 import { fecharCicloExpiradoSeNecessario } from "./financeiroFecharCiclo"
-import { type FinanceiroAgenteDbRow, type FinanceiroLiveRow, type FinanceiroLiveResultadoRow, type FinanceiroPagamentoDbRow, type FinanceiroPerfilCacheRow, type FinanceiroPerfilRow, type FinanceiroProfileRow, type PagamentoRow } from "./financeiroTypes"
+import { PAGAMENTO_AGENTE_COLS, PAGAMENTO_COLS, type FinanceiroAgenteDbRow, type FinanceiroLiveRow, type FinanceiroLiveResultadoRow, type FinanceiroPagamentoDbRow, type FinanceiroPerfilCacheRow, type FinanceiroPerfilRow, type FinanceiroProfileRow, type PagamentoRow } from "./financeiroTypes"
 import type { BlocoFiltros } from "./financeiroFiltros"
 import { Badge, BtnAcao, BtnPrimary, SelectInput } from "./financeiroUi"
 import { ModalAgente } from "./ModalAgente"
@@ -83,7 +83,7 @@ export function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
       if (!podeVerPagamentosAgenteFinanceiro(user?.role)) return [];
       const { data: agentes } = await supabase
         .from("pagamentos_agentes")
-        .select("*")
+        .select(PAGAMENTO_AGENTE_COLS)
         .eq("ciclo_id", c.id)
         .order("criado_em", { ascending: true });
       const filtrados = filtrarAgentesDoCiclo((agentes ?? []) as FinanceiroAgenteDbRow[], {
@@ -185,22 +185,26 @@ export function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
   }, [buscarLinhasAgente, filterInfluencers, filterOperadora, filtroOp, podeVerInfluencer]);
 
   const carregarPagamentos = useCallback(async (c: CicloPagamento) => {
-    const [{ data: pags }, { data: livesCiclo }] = await Promise.all([
-      supabase.from("pagamentos")
-        .select("*")
-        .eq("ciclo_id", c.id)
-        .order("total", { ascending: false }),
-      supabase.from("lives")
-        .select("id, influencer_id, operadora_slug")
-        .eq("status", "realizada")
-        .gte("data", c.data_inicio)
-        .lte("data", c.data_fim),
+    const [pagsList, livesCicloList] = await Promise.all([
+      fetchAllPages<FinanceiroPagamentoDbRow>(async (from, to) =>
+        await supabase.from("pagamentos")
+          .select(PAGAMENTO_COLS)
+          .eq("ciclo_id", c.id)
+          .order("total", { ascending: false })
+          .range(from, to),
+      ),
+      fetchAllPages<FinanceiroLiveRow>(async (from, to) =>
+        await supabase.from("lives")
+          .select("id, influencer_id, operadora_slug")
+          .eq("status", "realizada")
+          .gte("data", c.data_inicio)
+          .lte("data", c.data_fim)
+          .range(from, to),
+      ),
     ]);
 
     // Sincroniza lives validadas após o fechamento: cria pagamentos faltantes (em_analise) sem alterar os existentes
-    const pagsList = (pags ?? []) as FinanceiroPagamentoDbRow[];
     const existentesKeys = new Set(pagsList.map((p) => `${p.influencer_id}::${p.operadora_slug}`));
-    const livesCicloList = (livesCiclo ?? []) as FinanceiroLiveRow[];
     const livesSemPagamento = livesCicloList.filter((l) => {
       if (!podeVerInfluencer(l.influencer_id)) return false;
       const opSlug = l.operadora_slug?.trim() || OPERADORA_PADRAO;
@@ -245,8 +249,14 @@ export function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
         }, { onConflict: "ciclo_id,influencer_id,operadora_slug" });
       }
       if (Object.keys(horasPorPar).length > 0) {
-        const { data: pagsAtual } = await supabase.from("pagamentos").select("*").eq("ciclo_id", c.id).order("total", { ascending: false });
-        pagsFinais = (pagsAtual ?? pagsFinais) as FinanceiroPagamentoDbRow[];
+        const pagsAtual = await fetchAllPages<FinanceiroPagamentoDbRow>(async (from, to) =>
+          await supabase.from("pagamentos")
+            .select(PAGAMENTO_COLS)
+            .eq("ciclo_id", c.id)
+            .order("total", { ascending: false })
+            .range(from, to),
+        );
+        if (pagsAtual.length > 0) pagsFinais = pagsAtual;
       }
     }
 
@@ -775,12 +785,7 @@ export function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
               {rows.length === 0 ? (
                 <tr>
                   <td colSpan={(isAberto ? 6 : 7) + (filterOperadora === "todas" ? 1 : 0)} style={{ ...dataTable.tdCenter, textAlign: "center", color: t.textMuted, padding: "48px" }}>
-                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "12px" }}>
-                      {isAberto ? "Nenhuma live realizada neste ciclo ainda." : "Nenhum pagamento neste ciclo."}
-                      <span style={{ fontSize: "12px", maxWidth: 480, display: "block", marginTop: 8 }}>
-                        <strong>Confira:</strong> (1) Selecione no dropdown acima o ciclo que contém as datas das suas lives — ex.: lives em 26–28/01 ficam no ciclo 22/01–28/01 (qui–qua). (2) A live foi validada em <strong>Lives → Resultados</strong> com status realizada, operadora e duração? (3) O influencer tem cachê/hora em Lives → Influencers? (4) O filtro de operadora está em &quot;Todas&quot;?
-                      </span>
-                    </div>
+                    {isAberto ? "Nenhuma live realizada neste ciclo ainda." : "Nenhum pagamento neste ciclo."}
                   </td>
                 </tr>
               ) : pagCiclo.linhasPagina.map((row, i) => {
@@ -929,7 +934,12 @@ export function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
           totalItems={pagCiclo.totalItems}
           onPageChange={pagCiclo.setPagina}
         />
-      ) : null}
+      ) : (
+        /* Fora do wrapper rolável — dentro da tabela o texto era cortado na horizontal. */
+        <p style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, maxWidth: 560, margin: "12px auto 0", textAlign: "center", lineHeight: 1.6 }}>
+          <strong>Confira:</strong> (1) Selecione no dropdown acima o ciclo que contém as datas das suas lives — ex.: lives em 26–28/01 ficam no ciclo 22/01–28/01 (qui–qua). (2) A live foi validada em <strong>Lives → Resultados</strong> com status realizada, operadora e duração? (3) O influencer tem cachê/hora em Lives → Influencers? (4) O filtro de operadora está em &quot;Todas&quot;?
+        </p>
+      )}
 
       {/* Modais */}
       {modalAnalisar && ciclo && (

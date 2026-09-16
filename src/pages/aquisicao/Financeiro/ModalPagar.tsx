@@ -105,7 +105,7 @@ export function ModalPagar({ row, onClose, onConfirm, onRetornar }: {
           {saving ? (
             <>
               <Loader2 size={13} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden />
-              Salvando...
+              Salvando…
             </>
           ) : (
             <>
@@ -141,7 +141,7 @@ export function ModalPagar({ row, onClose, onConfirm, onRetornar }: {
           {saving ? (
             <>
               <Loader2 size={13} className="app-lucide-spin" color="#fff" aria-hidden />
-              Salvando...
+              Salvando…
             </>
           ) : (
             <>
