@@ -60,6 +60,18 @@ Usar `DashboardPageHeader` (`src/components/dashboard`) — spec **real** do com
 - **Afiliados:** chips **`FiltroStatusSemanticoPill`** na barra — toggle valor ativo ↔ agregador `todos`. Lista inclui contas com `profiles.ativo = false` (pill **Desativado**); ao mudar status do perfil para **Ativo**, a Edge de reativação redefine senha padrão, exige troca no login e envia e-mail de boas-vindas.
 - **Network:** filtro por status nos **cards clicáveis do Funil de Prospecção** (`FunilProspeccaoKpiGrid`) — **sem** chips de Status na barra. Estado inicial `todos`: lista todos os prospectos **exceto Fechados**; clique no card **Fechado** para incluí-los.
 
+## Lista e carga
+
+**Afiliados:** `profiles` (`role = afiliado`) via **`fetchAllPages`** + colunas explícitas; `influencer_perfil` / `influencer_operadoras` com **`fetchInBatched`** (lote 150). Nunca `select("*")`.
+
+**Network:** `afiliados_network` com colunas explícitas e teto de **500** prospectos na listagem inicial (`NETWORK_LIST_LIMIT`), ordem alfabética; ao atingir o teto, banner informativo (`role="status"`, amarelo) pedindo para refinar busca/filtros.
+
+**Vista (ambas):** lista filtrada pagina com **`TabelaComPaginacao`** (20 por página; `resetKey` com filtros + busca). Ações Ver/Editar: **`BtnIconeAcaoLinha`** + `tooltipAcao` — só ícone, **sem** o nome da pessoa no tooltip.
+
+**Estados:** `loadGenRef` contra corrida entre cargas. Falha de carga: alerta vermelho `role="alert"` + `aria-live="polite"` com copy de suporte — nunca lista vazia silenciosa. Loading: spinner + texto **«Carregando…»** (U+2026).
+
+---
+
 ## Estados ativos — tabs e filtros
 
 ```tsx
@@ -95,6 +107,7 @@ Atualizar `geral/Ajuda` (`afiliados`, `afiliados_network`) — ver `geral.mdc` (
 - Nunca `CTA_GRADIENT` de módulo com tokens de dashboard
 - Nunca `--brand-action-12` / `--brand-action-border` em tabs ou banner de visualização
 - Nunca `"este dashboard"` na permissão negada — usar `"esta página"`
-- Nunca texto visível `Carregando…` (ASCII `Carregando...`) no loading principal (só `aria-label` no spinner)
+- Nunca `Carregando...` / `Salvando...` em ASCII — elipse Unicode U+2026
+- Nunca `select("*")` nem lista sem paginação nestas páginas
 - Nunca `role="alert"` sem `aria-live="polite"` em erros
 - Nunca tabs sem ARIA completo e teclado

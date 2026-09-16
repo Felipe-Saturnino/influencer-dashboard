@@ -36,6 +36,7 @@ O `/verificacao` laranja no campo **é** a invocação. Badge/Alt+Enter só na A
 - Feature nova → glob da secção, não este skill.
 - Carga Mesas Spin → `/carga-mesas`
 - Carga Grafana → `/carga-grafana`
+- Smoke do delta do chat → `/smoke`
 
 ## Exemplos
 

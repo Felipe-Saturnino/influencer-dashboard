@@ -20,5 +20,6 @@ P1 = paginação de vista 20. P2 = uma linha por período.
 | 12 | Headcount + Overview Prestador + Overview Comercial | OK no recheck (`ec5ec75f`: Escala «1–20 de 625»; Mesa «1–20 de 93») | OK no recheck (HC Histórico 13 meses únicos; Mesa Detalhe 14 dias) |
 | 13 | Agenda | OK no recheck (commit pós-implantação) | N/A (calendário) |
 | 14 | Resultados + Feedback | OK no recheck (`5b764fae`: Feedback Histórico «1–20 de 1.262»; filtro Realizada «1–20 de 922») | N/A |
+| 15 | Influencers + Scout | OK no recheck (`a48b6094`: Influencers «1–20 de 124»; Scout «1–20 de 92» / Fechado «1–20 de 123») | N/A |
 
 Alimentar quando um ciclo **desta campanha** revelar gap de processo. P1/P2 permanentes estão no MDC `saude-da-plataforma.mdc`.

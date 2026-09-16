@@ -7,6 +7,7 @@ Constituição **não** vive aqui. Este ficheiro só aponta a frente. Chat novo 
 /carga-grafana Atualizar até D-1.
 /nova-feature {o que o usuário vê}
 /verificacao {página, aba ou função}
+/smoke Após implantar — login staging + testar o que mudou neste chat.
 /atualizar-backlog Antes de fechar — propõe diff do fio deste chat.
 ```
 
@@ -18,8 +19,19 @@ O `/skill` **laranja** no input **é** a invocação. Alt+Enter / badge só na A
 | Carga diária Grafana (GP + sinais SM) | `/carga-grafana` | `.cursor/rules/grafana-carga.mdc` |
 | Página ou fluxo novo | `/nova-feature` | `global.mdc` + `brand-css-variables.mdc` + MDC da secção; `business.mdc` se for estúdio/operadora/mesa |
 | Varredura de um item | `/verificacao` | `saude-da-plataforma.mdc` + MDC da secção |
+| Smoke pós-implantação | `/smoke` | Escopo do chat; MDC da secção se precisar rota/permissão |
 
-Não misturar frentes no mesmo chat. Dois chats diários de carga: **Mesas** (`/carga-mesas`) e **Grafana** (`/carga-grafana`) — nunca os dois no mesmo compositor. Bugfix na mesma página: glob da secção basta, sem skill.
+Não misturar frentes no mesmo chat. Dois chats diários de carga: **Mesas** (`/carga-mesas`) e **Grafana** (`/carga-grafana`) — nunca os dois no mesmo compositor. **1 frente = 1 intenção** (várias páginas ok se for a mesma feature ou secção). Bugfix numa página: glob da secção basta, sem skill.
+
+### Chats fixos (horizontais, sem skill)
+
+Compositores permanentes — nomes no Cursor. Não misturar com carga Mesas/Grafana no mesmo chat.
+
+| Nome do chat | Intenção | Lei (Grep + Read trecho; não Read global inteiro) |
+|--------------|----------|---------------------------------------------------|
+| **Ajuda** | Tutoriais, máscaras, tudo da secção Ajuda | MDCs da secção (ex. `geral`, conteúdo/ajuda); Brand se UI |
+| **Ajustes MDC** | Padrão de plataforma (ex. modal → replicar) | `global.mdc` + Brand; **atualizar MDC antes** do rollout em código |
+| **Ajustes Gerais** | Correções pequenas em qualquer área | MDC da secção do alvo + Grep em `global`; Brand se UI |
 
 **Backlog:** no início do chat, Read `docs/BACKLOG.md`. Cargas diárias: secção **Locks** basta. Chat longo ao fechar: `/atualizar-backlog` (skill) — um fio por chat, não reescrever o ficheiro inteiro.
 
@@ -31,6 +43,7 @@ Não misturar frentes no mesmo chat. Dois chats diários de carga: **Mesas** (`/
 - **Operadora ≠ estúdio.** Sports Club não é `operadora_slug`. Split EsportivaBet: lei na carga Mesas. Grafana: estúdio vem do cadastro Spin, não do filtro Studio do painel.
 - **Segredo:** nunca colar cookie Pomerium/Grafana no chat ou git.
 - **UI nova:** reusar componentes canónicos; copy PT-BR. Não reinventar filtro/tabela/modal.
+- **Pós-implantação:** após «pode implementar» em qualquer chat de código, invocar **`/smoke`** — login staging (humano) → testar o que mudou → reportar; não commitar. Auditoria formal → `/verificacao`.
 
 ## Onde está o resto
 
