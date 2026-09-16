@@ -12,6 +12,7 @@ export function useFinanceiroMes(
   filtros: BlocoFiltros,
   podeVerInfluencer: (id: string) => boolean,
   userRole: string | undefined,
+  emailMap: Record<string, string>,
   /** Só consulta depois dos catálogos — senão a carga repete com os filtros já montados. */
   habilitado = true,
 ) {
@@ -26,7 +27,7 @@ export function useFinanceiroMes(
     setLoadingMes(true);
     setErroMes(false);
     try {
-      const data = await loadFinanceiroMesData({ filtros, userRole, podeVerInfluencer });
+      const data = await loadFinanceiroMesData({ filtros, userRole, podeVerInfluencer, emailMap });
       if (gen !== loadGenRef.current) return;
       setMesData(data);
     } catch (e) {
@@ -37,7 +38,7 @@ export function useFinanceiroMes(
     } finally {
       if (gen === loadGenRef.current) setLoadingMes(false);
     }
-  }, [filtros, userRole, podeVerInfluencer, habilitado]);
+  }, [filtros, userRole, podeVerInfluencer, emailMap, habilitado]);
 
   useEffect(() => {
     void recarregarMes();

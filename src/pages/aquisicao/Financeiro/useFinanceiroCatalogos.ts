@@ -2,27 +2,31 @@ import { useCallback, useEffect, useState } from "react";
 import { supabase } from "../../../lib/supabase";
 import { fetchAllPages } from "../../../lib/supabasePaginate";
 import { ROLES_PARIDADE_INFLUENCER } from "../../../lib/staffRoles";
+import { PROFILE_INFLUENCER_COLS, type FinanceiroProfileRow } from "./financeiroTypes";
 
 export interface FinanceiroCatalogos {
   influencerList: { id: string; name: string }[];
   operadorasList: { slug: string; nome: string }[];
   operadoraInfMap: Record<string, string[]>;
+  /** E-mail por influencer — evita uma segunda lista de profiles na carga do mês. */
+  influencerEmailMap: Record<string, string>;
 }
 
 export function useFinanceiroCatalogos() {
   const [influencerList, setInfluencerList] = useState<FinanceiroCatalogos["influencerList"]>([]);
   const [operadorasList, setOperadorasList] = useState<FinanceiroCatalogos["operadorasList"]>([]);
   const [operadoraInfMap, setOperadoraInfMap] = useState<FinanceiroCatalogos["operadoraInfMap"]>({});
+  const [influencerEmailMap, setInfluencerEmailMap] = useState<FinanceiroCatalogos["influencerEmailMap"]>({});
   const [loadingCatalogos, setLoadingCatalogos] = useState(true);
 
   const recarregarCatalogos = useCallback(async () => {
     setLoadingCatalogos(true);
     try {
       const [profs, ops, vinculos] = await Promise.all([
-        fetchAllPages<{ id: string; name: string }>(async (from, to) =>
+        fetchAllPages<FinanceiroProfileRow>(async (from, to) =>
           await supabase
             .from("profiles")
-            .select("id, name")
+            .select(PROFILE_INFLUENCER_COLS)
             .in("role", [...ROLES_PARIDADE_INFLUENCER])
             .range(from, to),
         ),
@@ -42,7 +46,12 @@ export function useFinanceiroCatalogos() {
         ),
       ]);
 
-      setInfluencerList(profs);
+      setInfluencerList(profs.map((p) => ({ id: p.id, name: p.name ?? p.id })));
+      const emails: Record<string, string> = {};
+      profs.forEach((p) => {
+        emails[p.id] = p.email ?? "";
+      });
+      setInfluencerEmailMap(emails);
       setOperadorasList(ops);
       const map: Record<string, string[]> = {};
       vinculos.forEach((row) => {
@@ -65,6 +74,7 @@ export function useFinanceiroCatalogos() {
     influencerList,
     operadorasList,
     operadoraInfMap,
+    influencerEmailMap,
     loadingCatalogos,
     recarregarCatalogos,
   };

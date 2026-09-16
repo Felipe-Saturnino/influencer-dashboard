@@ -15,8 +15,9 @@ import {
  * Secrets: RS_API_URL, RS_API_KEY (X-API-Key), SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
  *
  * Body opcional:
- *   { data_inicio, data_fim, dry_run, ext_customer_ids?, cda_conta?, atualizar_cadastro? }
+ *   { data_inicio, data_fim, dry_run, ext_customer_ids?, cda_conta?, atualizar_cadastro?, probe_datasets? }
  * Uma chamada cobre uma única competência. Sem datas, usa mês corrente até D-1.
+ * `probe_datasets: true` só lê GET catalog/schema/datasets (não grava).
  */
 
 const INTEGRACAO_SLUG = "revenue_sentinel";
@@ -32,6 +33,7 @@ type SyncBody = {
   ext_customer_ids?: string[];
   cda_conta?: "influencers" | "afiliados";
   atualizar_cadastro?: boolean;
+  probe_datasets?: boolean;
 };
 
 function cors(req: Request): Record<string, string> {
@@ -48,6 +50,99 @@ function json(req: Request, data: unknown, status = 200) {
     status,
     headers: { "Content-Type": "application/json", ...cors(req) },
   });
+}
+
+const ID_KEY = /^(id|.*_id|external_id|ext_customer_id|crm_id|email|phone|cpf|cnpj|name|username)$/i;
+const MESA_KEY = /table|mesa|game|jogo/i;
+const DATA_KEY = /date|dia|day|snapshot|played_at|created_at/i;
+
+function asRec(v: unknown): Record<string, unknown> | null {
+  return v && typeof v === "object" && !Array.isArray(v) ? v as Record<string, unknown> : null;
+}
+
+function envelopeRows(payload: unknown): unknown[] {
+  const rec = asRec(payload);
+  if (!rec) return Array.isArray(payload) ? payload : [];
+  for (const k of ["rows", "items", "data", "results", "records", "hits"]) {
+    if (Array.isArray(rec[k])) return rec[k] as unknown[];
+  }
+  return [];
+}
+
+function redactVal(key: string, v: unknown): unknown {
+  if (v == null) return v;
+  if (typeof v === "number" || typeof v === "boolean") return v;
+  if (typeof v === "string") {
+    if (DATA_KEY.test(key) || MESA_KEY.test(key) || /^\d{4}-\d{2}-\d{2}/.test(v)) return v;
+    if (ID_KEY.test(key) || /CDA-\d+/i.test(v) || v.length > 24) {
+      return v.length <= 4 ? "***" : `…${v.slice(-4)}`;
+    }
+    return v.length > 48 ? `${v.slice(0, 24)}…` : v;
+  }
+  if (Array.isArray(v)) return `[array:${v.length}]`;
+  if (typeof v === "object") return `{keys:${Object.keys(v).slice(0, 12).join(",")}}`;
+  return typeof v;
+}
+
+function summarizeSample(payload: unknown, http: number) {
+  const rec = asRec(payload);
+  const rows = envelopeRows(payload);
+  const first = asRec(rows[0]) ?? (rows.length === 0 ? asRec(payload) : null);
+  const cols = first ? Object.keys(first) : [];
+  const uniques: Record<string, string[]> = {};
+  for (const col of cols) {
+    if (!MESA_KEY.test(col) && !DATA_KEY.test(col)) continue;
+    const set = new Set<string>();
+    for (const row of rows.slice(0, 200)) {
+      const r = asRec(row);
+      if (!r || r[col] == null) continue;
+      set.add(String(r[col]).slice(0, 80));
+      if (set.size >= 12) break;
+    }
+    if (set.size) uniques[col] = [...set];
+  }
+  return {
+    http,
+    envelope_keys: rec ? Object.keys(rec).slice(0, 24) : [],
+    n_rows: rows.length,
+    total: rec?.total ?? rec?.count ?? rec?.row_count ?? null,
+    colunas: cols,
+    amostra_redigida: first
+      ? Object.fromEntries(cols.map((k) => [k, redactVal(k, first[k])]))
+      : null,
+    valores_mesa_ou_data: uniques,
+  };
+}
+
+async function rsGet(
+  apiBase: string,
+  apiKey: string,
+  path: string,
+  query: Record<string, string> = {},
+): Promise<{ status: number; payload: unknown }> {
+  const url = new URL(`${apiBase}${path}`);
+  for (const [k, v] of Object.entries(query)) {
+    if (v) url.searchParams.set(k, v);
+  }
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), FETCH_MS);
+  try {
+    const res = await fetch(url, {
+      method: "GET",
+      signal: ctrl.signal,
+      headers: { "X-API-Key": apiKey },
+    });
+    const text = await res.text();
+    let payload: unknown = text;
+    try {
+      payload = text ? JSON.parse(text) : null;
+    } catch {
+      payload = { raw: text.slice(0, 400) };
+    }
+    return { status: res.status, payload };
+  } finally {
+    clearTimeout(t);
+  }
 }
 
 function ontemIsoSaoPaulo(): string {
@@ -108,6 +203,44 @@ serve(async (req: Request) => {
   const dryRun = params.dry_run === true;
   const atualizarCadastro = params.atualizar_cadastro === true;
   const conta = params.cda_conta === "afiliados" ? "afiliados" : "influencers";
+
+  if (params.probe_datasets === true) {
+    const de = params.data_inicio ?? "2026-08-01";
+    const ate = params.data_fim ?? "2026-08-07";
+    try {
+      const [status, catalog, schemaRounds, schemaSnaps] = await Promise.all([
+        rsGet(apiBase, apiKey, "/v1/status"),
+        rsGet(apiBase, apiKey, "/v1/catalog"),
+        rsGet(apiBase, apiKey, "/v1/schema/operator-player-rounds"),
+        rsGet(apiBase, apiKey, "/v1/schema/operator-player-snapshots"),
+      ]);
+      const operadores = ["casa_apostas", "Casa de Apostas"];
+      const roundsPorOp: Record<string, ReturnType<typeof summarizeSample>> = {};
+      const snapsPorOp: Record<string, ReturnType<typeof summarizeSample>> = {};
+      for (const op of operadores) {
+        const q = { start_date: de, end_date: ate, operator: op, limit: "25" };
+        const rounds = await rsGet(apiBase, apiKey, "/v1/datasets/operator-player-rounds", q);
+        const snaps = await rsGet(apiBase, apiKey, "/v1/datasets/operator-player-snapshots", q);
+        roundsPorOp[op] = summarizeSample(rounds.payload, rounds.status);
+        snapsPorOp[op] = summarizeSample(snaps.payload, snaps.status);
+      }
+      return json(req, {
+        ok: true,
+        versao: "v1.4.0",
+        probe: "datasets",
+        periodo: { de, ate },
+        status: { http: status.status, payload: status.payload },
+        catalog: { http: catalog.status, payload: catalog.payload },
+        schema_rounds: { http: schemaRounds.status, payload: schemaRounds.payload },
+        schema_snapshots: { http: schemaSnaps.status, payload: schemaSnaps.payload },
+        rounds: roundsPorOp,
+        snapshots: snapsPorOp,
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return json(req, { ok: false, probe: "datasets", erro: msg }, 200);
+    }
+  }
 
   if (dataInicio.slice(0, 7) !== dataFim.slice(0, 7)) {
     return json(req, {

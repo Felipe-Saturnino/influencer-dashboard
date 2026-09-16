@@ -180,15 +180,18 @@ export function useHomeGestorAquisicaoData() {
                 .select("id, status, updated_at, created_at")
                 .in("status", ["em_analise", "a_pagar"])
             : Promise.resolve({ data: [] as PagRow[], error: null }),
+          // Só os KPIs entram na Home — sem e-mail, não vale carregar a lista de profiles.
           loadFinanceiroMesData({
             filtros: filtrosFinanceiroMes(mesAtualYm, podeVerInf),
             userRole: user?.role,
             podeVerInfluencer: podeVerInf,
+            emailMap: {},
           }),
           loadFinanceiroMesData({
             filtros: filtrosFinanceiroMes(mesAntYm, podeVerInf),
             userRole: user?.role,
             podeVerInfluencer: podeVerInf,
+            emailMap: {},
           }),
           fetchInfluencerAnalyticsPeriodoCached({
             inicio: periodoStreamers.atual.inicio,

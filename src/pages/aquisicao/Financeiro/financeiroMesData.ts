@@ -1,7 +1,6 @@
 import { supabase } from "../../../lib/supabase";
 import { fetchAllPages, fetchInBatched } from "../../../lib/supabasePaginate";
 import { buscarInvestimentoPago } from "../../../lib/investimentoPago";
-import { ROLES_PARIDADE_INFLUENCER } from "../../../lib/staffRoles";
 import { getPeriodoHistoricoCompetencias } from "../../../lib/dashboardHelpers";
 import { periodoDoMes, podeVerPagamentosAgenteFinanceiro } from "./financeiroCiclos";
 import type { BlocoFiltros } from "./financeiroFiltros";
@@ -14,7 +13,6 @@ import type {
   FinanceiroAgenteDbRow,
   FinanceiroPagamentoDbRow,
   FinanceiroPerfilRow,
-  FinanceiroProfileRow,
 } from "./financeiroTypes";
 
 export interface FinanceiroKpiMes {
@@ -50,6 +48,8 @@ export interface FinanceiroMesLoadParams {
   filtros: BlocoFiltros;
   userRole: string | undefined;
   podeVerInfluencer: (id: string) => boolean;
+  /** Vem dos catálogos — a lista de profiles é carregada uma vez só por página. */
+  emailMap: Record<string, string>;
 }
 
 function filtrarPagamentos(
@@ -157,6 +157,7 @@ export async function loadFinanceiroMesData({
   filtros,
   userRole,
   podeVerInfluencer,
+  emailMap,
 }: FinanceiroMesLoadParams): Promise<FinanceiroMesData> {
   const { filterInfluencers, filterOperadora, filtroOp, mesFiltro, historico } = filtros;
   /** Sem mês selecionado, a janela é a das 13 competências — nunca consulta all-time. */
@@ -208,7 +209,7 @@ export async function loadFinanceiroMesData({
       }).then((r) => r.total)
     : Promise.resolve(null);
 
-  const [perfis, profiles, pags, agentes, totalPagoRpc] = await Promise.all([
+  const [perfis, pags, agentes, totalPagoRpc] = await Promise.all([
     fetchAllPages<FinanceiroPerfilRow>(async (from, to) =>
       await supabase
         .from("influencer_perfil")
@@ -216,22 +217,10 @@ export async function loadFinanceiroMesData({
         .order("nome_artistico")
         .range(from, to),
     ),
-    fetchAllPages<FinanceiroProfileRow>(async (from, to) =>
-      await supabase
-        .from("profiles")
-        .select("id, email")
-        .in("role", [...ROLES_PARIDADE_INFLUENCER])
-        .range(from, to),
-    ),
     pQuery,
     aQuery,
     investimentoPagoPromise,
   ]);
-
-  const emailMap: Record<string, string> = {};
-  for (const p of profiles) {
-    emailMap[p.id] = p.email ?? "";
-  }
 
   let perfisFiltrados = perfis.filter((p) => podeVerInfluencer(p.id));
   if (filterInfluencers.length > 0) {

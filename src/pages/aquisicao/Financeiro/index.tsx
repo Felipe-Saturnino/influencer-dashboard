@@ -56,6 +56,7 @@ export default function Financeiro() {
     influencerList,
     operadorasList,
     operadoraInfMap,
+    influencerEmailMap,
     loadingCatalogos,
   } = useFinanceiroCatalogos();
 
@@ -117,6 +118,7 @@ export default function Financeiro() {
     filtros,
     podeVerInfluencer,
     user?.role,
+    influencerEmailMap,
     !loadingCatalogos,
   );
 

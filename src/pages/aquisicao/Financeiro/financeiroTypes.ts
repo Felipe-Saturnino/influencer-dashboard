@@ -9,6 +9,10 @@ export const PAGAMENTO_AGENTE_COLS =
   "id, ciclo_id, operadora_slug, total, status, pago_em, descricao, criado_em";
 /** Lote seguro para `.in("ciclo_id", …)` em pagamentos / pagamentos_agentes. */
 export const CICLO_IN_CHUNK = 150;
+/** Lote seguro para `.in("id", …)` em profiles / influencer_perfil. */
+export const INFLUENCER_IN_CHUNK = 150;
+/** Lista de influencers/afiliados: nome e e-mail vêm na mesma carga. */
+export const PROFILE_INFLUENCER_COLS = "id, name, email";
 
 // ── Tipos locais ───────────────────────────────────────────────────────────────
 

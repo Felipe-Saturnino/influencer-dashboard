@@ -11,7 +11,7 @@ import { useDataTableBlock } from "../../../hooks/useDataTableBlock"
 import { useTabelaPaginacao } from "../../../hooks/useTabelaPaginacao"
 import { TabelaPaginacaoBar } from "../../../components/TabelaPaginacaoBar"
 import { supabase } from "../../../lib/supabase"
-import { fetchAllPages, fetchLiveResultadosBatched } from "../../../lib/supabasePaginate"
+import { fetchAllPages, fetchInBatched, fetchLiveResultadosBatched } from "../../../lib/supabasePaginate"
 import { enviarPagamentoEmailCiclo } from "../../../lib/financeiroEnviarPagamentoEmail"
 import type { CicloPagamento, PagamentoStatus } from "../../../types"
 import { SectionTitle, SortTableTh, type SortDir } from "../../../components/dashboard"
@@ -22,7 +22,7 @@ import { STATUS_INFLUENCER, STATUS_PAG } from "./financeiroConstants"
 import { cicloAberto, fmtCicloDatas, podeVerPagamentosAgenteFinanceiro } from "./financeiroCiclos"
 import { filtrarAgentesDoCiclo, mapAgentesParaPagamentoRows } from "./financeiroAgenteLinhas"
 import { fecharCicloExpiradoSeNecessario } from "./financeiroFecharCiclo"
-import { PAGAMENTO_AGENTE_COLS, PAGAMENTO_COLS, type FinanceiroAgenteDbRow, type FinanceiroLiveRow, type FinanceiroLiveResultadoRow, type FinanceiroPagamentoDbRow, type FinanceiroPerfilCacheRow, type FinanceiroPerfilRow, type FinanceiroProfileRow, type PagamentoRow } from "./financeiroTypes"
+import { INFLUENCER_IN_CHUNK, PAGAMENTO_AGENTE_COLS, PAGAMENTO_COLS, type FinanceiroAgenteDbRow, type FinanceiroLiveRow, type FinanceiroLiveResultadoRow, type FinanceiroPagamentoDbRow, type FinanceiroPerfilCacheRow, type FinanceiroPerfilRow, type FinanceiroProfileRow, type PagamentoRow } from "./financeiroTypes"
 import type { BlocoFiltros } from "./financeiroFiltros"
 import { Badge, BtnAcao, BtnPrimary, SelectInput } from "./financeiroUi"
 import { ModalAgente } from "./ModalAgente"
@@ -141,18 +141,29 @@ export function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
       parKeys = parKeys.filter((k) => k.endsWith(`::${filterOperadora}`));
     }
     const ids = [...new Set(parKeys.map((k) => k.split("::")[0]))];
-    const [{ data: profiles }, { data: perfis }] = await Promise.all([
-      supabase.from("profiles").select("id, name").in("id", ids),
-      supabase.from("influencer_perfil").select("id, cache_hora, nome_artistico, status").in("id", ids),
+    const [profiles, perfis] = await Promise.all([
+      fetchInBatched<FinanceiroProfileRow>(ids, INFLUENCER_IN_CHUNK, async (slice) => {
+        const { data, error } = await supabase.from("profiles").select("id, name").in("id", slice);
+        if (error) throw new Error(error.message);
+        return (data ?? []) as FinanceiroProfileRow[];
+      }),
+      fetchInBatched<FinanceiroPerfilCacheRow>(ids, INFLUENCER_IN_CHUNK, async (slice) => {
+        const { data, error } = await supabase
+          .from("influencer_perfil")
+          .select("id, cache_hora, nome_artistico, status")
+          .in("id", slice);
+        if (error) throw new Error(error.message);
+        return (data ?? []) as FinanceiroPerfilCacheRow[];
+      }),
     ]);
 
     const nameMap: Record<string, string> = {};
-    for (const p of (profiles ?? []) as FinanceiroProfileRow[]) {
+    for (const p of profiles) {
       nameMap[p.id] = p.name ?? p.id;
     }
 
     const perfilMap: Record<string, { cache: number; artistico: string; status: string | null }> = {};
-    for (const p of (perfis ?? []) as FinanceiroPerfilCacheRow[]) {
+    for (const p of perfis) {
       perfilMap[p.id] = {
         cache: p.cache_hora ?? 0,
         artistico: p.nome_artistico ?? nameMap[p.id] ?? p.id,
@@ -230,11 +241,19 @@ export function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
       const influencerIdsSync = [...new Set(Object.keys(horasPorPar).map((k) => k.split("::")[0]!))];
       const cachePorInfluencer: Record<string, number> = {};
       if (influencerIdsSync.length > 0) {
-        const { data: perfisSync } = await supabase
-          .from("influencer_perfil")
-          .select("id, cache_hora")
-          .in("id", influencerIdsSync);
-        for (const p of (perfisSync ?? []) as Array<{ id: string; cache_hora: number | null }>) {
+        const perfisSync = await fetchInBatched<{ id: string; cache_hora: number | null }>(
+          influencerIdsSync,
+          INFLUENCER_IN_CHUNK,
+          async (slice) => {
+            const { data, error } = await supabase
+              .from("influencer_perfil")
+              .select("id, cache_hora")
+              .in("id", slice);
+            if (error) throw new Error(error.message);
+            return (data ?? []) as Array<{ id: string; cache_hora: number | null }>;
+          },
+        );
+        for (const p of perfisSync) {
           cachePorInfluencer[p.id] = p.cache_hora ?? 0;
         }
       }
@@ -284,14 +303,25 @@ export function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
     const nomeMap: Record<string, string> = {};
     const statusPorId: Record<string, string | null> = {};
     if (influencerIds.length > 0) {
-      const [{ data: perfis }, { data: profiles }] = await Promise.all([
-        supabase.from("influencer_perfil").select("id, nome_artistico, status").in("id", influencerIds),
-        supabase.from("profiles").select("id, name").in("id", influencerIds),
+      const [perfis, profiles] = await Promise.all([
+        fetchInBatched<FinanceiroPerfilRow>(influencerIds, INFLUENCER_IN_CHUNK, async (slice) => {
+          const { data, error } = await supabase
+            .from("influencer_perfil")
+            .select("id, nome_artistico, status")
+            .in("id", slice);
+          if (error) throw new Error(error.message);
+          return (data ?? []) as FinanceiroPerfilRow[];
+        }),
+        fetchInBatched<FinanceiroProfileRow>(influencerIds, INFLUENCER_IN_CHUNK, async (slice) => {
+          const { data, error } = await supabase.from("profiles").select("id, name").in("id", slice);
+          if (error) throw new Error(error.message);
+          return (data ?? []) as FinanceiroProfileRow[];
+        }),
       ]);
-      for (const p of (profiles ?? []) as FinanceiroProfileRow[]) {
+      for (const p of profiles) {
         nomeMap[p.id] = p.name ?? p.id;
       }
-      for (const p of (perfis ?? []) as FinanceiroPerfilRow[]) {
+      for (const p of perfis) {
         if (p.nome_artistico) nomeMap[p.id] = p.nome_artistico;
         statusPorId[p.id] = p.status ?? null;
       }
