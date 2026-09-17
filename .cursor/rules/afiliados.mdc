@@ -57,7 +57,7 @@ Usar `DashboardPageHeader` (`src/components/dashboard`) — spec **real** do com
 
 ## Filtro de status
 
-- **Afiliados:** chips **`FiltroStatusSemanticoPill`** na barra — toggle valor ativo ↔ agregador `todos`. Lista inclui contas com `profiles.ativo = false` (pill **Desativado**); ao mudar status do perfil para **Ativo**, a Edge de reativação redefine senha padrão, exige troca no login e envia e-mail de boas-vindas.
+- **Afiliados:** chips **`FiltroStatusSemanticoPill`** na barra — toggle valor ativo ↔ agregador `todos`. Lista inclui contas com `profiles.ativo = false` (pill **Desativado**); ao mudar status do perfil para **Ativo**, o trigger libera `profiles.ativo` na hora e tenta a Edge (senha padrão + boas-vindas) — mesmo contrato que Influencers (`lives.mdc` § Reativação).
 - **Network:** filtro por status nos **cards clicáveis do Funil de Prospecção** (`FunilProspeccaoKpiGrid`) — **sem** chips de Status na barra. Estado inicial `todos`: lista todos os prospectos **exceto Fechados**; clique no card **Fechado** para incluí-los.
 
 ## Lista e carga

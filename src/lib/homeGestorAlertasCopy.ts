@@ -1,7 +1,36 @@
-export function mensagemHorasPendentesPortfolio(count: number): string {
+const HORAS_PENDENTES_NOMES_PREVIEW = 5;
+
+/** Junta nomes em PT-BR: «A», «A e B», «A, B e C». */
+function juntarNomesPt(nomes: string[]): string {
+  if (nomes.length === 0) return "";
+  if (nomes.length === 1) return nomes[0]!;
+  if (nomes.length === 2) return `${nomes[0]} e ${nomes[1]}`;
+  return `${nomes.slice(0, -1).join(", ")} e ${nomes[nomes.length - 1]}`;
+}
+
+/**
+ * Alerta Home Gestor de Aquisição — horas pendentes sem agenda.
+ * `nomesArtisticos` = amostra (já limitada/ordenada pelo caller); só nome artístico.
+ */
+export function mensagemHorasPendentesPortfolio(
+  count: number,
+  nomesArtisticos: string[] = [],
+): string {
   const n = count.toLocaleString("pt-BR");
   const s = count === 1 ? "influencer" : "influencers";
-  return `Há ${n} ${s} com horas pendentes da cota e sem live futura agendada. Priorize o agendamento na Agenda.`;
+  const base = `Há ${n} ${s} com horas pendentes da cota e sem live futura agendada`;
+  const preview = nomesArtisticos
+    .map((x) => x.trim())
+    .filter(Boolean)
+    .slice(0, HORAS_PENDENTES_NOMES_PREVIEW);
+  if (preview.length === 0) {
+    return `${base}. Priorize o agendamento na Agenda.`;
+  }
+  const lista = juntarNomesPt(preview);
+  const resto = count - preview.length;
+  const mais =
+    resto > 0 ? ` — e mais ${resto.toLocaleString("pt-BR")}` : "";
+  return `${base}: ${lista}${mais}. Priorize o agendamento na Agenda.`;
 }
 
 export function mensagemResultadosPendentes48h(count: number): string {

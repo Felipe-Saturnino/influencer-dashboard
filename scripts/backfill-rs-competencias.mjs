@@ -3,8 +3,8 @@
  * Backfill Revenue Sentinel competência por competência (equivalente ao
  * scripts/manual-supabase-backfill-revenue-sentinel-mensal.sql, executável).
  *
- * 1. Limpa só as colunas Spin de jogadores_metricas_diarias (preserva TAP).
- * 2. Chama a Edge sync-revenue-sentinel uma vez por mês, em série, esperando cada uma.
+ * Chama a Edge sync-revenue-sentinel uma vez por mês, em série (a Edge v1.5
+ * zera as colunas Spin da competência antes do UPSERT; TAP preservado).
  *
  * Sem `--gravar` faz dry-run (nenhuma escrita; a Edge recebe dry_run=true).
  * Env: SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY.
@@ -16,7 +16,6 @@ import { readFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
 
 const ARQUIVOS_ENV = [".env.gp-kpi", ".env.bko-pls", ".env.local", ".env"];
-const OPERADORA = "casa_apostas";
 const CONTA = "influencers";
 /** D-1 em São Paulo — nunca o dia corrente incompleto. */
 const ONTEM_SP = (() => {
@@ -67,33 +66,6 @@ function ultimoDia(competencia) {
 
 function fmt(n) {
   return Number(n ?? 0).toLocaleString("pt-BR");
-}
-
-async function limparColunasSpin(base, key, desde, ate) {
-  const url =
-    `${base}/rest/v1/jogadores_metricas_diarias` +
-    `?operadora_slug=eq.${OPERADORA}&cda_conta=eq.${CONTA}&data=gte.${desde}&data=lte.${ate}`;
-  const res = await fetch(url, {
-    method: "PATCH",
-    headers: {
-      apikey: key,
-      Authorization: `Bearer ${key}`,
-      "Content-Type": "application/json",
-      Prefer: "return=representation,count=exact",
-    },
-    body: JSON.stringify({
-      rodadas_spin: 0,
-      apostas_spin: 0,
-      ggr_spin: null,
-      turnover_spin: null,
-      jogou_spin: null,
-      rodadas_por_jogo: {},
-      rodadas_por_mesa: [],
-    }),
-  });
-  if (!res.ok) throw new Error(`limpeza HTTP ${res.status}: ${(await res.text()).slice(0, 300)}`);
-  const linhas = await res.json().catch(() => []);
-  return Array.isArray(linhas) ? linhas.length : 0;
 }
 
 async function syncCompetencia(base, key, competencia, gravar) {

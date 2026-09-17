@@ -21,7 +21,12 @@ export function AlertasGestorAquisicao({ alertas }: { alertas: HomeGestorAquisic
     <>
       {showHoras ? (
         <HomeAlertaBox variante="acao">
-          <p style={{ margin: "0 0 12px" }}>{mensagemHorasPendentesPortfolio(alertas.horasPendentesSemAgenda)}</p>
+          <p style={{ margin: "0 0 12px" }}>
+            {mensagemHorasPendentesPortfolio(
+              alertas.horasPendentesSemAgenda,
+              alertas.horasPendentesSemAgendaNomes,
+            )}
+          </p>
           <a {...propsFor("agenda")} style={cta}>
             Ir para Agenda
           </a>

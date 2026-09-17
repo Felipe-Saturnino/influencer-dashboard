@@ -18,6 +18,8 @@ import type { BancaRowDb } from "../../../aquisicao/BancaJogo/bancaJogoTypes";
 
 export type HomeGestorAquisicaoAlertas = {
   horasPendentesSemAgenda: number;
+  /** Até 5 nomes artísticos (A–Z) para o alerta de horas sem agenda. */
+  horasPendentesSemAgendaNomes: string[];
   resultadosPendentes48h: number;
   pagamentosAguardando7d: number;
 };
@@ -91,6 +93,7 @@ export function useHomeGestorAquisicaoData() {
   const [erro, setErro] = useState(false);
   const [alertas, setAlertas] = useState<HomeGestorAquisicaoAlertas>({
     horasPendentesSemAgenda: 0,
+    horasPendentesSemAgendaNomes: [],
     resultadosPendentes48h: 0,
     pagamentosAguardando7d: 0,
   });
@@ -110,7 +113,7 @@ export function useHomeGestorAquisicaoData() {
 
         let perfisQuery = supabase
           .from("influencer_perfil")
-          .select("id, horas_acordadas, horas_ciclo_iniciado_em, status")
+          .select("id, nome_artistico, horas_acordadas, horas_ciclo_iniciado_em, status")
           .eq("status", "ativo");
         if (!veTodos) {
           if (idsEscopo.length === 0) {
@@ -144,6 +147,7 @@ export function useHomeGestorAquisicaoData() {
         ] = await Promise.all([
           fetchAllPages<{
             id: string;
+            nome_artistico: string | null;
             horas_acordadas: number | null;
             horas_ciclo_iniciado_em: string | null;
             status: string;
@@ -227,6 +231,7 @@ export function useHomeGestorAquisicaoData() {
         const candidatos = comCota.filter((p) => !comAgenda.has(p.id));
 
         let horasPendentesSemAgenda = 0;
+        const nomesPendentes: string[] = [];
         if (candidatos.length > 0) {
           const cicloMaisAntigo = candidatos
             .map((p) => isoDateBrasilFromInstant(p.horas_ciclo_iniciado_em) ?? "9999-99-99")
@@ -268,9 +273,16 @@ export function useHomeGestorAquisicaoData() {
               .filter((l) => l.influencer_id === p.id && l.data >= cicloData)
               .reduce((acc, l) => acc + (horasPorLive.get(l.id) ?? 0), 0);
             const pend = horasPendentesCota(p.horas_acordadas, realizadas);
-            if (pend != null && pend > 0) horasPendentesSemAgenda += 1;
+            if (pend != null && pend > 0) {
+              horasPendentesSemAgenda += 1;
+              const artistico = (p.nome_artistico ?? "").trim();
+              if (artistico) nomesPendentes.push(artistico);
+            }
           }
         }
+        const horasPendentesSemAgendaNomes = [...nomesPendentes]
+          .sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" }))
+          .slice(0, 5);
 
         const liveIdsRealizadas = livesRealizadasRes.map((l) => l.id);
         const resultadosExistentes =
@@ -318,6 +330,7 @@ export function useHomeGestorAquisicaoData() {
 
         setAlertas({
           horasPendentesSemAgenda,
+          horasPendentesSemAgendaNomes,
           resultadosPendentes48h,
           pagamentosAguardando7d,
         });

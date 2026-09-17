@@ -7,7 +7,7 @@
 const port = process.env.MESAS_SPIN_LOCAL_PORT || "18765";
 const base = `http://127.0.0.1:${port}`;
 
-function bridge(modo, winKey, savePath) {
+function bridge(modo, winKey) {
   const run = `(async () => {
   const src = await fetch("${base}/oneshot-${modo}.js").then((r) => r.text());
   const p = (0, eval)(src);
@@ -26,9 +26,9 @@ function bridge(modo, winKey, savePath) {
 console.log(
   JSON.stringify(
     {
-      network: bridge("network", "__mesasNet", "network"),
-      dedicado: bridge("dedicado", "__mesasDed", "dedicado"),
-      monthly: bridge("monthly", "__mesasMon", "monthly"),
+      network: bridge("network", "__mesasNet"),
+      dedicado: bridge("dedicado", "__mesasDed"),
+      monthly: bridge("monthly", "__mesasMon"),
     },
     null,
     0,

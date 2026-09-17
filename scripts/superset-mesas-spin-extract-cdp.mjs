@@ -13,7 +13,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
-import { browserWindowKeyForModo, patchMesasExtractSource } from "./lib/patchMesasExtractSource.mjs";
+import { browserWindowKeyForModo } from "./lib/patchMesasExtractSource.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const node = process.execPath;

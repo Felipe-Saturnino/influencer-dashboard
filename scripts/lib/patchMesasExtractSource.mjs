@@ -21,8 +21,13 @@ export function patchMesasExtractSource({ modo, de, ate, force = false, browserW
   src = src.replace(/const FORCE = (?:true|false)/, `const FORCE = ${force}`);
 
   if (browserWindowKey) {
-    src = src.replace(/\/\*\*[\s\S]*?\*\//g, (m) => (/[^\x00-\x7F]/.test(m) ? "/* */" : m));
-    src = src.replace(/\/\/[^\n]*[^\x00-\x7F][^\n]*/g, () => "/* */");
+    // Strip comments with non-ASCII (CDP/eval); avoid control-char class in regex (eslint no-control-regex).
+    const hasNonAscii = (s) => {
+      for (let i = 0; i < s.length; i++) if (s.charCodeAt(i) > 127) return true;
+      return false;
+    };
+    src = src.replace(/\/\*[\s\S]*?\*\//g, (m) => (hasNonAscii(m) ? "/* */" : m));
+    src = src.replace(/\/\/[^\n]*/g, (m) => (hasNonAscii(m) ? "/* */" : m));
     src = src.replace(
       /return out;/g,
       `window.${browserWindowKey} = out;

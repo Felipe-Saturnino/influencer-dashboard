@@ -7,6 +7,8 @@ import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { fetchInfluencerAnalyticsPeriodoCached } from "../../../lib/influencerAnalyticsQuery";
+import { fetchJogadoresUapSpin } from "../../../lib/jogadoresAbaQuery";
+import { uapSpinJogadoresAba } from "../../../lib/jogadoresAbaMetrics";
 import { buscarInvestimentoPago } from "../../../lib/investimentoPago";
 import { buscarMetricasDeAliases, mesclarMetricasComAliases } from "../../../lib/metricasAliases";
 import { BRAND, MSG_SEM_DADOS_FILTRO, MSG_SEM_DADOS_PERIODO } from "../../../lib/dashboardConstants";
@@ -59,6 +61,7 @@ import {
   TrendingUp,
   Trophy,
   UserPlus,
+  Users,
   Video,
 } from "lucide-react";
 import {
@@ -490,6 +493,8 @@ export default function DashboardOverviewInfluencer() {
 
   const [totais, setTotais] = useState<TotaisData>({ ggr: 0, investimento: 0, roi: 0, ftds: 0, ftd_total: 0, registros: 0, acessos: 0, views: 0, depositos_qtd: 0, depositos_valor: 0, saques_qtd: 0, saques_valor: 0, lives: 0, horas: 0 });
   const [totaisAnt, setTotaisAnt] = useState<TotaisData>(totais);
+  const [uapSpin, setUapSpin] = useState(0);
+  const [uapSpinAnt, setUapSpinAnt] = useState(0);
   const [diasData, setDiasData] = useState<DiaData[]>([]);
   const [metricasComparativo, setMetricasComparativo] = useState<Metrica[]>([]);
   const [livesComparativo, setLivesComparativo] = useState<LiveData[]>([]);
@@ -537,6 +542,7 @@ export default function DashboardOverviewInfluencer() {
       setLivesComparativo([]);
       setLiveResultadosComparativo([]);
       setTotaisAnt({ ggr: 0, investimento: 0, roi: 0, ftds: 0, ftd_total: 0, registros: 0, acessos: 0, views: 0, depositos_qtd: 0, depositos_valor: 0, saques_qtd: 0, saques_valor: 0, lives: 0, horas: 0 });
+      setUapSpinAnt(0);
       try {
 
       const mom =
@@ -554,6 +560,12 @@ export default function DashboardOverviewInfluencer() {
           : influencersVisiveis.length === 0
             ? null
             : influencersVisiveis;
+      const influencerIdsUap =
+        filtroInfluencer !== "todos"
+          ? [filtroInfluencer]
+          : escoposVisiveis.semRestricaoEscopo || escoposVisiveis.vêTodosInfluencers
+            ? null
+            : influencersVisiveis;
       const investInfluencerIds =
         filtroInfluencer !== "todos"
           ? [filtroInfluencer]
@@ -568,7 +580,7 @@ export default function DashboardOverviewInfluencer() {
             ? null
             : escoposVisiveis.operadorasVisiveis;
 
-      const [analytics, investAtual] = await Promise.all([
+      const [analytics, investAtual, jogadoresUapAtual] = await Promise.all([
         fetchInfluencerAnalyticsPeriodoCached({
           inicio,
           fim,
@@ -583,6 +595,12 @@ export default function DashboardOverviewInfluencer() {
             includeAgentes: false,
           },
         ),
+        fetchJogadoresUapSpin({
+          inicio,
+          fim,
+          operadoraSlugs: operadoraSlugsQuery,
+          influencerIds: influencerIdsUap,
+        }),
       ]);
       if (cancelled) return;
 
@@ -641,6 +659,7 @@ export default function DashboardOverviewInfluencer() {
       }
 
       setTotais(calcTotais(rows, liveRows, resultados, investTotal));
+      setUapSpin(uapSpinJogadoresAba(jogadoresUapAtual).uap);
 
       // Bloco 5: Detalhamento Mensal (histórico) ou Detalhamento Diário (mês no carrossel)
       if (historico) {
@@ -767,7 +786,7 @@ export default function DashboardOverviewInfluencer() {
       if (mom) {
         try {
           const { inicio: iA, fim: fA } = mom.anterior;
-          const [investAnt, analyticsAnt] = await Promise.all([
+          const [investAnt, analyticsAnt, jogadoresUapAnterior] = await Promise.all([
             buscarInvestimentoPago(
               { inicio: iA, fim: fA },
               {
@@ -782,6 +801,12 @@ export default function DashboardOverviewInfluencer() {
               operadoraSlugs: operadoraSlugsQuery,
               influencerIds: influencerIdsAnalytics,
             }),
+            fetchJogadoresUapSpin({
+              inicio: iA,
+              fim: fA,
+              operadoraSlugs: operadoraSlugsQuery,
+              influencerIds: influencerIdsUap,
+            }),
           ]);
           if (cancelled) return;
           const mA: Metrica[] = analyticsAnt.metricas;
@@ -790,6 +815,7 @@ export default function DashboardOverviewInfluencer() {
           const rowsA = mA.filter((m) => podeVerInfluencer(m.influencer_id));
           const liveA = lA.filter((l) => podeVerInfluencer(l.influencer_id));
           setTotaisAnt(calcTotais(rowsA, liveA, rA, investAnt.total));
+          setUapSpinAnt(uapSpinJogadoresAba(jogadoresUapAnterior).uap);
           setMomPronto(true);
         } catch (errMom) {
           console.error("[OverviewInfluencer] MoM:", errMom);
@@ -819,6 +845,7 @@ export default function DashboardOverviewInfluencer() {
     podeVerInfluencer,
     influencersVisiveis,
     escoposVisiveis.semRestricaoEscopo,
+    escoposVisiveis.vêTodosInfluencers,
     escoposVisiveis.operadorasVisiveis,
     mesSelecionado,
     catalogosPending,
@@ -1149,8 +1176,8 @@ export default function DashboardOverviewInfluencer() {
                 <SkeletonKpiCard key={`sk-r1-${i}`} />
               ))}
             </div>
-            <div className="app-grid-kpi-3" style={{ marginBottom: 12 }}>
-              {[0, 1, 2].map((i) => (
+            <div className="app-grid-kpi-4" style={{ marginBottom: 12 }}>
+              {[0, 1, 2, 3].map((i) => (
                 <SkeletonKpiCard key={`sk-r2-${i}`} />
               ))}
             </div>
@@ -1162,7 +1189,7 @@ export default function DashboardOverviewInfluencer() {
           </>
         ) : (
           <>
-            <div className="app-grid-kpi-3" style={{ marginBottom: 12 }}>
+            <div className="app-grid-kpi-4" style={{ marginBottom: 12 }}>
               <KpiCard
                 label="GGR"
                 value={fmtBRL(totais.ggr)}
@@ -1225,6 +1252,15 @@ export default function DashboardOverviewInfluencer() {
                 accentColor={BRAND.ciano}
                 atual={totais.views}
                 anterior={totaisAnt.views}
+                isHistorico={historico || !momPronto}
+              />
+              <KpiCard
+                label="UAP Spin"
+                value={uapSpin.toLocaleString("pt-BR")}
+                icon={<Users size={16} aria-hidden="true" />}
+                accentColor={BRAND.verde}
+                atual={uapSpin}
+                anterior={uapSpinAnt}
                 isHistorico={historico || !momPronto}
               />
             </div>
