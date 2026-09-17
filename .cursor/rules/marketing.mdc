@@ -21,7 +21,7 @@ alwaysApply: false
 | PageKey | h1 | Subtítulo |
 |---|---|---|
 | `campanhas` | Campanhas | Cadastre campanhas de mídia e vincule UTMs para monitorar performance nos dashboards. |
-| `galeria_fotos` | Galeria de Fotos | Organize fotos de eventos, publique materiais gerais e vincule imagens individuais aos colaboradores. |
+| `galeria_fotos` | Galeria de Fotos | Organize fotos de eventos, publique materiais gerais e vincule imagens individuais aos prestadores. |
 | `gestao_links` | Gestão de Links | Mapeie UTMs detectados a influencers, afiliados ou campanhas e alimente os relatórios. |
 
 Texto de **afiliados** no subtítulo de Gestão de Links é intencional (roadmap da secção Afiliados).
@@ -49,7 +49,7 @@ Perfis: Gestor (operação interna).
 ### Aba Campanhas
 
 - **KPIs do topo:** grelha `app-grid-kpi-3` + `getPageKpiSectionGapStyle()` — layout igual Financeiro/Banca de Jogo (`borderLeft` 3px, rótulo em caixa alta acima: **TOTAL**, **ATIVAS**, **INATIVAS**; `brand.blockBg`; sem caixa pai).
-- **Campanhas cadastradas:** `getPageContentBoxStyle` + **`SectionTitle`** `compact` na mesma linha que **`CtaCriarButton`** **Nova Campanha** quando `canCriarOk`. Paginação 20/página (`TabelaPaginacaoBar`).
+- **Campanhas cadastradas:** `getPageContentBoxStyle` + **`SectionTitle`** `compact` na mesma linha que **`CtaCriarButton`** **Nova Campanha** quando `canCriarOk`. Paginação 20/página (`TabelaPaginacaoBar`). Select com colunas explícitas; falha de carga → alerta + **Tentar novamente** (não empty). Ação **Editar** = `BtnIconeAcaoLinha` + `tooltipAcao("Editar campanha")`. Ordenação default: **Criada em** `desc`.
 - Toggle status: dois botões pill **Ativa / Inativa** com `aria-pressed` — nunca botão único alternante.
 - `autoFocus` em modal: ref + `setTimeout(100)`.
 - Vazio: `Nenhuma campanha cadastrada. Crie campanhas e mapeie UTMs na Gestão de Links.`
@@ -59,7 +59,7 @@ Perfis: Gestor (operação interna).
 - **KPIs:** **TOTAL** (links na tabela), **ATIVOS** (métricas/resultados nos últimos 30 dias em `utm_metricas_diarias`), **INATIVOS** (resto) — mesma grelha KPI da aba Campanhas.
 - **Links cadastrados:** `SectionTitle` `compact` + **`CtaCriarButton`** **Novo Link** (`canCriarOk`) — abre **`ModalNovoLink`**. Paginação 20/página.
 - **Modal Novo Link:** Operadora obrigatória (só ativas). Operadoras com geração: **Casa de Apostas** (`utm_source`) e **Blaze** (`utm_campaign`). Select obrigatório **Campanha** (ativas da mesma operadora). Campo **UTM** só com o valor editável (sem URL base no formulário). Demais operadoras: aviso «em breve». **Gerar Link** monta a URL completa (base fixa da operadora + UTM), chama RPC `gerar_campanha_link` — grava `campanha_links` + mapeia `utm_aliases` (`status = mapeado`, `campanha_id`). Valor sanitizado e persistido em `utm_source` (identificador interno); URL completa só no resultado + **Copiar**.
-- Tabela: UTM, Operadora, Criado em, Usuário (nome em `profiles`), Status (Ativo/Inativo), Última Visita — `SortTableTh`; default **Criado em** `desc`. Fonte: tabela `campanha_links` (`src/lib/campanhaLinks.ts`).
+- Tabela: UTM, Operadora, Criado em, Usuário (nome em `profiles`), Status (Ativo/Inativo), Última Visita — `SortTableTh`; default **Criado em** `desc`. Fonte: tabela `campanha_links` (`src/lib/campanhaLinks.ts` — `fetchAllPages` + lotes; sem `.limit` arbitrário). Falha → alerta + **Tentar novamente**.
 - Vazio: `Nenhum link cadastrado.`
 - **Handoff:** bases de URL das demais operadoras; sync opcional com `utm_aliases` na emissão.
 
@@ -71,9 +71,9 @@ Perfis: Gestor (operação interna).
 - Abas `pendentes | mapeados | ignorados`: ARIA completo (tablist, tab, tabpanel, teclado).
 - **Busca:** `BarraPesquisaPagina` abaixo das abas, no mesmo bloco de filtros — filtra por **UTM Source** (`textoContemBusca`, insensível a acentos); placeholder `PAGE_SEARCH.utmSource`. Vazio com busca: `Nenhum link encontrado para a busca.`
 - Info box: linguagem de produto — **nunca** nomes de tabelas/RPC.
-- Tabela: padrão canónico (`useDataTableBlock`, `getDataTableWrapStyle`, `getDataTableStyle`); `tableLayout: fixed`; scroll horizontal em mobile via `app-table-wrap`. Paginação 20/página. Métricas Depósitos/GGR no painel de detalhe do link (não colunas da grade principal). Coluna **Proprietário** = influencer (nome artístico), afiliado (nome) ou campanha.
+- Tabela: padrão canónico (`useDataTableBlock`, `getDataTableWrapStyle`, `getDataTableStyle`); `tableLayout: fixed`; scroll horizontal em mobile via `app-table-wrap`. Paginação 20/página. Métricas Depósitos/GGR no painel de detalhe do link (não colunas da grade principal). Coluna **Proprietário** = influencer (nome artístico), afiliado (nome) ou campanha. Select com colunas explícitas; falha de lista → alerta canónico + **Tentar novamente** (nunca empty). Ações **Mapear** / **Ignorar** / **Reabrir** = `BtnIconeAcaoLinha` + `tooltipAcao`. Loading: `Carregando…`.
 - **Pendentes — coluna Origem:** `cda_conta` gravado pelo sync CDA (`influencers` | `afiliados`) → rótulos **TAP Influencers** / **TAP Afiliados**. Também coluna **Visitas** (`total_visits`). Ordenação default por visitas. Modal Mapear pré-seleciona tipo **Afiliado** quando origem = TAP Afiliados.
-- **Modal Mapear:** tipos **Influencer** | **Afiliado** | **Campanha**. Afiliado e Influencer gravam em `influencer_id` (mesma FK; papel vem de `profiles.role`). Listas separadas por role; exibição via `nomeExibicaoLinksEntidade`. O catálogo é carregado em duas consultas explícitas (`profiles` → IDs; `influencer_perfil` por `.in("id", ids)`) — não usar embed PostgREST, pois falha na relação não pode esvaziar silenciosamente os dois selects.
+- **Modal Mapear:** tipos **Influencer** | **Afiliado** | **Campanha**. Afiliado e Influencer gravam em `influencer_id` (mesma FK; papel vem de `profiles.role`). Listas separadas por role; exibição via `nomeExibicaoLinksEntidade`. O catálogo é carregado com `fetchAllPages` em `profiles` + `fetchInBatched` em `influencer_perfil` — não usar embed PostgREST, pois falha na relação não pode esvaziar silenciosamente os dois selects.
 - **Proteção de volume:** cada aba consulta no máximo 500 aliases; Pendentes ordena por `total_visits`, demais por `total_ftds`.
 - Órfãos das duas contas TAP CDA (Influencers e Afiliados) entram em Pendentes via `sync-metricas-cda` (`conta` no body).
 - `SortTableTh` + default em coluna de data quando existir (Global).
@@ -87,13 +87,13 @@ Perfis: Gestor (operação interna).
 - Abas `galeria | upload`: `FiltroBarTabButton` + `useRouteTab`; aba **Upload** só com permissão de **Criar** (`galeria_upload` em `appRoutes`).
 - **Galeria:** sub-abas **Gerais** | **Minhas Fotos** (`FiltroBarTabButton`); busca insensível a acentos.
   - **Gerais:** `SelectComIcone` de eventos com agregadora **Todos Eventos** (default `todos`) + todos os eventos ativos; **busca no painel**; blocos por evento recolhíveis (`ChevronRight`, **recolhidos por padrão**; expandem com busca ativa); `SectionTitle` + data no `sub` + **descrição** do evento abaixo do título; contagem de fotos no cabeçalho.
-  - **Minhas Fotos:** `FiltroEntidadeBarSelect` de colaborador com agregadora **Todos Colaboradores** (default) — **somente** com permissão de **Editar** (`canEditarOk`); quem tem só **Ver** vê o filtro travado no colaborador vinculado ao login (`buscarMeuColaboradorGaleria`); blocos por nome do colaborador em **ordem alfabética** (A→Z, `compareLocaleTexto`); com **Todos Colaboradores**, cards **recolhidos por padrão** (`ChevronRight`, igual Gerais) — expandem com busca ativa ou ao clicar na seta; colaborador específico no filtro → bloco expandido.
+  - **Minhas Fotos:** `FiltroEntidadeBarSelect` de prestador com agregadora **Todos Prestadores** (default) — **somente** com permissão de **Editar** (`canEditarOk`); quem tem só **Ver** vê o filtro travado no prestador vinculado ao login (`buscarMeuColaboradorGaleria`); blocos por nome do prestador em **ordem alfabética** (A→Z, `compareLocaleTexto`); com **Todos Prestadores**, cards **recolhidos por padrão** (`ChevronRight`, igual Gerais) — expandem com busca ativa ou ao clicar na seta; prestador específico no filtro → bloco expandido.
 - Ao **encerrar** prestador em Gestão de Prestadores (`termino_prestacao`), as fotos individuais são removidas via **Storage API** (`excluirMarketingFotosDoPrestador`) + RPC `marketing_galeria_excluir_fotos_prestador` (somente `marketing_fotos`); trigger em `rh_funcionarios.status` garante linhas no DB. **Não** usar `DELETE FROM storage.objects` em SQL (Supabase bloqueia). Legado encerrado: `scripts/limpar-galeria-fotos-prestadores-encerrados.mjs`.
-- **Escala (milhares de fotos):** listagem usa RPCs leves `galeria_fotos_resumo_eventos` / `galeria_fotos_resumo_prestadores` (contagem no servidor, **todos** os grupos); fotos carregadas **por evento/colaborador** ao expandir bloco (Gerais) ou ao entrar na aba (Minhas Fotos), com paginação interna de 1000 em 1000 (`listarMarketingFotosPorEvento` / `listarMarketingFotosPorPrestador`); busca ≥2 caracteres via RPC `galeria_fotos_buscar`. **Não** carregar todas as fotos numa query única (limite PostgREST 1000).
-- Perfis só com **Ver** (prestador): aba **Gerais** = todas as fotos gerais; aba **Minhas Fotos** = fotos `prestador` cujo `rh_funcionario_id` coincide com o **e-mail da sessão visível** (`buscarMeuColaboradorGaleria(emailEfetivo)` / `useIdentidadeEfetiva`) — **sem** exigir `visivel_prestador`. No Simulador de Login, a RPC `galeria_fotos_meu_colaborador` usa `auth.uid()` do viewer: passar o e-mail simulado; sem vínculo, **não** listar todos os colaboradores.
+- **Escala (milhares de fotos):** listagem usa RPCs leves `galeria_fotos_resumo_eventos` / `galeria_fotos_resumo_prestadores` (contagem no servidor, **todos** os grupos); fotos carregadas **por evento/prestador** ao expandir bloco (Gerais) ou ao entrar na aba (Minhas Fotos), com paginação interna de 1000 em 1000 (`listarMarketingFotosPorEvento` / `listarMarketingFotosPorPrestador`); busca ≥2 caracteres via RPC `galeria_fotos_buscar`. **Não** carregar todas as fotos numa query única (limite PostgREST 1000). Falha ao expandir/buscar → alerta canónico + **Tentar novamente** (nunca reutilizar o empty filtrado). Bucket privado: URLs assinadas TTL 1h com renovação no cliente (~15 min antes / `onError` na miniatura).
+- Perfis só com **Ver** (prestador): aba **Gerais** = todas as fotos gerais; aba **Minhas Fotos** = fotos `prestador` cujo `rh_funcionario_id` coincide com o **e-mail da sessão visível** (`buscarMeuColaboradorGaleria(emailEfetivo)` / `useIdentidadeEfetiva`) — **sem** exigir `visivel_prestador`. No Simulador de Login, a RPC `galeria_fotos_meu_colaborador` usa `auth.uid()` do viewer: passar o e-mail simulado; sem vínculo, **não** listar todos os prestadores.
 - Perfis **não prestador** com **Ver** na galeria (Marketing, gestor, …): veem **todas** as fotos individuais em **Minhas Fotos** (RLS `20260708160000`).
-- Perfis com **Editar** (ou Criar/Excluir): filtro **Todos Colaboradores** em **Minhas Fotos** (`canEditarOk`).
-- **Upload:** tipo primeiro (**Fotos gerais** | **Fotos de colaborador**); gerais → evento + **Novo Evento** + **Editar Eventos** (perm. **Editar**); modal editar: selecionar evento, alterar nome/data/descrição, **Excluir** (perm. **Excluir**) com aviso se houver fotos gerais vinculadas; múltiplos arquivos JPG/PNG/WebP até **25 MB**; sem campo Legenda.
+- Perfis com **Editar** (ou Criar/Excluir): filtro **Todos Prestadores** em **Minhas Fotos** (`canEditarOk`).
+- **Upload:** tipo primeiro (**Fotos gerais** | **Fotos de prestador**); gerais → evento + **Novo Evento** + **Editar Eventos** (perm. **Editar**); sem eventos cadastrados → empty a orientar criar evento antes do envio + CTA **Novo Evento**; modal editar: selecionar evento, alterar nome/data/descrição, **Excluir** (perm. **Excluir**) com aviso se houver fotos gerais vinculadas; múltiplos arquivos JPG/PNG/WebP até **25 MB**; sem campo Legenda.
 - Storage: `marketing-fotos-gerais` (público) e `marketing-fotos-prestadores` (privado, URL assinada).
 - Coluna `visivel_prestador`: reservada para liberação explícita futura; **não** filtra leitura — única exclusão automática é prestador **encerrado**.
 - Vazio galeria filtrada: `Nenhuma foto encontrada para os filtros selecionados.`
@@ -106,7 +106,7 @@ Perfis: Gestor (operação interna).
 | Estado | Mensagem |
 |--------|----------|
 | Links gerados vazio (Campanhas) | `Nenhum link cadastrado.` |
-| Links pendentes vazio | `Nenhum link pendente. Tudo mapeado!` |
+| Links pendentes vazio | `Nenhum link pendente. UTMs detectados nas contas TAP Influencers e TAP Afiliados aparecem aqui após o sync.` |
 | Mapeados vazio | `Nenhum link mapeado ainda.` |
 | Ignorados vazio | `Nenhum link ignorado.` |
 | Busca UTM sem resultado (Gestão de Links) | `Nenhum link encontrado para a busca.` |

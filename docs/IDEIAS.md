@@ -8,7 +8,7 @@
 **Perguntar** só se a ideia estiver ambígua (não dá para classificar tipo/área nem escrever a nota).
 **Leitura:** ao abrir este compositor, ou quando o usuário apontar um ID noutro chat.
 
-Próximo ID livre: **IDEIA-006**.
+Próximo ID livre: **IDEIA-008**.
 
 ## Como registrar
 
@@ -42,6 +42,14 @@ Status: `inbox` · `pronto` · `em curso` · `feito`.
 - **IDEIA-005** · 17/09/2026 · débito · Geral / Ajuda · inbox
   Mapear páginas, abas e funções sem tutorial.
   Inventário vs catálogo em `tutoriais/catalog.ts` + `relatedPageKey` / `relatedTabId`. Várias páginas já têm Conheça/Troubleshooting mas zero tutorial; outras têm tutorial só numa aba. Chat de implementação: Ajuda — mapa página → aba → função → tutorial (ou «não tem»).
+
+- **IDEIA-006** · 17/09/2026 · feature · RH / Escala Escritório · inbox
+  Requisição de ausência prolongada na Escala Escritório.
+  Fluxo novo para o prestador de escritório pedir ausência de vários dias e o gestor/RH tratar o efeito na grade (`escala_escritorio`). Hoje: Solicitações RH cobre atestado/reunião/vaga/feedback; «Registrar Ausência» existe no Controle de Turno (estúdio, dia operacional) — não é este pedido. Chat: `/nova-feature` — quem pede, quem aprova, como pinta a célula e se vira tipo em Solicitações.
+
+- **IDEIA-007** · 17/09/2026 · feature · Dashboards / Headcount · inbox
+  Listagem de contratações na aba Contratação, no padrão da aba Distratos.
+  Hoje a aba Contratação (`HeadcountAbaVagas`) é pipeline de vagas (Abertas / Em andamento / Fechadas + funil + tabela só de vagas abertas/em andamento). Distratos já lista pessoas (nome, time, admissão, término, tipo, permanência; sort + paginação 20). Incluir tabela equivalente das admissões do período/Histórico. Chat: `/nova-feature` ou Ajustes Gerais — `headcountMetrics.ts` + `HeadcountAbaVagas`.
 
 ## Feito
 

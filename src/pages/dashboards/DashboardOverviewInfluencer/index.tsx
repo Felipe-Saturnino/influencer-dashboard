@@ -872,6 +872,7 @@ export default function DashboardOverviewInfluencer() {
     catalogosPending,
     catalogosError,
     reloadTick,
+    perfis,
   ]);
 
   /** Mês civil atual: só exibe dias até ontem (MTD “fechado”); meses passados = mês inteiro. */

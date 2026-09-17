@@ -38,6 +38,13 @@ const ABA_LABEL: Record<AbaCampanhas, string> = {
   geracao_links: "Geração de Links",
 };
 
+const CAMPANHA_COLS = "id, nome, operadora_slug, ativo, created_at, updated_at" as const;
+
+const MSG_ERRO_CARREGAR_CAMPANHAS =
+  "Não foi possível carregar as campanhas. Se o problema persistir, entre em contato com o suporte.";
+const MSG_ERRO_CARREGAR_LINKS =
+  "Não foi possível carregar os links. Se o problema persistir, entre em contato com o suporte.";
+
 export default function Campanhas() {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
@@ -51,27 +58,48 @@ export default function Campanhas() {
   const [operadorasFiltro, setOperadorasFiltro] = useState<{ slug: string; nome: string }[]>([]);
   const [loadingCampanhas, setLoadingCampanhas] = useState(true);
   const [loadingLinks, setLoadingLinks] = useState(false);
+  const [erroCampanhas, setErroCampanhas] = useState<string | null>(null);
+  const [erroLinks, setErroLinks] = useState<string | null>(null);
   const [filtroOperadora, setFiltroOperadora] = useState<string>(OPERADORA_FILTRO_TODAS_VALUE);
   const [modalNovoLinkOpen, setModalNovoLinkOpen] = useState(false);
 
   const carregarCampanhas = useCallback(async () => {
     setLoadingCampanhas(true);
-    const { data } = await supabase.from("campanhas").select("*").order("nome");
-    setCampanhas(data ?? []);
+    setErroCampanhas(null);
+    const { data, error } = await supabase
+      .from("campanhas")
+      .select(CAMPANHA_COLS)
+      .order("nome");
+    if (error) {
+      console.error("[Campanhas] Erro ao carregar campanhas:", error.message);
+      setCampanhas([]);
+      setErroCampanhas(MSG_ERRO_CARREGAR_CAMPANHAS);
+      setLoadingCampanhas(false);
+      return;
+    }
+    setCampanhas((data ?? []) as Campanha[]);
     setLoadingCampanhas(false);
   }, []);
 
   const carregarLinks = useCallback(async () => {
     setLoadingLinks(true);
+    setErroLinks(null);
     const slug =
       filtroOperadora === OPERADORA_FILTRO_TODAS_VALUE
         ? operadoraSlugsForcado?.length === 1
           ? operadoraSlugsForcado[0]!
           : null
         : filtroOperadora;
-    const list = await carregarCampanhaLinks(slug);
-    setLinks(list);
-    setLoadingLinks(false);
+    try {
+      const list = await carregarCampanhaLinks(slug);
+      setLinks(list);
+    } catch (e: unknown) {
+      console.error("[Campanhas] Erro ao carregar campanha_links:", e);
+      setLinks([]);
+      setErroLinks(MSG_ERRO_CARREGAR_LINKS);
+    } finally {
+      setLoadingLinks(false);
+    }
   }, [filtroOperadora, operadoraSlugsForcado]);
 
   useEffect(() => {
@@ -276,6 +304,7 @@ export default function Campanhas() {
             campanhas={campanhasFiltradas}
             operadoras={operadoras}
             loading={loadingCampanhas}
+            loadError={erroCampanhas}
             onRecarregar={carregarCampanhas}
           />
         ) : null}
@@ -292,6 +321,8 @@ export default function Campanhas() {
             links={links}
             operadoras={operadoras}
             loading={loadingLinks}
+            loadError={erroLinks}
+            onRecarregar={carregarLinks}
             onNovoLink={() => setModalNovoLinkOpen(true)}
           />
         ) : null}

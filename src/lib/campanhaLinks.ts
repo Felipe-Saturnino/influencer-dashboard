@@ -1,7 +1,10 @@
 import { supabase } from "./supabase";
+import { fetchAllPages, fetchInBatched, LIVE_RESULTADOS_IN_CHUNK } from "./supabasePaginate";
 import type { CampanhaLink } from "../types";
 
 const DIAS_ATIVO = 30;
+/** Lote seguro para `.in("utm_source", …)` / `.in("id", …)`. */
+const UTM_IN_CHUNK = LIVE_RESULTADOS_IN_CHUNK;
 
 function isoDateDaysAgo(days: number): string {
   const d = new Date();
@@ -25,37 +28,53 @@ type CampanhaLinkRow = {
   created_at: string;
 };
 
+type MetricaRow = {
+  utm_source: string;
+  operadora_slug: string;
+  data: string;
+  visit_count: number | null;
+  registration_count: number | null;
+  ftd_count: number | null;
+};
+
+type AliasVisitaRow = {
+  utm_source: string;
+  operadora_slug: string | null;
+  ultimo_visto: string | null;
+};
+
 /**
  * Carrega links gerados e deriva Status (Ativo = métricas nos últimos 30 dias) e Última Visita.
+ * Pagina `campanha_links` e loteia métricas/aliases — sem `.limit` arbitrário.
  */
 export async function carregarCampanhaLinks(
   operadoraSlug: string | null,
 ): Promise<CampanhaLink[]> {
-  let query = supabase
-    .from("campanha_links")
-    .select("id, utm_source, operadora_slug, campanha_id, created_by, created_at")
-    .order("created_at", { ascending: false })
-    .limit(2000);
+  const rows = await fetchAllPages<CampanhaLinkRow>(async (from, to) => {
+    let query = supabase
+      .from("campanha_links")
+      .select("id, utm_source, operadora_slug, campanha_id, created_by, created_at")
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: true })
+      .range(from, to);
+    if (operadoraSlug) {
+      query = query.eq("operadora_slug", operadoraSlug);
+    }
+    return query;
+  });
 
-  if (operadoraSlug) {
-    query = query.eq("operadora_slug", operadoraSlug);
-  }
-
-  const { data, error } = await query;
-  if (error) {
-    console.error("[Campanhas] Erro ao carregar campanha_links:", error.message);
-    return [];
-  }
-
-  const rows = (data ?? []) as CampanhaLinkRow[];
   if (rows.length === 0) return [];
 
   const userIds = [...new Set(rows.map((r) => r.created_by).filter(Boolean))] as string[];
   const nomeMap = new Map<string, string>();
   if (userIds.length > 0) {
-    const { data: profiles } = await supabase.from("profiles").select("id, name").in("id", userIds);
-    for (const p of profiles ?? []) {
-      nomeMap.set(p.id, (p.name as string)?.trim() || "—");
+    const profiles = await fetchInBatched(userIds, UTM_IN_CHUNK, async (slice) => {
+      const { data, error } = await supabase.from("profiles").select("id, name").in("id", slice);
+      if (error) throw new Error(error.message);
+      return (data ?? []) as { id: string; name: string | null }[];
+    });
+    for (const p of profiles) {
+      nomeMap.set(p.id, p.name?.trim() || "—");
     }
   }
 
@@ -67,45 +86,53 @@ export async function carregarCampanhaLinks(
   const ultimaVisitaMap = new Map<string, string>();
 
   if (utmSources.length > 0) {
-    let metQ = supabase
-      .from("utm_metricas_diarias")
-      .select("utm_source, operadora_slug, data, visit_count, registration_count, ftd_count")
-      .in("utm_source", utmSources)
-      .gte("data", limiar)
-      .limit(5000);
-    if (opSlugs.length === 1) {
-      metQ = metQ.eq("operadora_slug", opSlugs[0]!);
-    } else if (opSlugs.length > 1) {
-      metQ = metQ.in("operadora_slug", opSlugs);
-    }
-    const { data: metricas } = await metQ;
-    for (const m of metricas ?? []) {
+    const metricas = await fetchInBatched(utmSources, UTM_IN_CHUNK, async (slice) => {
+      let metQ = supabase
+        .from("utm_metricas_diarias")
+        .select("utm_source, operadora_slug, data, visit_count, registration_count, ftd_count")
+        .in("utm_source", slice)
+        .gte("data", limiar);
+      if (opSlugs.length === 1) {
+        metQ = metQ.eq("operadora_slug", opSlugs[0]!);
+      } else if (opSlugs.length > 1) {
+        metQ = metQ.in("operadora_slug", opSlugs);
+      }
+      const { data, error } = await metQ;
+      if (error) throw new Error(error.message);
+      return (data ?? []) as MetricaRow[];
+    });
+
+    for (const m of metricas) {
       const visitas = Number(m.visit_count ?? 0);
       const regs = Number(m.registration_count ?? 0);
       const ftds = Number(m.ftd_count ?? 0);
       if (visitas + regs + ftds <= 0) continue;
       const key = `${m.utm_source}::${m.operadora_slug}`;
       ativoKeys.add(key);
-      const dia = fmtIsoDate(m.data as string);
+      const dia = fmtIsoDate(m.data);
       if (!dia) continue;
       const prev = ultimaVisitaMap.get(key);
       if (!prev || dia > prev) ultimaVisitaMap.set(key, dia);
     }
 
-    let aliasQ = supabase
-      .from("utm_aliases")
-      .select("utm_source, operadora_slug, ultimo_visto")
-      .in("utm_source", utmSources)
-      .limit(2000);
-    if (opSlugs.length === 1) {
-      aliasQ = aliasQ.eq("operadora_slug", opSlugs[0]!);
-    } else if (opSlugs.length > 1) {
-      aliasQ = aliasQ.in("operadora_slug", opSlugs);
-    }
-    const { data: aliases } = await aliasQ;
-    for (const a of aliases ?? []) {
+    const aliases = await fetchInBatched(utmSources, UTM_IN_CHUNK, async (slice) => {
+      let aliasQ = supabase
+        .from("utm_aliases")
+        .select("utm_source, operadora_slug, ultimo_visto")
+        .in("utm_source", slice);
+      if (opSlugs.length === 1) {
+        aliasQ = aliasQ.eq("operadora_slug", opSlugs[0]!);
+      } else if (opSlugs.length > 1) {
+        aliasQ = aliasQ.in("operadora_slug", opSlugs);
+      }
+      const { data, error } = await aliasQ;
+      if (error) throw new Error(error.message);
+      return (data ?? []) as AliasVisitaRow[];
+    });
+
+    for (const a of aliases) {
       const key = `${a.utm_source}::${a.operadora_slug ?? ""}`;
-      const dia = fmtIsoDate(a.ultimo_visto as string | null);
+      const dia = fmtIsoDate(a.ultimo_visto);
       if (!dia) continue;
       const prev = ultimaVisitaMap.get(key);
       if (!prev || dia > prev) ultimaVisitaMap.set(key, dia);

@@ -11,7 +11,9 @@ import { Campanha } from "../../../types";
 import { Pencil, Loader2 } from "lucide-react";
 import { ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal";
 import { BtnExcluirLinha } from "../../../components/BtnExcluirLinha";
+import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
 import { descricaoModalExcluirItem, tooltipExcluir } from "../../../lib/excluirItemUi";
+import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
 import { SectionTitle, SortTableTh, type SortDir } from "../../../components/dashboard";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { TabelaComPaginacao } from "../../../components/TabelaPaginacaoBar";
@@ -33,6 +35,7 @@ interface CampanhasTabContentProps {
   campanhas: Campanha[];
   operadoras: { slug: string; nome: string }[];
   loading: boolean;
+  loadError?: string | null;
   onRecarregar: () => void | Promise<void>;
 }
 
@@ -40,6 +43,7 @@ export function CampanhasTabContent({
   campanhas,
   operadoras,
   loading,
+  loadError = null,
   onRecarregar,
 }: CampanhasTabContentProps) {
   const { theme: t } = useApp();
@@ -48,7 +52,7 @@ export function CampanhasTabContent({
   const [modalOpen, setModalOpen] = useState(false);
   const [editando, setEditando] = useState<Campanha | null>(null);
   const [sortCamp, setSortCamp] = useState<{ col: CampSortCol; dir: SortDir }>({
-    col: "classificacao",
+    col: "criada",
     dir: "desc",
   });
   const [campanhaParaExcluir, setCampanhaParaExcluir] = useState<Campanha | null>(null);
@@ -199,6 +203,35 @@ export function CampanhasTabContent({
             <Loader2 size={22} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden />
             Carregando…
           </div>
+        ) : loadError ? (
+          <div
+            role="alert"
+            aria-live="polite"
+            style={{
+              padding: "48px 0",
+              textAlign: "center",
+              fontFamily: FONT.body,
+            }}
+          >
+            <p style={{ color: "#e84025", fontSize: 13, marginBottom: 12 }}>{loadError}</p>
+            <button
+              type="button"
+              onClick={() => void onRecarregar()}
+              style={{
+                padding: "10px 20px",
+                borderRadius: 10,
+                border: `1px solid ${t.cardBorder}`,
+                background: t.inputBg,
+                color: t.text,
+                fontSize: 13,
+                fontWeight: 700,
+                fontFamily: FONT.body,
+                cursor: "pointer",
+              }}
+            >
+              Tentar novamente
+            </button>
+          </div>
         ) : campanhas.length === 0 ? (
           <div
             style={{
@@ -340,29 +373,15 @@ export function CampanhasTabContent({
                             }}
                           >
                             {perm.canEditarOk ? (
-                              <button
-                                type="button"
+                              <BtnIconeAcaoLinha
+                                label={tooltipAcao("Editar campanha")}
                                 onClick={() => {
                                   setEditando(c);
                                   setModalOpen(true);
                                 }}
-                                style={{
-                                  display: "inline-flex",
-                                  alignItems: "center",
-                                  gap: 5,
-                                  background: "transparent",
-                                  border: `1px solid ${t.cardBorder}`,
-                                  borderRadius: 10,
-                                  padding: "6px 14px",
-                                  cursor: "pointer",
-                                  fontFamily: FONT.body,
-                                  fontSize: 12,
-                                  color: t.text,
-                                  fontWeight: 600,
-                                }}
                               >
-                                <Pencil size={13} aria-hidden /> Editar
-                              </button>
+                                <Pencil size={14} aria-hidden />
+                              </BtnIconeAcaoLinha>
                             ) : null}
                             {perm.canExcluirOk ? (
                               <BtnExcluirLinha
