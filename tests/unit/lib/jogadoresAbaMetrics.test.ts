@@ -10,6 +10,7 @@ import {
   pctJogadores,
   rankingJogadoresAba,
   recortarJogadoresAbaDaily,
+  uapSpinJogadoresAba,
   type JogadorAbaDailyFact,
 } from "@/lib/jogadoresAbaMetrics";
 
@@ -194,6 +195,28 @@ describe("filtrarRowsJogaramSpin", () => {
     expect(mesasJogadoresAba(elegiveis).reduce((s, m) => s + m.rodadas, 0)).toBe(
       kpisJogadoresAba(rows).rodadas,
     );
+  });
+});
+
+describe("uapSpinJogadoresAba", () => {
+  it("deduplica TAP ID no período e soma todas as rodadas, sem exigir registro no mês", () => {
+    const rows = [
+      fact({ ext_customer_id: "1", rodadas_spin: 10 }),
+      fact({ ext_customer_id: "1", rodadas_spin: 5 }),
+      fact({ ext_customer_id: "2", rodadas_spin: 20 }),
+      fact({ ext_customer_id: "3", rodadas_spin: 0 }),
+      fact({ ext_customer_id: "4", influencer_id: null, rodadas_spin: 99 }),
+    ];
+    expect(uapSpinJogadoresAba(rows)).toEqual({ uap: 2, rodadas: 35 });
+  });
+
+  it("trata o mesmo TAP ID em operadoras distintas como UAPs distintos e respeita influencer", () => {
+    const rows = [
+      fact({ ext_customer_id: "1", influencer_id: "inf-a", operadora_slug: "casa_apostas", rodadas_spin: 10 }),
+      fact({ ext_customer_id: "1", influencer_id: "inf-a", operadora_slug: "blaze", rodadas_spin: 20 }),
+      fact({ ext_customer_id: "2", influencer_id: "inf-b", operadora_slug: "blaze", rodadas_spin: 30 }),
+    ];
+    expect(uapSpinJogadoresAba(rows, new Set(["inf-a"]))).toEqual({ uap: 2, rodadas: 30 });
   });
 });
 

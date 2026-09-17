@@ -9,7 +9,9 @@ alwaysApply: false
 
 **Gatilho:** `/carga-mesas` ou «atualizar», «atualizar os dados», «carregar Mesas Spin», «rodar a carga», «atualizar desde …».
 
-**Contrato:** extract no Superset (dashboard 15, sessão logada no browser Cursor) → JSON em `tmp/` → UPSERT **direto** no Supabase com `--gravar`. **Não** pedir ao usuário colar SQL no Editor (salvo falha de `--gravar` ou pedido explícito).
+**Contrato:** extract no Superset (dashboard 15 — **Daily Commercial Report [BRL]**) → JSON em `tmp/` → UPSERT **direto** no Supabase com `--gravar`. **Não** pedir ao usuário colar SQL no Editor (salvo falha de `--gravar` ou pedido explícito).
+
+**Sessão Superset:** o usuário mantém o dashboard 15 **logado no Browser do painel do chat** (`cursor-ide-browser`). O agent consome a sessão via CDP nessa aba — **cookie no `.env` é opcional** (fallback para `node scripts/carga-mesas-spin.mjs` sem Browser MCP).
 
 **Proibido:** commit/push (regra do repo); carregar o **dia corrente incompleto** (D-0); usar slug de estúdio (ex. Sports Club) como `operadora_slug`.
 
@@ -68,9 +70,53 @@ Fonte única: `scripts/superset-mesas-spin-extract-browser.js`.
 
 ---
 
-## Fluxo operacional (agent)
+## Browser do chat (padrão agent — sem cookie)
 
-1. **Browser** — dashboard 15 Superset logado (`superset-sg.proxylive.tech`).
+Pré-requisito operacional: aba **Daily Commercial Report [BRL]** em `https://superset-sg.proxylive.tech/superset/dashboard/15/` aberta e logada no **Browser lateral do chat** (não substituir por Chrome externo salvo fallback CDP).
+
+1. **Tab** — `browser_tabs` (list) → `viewId` da aba dashboard 15; `browser_lock` durante o extract.
+2. **Extract** (ordem fixa): **network** → **dedicado** → **monthly** (`MODO` no script canónico).
+3. **CDP no Browser do chat** — preferir `node tmp/make-compact-extract.mjs <modo> <DE> <ATE>` → montar script em `window.__srcParts` (chunks ~3500) → `eval(window.__srcParts.join(''))` com `awaitPromise: true`. Dump: `JSON.stringify(window.__mesasNet|__mesasDed|__mesasMon)` → `tmp/superset-*.json`. Auto-review pode exigir **Smart Mode** no `browser_cdp` quando o script dispara `/api/v1/chart/data`.
+4. **DevTools Network vazio** até F5 é normal — o extract **não** depende de copiar request/cookie da aba Network.
+5. **Gravar** — `node scripts/superset-mesas-spin-run.mjs` ou `node scripts/carga-mesas-spin.mjs --so-gravar …` (ver abaixo).
+6. **Validar** — `node tmp/ultimo-dia-supabase.mjs`.
+
+**Proibido** pedir cookie ao usuário quando a aba do Browser do chat estiver logada. **Proibido** colar cookie no chat ou git.
+
+Extract **neste compositor** — subagentes não herdam o Browser MCP do chat.
+
+---
+
+## Comando único (fallback — cookie ou Chrome CDP)
+
+Quando **não** houver aba Superset no Browser do chat (automação local, CI, ou chat sem MCP):
+
+Sessão no **Cookie** (renovar como Grafana — DevTools → Network → request ao dashboard 15 → header `Cookie`):
+
+```bash
+# .env.gp-kpi
+SUPERSET_MESAS_COOKIE=…
+```
+
+Depois, **extract + gravar até D-1** num passo:
+
+```bash
+node scripts/carga-mesas-spin.mjs
+```
+
+Chrome com `--remote-debugging-port=9222` + dashboard 15 logado: `node scripts/carga-mesas-spin.mjs --cdp`.
+
+Reload explícito: `node scripts/carga-mesas-spin.mjs --de=2026-09-01 --ate=2026-09-06` (inclusivos). Só UPSERT se JSON já existir: `--so-gravar --network=tmp/… --dedicado=tmp/… --monthly=tmp/…`.
+
+Extract avulso: `node scripts/superset-mesas-spin-extract-node.mjs network 2026-09-16 2026-09-17 --out=tmp/….json` (`ATE` exclusivo).
+
+Nunca commitar `.env.gp-kpi`.
+
+---
+
+## Fluxo operacional (agent — detalhe extract)
+
+1. **Preferir** § Browser do chat. Cookie/CDP só se a aba do chat não existir ou estiver deslogada.
 2. **Extract** (nesta ordem):
    - **Network** — `MODO=network` (split marcas via `marca`)
    - **Dedicado** — `MODO=dedicado` (Casa + Blaze)
@@ -99,7 +145,7 @@ Fonte única: `scripts/superset-mesas-spin-extract-browser.js`.
 9. **Validar** após gravar: linhas em `bateu_bet` / `brx_bet` / `rico_bet` / `donald_bet` / `betponto_bet` / `esportiva_bet` (daily + monthly) no intervalo.
 10. Informar o usuário (dias, slugs novos com volume) e: alterações locais uncommitted — commit/push manual.
 
-Scripts canónicos: `scripts/superset-mesas-spin-extract-browser.js`, `scripts/superset-mesas-spin-run.mjs`, helpers `tmp/make-compact-extract.mjs`, `tmp/make-oneshot-inject.mjs`.
+Scripts canónicos: `scripts/carga-mesas-spin.mjs` (orquestrador), `scripts/superset-mesas-spin-extract-node.mjs` (cookie), `scripts/superset-mesas-spin-extract-cdp.mjs` (Chrome `--remote-debugging-port`), `scripts/superset-mesas-spin-extract-browser.js` (fonte), `scripts/superset-mesas-spin-run.mjs`, helpers `tmp/make-compact-extract.mjs`, `tmp/make-oneshot-inject.mjs`. Setup cookie: `docs/SETUP-MESAS-SPIN-CARGA.md`.
 
 ---
 

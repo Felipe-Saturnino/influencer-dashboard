@@ -6,6 +6,7 @@ export type DashboardInfluencerCatalogo = {
   id: string;
   nome_artistico: string;
   cache_hora: number;
+  status: string | null;
 };
 
 export type DashboardOperadoraCatalogo = {
@@ -25,7 +26,7 @@ export function useDashboardCatalogos() {
       const [perfisRes, opsRes, vinculosRes] = await Promise.all([
         supabase
           .from("influencer_perfil")
-          .select("id, nome_artistico, cache_hora")
+          .select("id, nome_artistico, cache_hora, status")
           .order("nome_artistico"),
         supabase.from("operadoras").select("slug, nome").eq("ativo", true).order("nome"),
         supabase.from("influencer_operadoras").select("influencer_id, operadora_slug"),

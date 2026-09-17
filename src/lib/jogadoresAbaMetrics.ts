@@ -57,6 +57,16 @@ export type JogadorAbaMesaBar = {
   cor: string;
 };
 
+export type JogadoresUapSpin = {
+  uap: number;
+  rodadas: number;
+};
+
+export type JogadorUapSpinFact = Pick<
+  JogadorAbaDailyFact,
+  "operadora_slug" | "ext_customer_id" | "influencer_id" | "rodadas_spin"
+>;
+
 type PlayerFold = {
   influencer_id: string | null;
   registrou: boolean;
@@ -187,6 +197,31 @@ export function kpisJogadoresAba(rows: JogadorAbaDailyFact[]): JogadorAbaKpis {
     mediaRodadas: jogaramSpin === 0 ? null : rodadas / jogaramSpin,
     ggrSpin,
     turnoverSpin,
+  };
+}
+
+/**
+ * UAP Spin do canal no período, sem recorte de coorte de cadastro.
+ * Deduplica por operadora + TAP ID e soma as rodadas de todos os dias do recorte.
+ */
+export function uapSpinJogadoresAba(
+  rows: JogadorUapSpinFact[],
+  influencerIds?: Set<string> | null,
+): JogadoresUapSpin {
+  const players = new Map<string, number>();
+  for (const r of rows) {
+    if (!r.influencer_id) continue;
+    if (influencerIds && !influencerIds.has(r.influencer_id)) continue;
+    const ext = (r.ext_customer_id ?? "").trim();
+    if (!ext) continue;
+    const rodadas = n(r.rodadas_spin);
+    if (rodadas <= 0) continue;
+    const key = playerKey(r.operadora_slug, ext);
+    players.set(key, (players.get(key) ?? 0) + rodadas);
+  }
+  return {
+    uap: players.size,
+    rodadas: [...players.values()].reduce((total, rodadas) => total + rodadas, 0),
   };
 }
 

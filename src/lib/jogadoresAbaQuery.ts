@@ -4,6 +4,7 @@ import {
   contarRegistrosUnicosJogadores,
   registrosUnicosVazios,
   type JogadorAbaDailyFact,
+  type JogadorUapSpinFact,
   type JogadoresRegistrosUnicos,
 } from "./jogadoresAbaMetrics";
 
@@ -100,6 +101,60 @@ export async function fetchJogadoresAbaDaily(filtro: JogadoresAbaQueryFiltro): P
   }
 
   return fetchPaginas(filtro);
+}
+
+const COLS_UAP_SPIN = "operadora_slug,ext_customer_id,influencer_id,rodadas_spin";
+
+type UapSpinRow = {
+  operadora_slug: string;
+  ext_customer_id: string;
+  influencer_id: string;
+  rodadas_spin: number;
+};
+
+function baseQueryUapSpin(filtro: JogadoresAbaQueryFiltro, influencerSlice?: string[]) {
+  let q = supabase
+    .from("jogadores_metricas_diarias")
+    .select(COLS_UAP_SPIN)
+    .eq("cda_conta", "influencers")
+    .gt("rodadas_spin", 0)
+    .not("influencer_id", "is", null)
+    .gte("data", filtro.inicio)
+    .lte("data", filtro.fim);
+  if (filtro.operadoraSlugs?.length === 1) {
+    q = q.eq("operadora_slug", filtro.operadoraSlugs[0]);
+  } else if (filtro.operadoraSlugs && filtro.operadoraSlugs.length > 1) {
+    q = q.in("operadora_slug", filtro.operadoraSlugs);
+  }
+  if (influencerSlice?.length) q = q.in("influencer_id", influencerSlice);
+  return q;
+}
+
+async function fetchPaginasUapSpin(
+  filtro: JogadoresAbaQueryFiltro,
+  influencerSlice?: string[],
+): Promise<JogadorUapSpinFact[]> {
+  return fetchAllPages<UapSpinRow>(async (from, to) => {
+    const { data, error } = await baseQueryUapSpin(filtro, influencerSlice).range(from, to);
+    return { data: (data as UapSpinRow[] | null) ?? null, error };
+  });
+}
+
+/** Linhas mínimas para UAP Spin da Overview; evita carregar JSON de mesa/jogo nessa aba. */
+export async function fetchJogadoresUapSpin(
+  filtro: JogadoresAbaQueryFiltro,
+): Promise<JogadorUapSpinFact[]> {
+  if (filtro.operadoraSlugs && filtro.operadoraSlugs.length === 0) return [];
+  if (filtro.influencerIds && filtro.influencerIds.length === 0) return [];
+  if (filtro.influencerIds?.length) {
+    return fetchInBatched(
+      filtro.influencerIds,
+      INFLUENCER_IN_CHUNK,
+      (slice) => fetchPaginasUapSpin(filtro, slice),
+      2,
+    );
+  }
+  return fetchPaginasUapSpin(filtro);
 }
 
 const COLS_REGISTROS = "operadora_slug,ext_customer_id,influencer_id,registration_count";

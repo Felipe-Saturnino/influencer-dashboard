@@ -69,10 +69,10 @@ function fmt(n) {
   return Number(n ?? 0).toLocaleString("pt-BR");
 }
 
-async function limparColunasSpin(base, key, desde) {
+async function limparColunasSpin(base, key, desde, ate) {
   const url =
     `${base}/rest/v1/jogadores_metricas_diarias` +
-    `?operadora_slug=eq.${OPERADORA}&cda_conta=eq.${CONTA}&data=gte.${desde}`;
+    `?operadora_slug=eq.${OPERADORA}&cda_conta=eq.${CONTA}&data=gte.${desde}&data=lte.${ate}`;
   const res = await fetch(url, {
     method: "PATCH",
     headers: {
@@ -130,8 +130,7 @@ async function main() {
   console.log(`${meses[0]} → ${meses.at(-1)} · D-1 = ${ONTEM_SP}\n`);
 
   if (gravar) {
-    const limpas = await limparColunasSpin(base, key, `${meses[0]}-01`);
-    console.log(`limpeza das colunas Spin: ${fmt(limpas)} linhas (TAP preservado)\n`);
+    console.log("limpeza: a Edge v1.5 zera as colunas Spin da competência antes do UPSERT (TAP preservado)\n");
   } else {
     console.log("limpeza não executada (falta --gravar)\n");
   }
@@ -148,7 +147,7 @@ async function main() {
     totalDias += b.dias_spin ?? 0;
     totalUpsert += b.diario_upsert ?? 0;
     console.log(
-      `${competencia}  ${r.dataInicio}→${r.dataFim}  jogaram_spin=${fmt(b.jogaram_spin)}  dias=${fmt(b.dias_spin)}  upsert=${fmt(b.diario_upsert)}  missing=${fmt(b.missing)}  (${(r.ms / 1000).toFixed(1)}s)`,
+      `${competencia}  ${r.dataInicio}→${r.dataFim}  versao=${b.versao ?? "?"}  fonte=${b.fonte_rodadas ?? "?"}  jogaram_spin=${fmt(b.jogaram_spin)}  dias=${fmt(b.dias_spin)}  upsert=${fmt(b.diario_upsert)}  missing=${fmt(b.missing)}  (${(r.ms / 1000).toFixed(1)}s)`,
     );
   }
 

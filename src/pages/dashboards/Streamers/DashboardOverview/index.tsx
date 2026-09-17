@@ -12,8 +12,12 @@ import {
   getPageFilterBoxStyle,
 } from "../../../../lib/pageContentBoxStyles";
 import { fetchInfluencerAnalyticsPeriodoCached } from "../../../../lib/influencerAnalyticsQuery";
-import { fetchJogadoresRegistrosUnicos } from "../../../../lib/jogadoresAbaQuery";
-import { aplicarRegistrosUnicosPorInfluencer } from "../../../../lib/jogadoresAbaMetrics";
+import { fetchJogadoresRegistrosUnicos, fetchJogadoresUapSpin } from "../../../../lib/jogadoresAbaQuery";
+import {
+  aplicarRegistrosUnicosPorInfluencer,
+  uapSpinJogadoresAba,
+  type JogadorUapSpinFact,
+} from "../../../../lib/jogadoresAbaMetrics";
 import { buscarInvestimentoPago, filtrosInvestimentoPorEscopo } from "../../../../lib/investimentoPago";
 import {
   BRAND,
@@ -34,6 +38,7 @@ import {
 import {
   SectionTitle,
   KpiCard,
+  KpiCardDuplo,
   KpiCardDepositos,
   FunilVisual,
   FiltroHistoricoButton,
@@ -54,8 +59,6 @@ import {
   ChevronRight,
   Clock,
   Coins,
-  Receipt,
-  Wallet,
   TrendingUp,
   Trophy,
   UserPlus,
@@ -82,6 +85,7 @@ interface InfluencerPerfil {
   id: string;
   nome_artistico: string;
   cache_hora: number;
+  status: string | null;
 }
 
 interface LiveData {
@@ -129,15 +133,34 @@ interface RankingRow {
   roi: number | null;
   plataformas: string[];
   statusLabel: StatusLabel;
+  perfilStatus: string | null;
 }
 
 interface TotaisData {
   ggr: number; investimento: number; roi: number;
   ftds: number; registros: number; acessos: number; views: number;
   custoPorFTD: number; custoPorRegistro: number;
-  lives: number; horas: number; influencers: number;
+  lives: number; horas: number; influencersAtivos: number; influencersInativos: number;
   depositos_qtd: number; depositos_valor: number;
 }
+
+const TOTAIS_VAZIOS: TotaisData = {
+  ggr: 0,
+  investimento: 0,
+  roi: 0,
+  ftds: 0,
+  registros: 0,
+  acessos: 0,
+  views: 0,
+  custoPorFTD: 0,
+  custoPorRegistro: 0,
+  lives: 0,
+  horas: 0,
+  influencersAtivos: 0,
+  influencersInativos: 0,
+  depositos_qtd: 0,
+  depositos_valor: 0,
+};
 
 // ─── HELPERS (calculaTotais específico do Overview) ───────────────────────────
 function calculaTotais(rows: RankingRow[], totalInvestimento?: number): TotaisData {
@@ -151,10 +174,15 @@ function calculaTotais(rows: RankingRow[], totalInvestimento?: number): TotaisDa
   const horas         = rows.reduce((s, r) => s + r.horas, 0);
   const depositos_qtd   = rows.reduce((s, r) => s + r.depositos_qtd, 0);
   const depositos_valor = rows.reduce((s, r) => s + r.depositos_valor, 0);
-  const influencers   = rows.filter((r) => r.lives > 0).length;
+  const influencersComLive = rows.filter((r) => r.lives > 0);
+  const influencersInativos = influencersComLive.filter((r) => {
+    const status = (r.perfilStatus ?? "ativo").toLowerCase();
+    return status === "inativo" || status === "cancelado";
+  }).length;
+  const influencersAtivos = influencersComLive.length - influencersInativos;
   return {
     ggr, investimento: invest, roi: invest > 0 ? ((ggr - invest) / invest) * 100 : 0,
-    ftds, registros, acessos, views, lives, horas, influencers,
+    ftds, registros, acessos, views, lives, horas, influencersAtivos, influencersInativos,
     depositos_qtd, depositos_valor,
     custoPorFTD: ftds > 0 ? invest / ftds : 0,
     custoPorRegistro: registros > 0 ? invest / registros : 0,
@@ -253,8 +281,10 @@ export default function DashboardOverview() {
 
   const [ranking, setRanking]     = useState<RankingRow[]>([]);
   const [rankingAnt, setRankingAnt] = useState<RankingRow[]>([]);
-  const [totais, setTotais]       = useState<TotaisData>({ ggr: 0, investimento: 0, roi: 0, ftds: 0, registros: 0, acessos: 0, views: 0, custoPorFTD: 0, custoPorRegistro: 0, lives: 0, horas: 0, influencers: 0, depositos_qtd: 0, depositos_valor: 0 });
-  const [totaisAnt, setTotaisAnt] = useState<TotaisData>({ ggr: 0, investimento: 0, roi: 0, ftds: 0, registros: 0, acessos: 0, views: 0, custoPorFTD: 0, custoPorRegistro: 0, lives: 0, horas: 0, influencers: 0, depositos_qtd: 0, depositos_valor: 0 });
+  const [jogadoresUap, setJogadoresUap] = useState<JogadorUapSpinFact[]>([]);
+  const [jogadoresUapAnt, setJogadoresUapAnt] = useState<JogadorUapSpinFact[]>([]);
+  const [totais, setTotais]       = useState<TotaisData>(TOTAIS_VAZIOS);
+  const [totaisAnt, setTotaisAnt] = useState<TotaisData>(TOTAIS_VAZIOS);
 
   const mesSelecionado = mesesDisponiveis[idxMes];
 
@@ -287,7 +317,8 @@ export default function DashboardOverview() {
       setErroCarga(null);
       setMomPronto(false);
       setRankingAnt([]);
-      setTotaisAnt({ ggr: 0, investimento: 0, roi: 0, ftds: 0, registros: 0, acessos: 0, views: 0, custoPorFTD: 0, custoPorRegistro: 0, lives: 0, horas: 0, influencers: 0, depositos_qtd: 0, depositos_valor: 0 });
+      setJogadoresUapAnt([]);
+      setTotaisAnt(TOTAIS_VAZIOS);
 
       const perfisLista: InfluencerPerfil[] = perfis;
       let operadoraSlugsQuery = streamersOperadoraSlugsQuery(filtroOperadora, escoposVisiveis, operadoraSlugsForcado);
@@ -307,7 +338,7 @@ export default function DashboardOverview() {
           if (!mapa.has(met.influencer_id)) {
             const p = perfisLista.find((x) => x.id === met.influencer_id);
             if (!p) return;
-            mapa.set(met.influencer_id, { influencer_id: met.influencer_id, nome: p.nome_artistico, lives: 0, horas: 0, views: 0, viewsTotal: 0, liveComViews: 0, acessos: 0, registros: 0, ftds: 0, depositos_qtd: 0, depositos_valor: 0, ggr: 0, investimento: 0, roi: null, plataformas: [], statusLabel: "Sem dados" });
+            mapa.set(met.influencer_id, { influencer_id: met.influencer_id, nome: p.nome_artistico, lives: 0, horas: 0, views: 0, viewsTotal: 0, liveComViews: 0, acessos: 0, registros: 0, ftds: 0, depositos_qtd: 0, depositos_valor: 0, ggr: 0, investimento: 0, roi: null, plataformas: [], statusLabel: "Sem dados", perfilStatus: p.status });
           }
           const row = mapa.get(met.influencer_id)!;
           row.acessos        += met.visit_count || 0;
@@ -321,7 +352,7 @@ export default function DashboardOverview() {
           if (!mapa.has(live.influencer_id)) {
             const p = perfisLista.find((x) => x.id === live.influencer_id);
             if (!p) return;
-            mapa.set(live.influencer_id, { influencer_id: live.influencer_id, nome: p.nome_artistico, lives: 0, horas: 0, views: 0, viewsTotal: 0, liveComViews: 0, acessos: 0, registros: 0, ftds: 0, depositos_qtd: 0, depositos_valor: 0, ggr: 0, investimento: 0, roi: null, plataformas: [], statusLabel: "Sem dados" });
+            mapa.set(live.influencer_id, { influencer_id: live.influencer_id, nome: p.nome_artistico, lives: 0, horas: 0, views: 0, viewsTotal: 0, liveComViews: 0, acessos: 0, registros: 0, ftds: 0, depositos_qtd: 0, depositos_valor: 0, ggr: 0, investimento: 0, roi: null, plataformas: [], statusLabel: "Sem dados", perfilStatus: p.status });
           }
           const row = mapa.get(live.influencer_id)!;
           row.lives += 1;
@@ -346,8 +377,6 @@ export default function DashboardOverview() {
         });
       }
 
-      const totaisVazio: TotaisData = { ggr: 0, investimento: 0, roi: 0, ftds: 0, registros: 0, acessos: 0, views: 0, custoPorFTD: 0, custoPorRegistro: 0, lives: 0, horas: 0, influencers: 0, depositos_qtd: 0, depositos_valor: 0 };
-
       try {
         let metricas: Metrica[] = [], lives: LiveData[] = [], resultados: LiveResultado[] = [];
         let periodo: { inicio: string; fim: string };
@@ -368,7 +397,7 @@ export default function DashboardOverview() {
           { operadora_slug: operadoraSlugParaApi, filtroInfluencer }
         );
 
-        const [analytics, investimentoPago, registrosUnicos] = await Promise.all([
+        const [analytics, investimentoPago, registrosUnicos, jogadoresDoPeriodo] = await Promise.all([
           fetchInfluencerAnalyticsPeriodoCached({
             inicio: periodo.inicio,
             fim: periodo.fim,
@@ -377,6 +406,12 @@ export default function DashboardOverview() {
           }),
           buscarInvestimentoPago(periodo, filtrosInvest),
           fetchJogadoresRegistrosUnicos({
+            inicio: periodo.inicio,
+            fim: periodo.fim,
+            operadoraSlugs: operadoraSlugsQuery,
+            influencerIds: influencerIdsQuery,
+          }),
+          fetchJogadoresUapSpin({
             inicio: periodo.inicio,
             fim: periodo.fim,
             operadoraSlugs: operadoraSlugsQuery,
@@ -406,13 +441,14 @@ export default function DashboardOverview() {
         );
         const rowsVisiveis = rows.filter((r) => podeVerInfluencer(r.influencer_id));
         setRanking(rowsVisiveis);
+        setJogadoresUap(jogadoresDoPeriodo);
         setTotais(calculaTotais(rowsVisiveis, investimentoPago.total));
         setLoading(false);
 
         if (mom) {
           try {
             const periodoAnt = mom.anterior;
-            const [investAnt, analyticsAnt, registrosUnicosAnt] = await Promise.all([
+            const [investAnt, analyticsAnt, registrosUnicosAnt, jogadoresDoPeriodoAnt] = await Promise.all([
               buscarInvestimentoPago(
                 periodoAnt,
                 filtrosInvestimentoPorEscopo(
@@ -436,6 +472,12 @@ export default function DashboardOverview() {
                 operadoraSlugs: operadoraSlugsQuery,
                 influencerIds: influencerIdsQuery,
               }),
+              fetchJogadoresUapSpin({
+                inicio: periodoAnt.inicio,
+                fim: periodoAnt.fim,
+                operadoraSlugs: operadoraSlugsQuery,
+                influencerIds: influencerIdsQuery,
+              }),
             ]);
             if (cancelled) return;
             const rowsAnt = aplicarRegistrosUnicosPorInfluencer(
@@ -448,6 +490,7 @@ export default function DashboardOverview() {
               registrosUnicosAnt.porInfluencer,
             ).filter((r) => podeVerInfluencer(r.influencer_id));
             setRankingAnt(rowsAnt);
+            setJogadoresUapAnt(jogadoresDoPeriodoAnt);
             setTotaisAnt(calculaTotais(rowsAnt, investAnt.total));
             setMomPronto(true);
           } catch (errMom) {
@@ -460,7 +503,8 @@ export default function DashboardOverview() {
         if (!cancelled) {
           setErroCarga(MSG_ERRO_STREAMERS);
           setRanking([]);
-          setTotais(totaisVazio);
+          setJogadoresUap([]);
+          setTotais(TOTAIS_VAZIOS);
           setLoading(false);
         }
       }
@@ -553,6 +597,18 @@ export default function DashboardOverview() {
     const totalAnt = filtroInfluencer === "todos" ? totaisAnt.investimento : undefined;
     return calculaTotais(rankingAntFiltrado, totalAnt);
   }, [rankingAntFiltrado, filtroInfluencer, totaisAnt.investimento]);
+  const uapSpinExibido = useMemo(() => {
+    const ids = statusFiltro
+      ? new Set(rankingFiltrado.map((row) => row.influencer_id))
+      : null;
+    return uapSpinJogadoresAba(jogadoresUap, ids);
+  }, [jogadoresUap, rankingFiltrado, statusFiltro]);
+  const uapSpinAntExibido = useMemo(() => {
+    const ids = statusFiltro
+      ? new Set(rankingAntFiltrado.map((row) => row.influencer_id))
+      : null;
+    return uapSpinJogadoresAba(jogadoresUapAnt, ids);
+  }, [jogadoresUapAnt, rankingAntFiltrado, statusFiltro]);
 
   const semDadosPeriodo = !loading && !erroCarga && rankingBaseFiltro.length === 0;
 
@@ -699,11 +755,11 @@ export default function DashboardOverview() {
             <div className="app-grid-kpi-3" style={{ marginBottom: 12 }}>
               {[0, 1, 2].map((i) => <SkeletonKpiCard key={i} />)}
             </div>
-            <div className="app-grid-kpi-4" style={{ marginBottom: 12 }}>
-              {[0, 1, 2, 3].map((i) => <SkeletonKpiCard key={`op-${i}`} />)}
+            <div className="app-grid-kpi-3" style={{ marginBottom: 12 }}>
+              {[0, 1, 2].map((i) => <SkeletonKpiCard key={`op-${i}`} />)}
             </div>
-            <div className="app-grid-kpi-4">
-              {[0, 1, 2, 3].map((i) => <SkeletonKpiCard key={`cv-${i}`} />)}
+            <div className="app-grid-kpi-3">
+              {[0, 1, 2].map((i) => <SkeletonKpiCard key={`cv-${i}`} />)}
             </div>
           </>
         ) : semDadosPeriodo ? (
@@ -744,10 +800,46 @@ export default function DashboardOverview() {
             >
               Operação
             </div>
-            <div className="app-grid-kpi-4" style={{ marginBottom: 12 }}>
-              <KpiCard label="Lives" value={totaisExibidos.lives.toLocaleString("pt-BR")} icon={<Video size={16} aria-hidden />} accentVar="--brand-contrast" accentColor={BRAND.operacao} atual={totaisExibidos.lives} anterior={totaisAntExibidos.lives} isHistorico={historico || !momPronto} />
-              <KpiCard label="Horas Realizadas" value={fmtHorasTotal(totaisExibidos.horas)} icon={<Clock size={16} aria-hidden />} accentVar="--brand-contrast" accentColor={BRAND.operacao} atual={totaisExibidos.horas} anterior={totaisAntExibidos.horas} isHistorico={historico || !momPronto} />
-              <KpiCard label="Influencers Ativos" value={totaisExibidos.influencers.toLocaleString("pt-BR")} icon={<Users size={16} aria-hidden />} accentVar="--brand-icon-color" accentColor={BRAND.operacao} atual={totaisExibidos.influencers} anterior={totaisAntExibidos.influencers} isHistorico={historico || !momPronto} />
+            <div className="app-grid-kpi-3" style={{ marginBottom: 12 }}>
+              <KpiCardDuplo
+                label="Influencers"
+                icon={<Users size={16} aria-hidden />}
+                accentVar="--brand-icon-color"
+                accentColor={BRAND.operacao}
+                esquerdo={{
+                  label: "Ativos",
+                  valor: totaisExibidos.influencersAtivos,
+                  anterior: totaisAntExibidos.influencersAtivos,
+                  exibicao: totaisExibidos.influencersAtivos.toLocaleString("pt-BR"),
+                }}
+                direito={{
+                  label: "Inativos",
+                  valor: totaisExibidos.influencersInativos,
+                  anterior: totaisAntExibidos.influencersInativos,
+                  exibicao: totaisExibidos.influencersInativos.toLocaleString("pt-BR"),
+                  isInverso: true,
+                }}
+                isHistorico={historico || !momPronto}
+              />
+              <KpiCardDuplo
+                label="Lives"
+                icon={<Video size={16} aria-hidden />}
+                accentVar="--brand-contrast"
+                accentColor={BRAND.operacao}
+                esquerdo={{
+                  label: "Qtd",
+                  valor: totaisExibidos.lives,
+                  anterior: totaisAntExibidos.lives,
+                  exibicao: totaisExibidos.lives.toLocaleString("pt-BR"),
+                }}
+                direito={{
+                  label: "Horas",
+                  valor: totaisExibidos.horas,
+                  anterior: totaisAntExibidos.horas,
+                  exibicao: fmtHorasTotal(totaisExibidos.horas),
+                }}
+                isHistorico={historico || !momPronto}
+              />
               <KpiCardDepositos atual={{ qtd: totaisExibidos.depositos_qtd, valor: totaisExibidos.depositos_valor }} anterior={{ qtd: totaisAntExibidos.depositos_qtd, valor: totaisAntExibidos.depositos_valor }} isHistorico={historico || !momPronto} />
             </div>
 
@@ -766,11 +858,65 @@ export default function DashboardOverview() {
             >
               Conversão
             </div>
-            <div className="app-grid-kpi-4">
-              <KpiCard label="Registros" value={totaisExibidos.registros.toLocaleString("pt-BR")} icon={<UserPlus size={16} aria-hidden />} accentVar="--brand-action" accentColor={BRAND.transacao} atual={totaisExibidos.registros} anterior={totaisAntExibidos.registros} isHistorico={historico || !momPronto} />
-              <KpiCard label="Custo por Registro" value={totaisExibidos.registros > 0 ? fmtBRL(totaisExibidos.custoPorRegistro) : "—"} icon={<Receipt size={16} aria-hidden />} accentVar="--brand-contrast" accentColor={BRAND.custo} atual={totaisExibidos.custoPorRegistro} anterior={totaisAntExibidos.custoPorRegistro} isBRL isHistorico={historico || !momPronto} />
-              <KpiCard label="FTDs" value={totaisExibidos.ftds.toLocaleString("pt-BR")} icon={<Trophy size={16} aria-hidden />} accentVar="--brand-action" accentColor={BRAND.transacao} atual={totaisExibidos.ftds} anterior={totaisAntExibidos.ftds} isHistorico={historico || !momPronto} />
-              <KpiCard label="Custo por FTD" value={totaisExibidos.ftds > 0 ? fmtBRL(totaisExibidos.custoPorFTD) : "—"} icon={<Wallet size={16} aria-hidden />} accentVar="--brand-contrast" accentColor={BRAND.custo} atual={totaisExibidos.custoPorFTD} anterior={totaisAntExibidos.custoPorFTD} isBRL isHistorico={historico || !momPronto} />
+            <div className="app-grid-kpi-3">
+              <KpiCardDuplo
+                label="Registros"
+                icon={<UserPlus size={16} aria-hidden />}
+                accentVar="--brand-action"
+                accentColor={BRAND.transacao}
+                esquerdo={{
+                  label: "Qtd",
+                  valor: totaisExibidos.registros,
+                  anterior: totaisAntExibidos.registros,
+                  exibicao: totaisExibidos.registros.toLocaleString("pt-BR"),
+                }}
+                direito={{
+                  label: "Custo Médio",
+                  valor: totaisExibidos.custoPorRegistro,
+                  anterior: totaisAntExibidos.custoPorRegistro,
+                  exibicao: totaisExibidos.registros > 0 ? fmtBRL(totaisExibidos.custoPorRegistro) : "—",
+                  isInverso: true,
+                }}
+                isHistorico={historico || !momPronto}
+              />
+              <KpiCardDuplo
+                label="FTDs"
+                icon={<Trophy size={16} aria-hidden />}
+                accentVar="--brand-action"
+                accentColor={BRAND.transacao}
+                esquerdo={{
+                  label: "Qtd",
+                  valor: totaisExibidos.ftds,
+                  anterior: totaisAntExibidos.ftds,
+                  exibicao: totaisExibidos.ftds.toLocaleString("pt-BR"),
+                }}
+                direito={{
+                  label: "Custo Médio",
+                  valor: totaisExibidos.custoPorFTD,
+                  anterior: totaisAntExibidos.custoPorFTD,
+                  exibicao: totaisExibidos.ftds > 0 ? fmtBRL(totaisExibidos.custoPorFTD) : "—",
+                  isInverso: true,
+                }}
+                isHistorico={historico || !momPronto}
+              />
+              <KpiCardDuplo
+                label="UAP Spin"
+                icon={<Users size={16} aria-hidden />}
+                accentColor={BRAND.verde}
+                esquerdo={{
+                  label: "Qtd",
+                  valor: uapSpinExibido.uap,
+                  anterior: uapSpinAntExibido.uap,
+                  exibicao: uapSpinExibido.uap.toLocaleString("pt-BR"),
+                }}
+                direito={{
+                  label: "Rodadas",
+                  valor: uapSpinExibido.rodadas,
+                  anterior: uapSpinAntExibido.rodadas,
+                  exibicao: uapSpinExibido.rodadas.toLocaleString("pt-BR"),
+                }}
+                isHistorico={historico || !momPronto}
+              />
             </div>
           </>
         )}
