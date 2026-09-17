@@ -9,8 +9,9 @@ import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../li
 import { getPageContentBoxStyle, getPageFilterBoxStyle } from "../../../lib/pageContentBoxStyles";
 import { getGameTagChipStyle } from "../../../lib/gameIdentityColors";
 import { GAME_IDENTITY_ICONS } from "../../../lib/gameIdentityIcons";
-import { BRAND, FONT_TITLE, MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
+import { BRAND, FONT_TITLE } from "../../../lib/dashboardConstants";
 import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
+import { fetchAllPages } from "../../../lib/supabasePaginate";
 import type { Dealer, DealerGenero, DealerTurno, DealerJogo, Operadora } from "../../../types";
 import {
   Eye,
@@ -52,6 +53,15 @@ import { corStatusSolicitacao, type SolicitacaoStatus, type SolicitacaoTipo } fr
 
 /** Jogos no cadastro e filtros. `mesa_vip` pode existir no banco por legado; usar flag `vip` no cadastro. */
 type DealerJogoCadastro = Exclude<DealerJogo, "mesa_vip">;
+
+const DEALER_LISTA_COLS =
+  "id, nome_real, nickname, fotos, genero, turno, jogos, estudio_slug, operadora_slug, perfil_influencer, rh_funcionario_id, status, vip, created_at, updated_at";
+
+const MSG_ERRO_CARREGAR_DEALERS =
+  "Não foi possível carregar os dealers. Se o problema persistir, entre em contato com o suporte.";
+const MSG_VAZIO_DEALERS = "Nenhum dealer encontrado.";
+const MSG_ERRO_HISTORICO_SOLIC =
+  "Não foi possível carregar as solicitações. Se o problema persistir, entre em contato com o suporte.";
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 const GENERO_OPTS: { value: DealerGenero; label: string }[] = [
@@ -161,6 +171,7 @@ export default function GestaoDealers() {
     { operadora_slug: string; estudio_slug: string; tipo: string }[]
   >([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [modalVer, setModalVer] = useState<Dealer | null>(null);
   const [modalHistoricoDealer, setModalHistoricoDealer] = useState<Dealer | null>(null);
   const [modalSolicitacao, setModalSolicitacao] = useState<Dealer | null>(null);
@@ -173,10 +184,11 @@ export default function GestaoDealers() {
   const [buscaDealer, setBuscaDealer] = useState("");
 
   const carregarEstudios = useCallback(async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("estudios_spin")
       .select("slug, nome, tipo, estudios_spin_operadoras(operadora_slug)")
       .eq("ativo", true);
+    if (error) throw new Error(error.message);
     const nomeMap: Record<string, string> = {};
     const opts: { slug: string; nome: string }[] = [];
     const junctionFlat: { operadora_slug: string; estudio_slug: string; tipo: string }[] = [];
@@ -209,38 +221,46 @@ export default function GestaoDealers() {
 
   const carregar = useCallback(async () => {
     setLoading(true);
-    const { opMap, junctionFlat } = await carregarEstudios();
-    const slugsForcado =
-      isOperadorEscopo && operadoraSlugsForcado?.length
-        ? buildEstudiosSlugsParaOperadoras(junctionFlat, operadoraSlugsForcado)
-        : null;
-    const { data: dealersRpc, error: dealersErr } = await supabase.rpc("dealers_lista_elenco");
-    let dealersLista: Dealer[];
-    if (dealersErr) {
-      console.error("Gestão de Dealers: RPC dealers_lista_elenco indisponível — fallback em dealers", dealersErr);
-      const { data: legacy, error: legacyErr } = await supabase
-        .from("dealers")
-        .select("*")
-        .not("rh_funcionario_id", "is", null)
-        .order("nickname");
-      if (legacyErr) console.error("Gestão de Dealers: falha ao carregar dealers", legacyErr);
-      dealersLista = (legacy ?? []) as Dealer[];
-    } else {
-      dealersLista = (dealersRpc ?? []) as Dealer[];
+    setLoadError(null);
+    try {
+      const { opMap, junctionFlat } = await carregarEstudios();
+      const slugsForcado =
+        isOperadorEscopo && operadoraSlugsForcado?.length
+          ? buildEstudiosSlugsParaOperadoras(junctionFlat, operadoraSlugsForcado)
+          : null;
+      const { data: dealersRpc, error: dealersErr } = await supabase.rpc("dealers_lista_elenco");
+      let dealersLista: Dealer[];
+      if (dealersErr) {
+        console.error("Gestão de Dealers: RPC dealers_lista_elenco indisponível — fallback em dealers", dealersErr);
+        dealersLista = await fetchAllPages<Dealer>(async (from, to) =>
+          supabase
+            .from("dealers")
+            .select(DEALER_LISTA_COLS)
+            .not("rh_funcionario_id", "is", null)
+            .order("nickname")
+            .range(from, to),
+        );
+      } else {
+        dealersLista = (dealersRpc ?? []) as Dealer[];
+      }
+      if (isOperadorEscopo && slugsForcado?.length) {
+        dealersLista = dealersLista.filter((d) => dealerNoEscopoEstudio(d, slugsForcado, opMap));
+      } else if (isOperadorEscopo) {
+        // Escopo sem junction resolvida — não exibir elenco global.
+        dealersLista = [];
+      }
+      dealersLista.sort((a, b) => (a.nickname ?? "").localeCompare(b.nickname ?? "", "pt-BR"));
+      const operadorasRes = await supabase.from("operadoras").select("slug, nome, brand_action").order("nome");
+      if (operadorasRes.error) throw new Error(operadorasRes.error.message);
+      setDealers(dealersLista);
+      setOperadoras((operadorasRes.data ?? []) as Operadora[]);
+    } catch (e) {
+      console.error("Gestão de Dealers: falha ao carregar", e);
+      setDealers([]);
+      setLoadError(MSG_ERRO_CARREGAR_DEALERS);
+    } finally {
+      setLoading(false);
     }
-    if (isOperadorEscopo && slugsForcado?.length) {
-      dealersLista = dealersLista.filter((d) => dealerNoEscopoEstudio(d, slugsForcado, opMap));
-    } else if (isOperadorEscopo) {
-      // Escopo sem junction resolvida — não exibir elenco global.
-      dealersLista = [];
-    }
-    dealersLista.sort((a, b) => (a.nickname ?? "").localeCompare(b.nickname ?? "", "pt-BR"));
-    const [operadorasRes] = await Promise.all([
-      supabase.from("operadoras").select("slug, nome, brand_action").order("nome"),
-    ]);
-    setDealers(dealersLista);
-    setOperadoras((operadorasRes.data ?? []) as Operadora[]);
-    setLoading(false);
   }, [isOperadorEscopo, operadoraSlugsForcado, carregarEstudios]);
 
   const estudioSlugsForcado = useMemo(() => {
@@ -556,7 +576,39 @@ export default function GestaoDealers() {
       )}
 
       {/* ─── Bloco 3: Elenco completo ────────────────────────────────────────── */}
-      {loading ? (
+      {loadError ? (
+        <div
+          role="alert"
+          aria-live="polite"
+          style={{
+            background: brand.blockBg,
+            border: `1px solid ${t.cardBorder}`,
+            borderRadius: 18,
+            padding: 48,
+            textAlign: "center",
+            fontFamily: FONT.body,
+          }}
+        >
+          <p style={{ color: "#e84025", fontSize: 13, marginBottom: 12 }}>{loadError}</p>
+          <button
+            type="button"
+            onClick={() => void carregar()}
+            style={{
+              padding: "10px 20px",
+              borderRadius: 10,
+              border: `1px solid ${t.cardBorder}`,
+              background: t.inputBg,
+              color: t.text,
+              fontSize: 13,
+              fontWeight: 700,
+              fontFamily: FONT.body,
+              cursor: "pointer",
+            }}
+          >
+            Tentar novamente
+          </button>
+        </div>
+      ) : loading ? (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 300px), 1fr))", gap: 20 }}>
           {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 18, overflow: "hidden" }}>
@@ -569,7 +621,7 @@ export default function GestaoDealers() {
           ))}
         </div>
       ) : filtered.length === 0 ? (
-        <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 18, padding: 48, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>{MSG_SEM_DADOS_FILTRO}</div>
+        <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 18, padding: 48, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>{MSG_VAZIO_DEALERS}</div>
       ) : (
         <div
           style={{
@@ -954,28 +1006,40 @@ function ModalHistoricoSolicitacoesDealer({
   const { theme: t } = useApp();
   const [solicitacoes, setSolicitacoes] = useState<SolicResumo[]>([]);
   const [solLoading, setSolLoading] = useState(true);
+  const [solError, setSolError] = useState<string | null>(null);
+  const [histReload, setHistReload] = useState(0);
 
   useEffect(() => {
     let cancel = false;
     setSolLoading(true);
+    setSolError(null);
     void (async () => {
-      let q = supabase
-        .from("dealer_solicitacoes")
-        .select("id, tipo, status, titulo, created_at, aguarda_resposta_de, operadora_slug, operadoras(nome, brand_action)")
-        .eq("dealer_id", dealer.id)
-        .order("created_at", { ascending: false })
-        .limit(150);
-      if (slugSolicitacaoFiltro) q = q.eq("operadora_slug", slugSolicitacaoFiltro);
-      const { data } = await q;
-      if (!cancel) {
-        setSolicitacoes((data ?? []) as SolicResumo[]);
-        setSolLoading(false);
+      try {
+        const rows = await fetchAllPages<SolicResumo>(async (from, to) => {
+          let q = supabase
+            .from("dealer_solicitacoes")
+            .select("id, tipo, status, titulo, created_at, aguarda_resposta_de, operadora_slug, operadoras(nome, brand_action)")
+            .eq("dealer_id", dealer.id)
+            .order("created_at", { ascending: false })
+            .range(from, to);
+          if (slugSolicitacaoFiltro) q = q.eq("operadora_slug", slugSolicitacaoFiltro);
+          return q;
+        });
+        if (!cancel) setSolicitacoes(rows);
+      } catch (e) {
+        console.error("Gestão de Dealers: falha ao carregar histórico de solicitações", e);
+        if (!cancel) {
+          setSolicitacoes([]);
+          setSolError(MSG_ERRO_HISTORICO_SOLIC);
+        }
+      } finally {
+        if (!cancel) setSolLoading(false);
       }
     })();
     return () => {
       cancel = true;
     };
-  }, [dealer.id, slugSolicitacaoFiltro]);
+  }, [dealer.id, slugSolicitacaoFiltro, histReload]);
 
   return (
     <ModalBase onClose={onClose} maxWidth={520} zIndex={1050}>
@@ -986,6 +1050,27 @@ function ModalHistoricoSolicitacoesDealer({
       {solLoading ? (
         <div style={{ display: "flex", justifyContent: "center", padding: 24 }}>
           <Loader2 size={22} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden />
+        </div>
+      ) : solError ? (
+        <div role="alert" aria-live="polite" style={{ textAlign: "center", padding: "12px 0", fontFamily: FONT.body }}>
+          <p style={{ color: "#e84025", fontSize: 13, marginBottom: 12 }}>{solError}</p>
+          <button
+            type="button"
+            onClick={() => setHistReload((n) => n + 1)}
+            style={{
+              padding: "8px 16px",
+              borderRadius: 10,
+              border: `1px solid ${t.cardBorder}`,
+              background: t.inputBg,
+              color: t.text,
+              fontSize: 12,
+              fontWeight: 700,
+              fontFamily: FONT.body,
+              cursor: "pointer",
+            }}
+          >
+            Tentar novamente
+          </button>
         </div>
       ) : solicitacoes.length === 0 ? (
         <span style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>Nenhuma solicitação registrada.</span>

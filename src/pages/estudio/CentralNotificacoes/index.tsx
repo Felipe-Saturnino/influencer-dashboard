@@ -10,6 +10,7 @@ import { FONT } from "../../../constants/theme";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { BRAND, FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
+import { fetchAllPages } from "../../../lib/supabasePaginate";
 import {
   getMesesDisponiveis,
   getDatasDoMes,
@@ -30,6 +31,29 @@ import {
   getPageContentBoxStyle,
   getPageFilterBoxStyle,
 } from "../../../lib/pageContentBoxStyles";
+
+const MSG_LOAD_ERROR =
+  "Não foi possível carregar as notificações. Se o problema persistir, entre em contato com o suporte.";
+
+const CAMPANHA_SELECT =
+  "id, estudio_slug, operadora_slug, titulo, texto, jogos, data_inicio, data_fim, ativo, ordem, created_by, created_at, updated_at, profiles!created_by(name)";
+
+const SEL_DEALER_SOL =
+  "id, dealer_id, tipo, status, titulo, created_at, resolvido_em, aguarda_resposta_de, operadora_slug, dealers(nickname, nome_real, fotos, turno)";
+
+const SEL_CAMP_RT =
+  "id, status, titulo, created_at, resolvido_em, aguarda_resposta_de, operadora_slug, roteiro_mesa_campanhas(titulo)";
+
+const SEL_MESA_RT =
+  "id, status, titulo, created_at, resolvido_em, aguarda_resposta_de, operadora_slug, roteiro_mesa_sugestoes(bloco, tipo, texto)";
+
+/** Alinha a resposta PostgREST ao contrato de `fetchAllPages` (embeds tipam como array). */
+async function asPageResult<T>(
+  q: PromiseLike<{ data: unknown; error: { message: string } | null }>,
+): Promise<{ data: T[] | null; error: { message: string } | null }> {
+  const { data, error } = await q;
+  return { data: (data as T[] | null) ?? null, error };
+}
 
 const JOGO_ROTEIRO_LABEL: Record<string, string> = {
   todos: "Todos Jogos",
@@ -176,6 +200,58 @@ function nomeCadastroCampanha(c: CampanhaComPerfil): string {
   return n || "Usuário não identificado";
 }
 
+function idCurtoDealer(row: { dealer_id?: string | null; id: string }): string {
+  const raw = (row.dealer_id ?? row.id).trim();
+  return raw.length > 8 ? raw.slice(0, 8) : raw;
+}
+
+function CampanhaTextoExpandivel({ texto, color }: { texto: string; color: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const longo = texto.length > 180;
+  return (
+    <div>
+      <p
+        style={{
+          margin: 0,
+          fontSize: 13,
+          color,
+          lineHeight: 1.45,
+          whiteSpace: "pre-wrap",
+          ...(longo && !expanded
+            ? {
+                display: "-webkit-box",
+                WebkitLineClamp: 4,
+                WebkitBoxOrient: "vertical" as const,
+                overflow: "hidden",
+              }
+            : null),
+        }}
+      >
+        {texto}
+      </p>
+      {longo ? (
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          style={{
+            marginTop: 6,
+            padding: 0,
+            border: "none",
+            background: "transparent",
+            color: "var(--brand-primary, #7c3aed)",
+            fontSize: 12,
+            fontWeight: 700,
+            fontFamily: FONT.body,
+            cursor: "pointer",
+          }}
+        >
+          {expanded ? "Ver menos" : "Ver mais"}
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
 type AbaStaff = "troca" | "feedback" | "campanha_roteiro" | "roteiro_mesa";
 
 const ABAS_STAFF: AbaStaff[] = ["troca", "feedback", "campanha_roteiro", "roteiro_mesa"];
@@ -220,6 +296,7 @@ function listaSolicSkeleton(cardShell: CSSProperties, t: ReturnType<typeof useAp
 
 interface DealerSolRow {
   id: string;
+  dealer_id?: string | null;
   tipo: SolicitacaoTipo;
   status: string;
   titulo: string | null;
@@ -298,6 +375,7 @@ export default function CentralNotificacoes() {
   const [campanhas, setCampanhas] = useState<CampanhaComPerfil[]>([]);
   const [solicCampRoteiroPorCampanhaId, setSolicCampRoteiroPorCampanhaId] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [abaStaff, setAbaStaff] = useRouteTab(
     "central_notificacoes",
     "troca",
@@ -368,276 +446,300 @@ export default function CentralNotificacoes() {
 
     async function carregar() {
       setLoading(true);
+      setLoadError(null);
       const { ini, fim } = periodoTimestamps(periodo);
 
-      if (verInboxEstudio) {
-        setCampanhas([]);
-        setSolicCampRoteiroPorCampanhaId({});
-        setSolicMesaRoteOperador([]);
-      } else {
-        let qCamp = supabase
-          .from("roteiro_mesa_campanhas")
-          .select("*, profiles!created_by(name)")
-          .or(`data_inicio.is.null,data_inicio.lte.${periodo.fim}`)
-          .or(`data_fim.is.null,data_fim.gte.${periodo.inicio}`)
-          .order("created_at", { ascending: false })
-          .limit(100);
+      try {
+        if (verInboxEstudio) {
+          setCampanhas([]);
+          setSolicCampRoteiroPorCampanhaId({});
+          setSolicMesaRoteOperador([]);
+        } else {
+          const listaCamp = await fetchAllPages<CampanhaComPerfil>(async (from, to) => {
+            let qCamp = supabase
+              .from("roteiro_mesa_campanhas")
+              .select(CAMPANHA_SELECT)
+              .or(`data_inicio.is.null,data_inicio.lte.${periodo.fim}`)
+              .or(`data_fim.is.null,data_fim.gte.${periodo.inicio}`)
+              .order("created_at", { ascending: false })
+              .order("id", { ascending: false });
 
-        if (operadoraSlugsForcado?.length) {
-          qCamp = qCamp.in("operadora_slug", operadoraSlugsForcado);
-        } else if (filtroOperadora !== "todas") {
-          qCamp = qCamp.eq("operadora_slug", filtroOperadora);
-        }
+            if (operadoraSlugsForcado?.length) {
+              qCamp = qCamp.in("operadora_slug", operadoraSlugsForcado);
+            } else if (filtroOperadora !== "todas") {
+              qCamp = qCamp.eq("operadora_slug", filtroOperadora);
+            }
 
-        const { data: dataCamp, error: errCamp } = await qCamp;
-        if (errCamp) console.error("[CentralNotificacoes] campanhas:", errCamp);
+            return asPageResult<CampanhaComPerfil>(qCamp.range(from, to));
+          });
 
-        const listaCamp = (dataCamp ?? []) as CampanhaComPerfil[];
-        const mapSol: Record<string, string> = {};
-        if (listaCamp.length > 0) {
-          const idsCamp = listaCamp.map((c) => c.id);
-          const { data: solRows, error: errSolMap } = await supabase
-            .from("roteiro_campanha_solicitacoes")
-            .select("id, campanha_id")
-            .in("campanha_id", idsCamp);
-          if (errSolMap) console.error("[CentralNotificacoes] solicitações campanha roteiro:", errSolMap.message);
-          for (const r of solRows ?? []) {
-            const row = r as { id: string; campanha_id: string };
-            mapSol[row.campanha_id] = row.id;
+          const mapSol: Record<string, string> = {};
+          if (listaCamp.length > 0) {
+            const idsCamp = listaCamp.map((c) => c.id);
+            const solRows = await fetchAllPages<{ id: string; campanha_id: string }>(async (from, to) =>
+              asPageResult<{ id: string; campanha_id: string }>(
+                supabase
+                  .from("roteiro_campanha_solicitacoes")
+                  .select("id, campanha_id")
+                  .in("campanha_id", idsCamp)
+                  .order("id", { ascending: true })
+                  .range(from, to),
+              ),
+            );
+            for (const r of solRows) {
+              mapSol[r.campanha_id] = r.id;
+            }
           }
-        }
-        setCampanhas(listaCamp);
-        setSolicCampRoteiroPorCampanhaId(mapSol);
-      }
-
-      const normSol = (rows: DealerSolRow[] | null | undefined) =>
-        (rows ?? []).map((r) => {
-          const d = r.dealers as DealerSolRow["dealers"] | DealerSolRow["dealers"][] | null;
-          const emb = Array.isArray(d) ? d[0] ?? null : d;
-          return { ...r, dealers: emb };
-        });
-
-      const normCampSol = (rows: CampanhaRoteiroSolRow[] | null | undefined) =>
-        (rows ?? []).map((r) => {
-          const c = r.roteiro_mesa_campanhas as CampanhaRoteiroSolRow["roteiro_mesa_campanhas"] | { titulo?: string }[] | null;
-          const emb = Array.isArray(c) ? c[0] ?? null : c;
-          const tituloCamp =
-            emb && typeof emb === "object" && "titulo" in emb ? String((emb as { titulo: string }).titulo ?? "") : null;
-          return { ...r, roteiro_mesa_campanhas: tituloCamp ? { titulo: tituloCamp } : null };
-        });
-
-      const normMesaSol = (rows: RoteiroMesaSolRow[] | null | undefined) =>
-        (rows ?? []).map((r) => {
-          const s = r.roteiro_mesa_sugestoes as RoteiroMesaSolRow["roteiro_mesa_sugestoes"] | Record<string, unknown>[] | null;
-          const emb = Array.isArray(s) ? s[0] ?? null : s;
-          const sugestao =
-            emb && typeof emb === "object" && "texto" in emb
-              ? {
-                  bloco: String((emb as { bloco?: string }).bloco ?? ""),
-                  tipo: ((emb as { tipo?: string | null }).tipo ?? null) as string | null,
-                  texto: String((emb as { texto?: string }).texto ?? ""),
-                }
-              : null;
-          return { ...r, roteiro_mesa_sugestoes: sugestao };
-        });
-
-      if (verInboxEstudio) {
-        const selDealer =
-          "id, tipo, status, titulo, created_at, resolvido_em, aguarda_resposta_de, operadora_slug, dealers(nickname, nome_real, fotos, turno)";
-        const selCampRt =
-          "id, status, titulo, created_at, resolvido_em, aguarda_resposta_de, operadora_slug, roteiro_mesa_campanhas(titulo)";
-        const selMesaRt =
-          "id, status, titulo, created_at, resolvido_em, aguarda_resposta_de, operadora_slug, roteiro_mesa_sugestoes(bloco, tipo, texto)";
-
-        let qTrocaOpen = supabase
-          .from("dealer_solicitacoes")
-          .select(selDealer)
-          .eq("tipo", "troca_dealer")
-          .in("status", ["pendente", "em_andamento"])
-          .order("created_at", { ascending: false })
-          .limit(80);
-        let qTrocaRes = supabase
-          .from("dealer_solicitacoes")
-          .select(selDealer)
-          .eq("tipo", "troca_dealer")
-          .eq("status", "resolvido")
-          .gte("resolvido_em", ini)
-          .lte("resolvido_em", fim)
-          .order("resolvido_em", { ascending: false })
-          .limit(80);
-
-        let qFbOpen = supabase
-          .from("dealer_solicitacoes")
-          .select(selDealer)
-          .eq("tipo", "feedback")
-          .in("status", ["pendente", "em_andamento"])
-          .order("created_at", { ascending: false })
-          .limit(80);
-        let qFbRes = supabase
-          .from("dealer_solicitacoes")
-          .select(selDealer)
-          .eq("tipo", "feedback")
-          .eq("status", "resolvido")
-          .gte("resolvido_em", ini)
-          .lte("resolvido_em", fim)
-          .order("resolvido_em", { ascending: false })
-          .limit(80);
-
-        let qCampOpen = supabase
-          .from("roteiro_campanha_solicitacoes")
-          .select(selCampRt)
-          .in("status", ["pendente", "em_andamento"])
-          .order("created_at", { ascending: false })
-          .limit(80);
-        let qCampRes = supabase
-          .from("roteiro_campanha_solicitacoes")
-          .select(selCampRt)
-          .eq("status", "resolvido")
-          .gte("resolvido_em", ini)
-          .lte("resolvido_em", fim)
-          .order("resolvido_em", { ascending: false })
-          .limit(80);
-
-        let qMesaOpen = supabase
-          .from("roteiro_mesa_solicitacoes")
-          .select(selMesaRt)
-          .in("status", ["pendente", "em_andamento"])
-          .order("created_at", { ascending: false })
-          .limit(80);
-        let qMesaRes = supabase
-          .from("roteiro_mesa_solicitacoes")
-          .select(selMesaRt)
-          .eq("status", "resolvido")
-          .gte("resolvido_em", ini)
-          .lte("resolvido_em", fim)
-          .order("resolvido_em", { ascending: false })
-          .limit(80);
-
-        if (!operadoraSlugsForcado?.length && filtroOperadora !== "todas") {
-          qTrocaOpen = qTrocaOpen.eq("operadora_slug", filtroOperadora);
-          qTrocaRes = qTrocaRes.eq("operadora_slug", filtroOperadora);
-          qFbOpen = qFbOpen.eq("operadora_slug", filtroOperadora);
-          qFbRes = qFbRes.eq("operadora_slug", filtroOperadora);
-          qCampOpen = qCampOpen.eq("operadora_slug", filtroOperadora);
-          qCampRes = qCampRes.eq("operadora_slug", filtroOperadora);
-          qMesaOpen = qMesaOpen.eq("operadora_slug", filtroOperadora);
-          qMesaRes = qMesaRes.eq("operadora_slug", filtroOperadora);
+          setCampanhas(listaCamp);
+          setSolicCampRoteiroPorCampanhaId(mapSol);
         }
 
-        const [
-          { data: dtOpen },
-          { data: dtRes },
-          { data: dfOpen },
-          { data: dfRes },
-          { data: dcrOpen },
-          { data: dcrRes },
-          { data: dmrOpen },
-          { data: dmrRes },
-        ] = await Promise.all([qTrocaOpen, qTrocaRes, qFbOpen, qFbRes, qCampOpen, qCampRes, qMesaOpen, qMesaRes]);
+        const normSol = (rows: DealerSolRow[] | null | undefined) =>
+          (rows ?? []).map((r) => {
+            const d = r.dealers as DealerSolRow["dealers"] | DealerSolRow["dealers"][] | null;
+            const emb = Array.isArray(d) ? d[0] ?? null : d;
+            return { ...r, dealers: emb };
+          });
 
-        const mergedT = mergeDealerSolicLista(normSol(dtOpen as DealerSolRow[] | null), normSol(dtRes as DealerSolRow[] | null));
-        const mergedF = mergeDealerSolicLista(normSol(dfOpen as DealerSolRow[] | null), normSol(dfRes as DealerSolRow[] | null));
-        const mergedCamp = mergeCampanhaSolicLista(
-          normCampSol(dcrOpen as CampanhaRoteiroSolRow[] | null),
-          normCampSol(dcrRes as CampanhaRoteiroSolRow[] | null),
-        );
-        const mergedMesa = mergeRoteiroMesaSolicLista(
-          normMesaSol(dmrOpen as RoteiroMesaSolRow[] | null),
-          normMesaSol(dmrRes as RoteiroMesaSolRow[] | null),
-        );
+        const normCampSol = (rows: CampanhaRoteiroSolRow[] | null | undefined) =>
+          (rows ?? []).map((r) => {
+            const c = r.roteiro_mesa_campanhas as CampanhaRoteiroSolRow["roteiro_mesa_campanhas"] | { titulo?: string }[] | null;
+            const emb = Array.isArray(c) ? c[0] ?? null : c;
+            const tituloCamp =
+              emb && typeof emb === "object" && "titulo" in emb ? String((emb as { titulo: string }).titulo ?? "") : null;
+            return { ...r, roteiro_mesa_campanhas: tituloCamp ? { titulo: tituloCamp } : null };
+          });
 
-        setSolicTroca(mergedT);
-        setSolicFeedback(mergedF);
-        setSolicCampRoteiroGestor(mergedCamp);
-        setSolicMesaRoteiroGestor(mergedMesa);
-        setSolMinhas([]);
-        setSolicMesaRoteOperador([]);
+        const normMesaSol = (rows: RoteiroMesaSolRow[] | null | undefined) =>
+          (rows ?? []).map((r) => {
+            const s = r.roteiro_mesa_sugestoes as RoteiroMesaSolRow["roteiro_mesa_sugestoes"] | Record<string, unknown>[] | null;
+            const emb = Array.isArray(s) ? s[0] ?? null : s;
+            const sugestao =
+              emb && typeof emb === "object" && "texto" in emb
+                ? {
+                    bloco: String((emb as { bloco?: string }).bloco ?? ""),
+                    tipo: ((emb as { tipo?: string | null }).tipo ?? null) as string | null,
+                    texto: String((emb as { texto?: string }).texto ?? ""),
+                  }
+                : null;
+            return { ...r, roteiro_mesa_sugestoes: sugestao };
+          });
 
-        const idsD = [...new Set([...mergedT, ...mergedF].map((r) => r.id))];
-        const idsC = mergedCamp.map((r) => r.id);
-        const idsM = mergedMesa.map((r) => r.id);
-        const [mD, mC, mM] = await Promise.all([
-          mapSolicitacoesComMensagemGestorDealer(idsD),
-          mapSolicitacoesComMensagemGestorCamp(idsC),
-          mapSolicitacoesComMensagemGestorMesa(idsM),
-        ]);
-        setMapMsgGestorDealer(mD);
-        setMapMsgGestorCamp(mC);
-        setMapMsgGestorMesa(mM);
-      } else if (user?.role === "operador" && operadoraSlugsForcado?.length) {
-        const { data: dMin } = await supabase
-          .from("dealer_solicitacoes")
-          .select(
-            "id, tipo, status, titulo, created_at, resolvido_em, aguarda_resposta_de, operadora_slug, dealers(nickname, nome_real, fotos, turno)",
-          )
-          .in("operadora_slug", operadoraSlugsForcado)
-          .in("status", ["pendente", "em_andamento"])
-          .order("created_at", { ascending: false })
-          .limit(40);
-        const minhas = normSol(dMin as DealerSolRow[] | null);
-        setSolMinhas(minhas);
-        setSolicTroca([]);
-        setSolicFeedback([]);
-        setSolicCampRoteiroGestor([]);
-        setSolicMesaRoteiroGestor([]);
+        if (verInboxEstudio) {
+          const filtrarOp = !operadoraSlugsForcado?.length && filtroOperadora !== "todas";
 
-        const selMesaRtOp =
-          "id, status, titulo, created_at, resolvido_em, aguarda_resposta_de, operadora_slug, roteiro_mesa_sugestoes(bloco, tipo, texto)";
-        const { data: dMesaOp } = await supabase
-          .from("roteiro_mesa_solicitacoes")
-          .select(selMesaRtOp)
-          .in("operadora_slug", operadoraSlugsForcado)
-          .in("status", ["pendente", "em_andamento"])
-          .order("created_at", { ascending: false })
-          .limit(40);
-        const mesaOp = normMesaSol(dMesaOp as RoteiroMesaSolRow[] | null);
-        setSolicMesaRoteOperador(mesaOp);
+          const [
+            dtOpen,
+            dtRes,
+            dfOpen,
+            dfRes,
+            dcrOpen,
+            dcrRes,
+            dmrOpen,
+            dmrRes,
+          ] = await Promise.all([
+            fetchAllPages<DealerSolRow>(async (from, to) => {
+              let q = supabase
+                .from("dealer_solicitacoes")
+                .select(SEL_DEALER_SOL)
+                .eq("tipo", "troca_dealer")
+                .in("status", ["pendente", "em_andamento"])
+                .order("created_at", { ascending: false })
+                .order("id", { ascending: false });
+              if (filtrarOp) q = q.eq("operadora_slug", filtroOperadora);
+              return asPageResult<DealerSolRow>(q.range(from, to));
+            }),
+            fetchAllPages<DealerSolRow>(async (from, to) => {
+              let q = supabase
+                .from("dealer_solicitacoes")
+                .select(SEL_DEALER_SOL)
+                .eq("tipo", "troca_dealer")
+                .eq("status", "resolvido")
+                .gte("resolvido_em", ini)
+                .lte("resolvido_em", fim)
+                .order("resolvido_em", { ascending: false })
+                .order("id", { ascending: false });
+              if (filtrarOp) q = q.eq("operadora_slug", filtroOperadora);
+              return asPageResult<DealerSolRow>(q.range(from, to));
+            }),
+            fetchAllPages<DealerSolRow>(async (from, to) => {
+              let q = supabase
+                .from("dealer_solicitacoes")
+                .select(SEL_DEALER_SOL)
+                .eq("tipo", "feedback")
+                .in("status", ["pendente", "em_andamento"])
+                .order("created_at", { ascending: false })
+                .order("id", { ascending: false });
+              if (filtrarOp) q = q.eq("operadora_slug", filtroOperadora);
+              return asPageResult<DealerSolRow>(q.range(from, to));
+            }),
+            fetchAllPages<DealerSolRow>(async (from, to) => {
+              let q = supabase
+                .from("dealer_solicitacoes")
+                .select(SEL_DEALER_SOL)
+                .eq("tipo", "feedback")
+                .eq("status", "resolvido")
+                .gte("resolvido_em", ini)
+                .lte("resolvido_em", fim)
+                .order("resolvido_em", { ascending: false })
+                .order("id", { ascending: false });
+              if (filtrarOp) q = q.eq("operadora_slug", filtroOperadora);
+              return asPageResult<DealerSolRow>(q.range(from, to));
+            }),
+            fetchAllPages<CampanhaRoteiroSolRow>(async (from, to) => {
+              let q = supabase
+                .from("roteiro_campanha_solicitacoes")
+                .select(SEL_CAMP_RT)
+                .in("status", ["pendente", "em_andamento"])
+                .order("created_at", { ascending: false })
+                .order("id", { ascending: false });
+              if (filtrarOp) q = q.eq("operadora_slug", filtroOperadora);
+              return asPageResult<CampanhaRoteiroSolRow>(q.range(from, to));
+            }),
+            fetchAllPages<CampanhaRoteiroSolRow>(async (from, to) => {
+              let q = supabase
+                .from("roteiro_campanha_solicitacoes")
+                .select(SEL_CAMP_RT)
+                .eq("status", "resolvido")
+                .gte("resolvido_em", ini)
+                .lte("resolvido_em", fim)
+                .order("resolvido_em", { ascending: false })
+                .order("id", { ascending: false });
+              if (filtrarOp) q = q.eq("operadora_slug", filtroOperadora);
+              return asPageResult<CampanhaRoteiroSolRow>(q.range(from, to));
+            }),
+            fetchAllPages<RoteiroMesaSolRow>(async (from, to) => {
+              let q = supabase
+                .from("roteiro_mesa_solicitacoes")
+                .select(SEL_MESA_RT)
+                .in("status", ["pendente", "em_andamento"])
+                .order("created_at", { ascending: false })
+                .order("id", { ascending: false });
+              if (filtrarOp) q = q.eq("operadora_slug", filtroOperadora);
+              return asPageResult<RoteiroMesaSolRow>(q.range(from, to));
+            }),
+            fetchAllPages<RoteiroMesaSolRow>(async (from, to) => {
+              let q = supabase
+                .from("roteiro_mesa_solicitacoes")
+                .select(SEL_MESA_RT)
+                .eq("status", "resolvido")
+                .gte("resolvido_em", ini)
+                .lte("resolvido_em", fim)
+                .order("resolvido_em", { ascending: false })
+                .order("id", { ascending: false });
+              if (filtrarOp) q = q.eq("operadora_slug", filtroOperadora);
+              return asPageResult<RoteiroMesaSolRow>(q.range(from, to));
+            }),
+          ]);
 
-        const [mD, mM] = await Promise.all([
-          mapSolicitacoesComMensagemGestorDealer(minhas.map((r) => r.id)),
-          mapSolicitacoesComMensagemGestorMesa(mesaOp.map((r) => r.id)),
-        ]);
-        setMapMsgGestorDealer(mD);
-        setMapMsgGestorCamp({});
-        setMapMsgGestorMesa(mM);
-      } else {
-        setSolicTroca([]);
-        setSolicFeedback([]);
-        setSolMinhas([]);
-        setSolicCampRoteiroGestor([]);
-        setSolicMesaRoteiroGestor([]);
-        setSolicMesaRoteOperador([]);
-        setMapMsgGestorDealer({});
-        setMapMsgGestorCamp({});
-        setMapMsgGestorMesa({});
-      }
+          const mergedT = mergeDealerSolicLista(normSol(dtOpen), normSol(dtRes));
+          const mergedF = mergeDealerSolicLista(normSol(dfOpen), normSol(dfRes));
+          const mergedCamp = mergeCampanhaSolicLista(normCampSol(dcrOpen), normCampSol(dcrRes));
+          const mergedMesa = mergeRoteiroMesaSolicLista(normMesaSol(dmrOpen), normMesaSol(dmrRes));
 
-      if (verInboxEstudio) {
-        setSolicConcluidas([]);
-      } else if (user?.role === "operador" && !operadoraSlugsForcado?.length) {
-        setSolicConcluidas([]);
-      } else {
-        let qConc = supabase
-          .from("dealer_solicitacoes")
-          .select(
-            "id, tipo, status, titulo, created_at, resolvido_em, aguarda_resposta_de, operadora_slug, dealers(nickname, nome_real, fotos, turno)",
-          )
-          .eq("status", "resolvido")
-          .gte("resolvido_em", ini)
-          .lte("resolvido_em", fim)
-          .order("resolvido_em", { ascending: false })
-          .limit(120);
+          setSolicTroca(mergedT);
+          setSolicFeedback(mergedF);
+          setSolicCampRoteiroGestor(mergedCamp);
+          setSolicMesaRoteiroGestor(mergedMesa);
+          setSolMinhas([]);
+          setSolicMesaRoteOperador([]);
 
-        if (user?.role === "operador" && operadoraSlugsForcado?.length) {
-          qConc = qConc.in("operadora_slug", operadoraSlugsForcado);
+          const idsD = [...new Set([...mergedT, ...mergedF].map((r) => r.id))];
+          const idsC = mergedCamp.map((r) => r.id);
+          const idsM = mergedMesa.map((r) => r.id);
+          const [mD, mC, mM] = await Promise.all([
+            mapSolicitacoesComMensagemGestorDealer(idsD),
+            mapSolicitacoesComMensagemGestorCamp(idsC),
+            mapSolicitacoesComMensagemGestorMesa(idsM),
+          ]);
+          setMapMsgGestorDealer(mD);
+          setMapMsgGestorCamp(mC);
+          setMapMsgGestorMesa(mM);
+        } else if (user?.role === "operador" && operadoraSlugsForcado?.length) {
+          const [dMin, dMesaOp] = await Promise.all([
+            fetchAllPages<DealerSolRow>(async (from, to) =>
+              asPageResult<DealerSolRow>(
+                supabase
+                  .from("dealer_solicitacoes")
+                  .select(SEL_DEALER_SOL)
+                  .in("operadora_slug", operadoraSlugsForcado)
+                  .in("status", ["pendente", "em_andamento"])
+                  .order("created_at", { ascending: false })
+                  .order("id", { ascending: false })
+                  .range(from, to),
+              ),
+            ),
+            fetchAllPages<RoteiroMesaSolRow>(async (from, to) =>
+              asPageResult<RoteiroMesaSolRow>(
+                supabase
+                  .from("roteiro_mesa_solicitacoes")
+                  .select(SEL_MESA_RT)
+                  .in("operadora_slug", operadoraSlugsForcado)
+                  .in("status", ["pendente", "em_andamento"])
+                  .order("created_at", { ascending: false })
+                  .order("id", { ascending: false })
+                  .range(from, to),
+              ),
+            ),
+          ]);
+          const minhas = normSol(dMin);
+          setSolMinhas(minhas);
+          setSolicTroca([]);
+          setSolicFeedback([]);
+          setSolicCampRoteiroGestor([]);
+          setSolicMesaRoteiroGestor([]);
+
+          const mesaOp = normMesaSol(dMesaOp);
+          setSolicMesaRoteOperador(mesaOp);
+
+          const [mD, mM] = await Promise.all([
+            mapSolicitacoesComMensagemGestorDealer(minhas.map((r) => r.id)),
+            mapSolicitacoesComMensagemGestorMesa(mesaOp.map((r) => r.id)),
+          ]);
+          setMapMsgGestorDealer(mD);
+          setMapMsgGestorCamp({});
+          setMapMsgGestorMesa(mM);
+        } else {
+          setSolicTroca([]);
+          setSolicFeedback([]);
+          setSolMinhas([]);
+          setSolicCampRoteiroGestor([]);
+          setSolicMesaRoteiroGestor([]);
+          setSolicMesaRoteOperador([]);
+          setMapMsgGestorDealer({});
+          setMapMsgGestorCamp({});
+          setMapMsgGestorMesa({});
         }
 
-        const { data: dConc, error: errConc } = await qConc;
-        if (errConc) console.error("[CentralNotificacoes] solicitações concluídas:", errConc);
-        setSolicConcluidas(normSol(dConc as DealerSolRow[] | null));
-      }
+        if (verInboxEstudio) {
+          setSolicConcluidas([]);
+        } else if (user?.role === "operador" && !operadoraSlugsForcado?.length) {
+          setSolicConcluidas([]);
+        } else {
+          const dConc = await fetchAllPages<DealerSolRow>(async (from, to) => {
+            let qConc = supabase
+              .from("dealer_solicitacoes")
+              .select(SEL_DEALER_SOL)
+              .eq("status", "resolvido")
+              .gte("resolvido_em", ini)
+              .lte("resolvido_em", fim)
+              .order("resolvido_em", { ascending: false })
+              .order("id", { ascending: false });
 
-      setLoading(false);
+            if (user?.role === "operador" && operadoraSlugsForcado?.length) {
+              qConc = qConc.in("operadora_slug", operadoraSlugsForcado);
+            }
+
+            return asPageResult<DealerSolRow>(qConc.range(from, to));
+          });
+          setSolicConcluidas(normSol(dConc));
+        }
+      } catch (e) {
+        console.error("[CentralNotificacoes] falha ao carregar:", e);
+        setLoadError(MSG_LOAD_ERROR);
+      } finally {
+        setLoading(false);
+      }
     }
 
     void carregar();
@@ -647,6 +749,34 @@ export default function CentralNotificacoes() {
   const isUltimo = idxMes === mesesDisponiveis.length - 1;
 
   const cardShell: React.CSSProperties = getPageContentBoxStyle(brand, t, { padding: 16 });
+  const pageBox = getPageContentBoxStyle(brand, t);
+
+  function renderLoadError() {
+    return (
+      <div role="alert" aria-live="polite" style={pageBox}>
+        <div style={{ padding: "40px 0", textAlign: "center", fontFamily: FONT.body }}>
+          <p style={{ color: "#e84025", fontSize: 13, marginBottom: 12 }}>{loadError}</p>
+          <button
+            type="button"
+            onClick={() => setInboxVersion((v) => v + 1)}
+            style={{
+              padding: "10px 20px",
+              borderRadius: 10,
+              border: `1px solid ${t.cardBorder}`,
+              background: t.inputBg,
+              color: t.text,
+              fontSize: 13,
+              fontWeight: 700,
+              fontFamily: FONT.body,
+              cursor: "pointer",
+            }}
+          >
+            Tentar novamente
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const blocoCampanhasEnvelope: React.CSSProperties = getPageFilterBoxStyle(brand, t, {
     padding: "16px 20px",
@@ -961,6 +1091,22 @@ export default function CentralNotificacoes() {
                   ) : null}
                   <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
                     <OperadoraTag label={op?.nome ?? row.operadora_slug} corPrimaria={op?.brand_action} />
+                    {!d ? (
+                      <span
+                        style={{
+                          fontSize: 10,
+                          fontWeight: 700,
+                          padding: "2px 8px",
+                          borderRadius: 20,
+                          background: "#6b728022",
+                          color: "#6b7280",
+                          border: "1px solid #6b728044",
+                          fontFamily: FONT.body,
+                        }}
+                      >
+                        DEALER INATIVO · {idCurtoDealer(row)}
+                      </span>
+                    ) : null}
                     <span
                       style={{
                         fontSize: 10,
@@ -1153,28 +1299,24 @@ export default function CentralNotificacoes() {
       </div>
 
       {verInboxEstudio ? (
-        <>
-          {abaStaff === "troca" ? (
-            <div role="tabpanel" id="panel-central-troca" aria-labelledby="tab-central-troca" tabIndex={0}>
-              {renderListaSolicitacoes(solicTroca, "abertas", { staffMesclado: true })}
-            </div>
-          ) : null}
-          {abaStaff === "feedback" ? (
-            <div role="tabpanel" id="panel-central-feedback" aria-labelledby="tab-central-feedback" tabIndex={0}>
-              {renderListaSolicitacoes(solicFeedback, "abertas", { staffMesclado: true })}
-            </div>
-          ) : null}
-          {abaStaff === "campanha_roteiro" ? (
-            <div role="tabpanel" id="panel-central-campanha-roteiro" aria-labelledby="tab-central-campanha-roteiro" tabIndex={0}>
-              {renderListaCampanhaRoteiroSolic(solicCampRoteiroGestor, { staffMesclado: true })}
-            </div>
-          ) : null}
-          {abaStaff === "roteiro_mesa" ? (
-            <div role="tabpanel" id="panel-central-roteiro-mesa" aria-labelledby="tab-central-roteiro-mesa" tabIndex={0}>
-              {renderListaMesaRoteiroSolic(solicMesaRoteiroGestor, { staffMesclado: true })}
-            </div>
-          ) : null}
-        </>
+        <div
+          role="tabpanel"
+          id={STAFF_TAB_META[abaStaff].panelId}
+          aria-labelledby={TAB_STAFF_DOM_ID[abaStaff]}
+          tabIndex={0}
+        >
+          {loadError
+            ? renderLoadError()
+            : abaStaff === "troca"
+              ? renderListaSolicitacoes(solicTroca, "abertas", { staffMesclado: true })
+              : abaStaff === "feedback"
+                ? renderListaSolicitacoes(solicFeedback, "abertas", { staffMesclado: true })
+                : abaStaff === "campanha_roteiro"
+                  ? renderListaCampanhaRoteiroSolic(solicCampRoteiroGestor, { staffMesclado: true })
+                  : renderListaMesaRoteiroSolic(solicMesaRoteiroGestor, { staffMesclado: true })}
+        </div>
+      ) : loadError ? (
+        renderLoadError()
       ) : (
         <>
           {user?.role === "operador" && solMinhas.length > 0 ? (
@@ -1206,7 +1348,9 @@ export default function CentralNotificacoes() {
             </div>
             <div style={blocoCampanhasEnvelope}>
               {campanhas.length === 0 && !loading ? (
-                <div style={{ ...cardShell, color: t.textMuted, fontSize: 14 }}>Sem dados para o período selecionado.</div>
+                <div style={{ ...cardShell, color: t.textMuted, fontSize: 14 }}>
+                  Nenhuma campanha cadastrada neste período.
+                </div>
               ) : (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 14 }}>
                   {campanhas.map((c) => {
@@ -1268,7 +1412,7 @@ export default function CentralNotificacoes() {
                             </span>
                           ) : null}
                         </div>
-                        <p style={{ margin: 0, fontSize: 13, color: t.text, lineHeight: 1.45, whiteSpace: "pre-wrap" }}>{c.texto}</p>
+                        <CampanhaTextoExpandivel texto={c.texto} color={t.text} />
                         {dataCadastro ? (
                           <p style={{ margin: "10px 0 0", fontSize: 11, color: t.textMuted }}>
                             Cadastrado por {nomeCadastroCampanha(c)} em {dataCadastro}
@@ -1301,23 +1445,21 @@ export default function CentralNotificacoes() {
               )}
             </div>
           </section>
+
+          <section style={{ marginTop: 36 }} aria-labelledby="heading-solic-concluidas">
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+              <CheckCircle size={20} color="#22c55e" aria-hidden />
+              <h2 id="heading-solic-concluidas" style={{ margin: 0, fontSize: 17, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE }}>
+                Solicitações concluídas
+              </h2>
+            </div>
+            <p style={{ margin: "0 0 16px", fontSize: 12, color: t.textMuted, fontFamily: FONT.body, maxWidth: 640 }}>
+              Listagem das solicitações marcadas como resolvidas no período selecionado.
+            </p>
+            {renderListaSolicitacoes(solicConcluidas, "concluidas")}
+          </section>
         </>
       )}
-
-      {!verInboxEstudio ? (
-        <section style={{ marginTop: 36 }} aria-labelledby="heading-solic-concluidas">
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-            <CheckCircle size={20} color="#22c55e" aria-hidden />
-            <h2 id="heading-solic-concluidas" style={{ margin: 0, fontSize: 17, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE }}>
-              Solicitações concluídas
-            </h2>
-          </div>
-          <p style={{ margin: "0 0 16px", fontSize: 12, color: t.textMuted, fontFamily: FONT.body, maxWidth: 640 }}>
-            Listagem das solicitações marcadas como resolvidas no período selecionado.
-          </p>
-          {renderListaSolicitacoes(solicConcluidas, "concluidas")}
-        </section>
-      ) : null}
 
       {threadCtx ? (
         <ModalThreadSolicitacao

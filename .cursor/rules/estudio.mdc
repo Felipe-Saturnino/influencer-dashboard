@@ -81,18 +81,21 @@ alwaysApply: false
 - **Escopo Operador:** filtro e elenco pelos **estúdios** ligados à(s) operadora(s) do escopo via `estudios_spin_operadoras` (`buildEstudiosSlugsParaOperadoras`) — dedicado **e** network (ex.: Blaze vê estúdios **Blaze** e **Sports Club**). Cards mostram a tag do estúdio em que o GP está (Blaze vs Sports Club). `operadora_slug` no registro dealer permanece só para **solicitações** (Central / `dealer_solicitacoes`).
 - **Tags de jogo** (filtro consolidado + badges nos cards): **`getGameTagChipStyle`** (`lib/gameIdentityColors.ts`) + ícones **`GAME_IDENTITY_ICONS`** — Global § Identidade por jogo (BJ verde, Roleta ouro, Baccarat azul, FB laranja); **não** pill amarela única nem roxo de marca. **Exceção:** só com pedido explícito — «Exceções — identidade de jogo» neste MDC.
 - **Handoff:** solicitar/histórico por operadora, upload de foto.
+- **Carga:** RPC `dealers_lista_elenco`; fallback `dealers` com colunas explícitas + `fetchAllPages`. Falha de boot ou de estúdios → alerta + **Tentar novamente** (não `MSG_SEM_DADOS_FILTRO`). Empty legítimo: `Nenhum dealer encontrado.` Histórico do GP: erro no modal ≠ «Nenhuma solicitação registrada.»
 
 ---
 
 ## Central de Notificações (`central_notificacoes`)
 
 - Abas staff com contagem e `aria-label` quando `count > 0`.
+- **Um** `role=tabpanel` dinâmico (`id` / `aria-labelledby` da aba ativa) — padrão Pipeline B2B.
 - Histórico na FilterBar: **`FiltroHistoricoButton`** (padrão Overview Influencer), limitado às 13 competências mensais inclusivas do Global; loading secundário: `Clock` + “Carregando…” (U+2026) — não `Loader2` na barra.
 - Cards: `<article aria-label={Campanha|Observação...}>`.
 - Datas campanha: badge **VIGENTE** verde quando no intervalo.
 - Texto longo: line-clamp + “Ver mais” / “Ver menos”.
 - Dealer inativo: tag **DEALER INATIVO** + ID — nunca mensagem genérica “removido”.
 - Vazio: `Nenhuma campanha cadastrada neste período.` (lista campanhas).
+- **Carga:** `fetchAllPages` nas listas (sem `.limit` artificial); falha → alerta + **Tentar novamente**. Thread partilhada: mensagens com `fetchAllPages`; erro de rede ≠ «não encontrada».
 - **Handoff:** threads, filtros operadora, notificações pendentes.
 
 ---
