@@ -22,7 +22,34 @@ export type DashboardInfluencerOperadoraCatalogo = {
 
 const INFLUENCER_IN_CHUNK = 150;
 
-type ProfileIdRow = { id: string };
+type ProfileRow = { id: string; name: string | null };
+
+/** `influencer_perfil.nome_artistico` aceita null no cadastro — normalizado aqui para o catálogo. */
+type InfluencerPerfilRow = {
+  id: string;
+  nome_artistico: string | null;
+  cache_hora: number | null;
+  status: string | null;
+};
+
+function nomeCatalogoInfluencer(
+  nomeArtistico: string | null | undefined,
+  nomePerfil: string | null | undefined,
+): string {
+  return (nomeArtistico ?? "").trim() || (nomePerfil ?? "").trim() || "—";
+}
+
+function asPerfilCatalogo(
+  row: InfluencerPerfilRow,
+  nomePerfil: string | null | undefined,
+): DashboardInfluencerCatalogo {
+  return {
+    id: row.id,
+    nome_artistico: nomeCatalogoInfluencer(row.nome_artistico, nomePerfil),
+    cache_hora: row.cache_hora ?? 0,
+    status: row.status,
+  };
+}
 
 /**
  * Catálogo Streamers / Overview Influencer: só `profiles.role = influencer`.
@@ -32,15 +59,15 @@ export function useDashboardCatalogos() {
   const query = useQuery({
     queryKey: ["catalogos", "dashboards-influencers", "role-influencer"],
     queryFn: async () => {
-      const [profileIds, operadoras] = await Promise.all([
-        fetchAllPages<ProfileIdRow>(async (from, to) => {
+      const [profiles, operadoras] = await Promise.all([
+        fetchAllPages<ProfileRow>(async (from, to) => {
           const { data, error } = await supabase
             .from("profiles")
-            .select("id")
+            .select("id, name")
             .eq("role", "influencer")
             .order("id")
             .range(from, to);
-          return { data: (data as ProfileIdRow[] | null) ?? null, error };
+          return { data: (data as ProfileRow[] | null) ?? null, error };
         }),
         fetchAllPages<DashboardOperadoraCatalogo>(async (from, to) => {
           const { data, error } = await supabase
@@ -53,7 +80,8 @@ export function useDashboardCatalogos() {
         }),
       ]);
 
-      const ids = profileIds.map((p) => p.id);
+      const ids = profiles.map((p) => p.id);
+      const nomePorId = new Map(profiles.map((p) => [p.id, p.name]));
       if (ids.length === 0) {
         return {
           perfis: [] as DashboardInfluencerCatalogo[],
@@ -67,14 +95,14 @@ export function useDashboardCatalogos() {
           ids,
           INFLUENCER_IN_CHUNK,
           (slice) =>
-            fetchAllPages<DashboardInfluencerCatalogo>(async (from, to) => {
+            fetchAllPages<InfluencerPerfilRow>(async (from, to) => {
               const { data, error } = await supabase
                 .from("influencer_perfil")
                 .select("id, nome_artistico, cache_hora, status")
                 .in("id", slice)
-                .order("nome_artistico")
+                .order("id")
                 .range(from, to);
-              return { data: (data as DashboardInfluencerCatalogo[] | null) ?? null, error };
+              return { data: (data as InfluencerPerfilRow[] | null) ?? null, error };
             }),
           2,
         ),
@@ -88,6 +116,7 @@ export function useDashboardCatalogos() {
                 .select("influencer_id, operadora_slug")
                 .in("influencer_id", slice)
                 .order("influencer_id")
+                .order("operadora_slug")
                 .range(from, to);
               return { data: (data as DashboardInfluencerOperadoraCatalogo[] | null) ?? null, error };
             }),
@@ -95,8 +124,9 @@ export function useDashboardCatalogos() {
         ),
       ]);
 
-      perfis.sort((a, b) => a.nome_artistico.localeCompare(b.nome_artistico, "pt-BR"));
-      return { perfis, operadoras, vinculos };
+      const perfisCatalogo = perfis.map((row) => asPerfilCatalogo(row, nomePorId.get(row.id)));
+      perfisCatalogo.sort((a, b) => a.nome_artistico.localeCompare(b.nome_artistico, "pt-BR"));
+      return { perfis: perfisCatalogo, operadoras, vinculos };
     },
     staleTime: 10 * 60 * 1000,
   });

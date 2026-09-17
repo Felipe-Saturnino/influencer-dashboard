@@ -17,9 +17,11 @@ export function ModalHistoricoAgregadora({
   const { theme: t } = useApp();
   const [itens, setItens] = useState<AgregadoraHistorico[]>([]);
   const [loading, setLoading] = useState(true);
+  const [erro, setErro] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
+    setErro(null);
     const { data, error } = await supabase
       .from("comercial_agregadora_historico")
       .select("id, agregadora_id, campo, valor_anterior, valor_novo, created_at, usuario_id")
@@ -30,6 +32,9 @@ export function ModalHistoricoAgregadora({
     if (error) {
       console.error(error);
       setItens([]);
+      setErro(
+        "Não foi possível carregar o histórico. Se o problema persistir, entre em contato com o suporte.",
+      );
       setLoading(false);
       return;
     }
@@ -61,6 +66,27 @@ export function ModalHistoricoAgregadora({
       {loading ? (
         <div style={{ padding: "24px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
           Carregando…
+        </div>
+      ) : erro ? (
+        <div role="alert" aria-live="polite" style={{ padding: "24px 0", textAlign: "center", fontFamily: FONT.body }}>
+          <p style={{ color: "#e84025", fontSize: 13, marginBottom: 12 }}>{erro}</p>
+          <button
+            type="button"
+            onClick={() => void load()}
+            style={{
+              padding: "8px 16px",
+              borderRadius: 10,
+              border: `1px solid ${t.cardBorder}`,
+              background: t.inputBg,
+              color: t.text,
+              fontSize: 12,
+              fontWeight: 700,
+              fontFamily: FONT.body,
+              cursor: "pointer",
+            }}
+          >
+            Tentar novamente
+          </button>
         </div>
       ) : itens.length === 0 ? (
         <div style={{ padding: "24px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>

@@ -94,6 +94,7 @@ Quatro cards: **Total de Operadores**, **Concluídos**, **Em andamento**, **Não
 - Ações: **Histórico** e **Comentar** (`BtnIconeAcaoLinha`).
 - Com **Editar:** Prioridade, Status e Agregador via popover (Agregador com **barra de pesquisa**); Caminho e PAM via clique inline.
 - Paginação 20/página (`TabelaComPaginacao`); KPIs usam o conjunto filtrado completo.
+- Boot: `fetchAllPages` nas listas (sem `.limit` arbitrário); falha de carga → alerta + **Tentar novamente** (nunca empty filtrado). Abas com `role="tabpanel"` alinhado a `aria-controls`.
 - Vazio: `Nenhuma integração encontrada para os filtros selecionados.`
 
 ### Criação automática (Pipeline B2B)
@@ -134,7 +135,7 @@ Contagens e filtro KPI derivados da **tabela** (`rowMatchesConsolidadoFolha` em 
 
 ### Tabela
 
-- Padrão canónico: `useDataTableBlock`, `getDataTableWrapStyle`, `SortTableTh`, coluna **Razão Social** fixa + `rowSpan` por CNPJ. **Zebra** por razão social (CNPJ): todas as marcas da mesma empresa compartilham a mesma cor de linha; intercalação segue ordem de primeira aparição na lista. **Ordenação** (`SortTableTh`): Razão Social, Dedicada, Network, **Agregadora**, **Último Contato** — **sem** sort em Marca, Contato, Comercial, Status. Paginação 20/página (`TabelaPaginacaoBar`).
+- Padrão canónico: `useDataTableBlock`, `getDataTableWrapStyle`, `SortTableTh`, coluna **Razão Social** fixa + `rowSpan` por CNPJ. **Zebra** por razão social (CNPJ): todas as marcas da mesma empresa compartilham a mesma cor de linha; intercalação segue ordem de primeira aparição na lista. **Ordenação** (`SortTableTh`): Razão Social, Dedicada, Network, **Agregadora**, **Último Contato** — **sem** sort em Marca, Contato, Comercial, Status. Paginação 20/página (`TabelaPaginacaoBar`). Boot: `fetchAllPages` + order estável; falha → alerta + **Tentar novamente**; abas com `role="tabpanel"` alinhado.
 - Colunas variam por aba (`TAB_TABLE_CONFIG` em `constants.ts`).
 - Edição inline (Comercial, Status, Dedicada, Network, **Agregadora**): popover + permissão **Editar**; grava em `comercial_marca_historico`. **Agregadora:** opções = **Nome** das linhas de `comercial_agregadoras` (página **Pipeline Agregadoras**), em ordem alfabética, ou **—** para limpar; popover com **barra de pesquisa** (`BarraPesquisaFiltroPainel` + `textoContemBusca`); valor legado fora do catálogo continua visível e permanece na lista até alteração. Coluna `comercial_marcas.agregadora` é texto livre (sem CHECK). **Último Contato:** campo `date` editável inline (`<input type="date">`) com permissão **Editar**; grava em `comercial_marcas.ultimo_contato` + histórico. Badges **Dedicada** / **Network** usam `STATUS_PRODUTO_COLOR` com **`badgeProdutoStyle(status)`** — fundo, borda e texto em `color-mix` translúcido (não pill sólida); progressão pior → melhor: Sem interesse → Desinteresse Comercial → … → Ativo (hex em `constants.ts`).
 - **Colunas (todas as abas, mesma ordem):** Razão Social · Marca · Contato · Comercial · Status · Dedicada · Network · Agregadora · Último Contato · Ação (`PIPELINE_TABLE_COLS`). Campo `ultima_comunicacao` permanece no banco para o fluxo **Comunicar** (futuro) — **sem** coluna na tabela.
@@ -224,6 +225,7 @@ Quatro cards clicáveis: **Disponíveis**, **Conexão**, **Negociação**, **Fec
 - Nome **sem** hiperlink (só texto). Site permanece link externo.
 - Cadastro novo: status inicial **`conexao`**; campos modal Nome*, Site*, Jogos, Comercial*.
 - Paginação 20/página (`TabelaComPaginacao`); KPIs usam o conjunto filtrado completo.
+- Boot: `fetchAllPages`; falha → alerta + **Tentar novamente**. Abas com `role="tabpanel"` alinhado.
 - Vazio: `Nenhuma agregadora encontrada para os filtros selecionados.`
 
 ### Dados (Supabase)
