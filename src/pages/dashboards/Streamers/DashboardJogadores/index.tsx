@@ -407,7 +407,11 @@ export default function DashboardJogadores() {
         fim = h.fim;
       }
 
-      let influencerIdsQuery = streamersInfluencerIdsQuery(sf.filtroInfluencer, escoposVisiveis);
+      let influencerIdsQuery = streamersInfluencerIdsQuery(
+        sf.filtroInfluencer,
+        escoposVisiveis,
+        perfis.map((p) => p.id),
+      );
       let operadoraSlugsQuery = streamersOperadoraSlugsQuery(sf.filtroOperadora, escoposVisiveis, operadoraSlugsForcado);
       if (perm.canView === "proprios") {
         const travado = travarRecortePropriosStreamers(

@@ -9,6 +9,10 @@ export const LIVE_RESULTADOS_IN_CHUNK = 150;
 
 type PageResult<T> = { data: T[] | null; error: { message: string } | null };
 
+/**
+ * A cada página, `runPage` **precisa** de `.order` estável (PK/unique) antes do `.range`.
+ * Sem ORDER BY o offset do PostgREST duplica ou omite linhas entre recargas.
+ */
 export async function fetchAllPages<T>(runPage: (from: number, to: number) => Promise<PageResult<T>>): Promise<T[]> {
   const acc: T[] = [];
   for (let from = 0; ; from += SUPABASE_PAGE_SIZE) {

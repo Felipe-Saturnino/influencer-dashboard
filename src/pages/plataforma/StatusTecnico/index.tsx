@@ -68,7 +68,6 @@ import {
   tableRowHoverBg,
   enriquecerStatusIntegracaoLobby,
   isLobbyIntegracaoSlug,
-  lobbyIntegracaoStatusOk,
   lobbyIntegracaoTemColetaComSucesso,
   ultimaColetaLobbyOkEm,
   mesclarLobbyFluxoPorData,
@@ -1637,122 +1636,50 @@ export default function StatusTecnico() {
   const syncLogsCdaKpi = syncLogs.filter((l) => l.integracao_slug === "casa_apostas");
   const ultimoSyncCdaLog = syncLogsCdaKpi[0];
   const cdaOkHoje = syncLogOkNoDia(syncLogsCdaKpi, hojeIsoKpi);
-  const cdaStatusOk =
-    cdaOkHoje || (!passouHorarioCda && ultimoSyncCdaLog?.status === "ok");
 
   const syncLogsCdaAfiliadosKpi = syncLogs.filter((l) => l.integracao_slug === "casa_apostas_afiliados");
   const ultimoSyncCdaAfiliadosLog = syncLogsCdaAfiliadosKpi[0];
   const cdaAfiliadosOkHoje = syncLogOkNoDia(syncLogsCdaAfiliadosKpi, hojeIsoKpi);
-  const cdaAfiliadosStatusOk =
-    cdaAfiliadosOkHoje || (!passouHorarioCda && ultimoSyncCdaAfiliadosLog?.status === "ok");
 
   const syncLogsSpinRssKpi = syncLogs.filter((l) => l.integracao_slug === "spin_na_rede_rss");
   const ultimoSyncSpinRssLog = syncLogsSpinRssKpi[0];
   const spinRssOkHoje = syncLogOkNoDia(syncLogsSpinRssKpi, hojeIsoKpi);
-  const spinNaRedeRssStatusOk =
-    spinRssOkHoje || (!passouHorarioSocial && ultimoSyncSpinRssLog?.status === "ok");
 
   const syncLogsComercialSpaKpi = syncLogs.filter((l) => l.integracao_slug === "comercial_spa_lista");
   const ultimoSyncComercialSpaLog = syncLogsComercialSpaKpi[0];
   const comercialSpaOkHoje = syncLogOkNoDia(syncLogsComercialSpaKpi, hojeIsoKpi);
-  const comercialSpaStatusOk =
-    comercialSpaOkHoje || (!passouHorarioComercialSpa && ultimoSyncComercialSpaLog?.status === "ok");
 
   const syncLogsComercialDominioKpi = syncLogs.filter(
     (l) => l.integracao_slug === "comercial_dominio_validacao",
   );
   const ultimoSyncComercialDominioLog = syncLogsComercialDominioKpi[0];
   const comercialDominioOkHoje = syncLogOkNoDia(syncLogsComercialDominioKpi, hojeIsoKpi);
-  const comercialDominioStatusOk =
-    comercialDominioOkHoje ||
-    (!passouHorarioComercialDominio && ultimoSyncComercialDominioLog?.status === "ok");
 
   const syncLogsComercialCnpjKpi = syncLogs.filter(
     (l) => l.integracao_slug === "comercial_cnpj_enriquecimento",
   );
   const ultimoSyncComercialCnpjLog = syncLogsComercialCnpjKpi[0];
   const comercialCnpjOkHoje = syncLogOkNoDia(syncLogsComercialCnpjKpi, hojeIsoKpi);
-  const comercialCnpjStatusOk =
-    comercialCnpjOkHoje ||
-    (!passouHorarioComercialCnpj && ultimoSyncComercialCnpjLog?.status === "ok");
 
   const syncLogsRevenueSentinelKpi = syncLogs.filter((l) => l.integracao_slug === "revenue_sentinel");
   const ultimoSyncRevenueSentinelLog = syncLogsRevenueSentinelKpi[0];
   const revenueSentinelOkHoje = syncLogOkNoDia(syncLogsRevenueSentinelKpi, hojeIsoKpi);
-  const revenueSentinelStatusOk =
-    revenueSentinelOkHoje ||
-    (!passouHorarioRevenueSentinel && ultimoSyncRevenueSentinelLog?.status === "ok");
 
   const ultimoSyncLobbyBlazeLog = syncLogs.find((l) => l.integracao_slug === "lobby_blaze");
-  const lobbyBlazeStatusOk = lobbyIntegracaoStatusOk(
-    "lobby_blaze",
-    syncLogs.filter((l) => l.integracao_slug === "lobby_blaze"),
-    lobbyExecucoes,
-  );
-
   const ultimoSyncLobbyCdaLog = syncLogs.find((l) => l.integracao_slug === "lobby_cda");
-  const lobbyCdaStatusOk = lobbyIntegracaoStatusOk(
-    "lobby_cda",
-    syncLogs.filter((l) => l.integracao_slug === "lobby_cda"),
-    lobbyExecucoes,
-  );
-
   const ultimoSyncLobbyEsportivaLog = syncLogs.find((l) => l.integracao_slug === "lobby_esportiva");
-  const lobbyEsportivaStatusOk = lobbyIntegracaoStatusOk(
-    "lobby_esportiva",
-    syncLogs.filter((l) => l.integracao_slug === "lobby_esportiva"),
-    lobbyExecucoes,
-  );
-
   const ultimoSyncLobbyJonbetLog = syncLogs.find((l) => l.integracao_slug === "lobby_jonbet");
-  const lobbyJonbetStatusOk = lobbyIntegracaoStatusOk(
-    "lobby_jonbet",
-    syncLogs.filter((l) => l.integracao_slug === "lobby_jonbet"),
-    lobbyExecucoes,
-  );
-
   const ultimoSyncLobbyBateuLog = syncLogs.find((l) => l.integracao_slug === "lobby_bateu");
-  const lobbyBateuStatusOk = lobbyIntegracaoStatusOk(
-    "lobby_bateu",
-    syncLogs.filter((l) => l.integracao_slug === "lobby_bateu"),
-    lobbyExecucoes,
-  );
-
   const ultimoSyncLobbyRicoLog = syncLogs.find((l) => l.integracao_slug === "lobby_rico");
-  const lobbyRicoStatusOk = lobbyIntegracaoStatusOk(
-    "lobby_rico",
-    syncLogs.filter((l) => l.integracao_slug === "lobby_rico"),
-    lobbyExecucoes,
-  );
-
   const ultimoSyncLobbyBrxLog = syncLogs.find((l) => l.integracao_slug === "lobby_brx");
-  const lobbyBrxStatusOk = lobbyIntegracaoStatusOk(
-    "lobby_brx",
-    syncLogs.filter((l) => l.integracao_slug === "lobby_brx"),
-    lobbyExecucoes,
-  );
-
   const ultimoSyncLobbyDonaldLog = syncLogs.find((l) => l.integracao_slug === "lobby_donald");
-  const lobbyDonaldStatusOk = lobbyIntegracaoStatusOk(
-    "lobby_donald",
-    syncLogs.filter((l) => l.integracao_slug === "lobby_donald"),
-    lobbyExecucoes,
-  );
-
   const ultimoSyncLobbyBetpontoLog = syncLogs.find((l) => l.integracao_slug === "lobby_betponto");
-  const lobbyBetpontoStatusOk = lobbyIntegracaoStatusOk(
-    "lobby_betponto",
-    syncLogs.filter((l) => l.integracao_slug === "lobby_betponto"),
-    lobbyExecucoes,
-  );
 
   const ultimoPipelineRun = pipelineRuns.reduce<PipelineRun | null>((max, r) => {
     if (!max) return r;
     return new Date(r.created_at) > new Date(max.created_at) ? r : max;
   }, null);
   const socialOkHoje = pipelineSucessoNoDia(pipelineRuns, hojeIsoKpi);
-  const socialStatusOk =
-    socialOkHoje || (!passouHorarioSocial && ultimoPipelineRun?.status === "success");
 
   const ultimoTechLogDiretoria = techLogs
     .filter((l) => l.tipo === "relatorio_diretoria")

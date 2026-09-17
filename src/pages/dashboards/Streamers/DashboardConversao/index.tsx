@@ -513,7 +513,11 @@ export default function DashboardConversao() {
         ? getPeriodoHistoricoCompetencias()
         : getDatasDoMes(mesSelecionado.ano, mesSelecionado.mes);
       let operadoraSlugsQuery = streamersOperadoraSlugsQuery(filtroOperadora, escoposVisiveis, operadoraSlugsForcado);
-      let influencerIdsQuery = streamersInfluencerIdsQuery(filtroInfluencer, escoposVisiveis);
+      let influencerIdsQuery = streamersInfluencerIdsQuery(
+        filtroInfluencer,
+        escoposVisiveis,
+        perfisLista.map((p) => p.id),
+      );
       if (perm.canView === "proprios") {
         const travado = travarRecortePropriosStreamers(
           { influencerIds: influencerIdsQuery, operadoraSlugs: operadoraSlugsQuery },
@@ -528,7 +532,7 @@ export default function DashboardConversao() {
           ? import("../../../../lib/metricasAliases").then(({ buscarMetricasDeAliases }) =>
               buscarMetricasDeAliases({
                 operadora_slug: operadoraSlugsForcado?.[0] ?? (filtroOperadora !== "todas" ? filtroOperadora : undefined),
-                influencerIds: influencerIdsQuery ?? undefined,
+                influencerIds: influencerIdsQuery,
                 dataInicio: inicio,
                 dataFim: fim,
               }),

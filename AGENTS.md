@@ -32,8 +32,9 @@ Compositores permanentes — nomes no Cursor. Não misturar com carga Mesas/Graf
 | **Ajuda** | Tutoriais, máscaras, tudo da secção Ajuda | MDCs da secção (ex. `geral`, conteúdo/ajuda); Brand se UI |
 | **Ajustes MDC** | Padrão de plataforma (ex. modal → replicar) | `global.mdc` + Brand; **atualizar MDC antes** do rollout em código |
 | **Ajustes Gerais** | Correções pequenas em qualquer área | MDC da secção do alvo + Grep em `global`; Brand se UI |
+| **Ideias** | Caixa de entrada: ideias, débitos de UI, features ainda sem chat de implementação | `docs/IDEIAS.md` — gravar direto ao receber; perguntar só se a ideia estiver ambígua; **não** implementar neste compositor |
 
-**Backlog:** no início do chat, Read `docs/BACKLOG.md`. Cargas diárias: secção **Locks** basta. Chat longo ao fechar: `/atualizar-backlog` (skill) — um fio por chat, não reescrever o ficheiro inteiro.
+**Backlog:** no início do chat, Read `docs/BACKLOG.md`. Cargas diárias: secção **Locks** basta. Chat longo ao fechar: `/atualizar-backlog` (skill) — um fio por chat, não reescrever o ficheiro inteiro. **Ideias** (caixa permanente, outro ficheiro): Read `docs/IDEIAS.md` neste compositor; item a implementar aponta o ID noutro chat.
 
 ## Trilhos duros (sempre)
 
@@ -52,6 +53,7 @@ Compositores permanentes — nomes no Cursor. Não misturar com carga Mesas/Graf
 - Pasta da página: `.cursor/rules/<secao>.mdc` (`lives`, `dashboards`, `rh`, …)
 - Carga Grafana (detalhe): `grafana-carga.mdc` · setup: `docs/SETUP-GP-KPI-GRAFANA.md`
 - Fios abertos / pausados: `docs/BACKLOG.md`
+- Ideias / débitos / features sem chat: `docs/IDEIAS.md`
 - E-mail: `emails.mdc` · Lobby Telecom: `telecom.mdc`
 
 Commit/push **não**. Alterações locais; o usuário publica.

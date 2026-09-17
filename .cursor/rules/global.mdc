@@ -1307,6 +1307,8 @@ PostgREST devolve **no máximo ~1000 linhas** por request. `.limit(5000)` **não
 | Pode ultrapassar ~800–1000 linhas | **Obrigatório** `fetchAllPages` (`lib/supabasePaginate.ts`) ou RPC agregadora |
 | Lotes `.in(ids)` grandes | `fetchInBatched` (com `concurrency` quando independente) |
 
+Cada página `.range` **precisa** de `.order` estável (PK ou unique). Sem ORDER BY o offset do PostgREST duplica ou omite linhas — KPIs do Histórico oscilam entre recargas.
+
 ### 3. Colunas explícitas — proibido `select("*")` em código novo
 
 | Contexto | Regra |

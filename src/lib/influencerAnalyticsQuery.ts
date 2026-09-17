@@ -1,6 +1,6 @@
 import { queryClient } from "./queryClient";
 import { supabase } from "./supabase";
-import { fetchAllPages, fetchLiveResultadosBatched } from "./supabasePaginate";
+import { fetchAllPages, fetchInBatched, fetchLiveResultadosBatched } from "./supabasePaginate";
 
 export type InfluencerAnalyticsMetrica = {
   influencer_id: string;
@@ -40,12 +40,60 @@ export type InfluencerAnalyticsPeriodo = {
   resultados: InfluencerAnalyticsResultado[];
 };
 
+const INFLUENCER_IN_CHUNK = 150;
+
 function canonical(values: string[] | null | undefined): string[] | null {
   if (!values?.length) return null;
   return [...new Set(values)].sort();
 }
 
 const ANALYTICS_VAZIO: InfluencerAnalyticsPeriodo = { metricas: [], lives: [], resultados: [] };
+
+async function fetchPaginasMetricas(
+  inicio: string,
+  fim: string,
+  operadoraSlugs: string[] | null,
+  influencerSlice?: string[],
+): Promise<InfluencerAnalyticsMetrica[]> {
+  return fetchAllPages<InfluencerAnalyticsMetrica>(async (from, to) => {
+    let q = supabase
+      .from("influencer_metricas")
+      .select(
+        "influencer_id, registration_count, ftd_count, ftd_total, visit_count, deposit_count, deposit_total, withdrawal_count, withdrawal_total, ggr, data, operadora_slug",
+      )
+      .gte("data", inicio)
+      .lte("data", fim)
+      .order("data", { ascending: true })
+      .order("influencer_id", { ascending: true })
+      .order("operadora_slug", { ascending: true });
+    if (operadoraSlugs) q = q.in("operadora_slug", operadoraSlugs);
+    if (influencerSlice?.length) q = q.in("influencer_id", influencerSlice);
+    const { data, error } = await q.range(from, to);
+    return { data: (data as InfluencerAnalyticsMetrica[] | null) ?? null, error };
+  });
+}
+
+async function fetchPaginasLives(
+  inicio: string,
+  fim: string,
+  operadoraSlugs: string[] | null,
+  influencerSlice?: string[],
+): Promise<InfluencerAnalyticsLive[]> {
+  return fetchAllPages<InfluencerAnalyticsLive>(async (from, to) => {
+    let q = supabase
+      .from("lives")
+      .select("id, influencer_id, status, plataforma, data, operadora_slug")
+      .eq("status", "realizada")
+      .gte("data", inicio)
+      .lte("data", fim)
+      .order("data", { ascending: true })
+      .order("id", { ascending: true });
+    if (operadoraSlugs) q = q.in("operadora_slug", operadoraSlugs);
+    if (influencerSlice?.length) q = q.in("influencer_id", influencerSlice);
+    const { data, error } = await q.range(from, to);
+    return { data: (data as InfluencerAnalyticsLive[] | null) ?? null, error };
+  });
+}
 
 export async function fetchInfluencerAnalyticsPeriodoCached(params: {
   inicio: string;
@@ -71,37 +119,18 @@ export async function fetchInfluencerAnalyticsPeriodoCached(params: {
     ],
     staleTime: 5 * 60 * 1000,
     queryFn: async () => {
+      const fetchMetricas = (slice?: string[]) =>
+        fetchPaginasMetricas(params.inicio, params.fim, operadoraSlugs, slice);
+      const fetchLives = (slice?: string[]) =>
+        fetchPaginasLives(params.inicio, params.fim, operadoraSlugs, slice);
+
       const [metricas, lives] = await Promise.all([
-        fetchAllPages<InfluencerAnalyticsMetrica>(async (from, to) => {
-          let q = supabase
-            .from("influencer_metricas")
-            .select(
-              "influencer_id, registration_count, ftd_count, ftd_total, visit_count, deposit_count, deposit_total, withdrawal_count, withdrawal_total, ggr, data, operadora_slug",
-            )
-            .gte("data", params.inicio)
-            .lte("data", params.fim)
-            .order("data", { ascending: true })
-            .order("influencer_id", { ascending: true })
-            .order("operadora_slug", { ascending: true })
-            .range(from, to);
-          if (operadoraSlugs) q = q.in("operadora_slug", operadoraSlugs);
-          if (influencerIds) q = q.in("influencer_id", influencerIds);
-          return q;
-        }),
-        fetchAllPages<InfluencerAnalyticsLive>(async (from, to) => {
-          let q = supabase
-            .from("lives")
-            .select("id, influencer_id, status, plataforma, data, operadora_slug")
-            .eq("status", "realizada")
-            .gte("data", params.inicio)
-            .lte("data", params.fim)
-            .order("data", { ascending: true })
-            .order("id", { ascending: true })
-            .range(from, to);
-          if (operadoraSlugs) q = q.in("operadora_slug", operadoraSlugs);
-          if (influencerIds) q = q.in("influencer_id", influencerIds);
-          return q;
-        }),
+        influencerIds
+          ? fetchInBatched(influencerIds, INFLUENCER_IN_CHUNK, fetchMetricas, 2)
+          : fetchMetricas(),
+        influencerIds
+          ? fetchInBatched(influencerIds, INFLUENCER_IN_CHUNK, fetchLives, 2)
+          : fetchLives(),
       ]);
 
       const resultados = await fetchLiveResultadosBatched<InfluencerAnalyticsResultado>(

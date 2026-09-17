@@ -327,7 +327,8 @@ export default function DashboardOverview() {
 
       const perfisLista: InfluencerPerfil[] = perfis;
       let operadoraSlugsQuery = streamersOperadoraSlugsQuery(filtroOperadora, escoposVisiveis, operadoraSlugsForcado);
-      let influencerIdsQuery = streamersInfluencerIdsQuery(filtroInfluencer, escoposVisiveis);
+      const catalogInfluencerIds = perfisLista.map((p) => p.id);
+      let influencerIdsQuery = streamersInfluencerIdsQuery(filtroInfluencer, escoposVisiveis, catalogInfluencerIds);
       if (perm.canView === "proprios") {
         const travado = travarRecortePropriosStreamers(
           { influencerIds: influencerIdsQuery, operadoraSlugs: operadoraSlugsQuery },
@@ -393,14 +394,17 @@ export default function DashboardOverview() {
           periodo = mom.atual;
         }
 
-        const filtrosInvest = filtrosInvestimentoPorEscopo(
-          {
-            semRestricaoEscopo: escoposVisiveis.semRestricaoEscopo,
-            vêTodosInfluencers: escoposVisiveis.vêTodosInfluencers,
-            influencersVisiveis: escoposVisiveis.influencersVisiveis,
-          },
-          { operadora_slug: operadoraSlugParaApi, filtroInfluencer }
-        );
+        const filtrosInvest = {
+          ...filtrosInvestimentoPorEscopo(
+            {
+              semRestricaoEscopo: escoposVisiveis.semRestricaoEscopo,
+              vêTodosInfluencers: escoposVisiveis.vêTodosInfluencers,
+              influencersVisiveis: escoposVisiveis.influencersVisiveis,
+            },
+            { operadora_slug: operadoraSlugParaApi, filtroInfluencer }
+          ),
+          influencerIds: influencerIdsQuery,
+        };
 
         const operadoraSlugParaAliases =
           operadoraSlugParaApi ?? undefined;
@@ -408,6 +412,7 @@ export default function DashboardOverview() {
           ? import("../../../../lib/metricasAliases").then(({ buscarMetricasDeAliases }) =>
               buscarMetricasDeAliases({
                 operadora_slug: operadoraSlugParaAliases,
+                influencerIds: influencerIdsQuery,
                 dataInicio: periodo.inicio,
                 dataFim: periodo.fim,
               }),
@@ -468,17 +473,7 @@ export default function DashboardOverview() {
           try {
             const periodoAnt = mom.anterior;
             const [investAnt, analyticsAnt, registrosUnicosAnt, jogadoresDoPeriodoAnt] = await Promise.all([
-              buscarInvestimentoPago(
-                periodoAnt,
-                filtrosInvestimentoPorEscopo(
-                  {
-                    semRestricaoEscopo: escoposVisiveis.semRestricaoEscopo,
-                    vêTodosInfluencers: escoposVisiveis.vêTodosInfluencers,
-                    influencersVisiveis: escoposVisiveis.influencersVisiveis,
-                  },
-                  { operadora_slug: operadoraSlugParaApi, filtroInfluencer }
-                )
-              ),
+              buscarInvestimentoPago(periodoAnt, filtrosInvest),
               fetchInfluencerAnalyticsPeriodoCached({
                 inicio: periodoAnt.inicio,
                 fim: periodoAnt.fim,

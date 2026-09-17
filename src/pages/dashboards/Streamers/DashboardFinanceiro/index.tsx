@@ -291,7 +291,11 @@ export default function DashboardFinanceiro() {
         ? getPeriodoHistoricoCompetencias()
         : getPeriodoComparativoMoM(mesSelecionado.ano, mesSelecionado.mes).atual;
       let operadoraSlugsQuery = streamersOperadoraSlugsQuery(operadoraFiltro, escoposVisiveis, operadoraSlugsForcado);
-      let influencerIdsQuery = streamersInfluencerIdsQuery(filtroInfluencer, escoposVisiveis);
+      let influencerIdsQuery = streamersInfluencerIdsQuery(
+        filtroInfluencer,
+        escoposVisiveis,
+        perfisLista.map((p) => p.id),
+      );
       if (perm.canView === "proprios") {
         const travado = travarRecortePropriosStreamers(
           { influencerIds: influencerIdsQuery, operadoraSlugs: operadoraSlugsQuery },
@@ -317,20 +321,23 @@ export default function DashboardFinanceiro() {
       }
 
       try {
-        const filtrosInvest = filtrosInvestimentoPorEscopo(
-          {
-            semRestricaoEscopo: escoposVisiveis.semRestricaoEscopo,
-            vêTodosInfluencers: escoposVisiveis.vêTodosInfluencers,
-            influencersVisiveis: escoposVisiveis.influencersVisiveis,
-          },
-          { operadora_slug: operadoraForApi, filtroInfluencer }
-        );
+        const filtrosInvest = {
+          ...filtrosInvestimentoPorEscopo(
+            {
+              semRestricaoEscopo: escoposVisiveis.semRestricaoEscopo,
+              vêTodosInfluencers: escoposVisiveis.vêTodosInfluencers,
+              influencersVisiveis: escoposVisiveis.influencersVisiveis,
+            },
+            { operadora_slug: operadoraForApi, filtroInfluencer }
+          ),
+          influencerIds: influencerIdsQuery,
+        };
 
         const aliasesPromise = historico
           ? import("../../../../lib/metricasAliases").then(({ buscarMetricasDeAliases }) =>
               buscarMetricasDeAliases({
                 operadora_slug: operadoraForApi ?? undefined,
-                influencerIds: influencerIdsQuery ?? undefined,
+                influencerIds: influencerIdsQuery,
                 dataInicio: periodoInicio,
                 dataFim: periodoFim,
               }),
@@ -415,14 +422,7 @@ export default function DashboardFinanceiro() {
             const [investAnt, analyticsAnt] = await Promise.all([
               buscarInvestimentoPago(
                 { inicio: periodoAnt.inicio, fim: periodoAnt.fim },
-                filtrosInvestimentoPorEscopo(
-                  {
-                    semRestricaoEscopo: escoposVisiveis.semRestricaoEscopo,
-                    vêTodosInfluencers: escoposVisiveis.vêTodosInfluencers,
-                    influencersVisiveis: escoposVisiveis.influencersVisiveis,
-                  },
-                  { operadora_slug: operadoraForApi, filtroInfluencer }
-                )
+                filtrosInvest,
               ),
               fetchInfluencerAnalyticsPeriodoCached({
                 inicio: periodoAnt.inicio,

@@ -23,22 +23,25 @@ function visaoGlobalInfluencers(escopo: EscopoInfluencerQuery): boolean {
 }
 
 /**
- * Agregador **Todos Influencers** = universo do escopo, nunca a plataforma inteira.
- * `null` = visão global (admin / gestor / operador).
- * `[]` = escopo fechado vazio — a query deve devolver vazio (não é “todos”).
- * ID fora do escopo → `[]` (perfil `proprios` / agência).
+ * Agregador **Todos Influencers** = universo do **catálogo** (`role = influencer`) ∩ escopo.
+ * Nunca `null` (plataforma / afiliados na mesma `influencer_metricas`).
+ * `[]` = escopo ou catálogo vazio — a query deve devolver vazio.
+ * ID fora do escopo ou do catálogo → `[]`.
  */
 export function streamersInfluencerIdsQuery(
   filtroInfluencer: string,
   escopo: EscopoInfluencerQuery,
-): string[] | null {
+  catalogInfluencerIds: readonly string[],
+): string[] {
+  const catalog = new Set(catalogInfluencerIds);
   const global = visaoGlobalInfluencers(escopo);
   if (filtroInfluencer !== "todos") {
-    if (global || escopo.influencersVisiveis.includes(filtroInfluencer)) return [filtroInfluencer];
-    return [];
+    const noEscopo = global || escopo.influencersVisiveis.includes(filtroInfluencer);
+    if (!noEscopo || !catalog.has(filtroInfluencer)) return [];
+    return [filtroInfluencer];
   }
-  if (global) return null;
-  return escopo.influencersVisiveis;
+  if (global) return [...catalog];
+  return escopo.influencersVisiveis.filter((id) => catalog.has(id));
 }
 
 /**
@@ -75,11 +78,11 @@ export function streamersOperadoraSlugsQuery(
 export function travarRecortePropriosStreamers(
   recorte: { influencerIds: string[] | null; operadoraSlugs: string[] | null },
   escopo: EscopoInfluencerQuery & EscopoOperadoraQuery,
-): { influencerIds: string[] | null; operadoraSlugs: string[] | null } {
+): { influencerIds: string[]; operadoraSlugs: string[] | null } {
   const infPermitidos = new Set(escopo.influencersVisiveis);
-  let influencerIds = recorte.influencerIds;
-  if (!influencerIds) influencerIds = escopo.influencersVisiveis;
-  else influencerIds = influencerIds.filter((id) => infPermitidos.has(id));
+  const influencerIds = recorte.influencerIds
+    ? recorte.influencerIds.filter((id) => infPermitidos.has(id))
+    : [...escopo.influencersVisiveis];
 
   const opPermitidos = new Set(escopo.operadorasVisiveis);
   let operadoraSlugs = recorte.operadoraSlugs;
@@ -116,8 +119,9 @@ export async function fetchInfluencerIdsComDadosNoPeriodo(params: {
   filtroOperadora: string;
   operadoraSlugsForcado: string[] | null;
   podeVerInfluencer: (id: string) => boolean;
+  influencerIds: string[];
 }): Promise<string[]> {
-  const { inicio, fim, filtroOperadora, operadoraSlugsForcado, podeVerInfluencer } = params;
+  const { inicio, fim, filtroOperadora, operadoraSlugsForcado, podeVerInfluencer, influencerIds } = params;
 
   const operadoraSlugs = operadoraSlugsForcado?.length
     ? operadoraSlugsForcado
@@ -129,7 +133,7 @@ export async function fetchInfluencerIdsComDadosNoPeriodo(params: {
     inicio,
     fim,
     operadoraSlugs,
-    influencerIds: null,
+    influencerIds,
   });
 
   const ids = new Set<string>();

@@ -559,7 +559,11 @@ export default function DashboardOverviewInfluencer() {
         : mom!.atual;
 
       // SQL (operadora_slug) é a fonte da verdade — mesmo contrato Streamers.
-      let influencerIdsQuery = streamersInfluencerIdsQuery(filtroInfluencer, escoposVisiveis);
+      let influencerIdsQuery = streamersInfluencerIdsQuery(
+        filtroInfluencer,
+        escoposVisiveis,
+        perfis.map((p) => p.id),
+      );
       let operadoraSlugsQuery = streamersOperadoraSlugsQuery(
         filtroOperadora,
         escoposVisiveis,
@@ -586,10 +590,7 @@ export default function DashboardOverviewInfluencer() {
           { operadora_slug: operadoraSlugParaApi, filtroInfluencer },
         ),
         includeAgentes: false as const,
-        influencerIds:
-          influencerIdsQuery === null
-            ? undefined
-            : influencerIdsQuery,
+        influencerIds: influencerIdsQuery,
       };
 
       const aliasesPromise = historico

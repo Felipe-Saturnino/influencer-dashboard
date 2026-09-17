@@ -18,6 +18,7 @@ import {
   buildInfluencerFilterOptions,
   fetchInfluencerIdsComDadosNoPeriodo,
   periodoStreamersFiltro,
+  streamersInfluencerIdsQuery,
 } from "./streamersInfluencerFilterHelpers";
 
 export type MesRef = { ano: number; mes: number; label: string };
@@ -102,12 +103,14 @@ export function StreamersFiltrosProvider({ children }: { children: ReactNode }) 
 
     (async () => {
       try {
+        const catalogInfluencerIds = perfis.map((p) => p.id);
         const idsComDados = await fetchInfluencerIdsComDadosNoPeriodo({
           inicio: periodo.inicio,
           fim: periodo.fim,
           filtroOperadora,
           operadoraSlugsForcado,
           podeVerInfluencer,
+          influencerIds: streamersInfluencerIdsQuery("todos", escoposVisiveis, catalogInfluencerIds),
         });
         if (cancel) return;
         setInfluencerOptions(buildInfluencerFilterOptions(perfis, idsComDados, podeVerInfluencer));
@@ -127,7 +130,7 @@ export function StreamersFiltrosProvider({ children }: { children: ReactNode }) 
     filtroOperadora,
     operadoraSlugsForcado,
     podeVerInfluencer,
-    escoposVisiveis.influencersVisiveis,
+    escoposVisiveis,
   ]);
 
   useEffect(() => {

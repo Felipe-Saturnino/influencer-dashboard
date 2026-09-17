@@ -13,6 +13,26 @@ const COLS =
 
 const INFLUENCER_IN_CHUNK = 150;
 
+/** PK de `jogadores_metricas_diarias` — obrigatória em cada `.range` para o offset não duplicar/omitir linhas. */
+const JOGADORES_METRICAS_DIARIAS_PK = [
+  "data",
+  "operadora_slug",
+  "origem_tipo",
+  "origem",
+  "ext_customer_id",
+] as const;
+
+type QueryComOrder = {
+  order: (column: string, options?: { ascending: boolean }) => QueryComOrder;
+};
+
+function ordenarPaginaJogadoresMetricasDiarias<Q extends QueryComOrder>(q: Q): Q {
+  return JOGADORES_METRICAS_DIARIAS_PK.reduce(
+    (acc, col) => acc.order(col, { ascending: true }),
+    q as QueryComOrder,
+  ) as Q;
+}
+
 export type JogadoresAbaQueryFiltro = {
   inicio: string;
   fim: string;
@@ -69,7 +89,7 @@ function baseQuery(filtro: JogadoresAbaQueryFiltro, influencerSlice?: string[]) 
   if (influencerSlice?.length) {
     q = q.in("influencer_id", influencerSlice);
   }
-  return q;
+  return ordenarPaginaJogadoresMetricasDiarias(q);
 }
 
 async function fetchPaginas(
@@ -127,7 +147,7 @@ function baseQueryUapSpin(filtro: JogadoresAbaQueryFiltro, influencerSlice?: str
     q = q.in("operadora_slug", filtro.operadoraSlugs);
   }
   if (influencerSlice?.length) q = q.in("influencer_id", influencerSlice);
-  return q;
+  return ordenarPaginaJogadoresMetricasDiarias(q);
 }
 
 async function fetchPaginasUapSpin(
@@ -183,7 +203,7 @@ function baseQueryRegistros(filtro: JogadoresAbaQueryFiltro, influencerSlice?: s
   if (influencerSlice?.length) {
     q = q.in("influencer_id", influencerSlice);
   }
-  return q;
+  return ordenarPaginaJogadoresMetricasDiarias(q);
 }
 
 async function fetchPaginasRegistros(

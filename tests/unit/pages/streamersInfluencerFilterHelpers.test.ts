@@ -9,30 +9,35 @@ const ESC_ADMIN = { semRestricaoEscopo: true, vêTodosInfluencers: true, influen
 const ESC_PROPRIOS = { semRestricaoEscopo: false, influencersVisiveis: ["inf-eu"], operadorasVisiveis: ["casa_apostas"] };
 const ESC_AGENCIA = { semRestricaoEscopo: false, influencersVisiveis: ["inf-a", "inf-b"], operadorasVisiveis: ["casa_apostas", "blaze"] };
 const ESC_OPERADOR = { semRestricaoEscopo: false, vêTodosInfluencers: true, influencersVisiveis: [] as string[], operadorasVisiveis: ["blaze"] };
+const CAT_INFLUENCERS = ["inf-1", "inf-2", "inf-eu", "inf-a", "inf-b"];
 
 describe("streamersInfluencerIdsQuery", () => {
-  it("admin com Todos Influencers não filtra (null)", () => {
-    expect(streamersInfluencerIdsQuery("todos", ESC_ADMIN)).toBeNull();
+  it("admin com Todos Influencers usa só o catálogo influencer (nunca null)", () => {
+    expect(streamersInfluencerIdsQuery("todos", ESC_ADMIN, ["inf-1", "inf-2"])).toEqual(["inf-1", "inf-2"]);
   });
 
-  it("vêTodosInfluencers com lista vazia também é visão global", () => {
-    expect(streamersInfluencerIdsQuery("todos", { vêTodosInfluencers: true, influencersVisiveis: [] })).toBeNull();
+  it("catálogo vazio zera a query", () => {
+    expect(streamersInfluencerIdsQuery("todos", { vêTodosInfluencers: true, influencersVisiveis: [] }, [])).toEqual([]);
   });
 
-  it("proprios com Todos Influencers fica só nos IDs do escopo", () => {
-    expect(streamersInfluencerIdsQuery("todos", ESC_PROPRIOS)).toEqual(["inf-eu"]);
+  it("proprios com Todos Influencers intersecta catálogo", () => {
+    expect(streamersInfluencerIdsQuery("todos", ESC_PROPRIOS, CAT_INFLUENCERS)).toEqual(["inf-eu"]);
   });
 
   it("agência sem influencers devolve array vazio (query deve zerar)", () => {
-    expect(streamersInfluencerIdsQuery("todos", { semRestricaoEscopo: false, influencersVisiveis: [] })).toEqual([]);
+    expect(streamersInfluencerIdsQuery("todos", { semRestricaoEscopo: false, influencersVisiveis: [] }, CAT_INFLUENCERS)).toEqual([]);
   });
 
-  it("filtro de um influencer na visão global é permitido", () => {
-    expect(streamersInfluencerIdsQuery("inf-1", ESC_ADMIN)).toEqual(["inf-1"]);
+  it("filtro de um influencer na visão global é permitido se estiver no catálogo", () => {
+    expect(streamersInfluencerIdsQuery("inf-1", ESC_ADMIN, CAT_INFLUENCERS)).toEqual(["inf-1"]);
+  });
+
+  it("afiliado fora do catálogo não entra no recorte Streamers", () => {
+    expect(streamersInfluencerIdsQuery("af-1", ESC_ADMIN, CAT_INFLUENCERS)).toEqual([]);
   });
 
   it("proprios não consegue pedir ID fora do escopo", () => {
-    expect(streamersInfluencerIdsQuery("inf-outro", ESC_PROPRIOS)).toEqual([]);
+    expect(streamersInfluencerIdsQuery("inf-outro", ESC_PROPRIOS, CAT_INFLUENCERS)).toEqual([]);
   });
 });
 
@@ -76,7 +81,7 @@ describe("travarRecortePropriosStreamers", () => {
   it("agência Todas = união do par, não plataforma", () => {
     const r = travarRecortePropriosStreamers(
       {
-        influencerIds: streamersInfluencerIdsQuery("todos", ESC_AGENCIA),
+        influencerIds: streamersInfluencerIdsQuery("todos", ESC_AGENCIA, CAT_INFLUENCERS),
         operadoraSlugs: streamersOperadoraSlugsQuery("todas", ESC_AGENCIA, null),
       },
       ESC_AGENCIA,
