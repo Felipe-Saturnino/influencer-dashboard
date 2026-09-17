@@ -116,7 +116,7 @@ function StreamersFiltrosEUAbas({
               podeVerOperadora={podeVerOperadora}
             />
           )}
-          {sf.isLoading && (
+          {(sf.isLoading || (!sf.historico && !sf.momPronto)) && (
             <span
               style={{
                 fontSize: 12,

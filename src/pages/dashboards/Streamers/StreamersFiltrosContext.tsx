@@ -45,6 +45,12 @@ export type StreamersFiltrosContextValue = {
   /** True enquanto a aba ativa (Overview / Conversão / Jogadores / Financeiro) está a carregar dados. */
   isLoading: boolean;
   setIsLoading: (v: boolean) => void;
+  /**
+   * Fase 2 MoM: false enquanto o comparativo do mês ainda corre.
+   * Conversão (sem MoM) e Histórico mantêm true.
+   */
+  momPronto: boolean;
+  setMomPronto: (v: boolean) => void;
 };
 
 const StreamersFiltrosCtx = createContext<StreamersFiltrosContextValue | null>(null);
@@ -72,6 +78,10 @@ export function StreamersFiltrosProvider({ children }: { children: ReactNode }) 
   const [isLoading, setIsLoadingState] = useState(false);
   const setIsLoading = useCallback((v: boolean) => {
     setIsLoadingState(v);
+  }, []);
+  const [momPronto, setMomProntoState] = useState(true);
+  const setMomPronto = useCallback((v: boolean) => {
+    setMomProntoState(v);
   }, []);
 
   const {
@@ -174,6 +184,8 @@ export function StreamersFiltrosProvider({ children }: { children: ReactNode }) 
       toggleHistorico,
       isLoading,
       setIsLoading,
+      momPronto,
+      setMomPronto,
     }),
     [
       mesesDisponiveis,
@@ -193,6 +205,8 @@ export function StreamersFiltrosProvider({ children }: { children: ReactNode }) 
       toggleHistorico,
       isLoading,
       setIsLoading,
+      momPronto,
+      setMomPronto,
     ],
   );
 

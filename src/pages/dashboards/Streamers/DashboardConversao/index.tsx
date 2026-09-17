@@ -332,7 +332,7 @@ function PodioFTDHora({ ranking }: { ranking: ConversaoRow[] }) {
 
   const maxFtdH = ranking[0].ftdPorHora;
 
-  const PARES_POR_PAG = 6;
+  const PARES_POR_PAG = Math.ceil(TABELA_PAGE_SIZE_STREAMERS / 2);
   const pares: [ConversaoRow, ConversaoRow | null][] = [];
   for (let i = 0; i < resto.length; i += 2) pares.push([resto[i], resto[i + 1] ?? null]);
   const totalPags = Math.ceil(pares.length / PARES_POR_PAG);
@@ -478,6 +478,11 @@ export default function DashboardConversao() {
     sf.setIsLoading(loading);
   }, [embed, sf, loading]);
 
+  useEffect(() => {
+    if (!embed || !sf) return;
+    sf.setMomPronto(true);
+  }, [embed, sf]);
+
   const mesSelecionado = mesesDisponiveis[idxMes];
 
   function irMesAnterior() { setHistorico(false); setIdxMes((i) => Math.max(0, i - 1)); }
@@ -519,7 +524,18 @@ export default function DashboardConversao() {
       }
 
       try {
-        const [analytics, registrosUnicos] = await Promise.all([
+        const aliasesPromise = historico
+          ? import("../../../../lib/metricasAliases").then(({ buscarMetricasDeAliases }) =>
+              buscarMetricasDeAliases({
+                operadora_slug: operadoraSlugsForcado?.[0] ?? (filtroOperadora !== "todas" ? filtroOperadora : undefined),
+                influencerIds: influencerIdsQuery ?? undefined,
+                dataInicio: inicio,
+                dataFim: fim,
+              }),
+            )
+          : Promise.resolve([]);
+
+        const [analytics, registrosUnicos, aliasesSinteticas] = await Promise.all([
           fetchInfluencerAnalyticsPeriodoCached({
             inicio,
             fim,
@@ -532,16 +548,11 @@ export default function DashboardConversao() {
             operadoraSlugs: operadoraSlugsQuery,
             influencerIds: influencerIdsQuery,
           }),
+          aliasesPromise,
         ]);
         let metricas = analytics.metricas;
         if (historico) {
-          const { buscarMetricasDeAliases, mesclarMetricasComAliases } = await import("../../../../lib/metricasAliases");
-          const aliasesSinteticas = await buscarMetricasDeAliases({
-            operadora_slug: operadoraSlugsForcado?.[0] ?? (filtroOperadora !== "todas" ? filtroOperadora : undefined),
-            influencerIds: influencerIdsQuery ?? undefined,
-            dataInicio: inicio,
-            dataFim: fim,
-          });
+          const { mesclarMetricasComAliases } = await import("../../../../lib/metricasAliases");
           metricas = mesclarMetricasComAliases(metricas, aliasesSinteticas, fim, podeVerInfluencer);
         }
 

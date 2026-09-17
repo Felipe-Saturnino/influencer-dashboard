@@ -302,6 +302,11 @@ export default function DashboardOverview() {
     sf.setIsLoading(loading);
   }, [embed, sf, loading]);
 
+  useEffect(() => {
+    if (!embed || !sf) return;
+    sf.setMomPronto(historico || momPronto);
+  }, [embed, sf, historico, momPronto]);
+
   // ── BUSCA: fase 1 = período atual; fase 2 = MoM em background ────────────────
   useEffect(() => {
     if (catalogosPending) return;
@@ -397,36 +402,50 @@ export default function DashboardOverview() {
           { operadora_slug: operadoraSlugParaApi, filtroInfluencer }
         );
 
-        const [analytics, investimentoPago, registrosUnicos, jogadoresDoPeriodo] = await Promise.all([
-          fetchInfluencerAnalyticsPeriodoCached({
-            inicio: periodo.inicio,
-            fim: periodo.fim,
-            operadoraSlugs: operadoraSlugsQuery,
-            influencerIds: influencerIdsQuery,
-          }),
-          buscarInvestimentoPago(periodo, filtrosInvest),
-          fetchJogadoresRegistrosUnicos({
-            inicio: periodo.inicio,
-            fim: periodo.fim,
-            operadoraSlugs: operadoraSlugsQuery,
-            influencerIds: influencerIdsQuery,
-          }),
-          fetchJogadoresUapSpin({
-            inicio: periodo.inicio,
-            fim: periodo.fim,
-            operadoraSlugs: operadoraSlugsQuery,
-            influencerIds: influencerIdsQuery,
-          }),
-        ]);
+        const operadoraSlugParaAliases =
+          operadoraSlugParaApi ?? undefined;
+        const aliasesPromise = historico
+          ? import("../../../../lib/metricasAliases").then(({ buscarMetricasDeAliases }) =>
+              buscarMetricasDeAliases({
+                operadora_slug: operadoraSlugParaAliases,
+                dataInicio: periodo.inicio,
+                dataFim: periodo.fim,
+              }),
+            )
+          : Promise.resolve([]);
+
+        const [analytics, investimentoPago, registrosUnicos, jogadoresDoPeriodo, aliasesSinteticas] =
+          await Promise.all([
+            fetchInfluencerAnalyticsPeriodoCached({
+              inicio: periodo.inicio,
+              fim: periodo.fim,
+              operadoraSlugs: operadoraSlugsQuery,
+              influencerIds: influencerIdsQuery,
+            }),
+            buscarInvestimentoPago(periodo, filtrosInvest),
+            fetchJogadoresRegistrosUnicos({
+              inicio: periodo.inicio,
+              fim: periodo.fim,
+              operadoraSlugs: operadoraSlugsQuery,
+              influencerIds: influencerIdsQuery,
+            }),
+            fetchJogadoresUapSpin({
+              inicio: periodo.inicio,
+              fim: periodo.fim,
+              operadoraSlugs: operadoraSlugsQuery,
+              influencerIds: influencerIdsQuery,
+            }),
+            aliasesPromise,
+          ]);
 
         if (historico) {
-          const { buscarMetricasDeAliases, mesclarMetricasComAliases } = await import("../../../../lib/metricasAliases");
-          const aliasesSinteticas = await buscarMetricasDeAliases({
-            operadora_slug: operadoraSlugParaApi,
-            dataInicio: periodo.inicio,
-            dataFim: periodo.fim,
-          });
-          metricas = mesclarMetricasComAliases(analytics.metricas, aliasesSinteticas, periodo.fim, podeVerInfluencer);
+          const { mesclarMetricasComAliases } = await import("../../../../lib/metricasAliases");
+          metricas = mesclarMetricasComAliases(
+            analytics.metricas,
+            aliasesSinteticas,
+            periodo.fim,
+            podeVerInfluencer,
+          );
           lives = analytics.lives;
           resultados = analytics.resultados;
         } else {

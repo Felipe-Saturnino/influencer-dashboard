@@ -7,10 +7,15 @@ import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { fetchInfluencerAnalyticsPeriodoCached } from "../../../lib/influencerAnalyticsQuery";
-import { fetchJogadoresUapSpin } from "../../../lib/jogadoresAbaQuery";
+import { fetchJogadoresRegistrosUnicos, fetchJogadoresUapSpin } from "../../../lib/jogadoresAbaQuery";
 import { uapSpinJogadoresAba } from "../../../lib/jogadoresAbaMetrics";
-import { buscarInvestimentoPago } from "../../../lib/investimentoPago";
+import { buscarInvestimentoPago, filtrosInvestimentoPorEscopo } from "../../../lib/investimentoPago";
 import { buscarMetricasDeAliases, mesclarMetricasComAliases } from "../../../lib/metricasAliases";
+import {
+  streamersInfluencerIdsQuery,
+  streamersOperadoraSlugsQuery,
+  travarRecortePropriosStreamers,
+} from "../Streamers/streamersInfluencerFilterHelpers";
 import { BRAND, MSG_SEM_DADOS_FILTRO, MSG_SEM_DADOS_PERIODO } from "../../../lib/dashboardConstants";
 import {
   fmt,
@@ -466,7 +471,7 @@ const MSG_ERRO_OVERVIEW_INFLUENCER =
 
 export default function DashboardOverviewInfluencer() {
   const { theme: t, podeVerInfluencer, podeVerOperadora, escoposVisiveis } = useApp();
-  const { showFiltroInfluencer, showFiltroOperadora } = useDashboardFiltros();
+  const { showFiltroInfluencer, showFiltroOperadora, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("dash_overview_influencer");
 
   const mesesDisponiveis = useMemo(() => getMesesDisponiveis(), []);
@@ -513,7 +518,7 @@ export default function DashboardOverviewInfluencer() {
     else setHistorico(true);
   }
 
-  const influencersVisiveis = useMemo(() => escoposVisiveis.influencersVisiveis.length === 0 ? [] : escoposVisiveis.influencersVisiveis, [escoposVisiveis.influencersVisiveis]);
+  const influencersVisiveis = escoposVisiveis.influencersVisiveis;
 
   useEffect(() => {
     if (filtroInfluencer !== "todos" && influencersComDadosIds.length > 0 && !influencersComDadosIds.includes(filtroInfluencer)) {
@@ -553,66 +558,76 @@ export default function DashboardOverviewInfluencer() {
         ? getPeriodoHistoricoCompetencias()
         : mom!.atual;
 
-      // SQL (operadora_slug) é a fonte da verdade — não refiltrar pela junction.
-      const influencerIdsAnalytics =
-        filtroInfluencer !== "todos"
-          ? [filtroInfluencer]
-          : influencersVisiveis.length === 0
-            ? null
-            : influencersVisiveis;
-      const influencerIdsUap =
-        filtroInfluencer !== "todos"
-          ? [filtroInfluencer]
-          : escoposVisiveis.semRestricaoEscopo || escoposVisiveis.vêTodosInfluencers
-            ? null
-            : influencersVisiveis;
-      const investInfluencerIds =
-        filtroInfluencer !== "todos"
-          ? [filtroInfluencer]
-          : influencersVisiveis.length === 0
-            ? undefined
-            : influencersVisiveis;
+      // SQL (operadora_slug) é a fonte da verdade — mesmo contrato Streamers.
+      let influencerIdsQuery = streamersInfluencerIdsQuery(filtroInfluencer, escoposVisiveis);
+      let operadoraSlugsQuery = streamersOperadoraSlugsQuery(
+        filtroOperadora,
+        escoposVisiveis,
+        operadoraSlugsForcado,
+      );
+      if (perm.canView === "proprios") {
+        const travado = travarRecortePropriosStreamers(
+          { influencerIds: influencerIdsQuery, operadoraSlugs: operadoraSlugsQuery },
+          escoposVisiveis,
+        );
+        influencerIdsQuery = travado.influencerIds;
+        operadoraSlugsQuery = travado.operadoraSlugs;
+      }
 
-      const operadoraSlugsQuery =
-        filtroOperadora !== "todas"
-          ? [filtroOperadora]
-          : escoposVisiveis.semRestricaoEscopo
-            ? null
-            : escoposVisiveis.operadorasVisiveis;
-
-      const [analytics, investAtual, jogadoresUapAtual] = await Promise.all([
-        fetchInfluencerAnalyticsPeriodoCached({
-          inicio,
-          fim,
-          operadoraSlugs: operadoraSlugsQuery,
-          influencerIds: influencerIdsAnalytics,
-        }),
-        buscarInvestimentoPago(
-          { inicio, fim },
+      const operadoraSlugParaApi =
+        operadoraSlugsForcado?.[0] ?? (filtroOperadora !== "todas" ? filtroOperadora : null);
+      const filtrosInvest = {
+        ...filtrosInvestimentoPorEscopo(
           {
-            influencerIds: investInfluencerIds,
-            operadora_slug: filtroOperadora !== "todas" ? filtroOperadora : undefined,
-            includeAgentes: false,
+            semRestricaoEscopo: escoposVisiveis.semRestricaoEscopo,
+            vêTodosInfluencers: escoposVisiveis.vêTodosInfluencers,
+            influencersVisiveis: escoposVisiveis.influencersVisiveis,
           },
+          { operadora_slug: operadoraSlugParaApi, filtroInfluencer },
         ),
-        fetchJogadoresUapSpin({
-          inicio,
-          fim,
-          operadoraSlugs: operadoraSlugsQuery,
-          influencerIds: influencerIdsUap,
-        }),
-      ]);
+        includeAgentes: false as const,
+        influencerIds:
+          influencerIdsQuery === null
+            ? undefined
+            : influencerIdsQuery,
+      };
+
+      const aliasesPromise = historico
+        ? buscarMetricasDeAliases({
+            operadora_slug: operadoraSlugParaApi ?? undefined,
+            influencerIds: filtrosInvest.influencerIds,
+            dataInicio: inicio,
+            dataFim: fim,
+          })
+        : Promise.resolve([]);
+
+      const [analytics, investAtual, jogadoresUapAtual, registrosUnicos, aliasesSinteticas] =
+        await Promise.all([
+          fetchInfluencerAnalyticsPeriodoCached({
+            inicio,
+            fim,
+            operadoraSlugs: operadoraSlugsQuery,
+            influencerIds: influencerIdsQuery,
+          }),
+          buscarInvestimentoPago({ inicio, fim }, filtrosInvest),
+          fetchJogadoresUapSpin({
+            inicio,
+            fim,
+            operadoraSlugs: operadoraSlugsQuery,
+            influencerIds: influencerIdsQuery,
+          }),
+          fetchJogadoresRegistrosUnicos({
+            inicio,
+            fim,
+            operadoraSlugs: operadoraSlugsQuery,
+            influencerIds: influencerIdsQuery,
+          }),
+          aliasesPromise,
+        ]);
       if (cancelled) return;
 
       let metricas: Metrica[] = analytics.metricas;
       if (historico) {
-        const aliasesSinteticas = await buscarMetricasDeAliases({
-          operadora_slug: filtroOperadora !== "todas" ? filtroOperadora : undefined,
-          influencerIds: investInfluencerIds,
-          dataInicio: inicio,
-          dataFim: fim,
-        });
-        if (cancelled) return;
         metricas = mesclarMetricasComAliases(metricas, aliasesSinteticas, fim, podeVerInfluencer);
       }
 
@@ -658,7 +673,10 @@ export default function DashboardOverviewInfluencer() {
         };
       }
 
-      setTotais(calcTotais(rows, liveRows, resultados, investTotal));
+      setTotais({
+        ...calcTotais(rows, liveRows, resultados, investTotal),
+        registros: registrosUnicos.total,
+      });
       setUapSpin(uapSpinJogadoresAba(jogadoresUapAtual).uap);
 
       // Bloco 5: Detalhamento Mensal (histórico) ou Detalhamento Diário (mês no carrossel)
@@ -786,26 +804,25 @@ export default function DashboardOverviewInfluencer() {
       if (mom) {
         try {
           const { inicio: iA, fim: fA } = mom.anterior;
-          const [investAnt, analyticsAnt, jogadoresUapAnterior] = await Promise.all([
-            buscarInvestimentoPago(
-              { inicio: iA, fim: fA },
-              {
-                influencerIds: investInfluencerIds,
-                operadora_slug: filtroOperadora !== "todas" ? filtroOperadora : undefined,
-                includeAgentes: false,
-              },
-            ),
+          const [investAnt, analyticsAnt, jogadoresUapAnterior, registrosUnicosAnt] = await Promise.all([
+            buscarInvestimentoPago({ inicio: iA, fim: fA }, filtrosInvest),
             fetchInfluencerAnalyticsPeriodoCached({
               inicio: iA,
               fim: fA,
               operadoraSlugs: operadoraSlugsQuery,
-              influencerIds: influencerIdsAnalytics,
+              influencerIds: influencerIdsQuery,
             }),
             fetchJogadoresUapSpin({
               inicio: iA,
               fim: fA,
               operadoraSlugs: operadoraSlugsQuery,
-              influencerIds: influencerIdsUap,
+              influencerIds: influencerIdsQuery,
+            }),
+            fetchJogadoresRegistrosUnicos({
+              inicio: iA,
+              fim: fA,
+              operadoraSlugs: operadoraSlugsQuery,
+              influencerIds: influencerIdsQuery,
             }),
           ]);
           if (cancelled) return;
@@ -814,7 +831,10 @@ export default function DashboardOverviewInfluencer() {
           const rA: LiveResultado[] = analyticsAnt.resultados;
           const rowsA = mA.filter((m) => podeVerInfluencer(m.influencer_id));
           const liveA = lA.filter((l) => podeVerInfluencer(l.influencer_id));
-          setTotaisAnt(calcTotais(rowsA, liveA, rA, investAnt.total));
+          setTotaisAnt({
+            ...calcTotais(rowsA, liveA, rA, investAnt.total),
+            registros: registrosUnicosAnt.total,
+          });
           setUapSpinAnt(uapSpinJogadoresAba(jogadoresUapAnterior).uap);
           setMomPronto(true);
         } catch (errMom) {
@@ -844,9 +864,9 @@ export default function DashboardOverviewInfluencer() {
     filtroOperadora,
     podeVerInfluencer,
     influencersVisiveis,
-    escoposVisiveis.semRestricaoEscopo,
-    escoposVisiveis.vêTodosInfluencers,
-    escoposVisiveis.operadorasVisiveis,
+    escoposVisiveis,
+    operadoraSlugsForcado,
+    perm.canView,
     mesSelecionado,
     catalogosPending,
     catalogosError,
@@ -1090,7 +1110,7 @@ export default function DashboardOverviewInfluencer() {
               />
             )}
 
-            {loading && (
+            {(loading || (!historico && !momPronto)) && (
               <span style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, display: "flex", alignItems: "center", gap: 6 }}>
                 <Clock size={12} aria-hidden />
                 Carregando…

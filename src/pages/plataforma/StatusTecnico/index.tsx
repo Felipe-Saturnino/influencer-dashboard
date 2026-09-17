@@ -74,6 +74,9 @@ import {
   mesclarLobbyFluxoPorData,
   type LobbyExecucaoMonitorRow,
 } from "./statusTecnicoHelpers";
+import {
+  computeIntegracoesAtivasCount,
+} from "./statusTecnicoIntegracoesAtivasKpi";
 import SectionTitle from "../../../components/dashboard/SectionTitle";
 import { AcaoCtaContent, StatusTecnicoLoadingBlock } from "./statusTecnicoUi";
 import { StatusIntegracaoTable } from "./statusTecnicoIntegracaoTable";
@@ -1778,28 +1781,17 @@ export default function StatusTecnico() {
       !!emailUltimoAgenda &&
       (!ultimoTechLogAgenda || emailUltimoAgenda >= ultimoTechLogAgenda));
 
-  const integracoesAtivasCount = [
-    cdaStatusOk,
-    cdaAfiliadosStatusOk,
-    socialStatusOk,
-    spinNaRedeRssStatusOk,
-    comercialSpaStatusOk,
-    comercialDominioStatusOk,
-    comercialCnpjStatusOk,
-    revenueSentinelStatusOk,
-    lobbyBlazeStatusOk,
-    lobbyCdaStatusOk,
-    lobbyEsportivaStatusOk,
-    lobbyJonbetStatusOk,
-    lobbyBateuStatusOk,
-    lobbyRicoStatusOk,
-    lobbyBrxStatusOk,
-    lobbyDonaldStatusOk,
-    lobbyBetpontoStatusOk,
-    emailStatusDiretoriaOk,
-    emailStatusAgendaOk,
-  ].filter(Boolean).length;
-  const totalIntegracoes = 19;
+  const { ativas: integracoesAtivasCount, total: totalIntegracoes } = computeIntegracoesAtivasCount({
+    syncLogs,
+    lobbyExecucoes,
+    pipelineRuns,
+    techLogs,
+    emailCountHojeDiretoria: fluxoDados.find((f) => f.data === hojeIsoKpi)?.emails?.relatorio_diretoria ?? 0,
+    emailCountHojeAgenda: fluxoDados.find((f) => f.data === hojeIsoKpi)?.emails?.email_agenda_diaria ?? 0,
+    emailUltimoDiretoria,
+    emailUltimoAgenda,
+    hojeIso: hojeIsoKpi,
+  });
 
   // Último Sync: mais recente entre CDA, Social, Spin na Rede RSS e e-mails (por data de execução)
   const timestamps: Array<{ ts: string; label: string }> = [];

@@ -30,8 +30,9 @@ import {
 } from "../../../../components/dashboard";
 import { SelectListaComBusca } from "../../../../components/SelectListaComBusca";
 import { placeholderPesquisaFiltro } from "../../../../lib/searchBarConstants";
-import { TabelaComPaginacao } from "../../../../components/TabelaPaginacaoBar";
+import { TabelaComPaginacao, TabelaPaginacaoBar } from "../../../../components/TabelaPaginacaoBar";
 import { useDataTableBlock } from "../../../../hooks/useDataTableBlock";
+import { useTabelaPaginacao } from "../../../../hooks/useTabelaPaginacao";
 import { getDataTableStyle, getDataTableWrapStyle } from "../../../../lib/dataTableStyles";
 import { compareLocaleTexto, compareNumber } from "../../../../lib/classificacaoSort";
 import { useStreamersFiltros } from "../StreamersFiltrosContext";
@@ -370,6 +371,10 @@ export default function DashboardJogadores() {
   }, [sf, loading]);
 
   useEffect(() => {
+    sf.setMomPronto(sf.historico || momPronto);
+  }, [sf, sf.historico, momPronto]);
+
+  useEffect(() => {
     if (catalogosPending) return;
     if (catalogosError) {
       console.error("[StreamersJogadores] catálogos:", catalogosError);
@@ -503,6 +508,7 @@ export default function DashboardJogadores() {
   const rowA = ranking.find((r) => r.influencer_id === compA) ?? null;
   const rowB = ranking.find((r) => r.influencer_id === compB) ?? null;
   const maxMesa = mesas[0]?.rodadas ?? 0;
+  const pagMesas = useTabelaPaginacao(mesas, `${sf.historico}-${sf.idxMes}-${sf.filtroInfluencer}-${sf.filtroOperadora}-${mesas.length}`);
   const taxasOrdenadas = useMemo(() => {
     const mul = sortTaxas.dir === "asc" ? 1 : -1;
     const rows = sf.historico ? ranking : ranking.filter((r) => r.registros > 0);
@@ -813,7 +819,7 @@ export default function DashboardJogadores() {
             <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>{MSG_SEM_DADOS_PERIODO}</div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              {mesas.map((m) => (
+              {pagMesas.linhasPagina.map((m) => (
                 <div key={m.key} style={{ display: "grid", gridTemplateColumns: "minmax(148px, 1.15fr) 1fr 64px", gap: 10, alignItems: "center" }}>
                   <span style={{ fontSize: 12, fontWeight: 700, color: t.text, lineHeight: 1.25, fontFamily: FONT.body, textAlign: "left", minWidth: 0 }}>
                     {m.estudio === "—" ? m.mesa : `${m.estudio} — ${m.mesa}`}
@@ -834,6 +840,15 @@ export default function DashboardJogadores() {
                   </span>
                 </div>
               ))}
+              {pagMesas.totalItems > pagMesas.pageSize && (
+                <TabelaPaginacaoBar
+                  t={t}
+                  page={pagMesas.paginaSafe}
+                  pageSize={pagMesas.pageSize}
+                  totalItems={pagMesas.totalItems}
+                  onPageChange={pagMesas.setPagina}
+                />
+              )}
             </div>
           )}
         </div>

@@ -252,6 +252,11 @@ export default function DashboardFinanceiro() {
     sf.setIsLoading(loading);
   }, [embed, sf, loading]);
 
+  useEffect(() => {
+    if (!embed || !sf) return;
+    sf.setMomPronto(historico || momPronto);
+  }, [embed, sf, historico, momPronto]);
+
   const mesSelecionado = mesesDisponiveis[idxMes];
 
   function irMesAnterior() { setHistorico(false); setIdxMes((i) => Math.max(0, i - 1)); }
@@ -321,7 +326,18 @@ export default function DashboardFinanceiro() {
           { operadora_slug: operadoraForApi, filtroInfluencer }
         );
 
-        const [analytics, investRes] = await Promise.all([
+        const aliasesPromise = historico
+          ? import("../../../../lib/metricasAliases").then(({ buscarMetricasDeAliases }) =>
+              buscarMetricasDeAliases({
+                operadora_slug: operadoraForApi ?? undefined,
+                influencerIds: influencerIdsQuery ?? undefined,
+                dataInicio: periodoInicio,
+                dataFim: periodoFim,
+              }),
+            )
+          : Promise.resolve([]);
+
+        const [analytics, investRes, aliasesSinteticas] = await Promise.all([
           fetchInfluencerAnalyticsPeriodoCached({
             inicio: periodoInicio,
             fim: periodoFim,
@@ -332,6 +348,7 @@ export default function DashboardFinanceiro() {
             { inicio: periodoInicio, fim: periodoFim },
             filtrosInvest,
           ),
+          aliasesPromise,
         ]);
         const { total: investimentoTotal, porInfluencer: investimentoPorInf, agentes: investimentoAgentesRes } = investRes;
 
@@ -345,13 +362,6 @@ export default function DashboardFinanceiro() {
           r.ggr += m.ggr || 0;
         });
         if (historico) {
-          const { buscarMetricasDeAliases } = await import("../../../../lib/metricasAliases");
-          const aliasesSinteticas = await buscarMetricasDeAliases({
-            operadora_slug: operadoraForApi ?? undefined,
-            influencerIds: influencerIdsQuery ?? undefined,
-            dataInicio: periodoInicio,
-            dataFim: periodoFim,
-          });
           for (const a of aliasesSinteticas) {
             if (!mapaAgreg.has(a.influencer_id) && podeVerInfluencer(a.influencer_id)) {
               mapaAgreg.set(a.influencer_id, {
