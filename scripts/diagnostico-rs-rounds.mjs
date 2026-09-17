@@ -227,6 +227,43 @@ function imprimir(body) {
   console.log("");
 }
 
+async function imprimirCatalogoCda(supabaseUrl, serviceKey) {
+  if (!supabaseUrl || !serviceKey) return;
+  const headers = { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` };
+  const [mesasRes, estudiosRes, vinculosRes, idsRes] = await Promise.all([
+    fetch(
+      `${supabaseUrl}/rest/v1/mesas_spin_cadastro?select=id,nome_mesa,tipo_jogo,mesa_identificacao,mesa_identificacao_operadora,operadora_slug,estudio_slug`,
+      { headers },
+    ),
+    fetch(`${supabaseUrl}/rest/v1/estudios_spin?select=slug,nome,tipo`, { headers }),
+    fetch(
+      `${supabaseUrl}/rest/v1/estudios_spin_operadoras?select=estudio_slug&operadora_slug=eq.casa_apostas`,
+      { headers },
+    ),
+    fetch(
+      `${supabaseUrl}/rest/v1/mesas_spin_operadora_identificacao?select=mesa_id,mesa_identificacao_operadora&operadora_slug=eq.casa_apostas`,
+      { headers },
+    ),
+  ]);
+  const [mesas, estudios, vinculos, ids] = await Promise.all([
+    mesasRes.json(), estudiosRes.json(), vinculosRes.json(), idsRes.json(),
+  ]);
+  const estudiosCda = new Set((vinculos ?? []).map((v) => v.estudio_slug));
+  const tipoPorEstudio = new Map((estudios ?? []).map((e) => [e.slug, e.tipo]));
+  const idCda = new Map((ids ?? []).map((i) => [i.mesa_id, i.mesa_identificacao_operadora]));
+  const catalogo = (mesas ?? [])
+    .filter((m) => m.operadora_slug === "casa_apostas" || estudiosCda.has(m.estudio_slug))
+    .map((m) => ({
+      tipo: tipoPorEstudio.get(m.estudio_slug) ?? (m.operadora_slug === "casa_apostas" ? "dedicado (legado)" : "—"),
+      mesa: m.nome_mesa,
+      id_spin: m.mesa_identificacao,
+      id_cda: idCda.get(m.id) ?? m.mesa_identificacao_operadora ?? null,
+    }));
+  console.log(`### Catálogo local vinculado à Casa de Apostas (${catalogo.length} mesas)`);
+  console.log(JSON.stringify(catalogo, null, 2));
+  console.log("");
+}
+
 async function main() {
   carregarEnv();
   const apiBase = (process.env.RS_API_URL ?? DEFAULT_BASE).replace(/\/$/, "");
@@ -266,6 +303,7 @@ async function main() {
     process.exit(1);
   }
   imprimir(body);
+  await imprimirCatalogoCda(supabaseUrl, serviceKey);
 }
 
 main().catch((e) => {

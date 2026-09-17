@@ -18,7 +18,7 @@ export type JogadorAbaDailyFact = {
   rodadas_por_mesa: unknown;
 };
 
-/** Cadastro Spin acumulado (`jogadores`) — atividade em mesa não tem quebra por dia no Revenue Sentinel. */
+/** KPIs da aba a partir dos fatos TAP + rodadas detalhadas do Revenue Sentinel. */
 export type JogadorAbaKpis = {
   registros: number;
   jogaramSpin: number;

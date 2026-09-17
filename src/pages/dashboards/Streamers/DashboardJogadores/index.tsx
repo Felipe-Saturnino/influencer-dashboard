@@ -806,7 +806,7 @@ export default function DashboardJogadores() {
         }}
       >
         <div style={{ ...card, marginBottom: 0 }}>
-          <SectionTitle sub="Estúdio — Nome da Mesa">Rodadas por Mesa</SectionTitle>
+          <SectionTitle sub="Tipo — Nome da Mesa">Rodadas por Mesa</SectionTitle>
           {loading ? (
             <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>Carregando…</div>
           ) : mesas.length === 0 ? (
@@ -815,11 +815,8 @@ export default function DashboardJogadores() {
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {mesas.map((m) => (
                 <div key={m.key} style={{ display: "grid", gridTemplateColumns: "minmax(148px, 1.15fr) 1fr 64px", gap: 10, alignItems: "center" }}>
-                  <span style={{ display: "flex", flexDirection: "column", gap: 1, textAlign: "left", minWidth: 0 }}>
-                    <span style={{ fontSize: 10, fontWeight: 600, color: t.textMuted, letterSpacing: "0.04em", textTransform: "uppercase", fontFamily: FONT.body }}>
-                      {m.estudio}
-                    </span>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: t.text, lineHeight: 1.25, fontFamily: FONT.body }}>{m.mesa}</span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: t.text, lineHeight: 1.25, fontFamily: FONT.body, textAlign: "left", minWidth: 0 }}>
+                    {m.estudio === "—" ? m.mesa : `${m.estudio} — ${m.mesa}`}
                   </span>
                   <div style={{ height: 8, borderRadius: 999, background: t.inputBg, overflow: "hidden" }}>
                     <i

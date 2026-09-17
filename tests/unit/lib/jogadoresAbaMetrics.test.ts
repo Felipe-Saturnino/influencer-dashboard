@@ -152,18 +152,18 @@ describe("mesasJogadoresAba", () => {
       fact({
         ext_customer_id: "1",
         rodadas_por_mesa: [
-          { estudio: "Casa de Apostas", mesa: "Blackjack 2", rodadas: 100 },
-          { estudio: "Sports Club", mesa: "Speed Baccarat", rodadas: 40 },
+          { estudio: "Dedicada", mesa: "Blackjack 2", rodadas: 100 },
+          { estudio: "Network", mesa: "Speed Baccarat", rodadas: 40 },
         ],
       }),
       fact({
         ext_customer_id: "2",
-        rodadas_por_mesa: [{ estudio: "Casa de Apostas", mesa: "Blackjack 2", rodadas: 20 }],
+        rodadas_por_mesa: [{ estudio: "Dedicada", mesa: "Blackjack 2", rodadas: 20 }],
       }),
     ];
     const mesas = mesasJogadoresAba(rows);
     expect(mesas[0]).toMatchObject({
-      estudio: "Casa de Apostas",
+      estudio: "Dedicada",
       mesa: "Blackjack 2",
       rodadas: 120,
       cor: GAME_IDENTITY_HEX.blackjack,

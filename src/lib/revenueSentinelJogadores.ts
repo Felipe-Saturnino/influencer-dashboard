@@ -14,7 +14,14 @@ export type RsSpinDia = {
   turnover_spin: number | null;
   jogou_spin: boolean;
   rodadas_por_jogo: Record<string, number>;
-  rodadas_por_mesa: Array<{ mesa?: string; jogo?: string; rodadas?: number; ggr?: number; turnover?: number }>;
+  rodadas_por_mesa: Array<{
+    estudio?: string;
+    mesa?: string;
+    jogo?: string;
+    rodadas?: number;
+    ggr?: number;
+    turnover?: number;
+  }>;
 };
 
 export type RsJogadoresSpinParse = {

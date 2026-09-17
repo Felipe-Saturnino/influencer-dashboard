@@ -5,17 +5,28 @@ import {
   parseJogadoresSpinResponse,
   RS_OPERADORA_SLUG_CDA,
   summarizeRsPayload,
+  tapIdFromRsExternal,
   type RsSpinDia,
 } from "./revenueSentinelJogadores.ts";
+import {
+  agruparOperatorPlayerRounds,
+  RS_ROUNDS_DATASET,
+  RS_ROUNDS_PAGE_SIZE,
+  totalRsRoundsPayload,
+  type RsMesaCatalogo,
+} from "./revenueSentinelRounds.ts";
 
 /**
  * Edge: sync-revenue-sentinel
- * Consome Data Export API (POST /v1/jogadores/spin) e enriquece jogadores TAP.
+ * Consome Data Export API:
+ * - POST /v1/jogadores/spin: consolidado e fallback;
+ * - GET /v1/datasets/operator-player-rounds: fatos por data e mesa (fonte principal).
  *
  * Secrets: RS_API_URL, RS_API_KEY (X-API-Key), SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
  *
  * Body opcional:
- *   { data_inicio, data_fim, dry_run, ext_customer_ids?, cda_conta?, atualizar_cadastro?, probe_datasets? }
+ *   { data_inicio, data_fim, dry_run, ext_customer_ids?, cda_conta?, atualizar_cadastro?,
+ *     probe_datasets?, usar_detalhe_rodadas? }
  * Uma chamada cobre uma única competência. Sem datas, usa mês corrente até D-1.
  * `probe_datasets: true` só lê GET catalog/schema/datasets (não grava).
  */
@@ -34,6 +45,7 @@ type SyncBody = {
   cda_conta?: "influencers" | "afiliados";
   atualizar_cadastro?: boolean;
   probe_datasets?: boolean;
+  usar_detalhe_rodadas?: boolean;
 };
 
 function cors(req: Request): Record<string, string> {
@@ -169,6 +181,169 @@ async function fetchAllPages<T>(
   return acc;
 }
 
+type MesaCatalogoRow = Omit<RsMesaCatalogo, "estudio_tipo" | "identificacao_cda">;
+type EstudioRow = { slug: string; tipo: "dedicado" | "network" };
+type EstudioOperadoraRow = { estudio_slug: string };
+type MesaIdentificacaoRow = { mesa_id: string; mesa_identificacao_operadora: string | null };
+
+async function carregarCatalogoMesasCda(
+  supabase: ReturnType<typeof createClient>,
+): Promise<RsMesaCatalogo[]> {
+  const [mesas, estudios, vinculos, identificacoes] = await Promise.all([
+    fetchAllPages<MesaCatalogoRow>((from, to) =>
+      supabase
+        .from("mesas_spin_cadastro")
+        .select("id,nome_mesa,tipo_jogo,mesa_identificacao,mesa_identificacao_operadora,operadora_slug,estudio_slug")
+        .range(from, to)
+    ),
+    fetchAllPages<EstudioRow>((from, to) =>
+      supabase.from("estudios_spin").select("slug,tipo").range(from, to)
+    ),
+    fetchAllPages<EstudioOperadoraRow>((from, to) =>
+      supabase
+        .from("estudios_spin_operadoras")
+        .select("estudio_slug")
+        .eq("operadora_slug", RS_OPERADORA_SLUG_CDA)
+        .range(from, to)
+    ),
+    fetchAllPages<MesaIdentificacaoRow>((from, to) =>
+      supabase
+        .from("mesas_spin_operadora_identificacao")
+        .select("mesa_id,mesa_identificacao_operadora")
+        .eq("operadora_slug", RS_OPERADORA_SLUG_CDA)
+        .range(from, to)
+    ),
+  ]);
+  const estudioTipo = new Map(estudios.map((e) => [e.slug, e.tipo] as const));
+  const estudiosCda = new Set(vinculos.map((v) => v.estudio_slug));
+  const idCda = new Map(identificacoes.map((i) => [i.mesa_id, i.mesa_identificacao_operadora] as const));
+
+  return mesas
+    .filter((m) =>
+      m.operadora_slug === RS_OPERADORA_SLUG_CDA ||
+      (m.estudio_slug != null && estudiosCda.has(m.estudio_slug))
+    )
+    .map((m) => ({
+      ...m,
+      estudio_tipo: m.estudio_slug ? estudioTipo.get(m.estudio_slug) ?? null : null,
+      identificacao_cda: idCda.get(m.id) ?? null,
+    }));
+}
+
+type RsRoundsFetch = {
+  payloadsFiltrados: unknown[];
+  totalApi: number;
+  paginas: number;
+  linhasFiltradas: number;
+};
+
+/**
+ * A API não filtra por jogador. Pagina toda a competência, mas retém em memória
+ * somente linhas dos IDs TAP deste canal.
+ */
+async function buscarRoundsCda(
+  apiBase: string,
+  apiKey: string,
+  de: string,
+  ate: string,
+  ids: ReadonlySet<string>,
+): Promise<RsRoundsFetch> {
+  const queryBase = {
+    start_date: de,
+    end_date: ate,
+    operator: "Casa de Apostas",
+    limit: String(RS_ROUNDS_PAGE_SIZE),
+  };
+  const primeira = await rsGet(apiBase, apiKey, `/v1/datasets/${RS_ROUNDS_DATASET}`, {
+    ...queryBase,
+    offset: "0",
+  });
+  if (primeira.status !== 200) {
+    throw new Error(`GET ${RS_ROUNDS_DATASET}: HTTP ${primeira.status}`);
+  }
+  const totalApi = totalRsRoundsPayload(primeira.payload) ?? envelopeRows(primeira.payload).length;
+  const payloadsFiltrados: unknown[] = [];
+  let linhasFiltradas = 0;
+  const guardar = (payload: unknown) => {
+    const items = envelopeRows(payload).filter((item) => {
+      const row = asRec(item);
+      const ext = tapIdFromRsExternal(String(row?.external_id ?? ""));
+      return ext.length > 0 && ids.has(ext);
+    });
+    linhasFiltradas += items.length;
+    if (items.length > 0) payloadsFiltrados.push({ items });
+  };
+  guardar(primeira.payload);
+
+  const offsets: number[] = [];
+  for (let offset = RS_ROUNDS_PAGE_SIZE; offset < totalApi; offset += RS_ROUNDS_PAGE_SIZE) {
+    offsets.push(offset);
+  }
+  const concorrencia = 3;
+  for (let i = 0; i < offsets.length; i += concorrencia) {
+    const lote = offsets.slice(i, i + concorrencia);
+    const paginas = await Promise.all(lote.map((offset) =>
+      rsGet(apiBase, apiKey, `/v1/datasets/${RS_ROUNDS_DATASET}`, {
+        ...queryBase,
+        offset: String(offset),
+      })
+    ));
+    for (const pagina of paginas) {
+      if (pagina.status !== 200) {
+        throw new Error(`GET ${RS_ROUNDS_DATASET}: HTTP ${pagina.status}`);
+      }
+      guardar(pagina.payload);
+    }
+  }
+
+  return {
+    payloadsFiltrados,
+    totalApi,
+    paginas: offsets.length + 1,
+    linhasFiltradas,
+  };
+}
+
+const SPIN_VAZIO = {
+  rodadas_spin: 0,
+  apostas_spin: 0,
+  ggr_spin: null,
+  turnover_spin: null,
+  jogou_spin: null,
+  rodadas_por_jogo: {},
+  rodadas_por_mesa: [],
+};
+
+/** Recalcula a competência de forma idempotente sem tocar nos fatos TAP. */
+async function limparSpinPeriodo(
+  supabase: ReturnType<typeof createClient>,
+  conta: "influencers" | "afiliados",
+  de: string,
+  ate: string,
+  idsExplicitos: string[] | null,
+): Promise<void> {
+  const limpar = async (ids?: string[]) => {
+    let query = supabase
+      .from("jogadores_metricas_diarias")
+      .update(SPIN_VAZIO)
+      .eq("operadora_slug", RS_OPERADORA_SLUG_CDA)
+      .eq("cda_conta", conta)
+      .gte("data", de)
+      .lte("data", ate);
+    if (ids?.length) query = query.in("ext_customer_id", ids);
+    const { error } = await query;
+    if (error) throw new Error(`limpeza Spin da competência: ${error.message}`);
+  };
+
+  if (!idsExplicitos?.length) {
+    await limpar();
+    return;
+  }
+  for (let i = 0; i < idsExplicitos.length; i += RPC_CHUNK) {
+    await limpar(idsExplicitos.slice(i, i + RPC_CHUNK));
+  }
+}
+
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: cors(req) });
@@ -202,6 +377,7 @@ serve(async (req: Request) => {
   const dataInicio = params.data_inicio ?? inicioMes(dataFim);
   const dryRun = params.dry_run === true;
   const atualizarCadastro = params.atualizar_cadastro === true;
+  const usarDetalheRodadas = params.usar_detalhe_rodadas !== false;
   const conta = params.cda_conta === "afiliados" ? "afiliados" : "influencers";
 
   if (params.probe_datasets === true) {
@@ -226,7 +402,7 @@ serve(async (req: Request) => {
       }
       return json(req, {
         ok: true,
-        versao: "v1.4.0",
+        versao: "v1.5.0",
         probe: "datasets",
         periodo: { de, ate },
         status: { http: status.status, payload: status.payload },
@@ -271,6 +447,7 @@ serve(async (req: Request) => {
   };
 
   try {
+    const idsForamInformados = (params.ext_customer_ids?.length ?? 0) > 0;
     let ids = (params.ext_customer_ids ?? [])
       .map((s) => String(s).trim())
       .filter((s) => s.length > 0);
@@ -298,7 +475,7 @@ serve(async (req: Request) => {
     const comDeposito = new Set(depositRows.map((r) => r.ext_customer_id));
 
     const chunks = chunkIds(ids);
-    const todosDias: RsSpinDia[] = [];
+    const diasConsolidados: RsSpinDia[] = [];
     const missing = new Set<string>();
     const erros: string[] = [];
     let httpOk = 0;
@@ -341,13 +518,66 @@ serve(async (req: Request) => {
         // O contrato atual devolve totais da janela sem dia. Cada chamada representa
         // uma competência; o primeiro dia funciona como bucket estável para o UPSERT.
         const parsed = parseJogadoresSpinResponse(payload, dataInicio);
-        todosDias.push(...parsed.dias);
+        diasConsolidados.push(...parsed.dias);
         for (const m of parsed.missing) missing.add(m);
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
         erros.push(`lote: ${msg}`);
       } finally {
         clearTimeout(t);
+      }
+    }
+
+    let todosDias = diasConsolidados;
+    let roundsDetalhe: {
+      ativo: boolean;
+      total_api: number;
+      paginas: number;
+      linhas_ids_canal: number;
+      duplicadas: number;
+      mesas_sem_cadastro: string[];
+      rodadas_detalhe: number;
+      rodadas_consolidado: number;
+    } | null = null;
+
+    if (usarDetalheRodadas) {
+      try {
+        const [catalogo, roundsFetch] = await Promise.all([
+          carregarCatalogoMesasCda(supabase),
+          buscarRoundsCda(apiBase, apiKey, dataInicio, dataFim, new Set(ids)),
+        ]);
+        const resumo = agruparOperatorPlayerRounds(
+          roundsFetch.payloadsFiltrados,
+          new Set(ids),
+          catalogo,
+        );
+        const rodadasDetalhe = resumo.dias.reduce((s, d) => s + d.rodadas_spin, 0);
+        const rodadasConsolidado = diasConsolidados.reduce((s, d) => s + d.rodadas_spin, 0);
+        roundsDetalhe = {
+          ativo: true,
+          total_api: roundsFetch.totalApi,
+          paginas: roundsFetch.paginas,
+          linhas_ids_canal: roundsFetch.linhasFiltradas,
+          duplicadas: resumo.duplicadas,
+          mesas_sem_cadastro: resumo.mesasSemCadastro.slice(0, 20),
+          rodadas_detalhe: rodadasDetalhe,
+          rodadas_consolidado: rodadasConsolidado,
+        };
+
+        // O dataset granular é a fonte da verdade para data, mesa, rodadas e financeiro.
+        // Se há dados na API mas nenhum ID do canal cruza, preserva o consolidado e
+        // sinaliza erro de identidade em vez de zerar silenciosamente a competência.
+        if (roundsFetch.totalApi === 0 || resumo.dias.length > 0) {
+          todosDias = resumo.dias;
+        } else {
+          roundsDetalhe.ativo = false;
+          erros.push(
+            `${RS_ROUNDS_DATASET}: ${roundsFetch.totalApi} linhas na competência, mas nenhuma cruzou os ${ids.length} IDs TAP`,
+          );
+        }
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        erros.push(`detalhe de rodadas: ${msg}`);
       }
     }
 
@@ -431,6 +661,13 @@ serve(async (req: Request) => {
     let cadastroUpsert = 0;
 
     if (!dryRun) {
+      await limparSpinPeriodo(
+        supabase,
+        conta,
+        dataInicio,
+        dataFim,
+        idsForamInformados ? ids : null,
+      );
       for (let i = 0; i < todosDias.length; i += RPC_CHUNK) {
         const slice = todosDias.slice(i, i + RPC_CHUNK);
         const { data, error } = await supabase.rpc("enriquecer_jogadores_spin_diario", {
@@ -470,11 +707,14 @@ serve(async (req: Request) => {
 
     return json(req, {
       ok: status === "ok",
-      versao: "v1.4.0",
+      versao: "v1.5.0",
       integracao: INTEGRACAO_SLUG,
       dry_run: dryRun,
       periodo: { data_inicio: dataInicio, data_fim: dataFim },
       atualizar_cadastro: atualizarCadastro,
+      competencia_recalculada: !dryRun,
+      fonte_rodadas: roundsDetalhe?.ativo ? RS_ROUNDS_DATASET : "jogadores-spin",
+      rounds_detalhe: roundsDetalhe,
       ids_enviados: ids.length,
       lotes: chunks.length,
       lotes_ok: httpOk,

@@ -55,19 +55,23 @@ Métricas e UTMs gravam sempre com `operadora_slug = casa_apostas`. Cron diário
 
 ### Revenue Sentinel (Jogadores Spin)
 
-Data Export API (`POST /v1/jogadores/spin`, header `X-API-Key`, lotes máx. 500). Cruza IDs TAP (`ext_customer_id`) com `external_id` OnAir (`CDA-{crm}`). GGR gravado é **Spin**, não TAP.
+Data Export API (header `X-API-Key`). A Edge cruza IDs TAP (`ext_customer_id`) com `external_id` OnAir (`CDA-{crm}`). GGR gravado é **Spin**, não TAP.
+
+- **Fonte principal:** `GET /v1/datasets/operator-player-rounds`, paginado em até 10 mil linhas. Cada `game_id` é uma rodada e traz `round_date`, `game_table_id`, `table_name`, GGR, turnover e `bet_count`.
+- **Reconciliação/fallback:** `POST /v1/jogadores/spin`, em lotes de até 500 IDs. Se o dataset detalhado falhar ou não cruzar nenhum ID TAP numa competência com dados, o consolidado é preservado e o sync registra o aviso.
+- **Mesa:** `game_table_id` é cruzado com Gestão de Estúdios (`mesas_spin_cadastro` e identificação da Casa de Apostas). A UI exibe o tipo e o nome canónico, por exemplo **Dedicada — Blackjack 1** ou **Network — Roleta**.
 
 | Item | Valor |
 |------|--------|
-| Edge | `sync-revenue-sentinel` (`index.ts` + `revenueSentinelJogadores.ts`) |
+| Edge | `sync-revenue-sentinel` (`index.ts` + `revenueSentinelJogadores.ts` + `revenueSentinelRounds.ts`) |
 | Secrets | `RS_API_URL` (opcional) + `RS_API_KEY` |
 | Cron | `daily-sync-revenue-sentinel` ~4h20 BRT (depois do TAP Influencers) |
 | Status Técnico | Integrações Externas → **Revenue Sentinel — Jogadores Spin** → Sync |
 | SQL | `enriquecer_jogadores_spin_diario` / `_cadastro` (só `service_role`) |
 
-`jogou_spin` só com **rodadas Spin > 0** no bloco `spin` do retorno (`round_count` / `bet_count`). O bloco `bko` é o backoffice do operador — todos os produtos — e **não** é fonte de rodada Spin: usá-lo como fallback inflou ago/2026 em 2,2 M de rodadas com turnover de R$ 360 (corrigido na v1.4.1). Estar no lake do RS sem rodada não conta — o RS pode passar a ter outras fontes. `jogou_outros` = jogador TAP com depósito e **zero** rodadas Spin no RS. Operadora do POST: `casa_apostas` (Casa de Apostas). IDs ausentes no RS devolvem 200 + `missing` — não é falha.
+Na v1.5.0, `jogou_spin` exige pelo menos um `game_id` do dataset granular. `rodadas_spin` conta rodadas distintas; `apostas_spin` soma `bet_count`. O bloco `bko` é o backoffice do operador — todos os produtos — e **não** é fonte de rodada Spin: usá-lo como fallback inflou ago/2026 em 2,2 M de rodadas com turnover de R$ 360 (corrigido na v1.4.1). `jogou_outros` = jogador TAP com depósito e zero rodada Spin.
 
-O contrato atual entrega totais da janela sem quebra diária. A Edge v1.4.0+ aceita **uma competência por chamada** e fixa esses totais no primeiro dia do mês, permitindo UPSERT do MTD sem somar snapshots cumulativos. O cron consulta início do mês → D-1 com `atualizar_cadastro=false`. O histórico deve ser carregado mês a mês com `scripts/manual-supabase-backfill-revenue-sentinel-mensal.sql`; antes do backfill, o script limpa somente as colunas Spin agregadas antigas e preserva os fatos TAP.
+O dataset granular entrega a data real da rodada; a Edge ainda aceita **uma competência por chamada** para limitar volume e manter o backfill controlado. O cron consulta início do mês → D-1 com `atualizar_cadastro=false`. Depois de publicar a v1.5.0, recarregar o histórico com `node scripts/backfill-rs-competencias.mjs --gravar`; o script limpa somente as colunas Spin antigas e preserva os fatos TAP.
 
 Migrações: `supabase/migrations/20260915180000_integrations_revenue_sentinel.sql` e `20260915181000_cron_sync_revenue_sentinel.sql`.
 

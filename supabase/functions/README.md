@@ -65,14 +65,15 @@ Espelho do builder: `src/lib/rhCalendarioIcs.ts`. `verify_jwt = false` no Dashbo
 
 **`enrich-comercial-cnpj`:** deploy com **apenas** `index.ts`. Parser/localidade espelhado em `src/lib/comercialCnpjEnrichment.ts`.
 
-### `index.ts` + `revenueSentinelJogadores.ts`
+### `index.ts` + parsers Revenue Sentinel
 
-**Function:** `sync-revenue-sentinel` — POST Data Export API (`/v1/jogadores/spin`, header `X-API-Key`) e UPSERT em `jogadores` / `jogadores_metricas_diarias` (só colunas Spin). Secrets **`RS_API_URL`** (opcional; default `https://api.spingaming.com.br/api/v1/data`) e **`RS_API_KEY`**. Cron `daily-sync-revenue-sentinel` ~4h20 BRT. Status Técnico → Integrações Externas → **Sync**. Espelho do parser: `src/lib/revenueSentinelJogadores.ts`. `verify_jwt = false`.
+**Function:** `sync-revenue-sentinel` v1.5.0 — GET paginado `/v1/datasets/operator-player-rounds` (fonte principal por data/mesa) + POST `/v1/jogadores/spin` (reconciliação/fallback), header `X-API-Key`, e UPSERT em `jogadores` / `jogadores_metricas_diarias` (só colunas Spin). Cruza `game_table_id` com Gestão de Estúdios para rotular **Dedicada/Network + nome canónico**. Secrets **`RS_API_URL`** (opcional; default `https://api.spingaming.com.br/api/v1/data`) e **`RS_API_KEY`**. Cron `daily-sync-revenue-sentinel` ~4h20 BRT. Status Técnico → Integrações Externas → **Sync**. Espelhos dos parsers em `src/lib/revenueSentinelJogadores.ts` e `src/lib/revenueSentinelRounds.ts`. `verify_jwt = false`.
 
 | Ficheiro |
 |----------|
 | `index.ts` |
 | `revenueSentinelJogadores.ts` |
+| `revenueSentinelRounds.ts` |
 
 ### `index.ts` + `platformHealthDiagnostics.ts`
 

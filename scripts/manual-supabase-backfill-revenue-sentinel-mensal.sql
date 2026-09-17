@@ -1,5 +1,6 @@
 -- BACKFILL MANUAL — Revenue Sentinel por competência
--- Pré-requisito: publicar sync-revenue-sentinel (index.ts + parser) com bucket mensal.
+-- Pré-requisito: publicar sync-revenue-sentinel v1.5.0 com os três ficheiros
+-- (index.ts + revenueSentinelJogadores.ts + revenueSentinelRounds.ts).
 --
 -- 1) Execute primeiro a limpeza abaixo. Ela preserva TAP e limpa apenas métricas Spin.
 -- 2) Execute UMA chamada por vez, espere o sync terminar no Status Técnico e só então

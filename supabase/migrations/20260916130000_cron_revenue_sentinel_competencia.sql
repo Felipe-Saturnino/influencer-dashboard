@@ -1,6 +1,5 @@
--- Revenue Sentinel não devolve quebra diária: cada chamada deve cobrir uma única
--- competência. O resultado sem data é gravado no primeiro dia do mês (UPSERT MTD).
--- D-1 sempre; nunca envia o dia corrente incompleto.
+-- Revenue Sentinel: cada chamada cobre uma única competência para limitar o volume
+-- paginado de operator-player-rounds. D-1 sempre; nunca envia o dia corrente incompleto.
 
 DO $$
 DECLARE

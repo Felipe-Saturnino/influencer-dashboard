@@ -182,9 +182,13 @@ SELECT cron.schedule(
   SELECT public._cron_edge_http_post(
     'sync-revenue-sentinel',
     jsonb_build_object(
-      'data_inicio', '2025-12-01',
+      'data_inicio', date_trunc(
+        'month',
+        (timezone('America/Sao_Paulo', now()))::date - 1
+      )::date::text,
       'data_fim', ((timezone('America/Sao_Paulo', now()))::date - 1)::text,
-      'cda_conta', 'influencers'
+      'cda_conta', 'influencers',
+      'atualizar_cadastro', false
     )
   );
   $$

@@ -84,7 +84,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Na aba Jogadores, por que um mês antigo aparece sem rodadas Spin?",
         texto:
-          "O Revenue Sentinel entrega totais de uma janela, sem separar por dia. Para respeitar o carrossel, a integração consulta e grava uma competência por vez — o botão Sync do Status Técnico atualiza apenas o mês corrente (até D-1). Meses antigos só aparecem depois do backfill daquela competência; se estiverem zerados, o backfill ainda não rodou. Depois dele, Ativação, Rodadas, GGR, Turnover, mesas e ranking refletem o mês selecionado; Histórico soma as competências.\n\nRodadas, Média, GGR e Turnover do bloco Ativação contam só os jogadores do card Jogaram Spin (cadastro e rodada na competência). Quem rodou no mês mas se cadastrou antes não entra nesses cards.",
+          "A integração consulta o Revenue Sentinel uma competência por vez e grava a data real das rodadas. O botão Sync do Status Técnico atualiza apenas o mês corrente (até D-1); meses antigos precisam do backfill histórico. Depois dele, Ativação, Rodadas, GGR, Turnover, mesas e ranking refletem o mês selecionado; Histórico soma as competências.\n\nRodadas, Média, GGR e Turnover do bloco Ativação contam só os jogadores do card Jogaram Spin (cadastro e rodada na competência). Quem rodou no mês mas se cadastrou antes não entra nesses cards. Se Rodadas por Mesa mostrar “Mesa não informada”, confira se a Edge `sync-revenue-sentinel` v1.5.0+ está publicada com os três ficheiros e se o `game_table_id` retornado pelo RS existe na Gestão de Estúdios.",
       },
       {
         subtitulo: "Os KPIs mostram valores diferentes entre Overview e Financeiro?",
