@@ -34,6 +34,7 @@ export function ModalRetirada({
   const [prestadores, setPrestadores] = useState<PrestadorRetiradaRow[]>([]);
   const [loadingPrestadores, setLoadingPrestadores] = useState(true);
   const [erroCargaPrestadores, setErroCargaPrestadores] = useState<string | null>(null);
+  const [reloadPrestadores, setReloadPrestadores] = useState(0);
   const [buscaPrestador, setBuscaPrestador] = useState("");
   const [prestadorSelecionadoId, setPrestadorSelecionadoId] = useState<string | null>(null);
   const [tipoRetirada, setTipoRetirada] = useState<RhWithdrawalType>("emprestar");
@@ -71,7 +72,7 @@ export function ModalRetirada({
     return () => {
       cancelado = true;
     };
-  }, []);
+  }, [reloadPrestadores]);
 
   useEffect(() => {
     const id = window.setTimeout(() => buscaRef.current?.focus(), 100);
@@ -142,8 +143,25 @@ export function ModalRetirada({
           Mesma base da página Gestão de Prestadores (ativos e indisponíveis). Pesquise por nome ou setor e escolha na lista.
         </p>
         {erroCargaPrestadores ? (
-          <div role="alert" aria-live="polite" style={{ color: "#e84025", fontSize: 12, marginBottom: 8 }}>
-            {erroCargaPrestadores}
+          <div role="alert" aria-live="polite" style={{ color: "#e84025", fontSize: 12, marginBottom: 8, fontFamily: FONT.body }}>
+            <p style={{ margin: "0 0 8px" }}>{erroCargaPrestadores}</p>
+            <button
+              type="button"
+              onClick={() => setReloadPrestadores((n) => n + 1)}
+              style={{
+                padding: "6px 12px",
+                borderRadius: 8,
+                border: `1px solid ${t.cardBorder}`,
+                background: t.inputBg,
+                color: t.text,
+                fontSize: 12,
+                fontWeight: 700,
+                fontFamily: FONT.body,
+                cursor: "pointer",
+              }}
+            >
+              Tentar novamente
+            </button>
           </div>
         ) : null}
         {!loadingPrestadores && !erroCargaPrestadores && prestadores.length === 0 ? (

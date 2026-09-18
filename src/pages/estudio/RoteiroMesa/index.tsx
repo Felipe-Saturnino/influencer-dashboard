@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useId, useMemo, type CSSProperties } from "react";
 import { supabase } from "../../../lib/supabase";
+import { fetchAllPages } from "../../../lib/supabasePaginate";
 import { useApp } from "../../../context/AppContext";
 import { usePermission } from "../../../hooks/usePermission";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
@@ -183,6 +184,14 @@ const ROTEIRO_TIPO_ICON_SIZE = 20;
 const CARD_SHADOW = (isDark: boolean) =>
   isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
 
+/** Colunas explícitas — espelham `RoteiroSugestao` / `RoteiroCampanha` (sem `select("*")`). */
+const ROTEIRO_SUGESTAO_COLS =
+  "id, estudio_slug, operadora_slug, bloco, texto, tipo, jogos, ordem, created_at, updated_at";
+const ROTEIRO_CAMPANHA_COLS =
+  "id, estudio_slug, operadora_slug, titulo, texto, jogos, data_inicio, data_fim, ativo, ordem, created_by, created_at, updated_at";
+
+const MSG_ERRO_CARREGAR_ROTEIROS =
+  "Não foi possível carregar os roteiros. Se o problema persistir, entre em contato com o suporte.";
 const MSG_ERRO_SALVAR_ROTEIRO =
   "Não foi possível salvar o roteiro. Se o problema persistir, entre em contato com o suporte.";
 const MSG_ERRO_SALVAR_CAMPANHA =
@@ -195,6 +204,10 @@ const MSG_ERRO_CONVERSA_CAMPANHA =
   "Não foi possível salvar a campanha: falha ao abrir a conversa com o estúdio. Se o problema persistir, entre em contato com o suporte.";
 const MSG_ERRO_MSG_CAMPANHA =
   "Não foi possível salvar a campanha: falha ao registrar a primeira mensagem. Se o problema persistir, entre em contato com o suporte.";
+const MSG_ERRO_EXCLUIR_SUGESTAO =
+  "Não foi possível excluir a sugestão. Se o problema persistir, entre em contato com o suporte.";
+const MSG_ERRO_EXCLUIR_CAMPANHA =
+  "Não foi possível excluir a campanha. Se o problema persistir, entre em contato com o suporte.";
 
 // ─── Tags de jogo (paleta canónica — Global § Identidade por jogo) ───────────
 function jogoTagChipStyle(key: JogoTag, isDark: boolean): { bg: string; color: string; border: string } {
@@ -703,7 +716,7 @@ function ModalCampanha({ estudioSlug, estudiosList, onClose, onSalvo, opParaEstu
             {saving ? (
               <>
                 <Loader2 size={14} className="app-lucide-spin" color="#fff" aria-hidden />
-                Salvando...
+                Salvando…
               </>
             ) : (
               "Salvar"
@@ -900,6 +913,7 @@ function BlocoSugestoes({ bloco, estudioSlug, sugestoes, podeEditar, podeExcluir
   const [editando, setEditando] = useState<RoteiroSugestao | null>(null);
   const [excluirTarget, setExcluirTarget] = useState<RoteiroSugestao | null>(null);
   const [excluindo, setExcluindo] = useState(false);
+  const [erroExcluir, setErroExcluir] = useState<string | null>(null);
 
   const abrirCriar = () => {
     setEditando(null);
@@ -914,15 +928,24 @@ function BlocoSugestoes({ bloco, estudioSlug, sugestoes, podeEditar, podeExcluir
     setEditando(null);
   };
 
+  const pedirExcluir = (s: RoteiroSugestao) => {
+    setErroExcluir(null);
+    setExcluirTarget(s);
+  };
+
   const confirmarExcluir = async () => {
     if (!excluirTarget) return;
     setExcluindo(true);
+    setErroExcluir(null);
     const { error } = await supabase.from("roteiro_mesa_sugestoes").delete().eq("id", excluirTarget.id);
     setExcluindo(false);
-    if (!error) {
-      setExcluirTarget(null);
-      onCarregar();
+    if (error) {
+      console.error("[RoteiroMesa] Erro ao excluir sugestão:", error);
+      setErroExcluir(MSG_ERRO_EXCLUIR_SUGESTAO);
+      return;
     }
+    setExcluirTarget(null);
+    onCarregar();
   };
 
   const label = BLOCOS.find((b) => b.key === bloco)?.label ?? bloco;
@@ -966,7 +989,7 @@ function BlocoSugestoes({ bloco, estudioSlug, sugestoes, podeEditar, podeExcluir
                 podeEditar={podeEditar}
                 podeExcluir={podeExcluir}
                 onPedirEditar={abrirEditar}
-                onPedirExcluir={setExcluirTarget}
+                onPedirExcluir={pedirExcluir}
                 dark={dark}
                 estudioNome={estLabel !== "—" ? estLabel : undefined}
               />
@@ -992,10 +1015,14 @@ function BlocoSugestoes({ bloco, estudioSlug, sugestoes, podeEditar, podeExcluir
       <ModalConfirmExcluirPadrao
         descricaoItem={descricaoModalExcluirItem("a sugestão de roteiro", truncarTextoRoteiro(excluirTarget.texto, 80))}
         onCancel={() => {
-          if (!excluindo) setExcluirTarget(null);
+          if (!excluindo) {
+            setExcluirTarget(null);
+            setErroExcluir(null);
+          }
         }}
         onConfirm={() => void confirmarExcluir()}
         loading={excluindo}
+        error={erroExcluir}
       />
     ) : null}
     </>
@@ -1020,19 +1047,29 @@ function BlocoCampanhas({ estudioSlug, campanhas, podeExcluir, podeCriar, onCarr
   const [modalAberto, setModalAberto] = useState(false);
   const [excluirTarget, setExcluirTarget] = useState<RoteiroCampanha | null>(null);
   const [excluindo, setExcluindo] = useState(false);
+  const [erroExcluir, setErroExcluir] = useState<string | null>(null);
   const btnNovaCampanhaBg = brand.useBrand
     ? "var(--brand-primary)"
     : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`;
 
+  const pedirExcluir = (c: RoteiroCampanha) => {
+    setErroExcluir(null);
+    setExcluirTarget(c);
+  };
+
   const confirmarExcluir = async () => {
     if (!excluirTarget) return;
     setExcluindo(true);
+    setErroExcluir(null);
     const { error } = await supabase.from("roteiro_mesa_campanhas").delete().eq("id", excluirTarget.id);
     setExcluindo(false);
-    if (!error) {
-      setExcluirTarget(null);
-      onCarregar();
+    if (error) {
+      console.error("[RoteiroMesa] Erro ao excluir campanha:", error);
+      setErroExcluir(MSG_ERRO_EXCLUIR_CAMPANHA);
+      return;
     }
+    setExcluirTarget(null);
+    onCarregar();
   };
 
   if (!estudioSlug) return null;
@@ -1073,7 +1110,7 @@ function BlocoCampanhas({ estudioSlug, campanhas, podeExcluir, podeCriar, onCarr
                 key={c.id}
                 campanha={c}
                 podeExcluir={podeExcluir}
-                onPedirExcluir={setExcluirTarget}
+                onPedirExcluir={pedirExcluir}
                 dark={dark}
                 estudioNome={estLabel !== "—" ? estLabel : undefined}
               />
@@ -1100,10 +1137,14 @@ function BlocoCampanhas({ estudioSlug, campanhas, podeExcluir, podeCriar, onCarr
       <ModalConfirmExcluirPadrao
         descricaoItem={descricaoModalExcluirItem("a campanha", excluirTarget.titulo)}
         onCancel={() => {
-          if (!excluindo) setExcluirTarget(null);
+          if (!excluindo) {
+            setExcluirTarget(null);
+            setErroExcluir(null);
+          }
         }}
         onConfirm={() => void confirmarExcluir()}
         loading={excluindo}
+        error={erroExcluir}
       />
     ) : null}
     </>
@@ -1137,6 +1178,7 @@ export default function RoteiroMesa() {
   const [campanhas, setCampanhas] = useState<RoteiroCampanha[]>([]);
   const [threadCampSolId, setThreadCampSolId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   /** Evita fetch de roteiros do operador antes do mapa operadora→estúdio (e quebra loop de loading). */
   const [estudiosReady, setEstudiosReady] = useState(false);
 
@@ -1231,72 +1273,90 @@ export default function RoteiroMesa() {
     if (role === "operador" && operadoraSlugsForcado?.length && estudiosReady && !estudioSlugsForcado?.length) {
       setSugestoes([]);
       setCampanhas([]);
+      setLoadError(null);
       setLoading(false);
       return;
     }
     if (!estudioSlugSelecionada) {
       setSugestoes([]);
       setCampanhas([]);
+      setLoadError(null);
       setLoading(false);
       return;
     }
     setLoading(true);
+    setLoadError(null);
 
-    let qSug = supabase.from("roteiro_mesa_sugestoes").select("*").order("bloco").order("ordem");
-    if (
-      role === "operador" &&
-      estudioSlugsForcado?.length &&
-      estudioSlugSelecionada === FILTRO_STAFF_ESTUDIO_TODOS
-    ) {
-      const parts: string[] = [];
-      for (const s of estudioSlugsForcado) parts.push(`estudio_slug.eq.${s}`);
-      if (operadoraSlugsForcado?.length) {
-        for (const op of operadoraSlugsForcado) parts.push(`operadora_slug.eq.${op}`);
-      }
-      qSug = qSug.or(parts.join(","));
-    } else if (estudioSlugSelecionada !== FILTRO_STAFF_ESTUDIO_TODOS) {
-      qSug = qSug.eq("estudio_slug", estudioSlugSelecionada);
-    }
-    const { data: dataSug } = await qSug;
-    let sugLista = (dataSug ?? []) as RoteiroSugestao[];
-    if (role === "operador" && estudioSlugsForcado?.length) {
-      sugLista = sugLista.filter((s) => {
-        const est = (s.estudio_slug ?? "").trim();
-        if (est) return estudioSlugsForcado.includes(est);
-        const op = (s.operadora_slug ?? "").trim();
-        return !!op && !!operadoraSlugsForcado?.includes(op);
+    try {
+      const sugListaRaw = await fetchAllPages<RoteiroSugestao>(async (from, to) => {
+        let q = supabase
+          .from("roteiro_mesa_sugestoes")
+          .select(ROTEIRO_SUGESTAO_COLS);
+        if (
+          role === "operador" &&
+          estudioSlugsForcado?.length &&
+          estudioSlugSelecionada === FILTRO_STAFF_ESTUDIO_TODOS
+        ) {
+          const parts: string[] = [];
+          for (const s of estudioSlugsForcado) parts.push(`estudio_slug.eq.${s}`);
+          if (operadoraSlugsForcado?.length) {
+            for (const op of operadoraSlugsForcado) parts.push(`operadora_slug.eq.${op}`);
+          }
+          q = q.or(parts.join(","));
+        } else if (estudioSlugSelecionada !== FILTRO_STAFF_ESTUDIO_TODOS) {
+          q = q.eq("estudio_slug", estudioSlugSelecionada);
+        }
+        return q.order("bloco").order("ordem").order("id").range(from, to);
       });
-    }
-    setSugestoes(sugLista);
-
-    let qCamp = supabase.from("roteiro_mesa_campanhas").select("*").order("ordem");
-    if (
-      role === "operador" &&
-      estudioSlugsForcado?.length &&
-      estudioSlugSelecionada === FILTRO_STAFF_ESTUDIO_TODOS
-    ) {
-      const parts: string[] = [];
-      for (const s of estudioSlugsForcado) parts.push(`estudio_slug.eq.${s}`);
-      if (operadoraSlugsForcado?.length) {
-        for (const op of operadoraSlugsForcado) parts.push(`operadora_slug.eq.${op}`);
+      let sugLista = sugListaRaw;
+      if (role === "operador" && estudioSlugsForcado?.length) {
+        sugLista = sugLista.filter((s) => {
+          const est = (s.estudio_slug ?? "").trim();
+          if (est) return estudioSlugsForcado.includes(est);
+          const op = (s.operadora_slug ?? "").trim();
+          return !!op && !!operadoraSlugsForcado?.includes(op);
+        });
       }
-      qCamp = qCamp.or(parts.join(","));
-    } else if (estudioSlugSelecionada !== FILTRO_STAFF_ESTUDIO_TODOS) {
-      qCamp = qCamp.eq("estudio_slug", estudioSlugSelecionada);
-    }
-    const { data: dataCamp } = await qCamp;
-    let campLista = (dataCamp ?? []) as RoteiroCampanha[];
-    if (role === "operador" && estudioSlugsForcado?.length) {
-      campLista = campLista.filter((c) => {
-        const est = (c.estudio_slug ?? "").trim();
-        if (est) return estudioSlugsForcado.includes(est);
-        const op = (c.operadora_slug ?? "").trim();
-        return !!op && !!operadoraSlugsForcado?.includes(op);
-      });
-    }
-    setCampanhas(campLista);
+      setSugestoes(sugLista);
 
-    setLoading(false);
+      const campListaRaw = await fetchAllPages<RoteiroCampanha>(async (from, to) => {
+        let q = supabase
+          .from("roteiro_mesa_campanhas")
+          .select(ROTEIRO_CAMPANHA_COLS);
+        if (
+          role === "operador" &&
+          estudioSlugsForcado?.length &&
+          estudioSlugSelecionada === FILTRO_STAFF_ESTUDIO_TODOS
+        ) {
+          const parts: string[] = [];
+          for (const s of estudioSlugsForcado) parts.push(`estudio_slug.eq.${s}`);
+          if (operadoraSlugsForcado?.length) {
+            for (const op of operadoraSlugsForcado) parts.push(`operadora_slug.eq.${op}`);
+          }
+          q = q.or(parts.join(","));
+        } else if (estudioSlugSelecionada !== FILTRO_STAFF_ESTUDIO_TODOS) {
+          q = q.eq("estudio_slug", estudioSlugSelecionada);
+        }
+        return q.order("ordem").order("id").range(from, to);
+      });
+      let campLista = campListaRaw;
+      if (role === "operador" && estudioSlugsForcado?.length) {
+        campLista = campLista.filter((c) => {
+          const est = (c.estudio_slug ?? "").trim();
+          if (est) return estudioSlugsForcado.includes(est);
+          const op = (c.operadora_slug ?? "").trim();
+          return !!op && !!operadoraSlugsForcado?.includes(op);
+        });
+      }
+      setCampanhas(campLista);
+    } catch (e) {
+      console.error("[RoteiroMesa] Erro ao carregar roteiros:", e);
+      setSugestoes([]);
+      setCampanhas([]);
+      setLoadError(MSG_ERRO_CARREGAR_ROTEIROS);
+    } finally {
+      setLoading(false);
+    }
   }, [
     estudioSlugSelecionada,
     role,
@@ -1467,7 +1527,40 @@ export default function RoteiroMesa() {
         loading ? (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, padding: 60, color: t.textMuted, fontFamily: FONT.body, fontSize: 13 }}>
             <Loader2 size={22} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden />
-            Carregando roteiros...
+            Carregando roteiros…
+          </div>
+        ) : loadError ? (
+          <div
+            role="alert"
+            aria-live="polite"
+            style={{
+              background: t.cardBg,
+              border: `1px solid ${t.cardBorder}`,
+              borderRadius: 16,
+              padding: 48,
+              textAlign: "center",
+              fontFamily: FONT.body,
+              boxShadow: CARD_SHADOW(dark),
+            }}
+          >
+            <p style={{ color: "#e84025", fontSize: 13, marginBottom: 12, marginTop: 0 }}>{loadError}</p>
+            <button
+              type="button"
+              onClick={() => void carregarDados()}
+              style={{
+                padding: "10px 20px",
+                borderRadius: 10,
+                border: `1px solid ${t.cardBorder}`,
+                background: t.inputBg,
+                color: t.text,
+                fontSize: 13,
+                fontWeight: 700,
+                fontFamily: FONT.body,
+                cursor: "pointer",
+              }}
+            >
+              Tentar novamente
+            </button>
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>

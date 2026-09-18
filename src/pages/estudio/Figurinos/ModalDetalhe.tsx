@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Loader2 } from "lucide-react"
 import { FiltroBarTabButton } from "../../../components/dashboard"
 import { onFiltroBarTabsKeyDown } from "../../../lib/filterBarStyles"
@@ -10,6 +10,8 @@ import { useDashboardBrand } from "../../../hooks/useDashboardBrand"
 import { FONT } from "../../../constants/theme"
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal"
 import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles"
+import { TabelaPaginacaoBar } from "../../../components/TabelaPaginacaoBar"
+import { TABELA_PAGE_SIZE } from "../../../lib/tablePagination"
 import { type RhFigurinoEmprestimo, type RhFigurinoPeca, type RhFigurinoStatusHist } from "./types";
 import { labelStatusHistorico, labelStatusPeca, labelTipoRetirada } from "./figurinosConstants"
 import { ctaButtonContent, fmtDataHora, fmtDataSóDia, labelCondicaoPeca, tableRowHoverBg } from "./figurinosPageHelpers"
@@ -31,6 +33,7 @@ export function ModalDetalhe({
   podeEditar,
   podeCriar,
   onClose,
+  onRetryHist,
   onRetirada,
   onDevolver,
   onManutencao,
@@ -48,6 +51,7 @@ export function ModalDetalhe({
   /** Manutenção / Disponibilizar / Descartar. */
   podeCriar: boolean;
   onClose: () => void;
+  onRetryHist: () => void;
   onRetirada: () => void;
   onDevolver: () => void;
   onManutencao: () => void;
@@ -59,12 +63,27 @@ export function ModalDetalhe({
   const dataTable = useDataTableBlock();
   const [pdfLoading, setPdfLoading] = useState(false);
   const [abaDet, setAbaDet] = useState<AbaDetalheFig>("detalhes");
+  const [histPage, setHistPage] = useState(0);
 
   const registroCadastro = useMemo(() => {
     if (!histStatus.length) return null;
     const asc = [...histStatus].sort((a, b) => new Date(a.changed_at).getTime() - new Date(b.changed_at).getTime());
     return asc.find((h) => h.previous_status == null) ?? asc[0] ?? null;
   }, [histStatus]);
+
+  const histOrdenado = useMemo(
+    () => [...histStatus].sort((a, b) => new Date(b.changed_at).getTime() - new Date(a.changed_at).getTime()),
+    [histStatus],
+  );
+
+  useEffect(() => {
+    setHistPage(0);
+  }, [peca.id, histStatus.length]);
+
+  const histSlice = useMemo(() => {
+    const from = histPage * TABELA_PAGE_SIZE;
+    return histOrdenado.slice(from, from + TABELA_PAGE_SIZE);
+  }, [histOrdenado, histPage]);
 
   const linhaLeitura = (label: string, value: string) => (
     <div style={{ display: "flex", justifyContent: "space-between", gap: 14, padding: "8px 0", borderBottom: `1px solid ${t.cardBorder}` }}>
@@ -96,8 +115,14 @@ export function ModalDetalhe({
         ))}
       </div>
 
-      {abaDet === "detalhes" ? (
-        <div role="tabpanel" id="panel-fig-detalhe-detalhes" aria-labelledby="tab-fig-detalhe-detalhes" tabIndex={0}>
+      <div
+        role="tabpanel"
+        id={`panel-fig-detalhe-${abaDet}`}
+        aria-labelledby={`tab-fig-detalhe-${abaDet}`}
+        tabIndex={0}
+      >
+        {abaDet === "detalhes" ? (
+          <>
           <div style={{ marginBottom: 16 }}>
             {linhaLeitura("Estúdio", estudiosTexto)}
             {linhaLeitura("Categoria", peca.category)}
@@ -165,7 +190,7 @@ export function ModalDetalhe({
                       style={{
                         padding: "8px 14px",
                         borderRadius: 10,
-                        border: `1px solid rgba(34,197,94,0.35)`,
+                        border: "1px solid rgba(34,197,94,0.35)",
                         background: "rgba(34,197,94,0.12)",
                         color: "#22c55e",
                         fontWeight: 700,
@@ -183,7 +208,7 @@ export function ModalDetalhe({
                       style={{
                         padding: "8px 14px",
                         borderRadius: 10,
-                        border: `1px solid rgba(167,139,250,0.4)`,
+                        border: "1px solid rgba(167,139,250,0.4)",
                         background: "rgba(167,139,250,0.12)",
                         color: "#a78bfa",
                         fontWeight: 700,
@@ -203,7 +228,7 @@ export function ModalDetalhe({
                   style={{
                     padding: "8px 14px",
                     borderRadius: 10,
-                    border: `1px solid rgba(245,158,11,0.4)`,
+                    border: "1px solid rgba(245,158,11,0.4)",
                     background: "rgba(245,158,11,0.12)",
                     color: "#f59e0b",
                     fontWeight: 700,
@@ -222,7 +247,7 @@ export function ModalDetalhe({
                     style={{
                       padding: "8px 14px",
                       borderRadius: 10,
-                      border: `1px solid rgba(34,197,94,0.35)`,
+                      border: "1px solid rgba(34,197,94,0.35)",
                       background: "rgba(34,197,94,0.12)",
                       color: "#22c55e",
                       fontWeight: 700,
@@ -252,23 +277,39 @@ export function ModalDetalhe({
               ) : null}
             </div>
           ) : null}
-        </div>
-      ) : (
-        <div role="tabpanel" id="panel-fig-detalhe-historico" aria-labelledby="tab-fig-detalhe-historico" tabIndex={0}>
-          {loadingHist ? (
+          </>
+        ) : loadingHist ? (
             <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "24px 0", color: t.textMuted }}>
               <Loader2 className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" size={18} aria-hidden />
               <span style={{ fontFamily: FONT.body, fontSize: 13 }}>Carregando histórico…</span>
             </div>
           ) : histErro ? (
-            <div role="alert" aria-live="polite" style={{ padding: "24px 0", textAlign: "center", color: "#e84025", fontSize: 13, fontFamily: FONT.body }}>
-              {histErro}
+            <div role="alert" aria-live="polite" style={{ padding: "24px 0", textAlign: "center", fontFamily: FONT.body }}>
+              <p style={{ color: "#e84025", fontSize: 13, marginBottom: 12 }}>{histErro}</p>
+              <button
+                type="button"
+                onClick={onRetryHist}
+                style={{
+                  padding: "8px 16px",
+                  borderRadius: 10,
+                  border: `1px solid ${t.cardBorder}`,
+                  background: t.inputBg,
+                  color: t.text,
+                  fontSize: 12,
+                  fontWeight: 700,
+                  fontFamily: FONT.body,
+                  cursor: "pointer",
+                }}
+              >
+                Tentar novamente
+              </button>
             </div>
           ) : histStatus.length === 0 ? (
             <div style={{ padding: "28px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
               Sem histórico de alterações de status.
             </div>
           ) : (
+            <>
             <div className="app-table-wrap" style={getDataTableWrapStyle()}>
               <table style={getDataTableStyle()}>
                 <caption style={{ display: "none" }}>Histórico de alterações de status da peça</caption>
@@ -286,9 +327,7 @@ export function ModalDetalhe({
                   </tr>
                 </thead>
                 <tbody>
-                  {[...histStatus]
-                    .sort((a, b) => new Date(b.changed_at).getTime() - new Date(a.changed_at).getTime())
-                    .map((h, i) => {
+                  {histSlice.map((h, i) => {
                       const zebra = dataTable.zebraRow(i);
                       return (
                       <tr
@@ -312,9 +351,16 @@ export function ModalDetalhe({
                 </tbody>
               </table>
             </div>
+            <TabelaPaginacaoBar
+              t={t}
+              page={histPage}
+              pageSize={TABELA_PAGE_SIZE}
+              totalItems={histOrdenado.length}
+              onPageChange={setHistPage}
+            />
+            </>
           )}
-        </div>
-      )}
+      </div>
     </ModalBase>
   );
 }
