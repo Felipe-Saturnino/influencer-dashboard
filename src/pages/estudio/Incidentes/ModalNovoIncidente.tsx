@@ -11,8 +11,7 @@ import { ModalBase, ModalConfirmDelete, ModalHeader } from "../../../components/
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { CampoUploadArquivos } from "../../../components/CampoUploadArquivos";
 import { BarraPesquisaFiltroPainel } from "../../../components/BarraPesquisaFiltroPainel";
-import { FiltroBarTabButton, FILTRO_BAR_TAB_ICON_PROPS } from "../../../components/dashboard";
-import { getFiltroBarTabButtonStyle } from "../../../lib/filterBarStyles";
+import { getFiltroBarTabButtonStyle, FILTRO_BAR_TAB_ICON_PROPS } from "../../../lib/filterBarStyles";
 import { textoContemBuscaEmAlgum } from "../../../lib/searchText";
 import { placeholderPesquisaFiltro } from "../../../lib/searchBarConstants";
 import {
@@ -347,6 +346,9 @@ export function ModalNovoIncidente({
   onClose,
   onSaved,
   editando = null,
+  erroMesas = null,
+  loadingMesas = false,
+  onRetryMesas,
 }: {
   mesas: NovoIncidenteMesaOption[];
   onClose: () => void;
@@ -357,6 +359,10 @@ export function ModalNovoIncidente({
   ) => void;
   /** Quando informado, abre em modo edição (protocolo somente leitura). */
   editando?: EstudioIncidenteRow | null;
+  /** Falha ao carregar catálogo de mesas (não confundir com lista vazia). */
+  erroMesas?: string | null;
+  loadingMesas?: boolean;
+  onRetryMesas?: () => void;
 }) {
   const { theme: t, user } = useApp();
   const brand = useDashboardBrand();
@@ -723,14 +729,56 @@ export function ModalNovoIncidente({
 
   const campoMesa = (
     <Campo label="Mesa" required>
-      <ComboBuscavel
-        id="novo-incidente-mesa"
-        label="Mesa"
-        placeholder="Selecione a mesa"
-        value={mesaId}
-        onChange={setMesaId}
-        options={mesasDisponiveis.map((m) => ({ id: m.id, label: m.label }))}
-      />
+      {erroMesas ? (
+        <div
+          role="alert"
+          aria-live="polite"
+          style={{
+            color: "#e84025",
+            fontSize: 12,
+            fontFamily: FONT.body,
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            flexWrap: "wrap",
+          }}
+        >
+          <span>{erroMesas}</span>
+          {onRetryMesas ? (
+            <button
+              type="button"
+              onClick={() => onRetryMesas()}
+              disabled={loadingMesas}
+              style={{
+                fontFamily: FONT.body,
+                fontSize: 12,
+                fontWeight: 700,
+                padding: "6px 12px",
+                borderRadius: 10,
+                border: "1px solid rgba(232,64,37,0.35)",
+                background: "transparent",
+                color: "#e84025",
+                cursor: loadingMesas ? "default" : "pointer",
+                opacity: loadingMesas ? 0.6 : 1,
+              }}
+            >
+              Tentar novamente
+            </button>
+          ) : null}
+        </div>
+      ) : loadingMesas && mesasDisponiveis.length === 0 ? (
+        <div style={{ fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>Carregando…</div>
+      ) : (
+        <ComboBuscavel
+          id="novo-incidente-mesa"
+          label="Mesa"
+          placeholder="Selecione a mesa"
+          value={mesaId}
+          onChange={setMesaId}
+          options={mesasDisponiveis.map((m) => ({ id: m.id, label: m.label }))}
+          disabled={loadingMesas}
+        />
+      )}
     </Campo>
   );
 
@@ -990,25 +1038,31 @@ export function ModalNovoIncidente({
         ) : null}
 
         <Campo label="Time">
-          <div role="tablist" aria-label="Time" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <FiltroBarTabButton
+          <div role="group" aria-label="Time" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button
+              type="button"
               id="tab-novo-incidente-gp"
-              active={timeAlvo === "gp"}
+              aria-pressed={timeAlvo === "gp"}
+              tabIndex={timeAlvo === "gp" ? 0 : -1}
               className={CAMPO_FOCO_CLASS}
               onClick={() => setTimeAlvo("gp")}
-              icon={<UserRound {...FILTRO_BAR_TAB_ICON_PROPS} />}
+              style={getFiltroBarTabButtonStyle(t, brand, timeAlvo === "gp")}
             >
+              <UserRound {...FILTRO_BAR_TAB_ICON_PROPS} />
               Game Presenter
-            </FiltroBarTabButton>
-            <FiltroBarTabButton
+            </button>
+            <button
+              type="button"
               id="tab-novo-incidente-shuf"
-              active={timeAlvo === "shuf"}
+              aria-pressed={timeAlvo === "shuf"}
+              tabIndex={timeAlvo === "shuf" ? 0 : -1}
               className={CAMPO_FOCO_CLASS}
               onClick={() => setTimeAlvo("shuf")}
-              icon={<Shuffle {...FILTRO_BAR_TAB_ICON_PROPS} />}
+              style={getFiltroBarTabButtonStyle(t, brand, timeAlvo === "shuf")}
             >
+              <Shuffle {...FILTRO_BAR_TAB_ICON_PROPS} />
               Shuffler
-            </FiltroBarTabButton>
+            </button>
           </div>
         </Campo>
 

@@ -33,7 +33,7 @@ import {
   type CtRelatorioTurnoRow,
   type CtStatsPresencaBloco,
 } from "../../../lib/escalaControleTurno";
-import { formatDiaBr, labelTurnoCurto } from "./helpers";
+import { formatDiaBr, labelTurnoCurto, BTN_RETRY_CT_STYLE } from "./helpers";
 import type { ControleTurnoTurno } from "./types";
 
 type RelStatus = "publicado" | "rascunho" | "nao_iniciado";
@@ -525,13 +525,21 @@ export function AbaRelatorio({ diaIso, busca }: Props) {
             color: "#e84025",
             fontSize: 13,
             fontFamily: FONT.body,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 12,
+            flexWrap: "wrap",
           }}
         >
-          {erroPagina}
+          <span>{erroPagina}</span>
+          <button type="button" onClick={() => void carregar()} style={BTN_RETRY_CT_STYLE}>
+            Tentar novamente
+          </button>
         </div>
       ) : null}
 
-      {loading ? (
+      {!erroPagina && loading ? (
         <div style={pageBox}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 0", gap: 8 }}>
             <Loader2 size={18} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden />
@@ -540,7 +548,7 @@ export function AbaRelatorio({ diaIso, busca }: Props) {
         </div>
       ) : null}
 
-      {!loading ? (
+      {!erroPagina && !loading ? (
       <div style={pageBox}>
         <SectionTitle sub={formatDiaBr(diaIso)}>Controle dos Turnos</SectionTitle>
         <div className="app-grid-3" style={{ gap: 12 }}>
@@ -578,7 +586,7 @@ export function AbaRelatorio({ diaIso, busca }: Props) {
       </div>
       ) : null}
 
-      {!loading && cardsVisiveis.length === 0 ? (
+      {!erroPagina && !loading && cardsVisiveis.length === 0 ? (
         <div style={pageBox}>
           <div
             style={{
@@ -594,7 +602,7 @@ export function AbaRelatorio({ diaIso, busca }: Props) {
         </div>
       ) : null}
 
-      {!loading
+      {!erroPagina && !loading
         ? cardsVisiveis.map((turno) => (
             <CardTurno
               key={turno}

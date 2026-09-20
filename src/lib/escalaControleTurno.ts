@@ -1,5 +1,6 @@
 import { entradaAtrasadaMais5Min } from "./overviewPrestadorCalendarioHelpers";
 import { supabase } from "./supabase";
+import { fetchAllPages } from "./supabasePaginate";
 
 export const MSG_ERRO_CT =
   "Não foi possível carregar os dados. Se o problema persistir, entre em contato com o suporte.";
@@ -459,15 +460,20 @@ export async function listMesasForFechamento(): Promise<CtMesaOpt[]> {
 
   let rows: Record<string, unknown>[] = [];
   for (const select of attempts) {
-    const { data, error } = await supabase
-      .from("mesas_spin_cadastro")
-      .select(select)
-      .order("nome_mesa", { ascending: true });
-    if (!error) {
-      rows = (data ?? []) as unknown as Record<string, unknown>[];
+    try {
+      rows = await fetchAllPages<Record<string, unknown>>(async (from, to) => {
+        const { data, error } = await supabase
+          .from("mesas_spin_cadastro")
+          .select(select)
+          .order("nome_mesa", { ascending: true })
+          .order("id", { ascending: true })
+          .range(from, to);
+        return { data: (data ?? null) as Record<string, unknown>[] | null, error };
+      });
       break;
+    } catch (e) {
+      console.error(e);
     }
-    console.error(error);
   }
 
   return rows.map((r) => {

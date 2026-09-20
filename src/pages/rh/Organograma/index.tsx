@@ -194,21 +194,32 @@ export default function RhOrganogramaPage() {
     return m;
   }, [funcionarios]);
 
-  const arvore = useMemo(
+  /** Visualização: só ativos. Gerenciamento: inclui inativos (soft-delete). */
+  const arvoreVisual = useMemo(
     () => montarArvoreOrganograma(diretorias, gerencias, times),
     [diretorias, gerencias, times],
+  );
+  const arvoreGestao = useMemo(
+    () => montarArvoreOrganograma(diretorias, gerencias, times, { incluirInativos: true }),
+    [diretorias, gerencias, times],
+  );
+
+  /** Carrossel: na Visualização não lista diretorias inativas. */
+  const diretoriasFiltroBar = useMemo(
+    () => (modo === "visual" ? diretorias.filter((d) => d.status === "ativo") : diretorias),
+    [modo, diretorias],
   );
 
   /** No Gerenciamento com uma diretoria selecionada no filtro, mostrar só essa árvore. */
   const arvoreGerenciamento = useMemo(() => {
-    if (modo !== "gerenciar" || filtroDiretoriaId === ORG_FILTRO_TODAS_DIRETORIAS) return arvore;
-    const d = arvore.find((x) => x.id === filtroDiretoriaId);
+    if (modo !== "gerenciar" || filtroDiretoriaId === ORG_FILTRO_TODAS_DIRETORIAS) return arvoreGestao;
+    const d = arvoreGestao.find((x) => x.id === filtroDiretoriaId);
     return d ? [d] : [];
-  }, [arvore, modo, filtroDiretoriaId]);
+  }, [arvoreGestao, modo, filtroDiretoriaId]);
 
   useEffect(() => {
     if (modo !== "gerenciar" || filtroDiretoriaId === ORG_FILTRO_TODAS_DIRETORIAS) return;
-    const d = arvore.find((x) => x.id === filtroDiretoriaId);
+    const d = arvoreGestao.find((x) => x.id === filtroDiretoriaId);
     if (!d) return;
     setExpanded((prev) => {
       const next = { ...prev, [`d-${d.id}`]: true };
@@ -217,12 +228,19 @@ export default function RhOrganogramaPage() {
       });
       return next;
     });
-  }, [modo, filtroDiretoriaId, arvore]);
+  }, [modo, filtroDiretoriaId, arvoreGestao]);
+
+  /** Se o filtro apontar para diretoria inativa ao ir para Visualização, volta para «Todas». */
+  useEffect(() => {
+    if (modo !== "visual" || filtroDiretoriaId === ORG_FILTRO_TODAS_DIRETORIAS) return;
+    const aindaVisivel = arvoreVisual.some((d) => d.id === filtroDiretoriaId);
+    if (!aindaVisivel) setFiltroDiretoriaId(ORG_FILTRO_TODAS_DIRETORIAS);
+  }, [modo, filtroDiretoriaId, arvoreVisual]);
 
   const dirSelecionada = useMemo(() => {
     if (filtroDiretoriaId === ORG_FILTRO_TODAS_DIRETORIAS) return null;
-    return arvore.find((d) => d.id === filtroDiretoriaId) ?? null;
-  }, [arvore, filtroDiretoriaId]);
+    return arvoreVisual.find((d) => d.id === filtroDiretoriaId) ?? null;
+  }, [arvoreVisual, filtroDiretoriaId]);
 
   const countsMap = useMemo(() => {
     const acc: Record<string, number> = {};
@@ -263,7 +281,7 @@ export default function RhOrganogramaPage() {
   /** Contagem distinta de pessoas (prestadores vinculados + líderes explícitos da diretoria). */
   const prestadoresCountPorDiretoriaId = useMemo(() => {
     const out: Record<string, number> = {};
-    for (const d of arvore) {
+    for (const d of arvoreVisual) {
       const ids = new Set<string>();
       if (d.diretor_funcionario_id) ids.add(d.diretor_funcionario_id);
       const timeIds = new Set<string>();
@@ -290,7 +308,7 @@ export default function RhOrganogramaPage() {
       out[d.id] = ids.size;
     }
     return out;
-  }, [arvore, funcionarios]);
+  }, [arvoreVisual, funcionarios]);
 
   const nomeResponsavel = useCallback(
     (fid: string | null | undefined, livre: string | null | undefined) => {
@@ -573,8 +591,8 @@ export default function RhOrganogramaPage() {
   };
 
   const prepararDesativarDiretoria = (d: RhOrgDiretoriaComFilhos) => {
-    const ng = contarGerenciasAtivasFilhasDeDiretoria(arvore, d.id);
-    const nt = contarTimesAtivosSobDiretoria(arvore, d.id);
+    const ng = contarGerenciasAtivasFilhasDeDiretoria(arvoreGestao, d.id);
+    const nt = contarTimesAtivosSobDiretoria(arvoreGestao, d.id);
     setModalOff({
       tipo: "diretoria",
       row: d,
@@ -584,7 +602,7 @@ export default function RhOrganogramaPage() {
   };
 
   const prepararDesativarGerencia = (g: RhOrgGerenciaComFilhos) => {
-    const nt = contarTimesAtivosFilhosDeGerencia(arvore, g.id);
+    const nt = contarTimesAtivosFilhosDeGerencia(arvoreGestao, g.id);
     setModalOff({
       tipo: "gerencia",
       row: g,
@@ -807,7 +825,7 @@ export default function RhOrganogramaPage() {
       ) : null}
 
       <OrgFiltroBarDiretorias
-        diretorias={diretorias}
+        diretorias={diretoriasFiltroBar}
         filtroDiretoriaId={filtroDiretoriaId}
         onFiltroChange={setFiltroDiretoriaId}
         t={t}
@@ -859,7 +877,7 @@ export default function RhOrganogramaPage() {
             {modo === "visual" ? (
           filtroDiretoriaId === ORG_FILTRO_TODAS_DIRETORIAS ? (
             <OrgChartHierarquico
-              arvore={arvore}
+              arvore={arvoreVisual}
               t={{ ...t, isDark }}
               nomeResponsavel={nomeResponsavel}
               prestadoresCountPorDiretoriaId={prestadoresCountPorDiretoriaId}
@@ -899,7 +917,7 @@ export default function RhOrganogramaPage() {
         ) : modo === "gerenciar" &&
           filtroDiretoriaId !== ORG_FILTRO_TODAS_DIRETORIAS &&
           arvoreGerenciamento.length === 0 &&
-          arvore.length > 0 ? (
+          arvoreGestao.length > 0 ? (
           <div style={{ padding: "32px 12px", textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
             <p style={{ margin: "0 0 12px" }}>Diretoria não encontrada ou removida.</p>
             <button

@@ -35,7 +35,7 @@ import {
   type CtPresencaStatus,
   type CtPresencaTipo,
 } from "../../../lib/escalaControleTurno";
-import { formatDiaBr, formatDiaCurto, formatSaidaPresencaCt, labelTurnoCurto } from "./helpers";
+import { formatDiaBr, formatDiaCurto, formatSaidaPresencaCt, labelTurnoCurto, BTN_RETRY_CT_STYLE } from "./helpers";
 import { CONTROLE_TURNO_TURNO_LABEL, type ControleTurnoTurno } from "./types";
 
 const STATUS_LABEL: Record<CtPresencaStatus, string> = {
@@ -415,15 +415,27 @@ export function AbaEscala({ diaIso, turno, busca }: Props) {
           aria-live="polite"
           style={{
             marginBottom: 14,
+            padding: "10px 14px",
+            borderRadius: 10,
+            background: "rgba(232,64,37,0.12)",
+            border: "1px solid rgba(232,64,37,0.35)",
             color: "#e84025",
-            fontSize: 12,
+            fontSize: 13,
             fontFamily: FONT.body,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 12,
+            flexWrap: "wrap",
           }}
         >
-          {erroPagina}
+          <span>{erroPagina}</span>
+          <button type="button" onClick={() => void carregar()} style={BTN_RETRY_CT_STYLE}>
+            Tentar novamente
+          </button>
         </div>
-      ) : null}
-
+      ) : (
+        <>
       <div style={pageBox}>
         <SectionTitle sub={sub}>Consolidado</SectionTitle>
         <div className="app-grid-2" style={{ gap: 12 }}>
@@ -601,6 +613,8 @@ export function AbaEscala({ diaIso, turno, busca }: Props) {
           </TabelaComPaginacao>
         )}
       </div>
+        </>
+      )}
 
       {alvoRegistrar ? (
         <ModalBase onClose={fecharRegistrar} maxWidth={560} closeOnBackdrop={false}>
@@ -850,9 +864,24 @@ export function AbaEscala({ diaIso, turno, busca }: Props) {
               <div
                 role="alert"
                 aria-live="polite"
-                style={{ color: "#e84025", fontSize: 12, fontFamily: FONT.body }}
+                style={{
+                  color: "#e84025",
+                  fontSize: 12,
+                  fontFamily: FONT.body,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                  flexWrap: "wrap",
+                }}
               >
-                {erroHistorico}
+                <span>{erroHistorico}</span>
+                <button
+                  type="button"
+                  onClick={() => alvoHistorico && void abrirHistorico(alvoHistorico)}
+                  style={BTN_RETRY_CT_STYLE}
+                >
+                  Tentar de novo
+                </button>
               </div>
             ) : loadingHistorico ? (
               <div

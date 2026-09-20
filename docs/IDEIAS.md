@@ -8,7 +8,7 @@
 **Perguntar** só se a ideia estiver ambígua (não dá para classificar tipo/área nem escrever a nota).
 **Leitura:** ao abrir este compositor, ou quando o usuário apontar um ID noutro chat.
 
-Próximo ID livre: **IDEIA-008**.
+Próximo ID livre: **IDEIA-009**.
 
 ## Como registrar
 
@@ -50,6 +50,10 @@ Status: `inbox` · `pronto` · `em curso` · `feito`.
 - **IDEIA-007** · 17/09/2026 · feature · Dashboards / Headcount · inbox
   Listagem de contratações na aba Contratação, no padrão da aba Distratos.
   Hoje a aba Contratação (`HeadcountAbaVagas`) é pipeline de vagas (Abertas / Em andamento / Fechadas + funil + tabela só de vagas abertas/em andamento). Distratos já lista pessoas (nome, time, admissão, término, tipo, permanência; sort + paginação 20). Incluir tabela equivalente das admissões do período/Histórico. Chat: `/nova-feature` ou Ajustes Gerais — `headcountMetrics.ts` + `HeadcountAbaVagas`.
+
+- **IDEIA-008** · 18/09/2026 · feature · Escala / Marketplace · inbox
+  Processo e controle de solicitação de troca de turno.
+  Hoje a Oferta de Troca já existe no Marketplace (publicar, aceitar, `ModalDecidirTrocaMarketplace` aprovar/recusar/desistir; grade grava Venda + Compra — Turno). A ideia é formalizar o processo e o controle da solicitação (fila, estados, quem aprova, visibilidade para gestão). Chat: `/nova-feature` — o que falta vs o fluxo atual e se Escala Escritório entra.
 
 ## Feito
 

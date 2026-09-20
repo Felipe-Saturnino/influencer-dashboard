@@ -57,14 +57,22 @@ export function usePerformanceHubCadastro() {
     async function carregar() {
       setLoading(true);
 
-      const [timesRes, timesOrgRes, estudiosRows, mesasRows] = await Promise.all([
+      const [timesRes, timesOrgRes, estudiosRows, mesasSettled] = await Promise.all([
         supabase.rpc("rh_staff_times_filtrados"),
         supabase.from("rh_org_times").select("id, nome").eq("status", "ativo"),
         fetchEstudiosSpinRows(),
-        fetchMesasSpinCadastroRows(),
+        fetchMesasSpinCadastroRows().then(
+          (rows) => ({ ok: true as const, rows }),
+          (e) => {
+            console.error(e);
+            return { ok: false as const, rows: [] as Awaited<ReturnType<typeof fetchMesasSpinCadastroRows>> };
+          },
+        ),
       ]);
 
       if (cancelado) return;
+
+      const mesasRows = mesasSettled.rows;
 
       const junctionFlat: { operadora_slug: string; estudio_slug: string; tipo: string }[] = [];
       const estudiosAtivos: PerformanceHubEstudioCadastro[] = estudiosRows.map((e) => {

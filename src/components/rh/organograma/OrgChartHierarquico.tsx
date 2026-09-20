@@ -52,26 +52,7 @@ function textoOuTraco(s: string): string {
   return x ? x : "—";
 }
 
-function badgeInativo() {
-  return (
-    <span
-      style={{
-        fontSize: 10,
-        fontWeight: 700,
-        padding: "2px 6px",
-        borderRadius: 6,
-        background: "rgba(107,114,128,0.2)",
-        color: "#6b7280",
-        marginLeft: 8,
-        fontFamily: FONT.body,
-      }}
-    >
-      Inativo
-    </span>
-  );
-}
-
-/** Visão geral: grid de cards de diretoria (nome, diretor, contagens). */
+/** Visão geral: grid de cards de diretoria (nome, diretor, contagens). Só nós ativos. */
 export function OrgChartHierarquico({
   arvore,
   t,
@@ -152,7 +133,6 @@ export function OrgChartHierarquico({
             {arvoreFiltrada.map((d) => {
               const diretor = nomeResponsavel(d.diretor_funcionario_id, d.diretor_nome_livre);
               const nPrest = prestadoresCountPorDiretoriaId[d.id] ?? 0;
-              const inativo = d.status === "inativo";
               return (
                 <li key={d.id} className="app-org-dir-card-item">
                   <button
@@ -178,7 +158,6 @@ export function OrgChartHierarquico({
                       <div className="app-org-dir-card-textcol">
                         <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 6 }}>
                           <span style={{ fontSize: 16, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE }}>{d.nome}</span>
-                          {inativo ? badgeInativo() : null}
                         </div>
                         <p
                           style={{

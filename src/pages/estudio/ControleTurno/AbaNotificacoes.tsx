@@ -62,7 +62,7 @@ import {
   type CtPrestadorOpt,
   type CtTipoAusenciaPessoal,
 } from "../../../lib/escalaControleTurno";
-import { formatDiaBr, formatDiaCurto } from "./helpers";
+import { formatDiaBr, formatDiaCurto, BTN_RETRY_CT_STYLE } from "./helpers";
 
 export type AbaNotificacoesProps = {
   diaIso: string;
@@ -1177,9 +1177,17 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
             color: "#e84025",
             fontSize: 13,
             fontFamily: FONT.body,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 12,
+            flexWrap: "wrap",
           }}
         >
-          {erroPagina}
+          <span>{erroPagina}</span>
+          <button type="button" onClick={() => void carregarDia()} style={BTN_RETRY_CT_STYLE}>
+            Tentar novamente
+          </button>
         </div>
       ) : null}
 
@@ -1193,7 +1201,7 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
         />
         {loading ? (
           <LoadingBloco />
-        ) : fechVisiveis.length === 0 ? (
+        ) : erroPagina ? null : fechVisiveis.length === 0 ? (
           <EmptyDia msg="Sem fechamentos registrados no dia." />
         ) : (
           <TabelaComPaginacao items={fechVisiveis} t={t} resetKey={`${sortFech.col}-${sortFech.dir}-${busca}-${diaIso}`}>
@@ -1318,7 +1326,7 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
         />
         {loading ? (
           <LoadingBloco />
-        ) : ausVisiveis.length === 0 ? (
+        ) : erroPagina ? null : ausVisiveis.length === 0 ? (
           <EmptyDia msg="Sem ausências prolongadas registradas no dia." />
         ) : (
           <TabelaComPaginacao items={ausVisiveis} t={t} resetKey={`${sortAus.col}-${sortAus.dir}-${busca}-${diaIso}`}>
@@ -1429,7 +1437,7 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
         />
         {loading ? (
           <LoadingBloco />
-        ) : fbVisiveis.length === 0 ? (
+        ) : erroPagina ? null : fbVisiveis.length === 0 ? (
           <EmptyDia msg="Sem feedbacks registrados no dia." />
         ) : (
           <TabelaComPaginacao items={fbVisiveis} t={t} resetKey={`${sortFb.col}-${sortFb.dir}-${busca}-${diaIso}`}>
@@ -1554,7 +1562,7 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
         />
         {loading ? (
           <LoadingBloco />
-        ) : manutVisiveis.length === 0 ? (
+        ) : erroPagina ? null : manutVisiveis.length === 0 ? (
           <EmptyDia msg="Sem solicitações de manutenção no dia." />
         ) : (
           <TabelaComPaginacao items={manutVisiveis} t={t} resetKey={`${sortManut.col}-${sortManut.dir}-${busca}-${diaIso}`}>

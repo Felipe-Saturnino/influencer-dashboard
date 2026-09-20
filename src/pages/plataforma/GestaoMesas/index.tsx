@@ -50,15 +50,21 @@ export default function GestaoMesas() {
 
   const carregar = useCallback(async () => {
     setLoading(true);
-    const [mesas, estudiosAtivos, estudiosTodos] = await Promise.all([
-      fetchMesasSpinCadastroRows(),
-      fetchEstudiosSpinRows(),
-      fetchEstudiosSpinJunctionRows(),
-    ]);
-    setRows(mesas);
-    setEstudios(estudiosAtivos);
-    setEstudiosJunction(estudiosTodos.length > 0 ? estudiosTodos : estudiosAtivos);
-    setLoading(false);
+    try {
+      const [mesas, estudiosAtivos, estudiosTodos] = await Promise.all([
+        fetchMesasSpinCadastroRows(),
+        fetchEstudiosSpinRows(),
+        fetchEstudiosSpinJunctionRows(),
+      ]);
+      setRows(mesas);
+      setEstudios(estudiosAtivos);
+      setEstudiosJunction(estudiosTodos.length > 0 ? estudiosTodos : estudiosAtivos);
+    } catch (e) {
+      console.error(e);
+      setRows([]);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {

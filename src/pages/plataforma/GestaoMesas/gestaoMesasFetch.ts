@@ -43,16 +43,18 @@ function normalizarEstudioRow(row: Record<string, unknown>): EstudioSpinRow {
 export async function fetchMesasSpinCadastroRows(): Promise<MesaSpinCadastroRow[]> {
   const attempts = [MESAS_SELECT_COM_ESTUDIO, MESAS_SELECT_LEGADO, MESAS_SELECT_SEM_EMBED, MESAS_SELECT_LEGADO_SEM_EMBED];
 
+  let lastMessage = "Não foi possível carregar as mesas.";
   for (let i = 0; i < attempts.length; i++) {
     const select = attempts[i]!;
     const res = await supabase.from("mesas_spin_cadastro").select(select).order("nome_mesa", { ascending: true });
     if (!res.error) {
       return (res.data ?? []).map((row) => normalizarMesaRow(row as unknown as Record<string, unknown>));
     }
+    lastMessage = res.error.message || lastMessage;
     console.error(`mesas_spin_cadastro (tentativa ${i + 1}):`, res.error);
   }
 
-  return [];
+  throw new Error(lastMessage);
 }
 
 export async function fetchEstudiosSpinRows(): Promise<EstudioSpinRow[]> {

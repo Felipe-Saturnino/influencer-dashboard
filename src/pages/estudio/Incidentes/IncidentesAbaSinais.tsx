@@ -258,6 +258,7 @@ export function useIncidentesAbaSinais(opts: {
         id="panel-incidentes-sinais"
         role="tabpanel"
         aria-labelledby="tab-incidentes-sinais"
+        hidden={!opts.active}
         style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 280 }}
       >
         <div style={{ textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
@@ -274,7 +275,12 @@ export function useIncidentesAbaSinais(opts: {
     );
   } else if (erro) {
     panel = (
-      <div id="panel-incidentes-sinais" role="tabpanel" aria-labelledby="tab-incidentes-sinais">
+      <div
+        id="panel-incidentes-sinais"
+        role="tabpanel"
+        aria-labelledby="tab-incidentes-sinais"
+        hidden={!opts.active}
+      >
         <div
           role="alert"
           aria-live="polite"
@@ -314,7 +320,12 @@ export function useIncidentesAbaSinais(opts: {
     );
   } else {
     panel = (
-      <div id="panel-incidentes-sinais" role="tabpanel" aria-labelledby="tab-incidentes-sinais">
+      <div
+        id="panel-incidentes-sinais"
+        role="tabpanel"
+        aria-labelledby="tab-incidentes-sinais"
+        hidden={!opts.active}
+      >
         <div style={getPageContentBoxStyle(brand, t)}>
           <SectionTitle>KPIs Consolidados</SectionTitle>
           <div className="app-grid-kpi-4">
