@@ -1,14 +1,16 @@
 /**
- * Carga Mesas Spin — um comando: Superset (cookie) → JSON → Supabase (--gravar).
+ * Carga Mesas Spin — um comando: Grafana/ClickHouse → JSON → Supabase.
  *
- * Extract: Browser do chat logado (agent /carga-mesas) ou SUPERSET_MESAS_COOKIE / --cdp.
+ * Extract: Browser do chat logado (agent /carga-mesas) ou cookie Pomerium.
  * Supabase: VITE_SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY (mesmo .env do runner).
  *
  * Uso:
  *   node scripts/carga-mesas-spin.mjs
  *   node scripts/carga-mesas-spin.mjs --ate=2026-09-16
- *   node scripts/carga-mesas-spin.mjs --de=2026-09-01 --ate=2026-09-06 --force
+ *   node scripts/carga-mesas-spin.mjs --de=2026-09-01 --ate=2026-09-06
  *   node scripts/carga-mesas-spin.mjs --so-gravar --network=tmp/….json …
+ *
+ * Env do modo local: GRAFANA_MESAS_COOKIE ou GRAFANA_GP_KPI_COOKIE.
  */
 import { readFileSync, existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
@@ -87,14 +89,22 @@ function run(cmd, args, label) {
 
 const env = loadEnv();
 const soGravar = flag("so-gravar");
-const forceExtract = flag("force");
-const viaCdp = flag("cdp");
-const cdpUrl = arg("cdp-url") || "http://127.0.0.1:9222";
 const ateInclusivoArg = arg("ate");
 const deArg = arg("de");
 
 const hoje = hojeBrtIso();
 const d1 = diaAnterior(hoje);
+
+if (deArg && !ateInclusivoArg) {
+  console.error("--de exige --ate (datas inclusivas).");
+  process.exit(1);
+}
+if (ateInclusivoArg && ateInclusivoArg >= hoje) {
+  console.error(
+    `Não é permitido carregar D-0 ou futuro: --ate=${ateInclusivoArg}; hoje em Brasília=${hoje}.`,
+  );
+  process.exit(1);
+}
 
 let deCarga;
 let ateInclusivo;
@@ -105,17 +115,29 @@ if (deArg && ateInclusivoArg) {
 } else if (ateInclusivoArg) {
   ateInclusivo = ateInclusivoArg;
   const { ded, net } = await ultimoDiaSupabase(env);
-  const last = [ded, net].filter(Boolean).sort().pop() || null;
-  deCarga = last ? diaSeguinte(last) : ateInclusivo;
+  const proximos = [ded, net].filter(Boolean).map(diaSeguinte).sort();
+  deCarga = proximos[0] || ateInclusivo;
 } else {
   const { ded, net } = await ultimoDiaSupabase(env);
-  const last = [ded, net].filter(Boolean).sort().pop() || null;
   ateInclusivo = d1;
-  if (last && last >= d1) {
-    console.log(JSON.stringify({ ok: true, mensagem: "Supabase já está em D-1", last, d1 }, null, 2));
+  if (ded && net && ded >= d1 && net >= d1) {
+    console.log(
+      JSON.stringify(
+        {
+          ok: true,
+          mensagem: "Dedicado e Network já estão em D-1",
+          ded,
+          net,
+          d1,
+        },
+        null,
+        2,
+      ),
+    );
     process.exit(0);
   }
-  deCarga = last ? diaSeguinte(last) : d1;
+  const proximos = [ded, net].filter(Boolean).map(diaSeguinte).sort();
+  deCarga = proximos[0] || d1;
 }
 
 if (deCarga > ateInclusivo) {
@@ -123,71 +145,41 @@ if (deCarga > ateInclusivo) {
   process.exit(1);
 }
 
-const ateExclusivo = diaSeguinte(ateInclusivo);
-const mesDe = `${deCarga.slice(0, 7)}-01`;
-
-const netPath = arg("network") || `tmp/superset-network-${ateInclusivo}.json`;
-const dedPath = arg("dedicado") || `tmp/superset-dedicado-${ateInclusivo}.json`;
-const monPath = arg("monthly") || `tmp/superset-monthly-${deCarga.slice(0, 7)}.json`;
-
-const extractArgs = forceExtract ? ["--force"] : [];
+const mesCarga = ateInclusivo.slice(0, 7);
+const netPath =
+  arg("network") || `tmp/grafana-mesas-network-${ateInclusivo}.json`;
+const dedPath =
+  arg("dedicado") || `tmp/grafana-mesas-dedicado-${ateInclusivo}.json`;
+const monPath =
+  arg("monthly") || `tmp/grafana-mesas-monthly-${mesCarga}.json`;
 
 if (!soGravar) {
-  const hasCookie = !!(env.SUPERSET_MESAS_COOKIE || "").trim();
-  if (!hasCookie && !viaCdp) {
+  const hasCookie = !!(
+    env.GRAFANA_MESAS_COOKIE ||
+    env.GRAFANA_GP_KPI_COOKIE ||
+    ""
+  ).trim();
+  if (!hasCookie) {
     console.error(
-      "SUPERSET_MESAS_COOKIE ausente. Opções:\n" +
-        "  1) /carga-mesas com dashboard 15 logado no Browser do chat (agent — sem cookie)\n" +
-        "  2) Cookie em .env.gp-kpi → node scripts/carga-mesas-spin.mjs\n" +
-        "  3) Chrome --remote-debugging-port=9222 + dashboard 15 logado → node scripts/carga-mesas-spin.mjs --cdp\n" +
-        "  4) Console oneshot → node scripts/carga-mesas-spin.mjs --so-gravar …",
+      "Cookie Grafana ausente. Opções:\n" +
+        "  1) /carga-mesas com Grafana logado no Browser do chat (sem copiar cookie)\n" +
+        "  2) GRAFANA_MESAS_COOKIE ou GRAFANA_GP_KPI_COOKIE no .env.gp-kpi\n" +
+        "  3) JSON do Browser → node scripts/carga-mesas-spin.mjs --so-gravar …",
     );
     process.exit(1);
   }
 
-  const extractScript = viaCdp
-    ? "scripts/superset-mesas-spin-extract-cdp.mjs"
-    : "scripts/superset-mesas-spin-extract-node.mjs";
-  const cdpExtra = viaCdp ? [`--cdp=${cdpUrl}`] : [];
-
   run(
     node,
     [
-      resolve(root, extractScript),
-      "network",
-      deCarga,
-      ateExclusivo,
-      `--out=${netPath}`,
-      ...cdpExtra,
-      ...extractArgs,
+      resolve(root, "scripts/grafana-mesas-spin-extract-node.mjs"),
+      `--de=${deCarga}`,
+      `--ate=${ateInclusivo}`,
+      `--network-out=${netPath}`,
+      `--dedicado-out=${dedPath}`,
+      `--monthly-out=${monPath}`,
     ],
-    `Extract Network ${deCarga} → ${ateExclusivo} (exclusivo)`,
-  );
-  run(
-    node,
-    [
-      resolve(root, extractScript),
-      "dedicado",
-      deCarga,
-      ateExclusivo,
-      `--out=${dedPath}`,
-      ...cdpExtra,
-      ...extractArgs,
-    ],
-    `Extract Dedicado ${deCarga} → ${ateExclusivo}`,
-  );
-  run(
-    node,
-    [
-      resolve(root, extractScript),
-      "monthly",
-      mesDe,
-      ateExclusivo,
-      `--out=${monPath}`,
-      ...cdpExtra,
-      ...extractArgs,
-    ],
-    `Extract Monthly ${mesDe} → ${ateExclusivo}`,
+    `Extract Grafana ${deCarga}…${ateInclusivo} (Network + Dedicado + Monthly)`,
   );
 }
 
@@ -201,7 +193,7 @@ for (const p of [netPath, dedPath, monPath]) {
 run(
   node,
   [
-    resolve(root, "scripts/superset-mesas-spin-run.mjs"),
+    resolve(root, "scripts/mesas-spin-run.mjs"),
     `--network=${netPath}`,
     `--dedicado=${dedPath}`,
     `--monthly=${monPath}`,

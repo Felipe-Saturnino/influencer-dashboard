@@ -1,79 +1,141 @@
-# Mesas Spin — carga diária (um comando)
+# Mesas Spin — carga diária via Grafana/ClickHouse
+
+## Fonte e destino
+
+| Item | Valor |
+|---|---|
+| Gateway | Grafana `spingaming2.grafana.proxylive.tech` |
+| Datasource | `risk_integrity_ch_live_sg` |
+| Bets BRL | `live_dwh.filtered_player_bets_view` |
+| UAP | `live_dwh_agg.agg_reporting_uap` / `agg_player_bets` |
+| Destino | famílias `relatorio_*` e `relatorio_network_*` no Supabase |
+| Orquestrador | `scripts/carga-mesas-spin.mjs` |
+| Runner | `scripts/mesas-spin-run.mjs` |
+
+Valores monetários:
+
+```sql
+sum(amount)                 -- turnover BRL
+sum(amount) - sum(payout)   -- GGR BRL
+count(bet_id)               -- apostas
+```
+
+As consultas aplicam `currency = 'BRL'`. Não usar `turnover/ggr` de
+`live_dwh_agg`: são EUR.
 
 ## Pré-requisitos
 
-- `.env.gp-kpi` ou `.env` com `VITE_SUPABASE_URL` (ou `SUPABASE_URL`) e `SUPABASE_SERVICE_ROLE_KEY`
-- Sessão logada no **Daily Commercial Report [BRL]** (dashboard 15)
+- `.env.gp-kpi` ou `.env` com `VITE_SUPABASE_URL`/`SUPABASE_URL` e
+  `SUPABASE_SERVICE_ROLE_KEY`.
+- Browser do chat autenticado no Grafana pelo Pomerium.
+- Nunca carregar D-0.
 
-## Browser do chat (padrão no `/carga-mesas`)
+## Browser do chat — modo preferido
 
-Mantenha o dashboard 15 **logado no Browser lateral do chat** do Cursor. O agent extrai via MCP (`cursor-ide-browser`) usando a sessão já autenticada — **não precisa** de `SUPERSET_MESAS_COOKIE` nem copiar request da aba Network (Network vazio até recarregar a página é normal).
+1. Gerar o extract para a janela inclusiva:
 
-Lei: `.cursor/rules/mesas-spin-carga.mdc` § Browser do chat.
+   ```bash
+   node scripts/grafana-mesas-spin-write-extract-expr.mjs \
+     --de=2026-09-18 --ate=2026-09-20
+   ```
 
-## Cookie Superset (opcional — um comando local)
+2. Na aba Grafana controlada, avaliar em ordem os arquivos
+   `tmp/grafana-mesas-extract-2026-09-18_2026-09-20-chunk-N.js` e por fim
+   `*-run.js`. O arquivo sem sufixo continua disponível para colar no Console.
 
-Só se rodar `node scripts/carga-mesas-spin.mjs` **fora** do Browser do chat (sem CDP):
+3. O script executa uma chamada multi-query e guarda:
 
-1. Abra o dashboard 15 logado.
-2. DevTools → **Network** → request `/api/v1/…` → header **`Cookie`**.
-3. Cole no `.env.gp-kpi` (não commitar):
+   ```js
+   window.__mesasGrafana.network
+   window.__mesasGrafana.dedicado
+   window.__mesasGrafana.monthly
+   ```
+
+4. Salvar os dumps em:
+
+   ```text
+   tmp/grafana-mesas-network-2026-09-20.json
+   tmp/grafana-mesas-dedicado-2026-09-20.json
+   tmp/grafana-mesas-monthly-2026-09.json
+   ```
+
+5. Dry-run:
+
+   ```bash
+   node scripts/mesas-spin-run.mjs \
+     --network=tmp/grafana-mesas-network-2026-09-20.json \
+     --dedicado=tmp/grafana-mesas-dedicado-2026-09-20.json \
+     --monthly=tmp/grafana-mesas-monthly-2026-09.json \
+     --de=2026-09-18 --ate=2026-09-20 \
+     --preencher-faltantes --dry-run
+   ```
+
+6. Gravar removendo `--dry-run` e acrescentando `--gravar`.
+
+## Um comando local com cookie
+
+Cookie Pomerium somente no `.env.gp-kpi`:
 
 ```env
-SUPERSET_MESAS_COOKIE=…
+GRAFANA_MESAS_COOKIE=...
 ```
 
-Renove em **401/302** (mesmo fluxo do Grafana — `docs/SETUP-GP-KPI-GRAFANA.md`).
+Também é aceito `GRAFANA_GP_KPI_COOKIE`.
 
-## Comando diário (cookie ou `--cdp`)
-
-Atualiza até **D-1** (detecta último dia no Supabase):
+Carga até D-1:
 
 ```bash
 node scripts/carga-mesas-spin.mjs
 ```
 
-Reload explícito (dias **inclusivos**):
+Reload explícito, datas inclusivas:
 
 ```bash
-node scripts/carga-mesas-spin.mjs --de=2026-09-01 --ate=2026-09-06
+node scripts/carga-mesas-spin.mjs \
+  --de=2026-09-01 --ate=2026-09-06
 ```
 
-Só gravar (JSON já em `tmp/`):
+Somente gravar JSON já extraído:
 
 ```bash
-node scripts/carga-mesas-spin.mjs --so-gravar --network=tmp/superset-network-2026-09-16.json --dedicado=tmp/superset-dedicado-2026-09-16.json --monthly=tmp/superset-monthly-2026-09.json
+node scripts/carga-mesas-spin.mjs --so-gravar \
+  --network=tmp/grafana-mesas-network-2026-09-20.json \
+  --dedicado=tmp/grafana-mesas-dedicado-2026-09-20.json \
+  --monthly=tmp/grafana-mesas-monthly-2026-09.json \
+  --de=2026-09-18 --ate=2026-09-20
 ```
 
-Validação rápida:
+## Arquivos
 
-```bash
-node tmp/ultimo-dia-supabase.mjs
-```
+| Arquivo | Responsabilidade |
+|---|---|
+| `grafana-mesas-spin-extract-browser.js` | SQL e transformação canônica |
+| `grafana-mesas-spin-write-extract-expr.mjs` | prepara expressão do Browser |
+| `grafana-mesas-spin-extract-node.mjs` | fallback local com cookie |
+| `carga-mesas-spin.mjs` | janela, extract, gravação e validação |
+| `mesas-spin-run.mjs` | entrada canônica do runner |
+| `superset-mesas-spin-run.mjs` | implementação histórica interna compatível |
 
-## Alternativa: Chrome com CDP
+Os extractors `superset-mesas-spin-*` ficam disponíveis somente para diagnóstico
+e rollback. Não fazem parte da rotina `/carga-mesas`.
 
-Sem Browser do chat e sem cookie no `.env`:
+## Validação
 
-1. Feche instâncias do Chrome e abra com depuração remota, por exemplo:
+- Último dia Dedicada e Network = D-1.
+- Apostas fecham exatamente.
+- UAP diário e por jogo fecham; UAP diário não é soma dos jogos.
+- Daily = soma das mesas após arredondamento.
+- TO/GGR aceitam somente a tolerância histórica ±1/±2.
+- Confirmar split EsportivaBet e zeros após o primeiro dia com histórico.
 
-   `"C:\Program Files\Google\Chrome\Application\chrome.exe" --remote-debugging-port=9222`
+## Paridade certificada
 
-2. Login no dashboard 15 nessa janela.
-3. Execute:
+Agosto/2026 completo:
 
-```bash
-node scripts/carga-mesas-spin.mjs --cdp
-```
+- Network: 117 daily, 468 mesas e 468 UAP/jogo iguais ao Supabase; monthly
+  existente também igual.
+- Dedicada: 62 daily, 341 mesas e 217 UAP/jogo; apostas/UAP exatos e apenas
+  diferenças ±1/±2 históricas em TO/GGR.
+- Consultas de 31 dias: aproximadamente 7 segundos no total.
 
-## Fallback manual (Console)
-
-```bash
-node tmp/make-oneshot-inject.mjs network 2026-09-16 2026-09-17
-node tmp/make-oneshot-inject.mjs dedicado 2026-09-16 2026-09-17
-node tmp/make-oneshot-inject.mjs monthly 2026-09-01 2026-09-17
-```
-
-Console (F12) no dashboard 15: colar cada `tmp/oneshot-*.js` → Enter. Depois `--so-gravar` como acima.
-
-Lei completa: `.cursor/rules/mesas-spin-carga.mdc`.
+Lei operacional completa: `.cursor/rules/mesas-spin-carga.mdc`.

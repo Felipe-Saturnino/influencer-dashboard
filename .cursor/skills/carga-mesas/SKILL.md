@@ -1,68 +1,99 @@
 ---
 name: carga-mesas
 description: >-
-  Carga diária Mesas Spin: extract Superset dashboard 15 (Browser do chat
-  logado ou cookie) → JSON em tmp/ → UPSERT --gravar. Usar com /carga-mesas.
-  Não em feature, verificação nem UI.
+  Carga diária Mesas Spin: Grafana/ClickHouse pelo Browser do chat → JSON em
+  tmp/ → UPSERT direto no Supabase. Usar com /carga-mesas. Não usar na carga
+  GP KPI/Sinais, feature, verificação ou UI.
 disable-model-invocation: true
 ---
 
 # Carga Mesas Spin
 
-Esta frente é o **chat diário de carga**. Não misturar com `/nova-feature` nem `/verificacao`.
+Esta frente é o **chat diário de carga comercial do Overview Spin**. Não misturar
+com `/carga-grafana` (GP KPI/Sinais), `/nova-feature` ou `/verificacao`.
 
-Lei: **Read** `.cursor/rules/mesas-spin-carga.mdc` **antes** de extract ou runner. Não recopiar o MDC aqui. Split EsportivaBet / zeros / D-0 estão lá.
+Antes de operar, **Read** `.cursor/rules/mesas-spin-carga.mdc`. O MDC é a lei:
+D-0, split EsportivaBet, zeros, reconciliação e validação vivem lá.
 
-No **painel do editor** (Composer com Open Canvas / Changes / This PC): Custom Mode **não liga**. Alt+Enter só insere `/carga-mesas` em laranja no campo — é o fluxo certo daqui.
+## Uso
 
-**Como usar neste chat:** uma mensagem só, Enter:
-
-```
+```text
 /carga-mesas Atualizar os dados até D-1.
 ```
 
-O texto laranja `/carga-mesas` no input (e a bolha no histórico) **é** a confirmação. Não há badge.
+## Browser do chat — padrão
 
-Badge / Alt+Enter / Use as Mode: só na **Agents Window** (janela Agents), não neste compositor.
+O usuário mantém qualquer página do **Grafana Spin** em
+`spingaming2.grafana.proxylive.tech` aberta e autenticada pelo Pomerium.
 
-## Browser do chat (padrão — cookie **não** necessário)
+1. Consultar o último dia de Dedicada e Network no Supabase. A janela começa no
+   canal mais atrasado e termina em D-1.
+2. Gerar a expressão:
 
-O usuário mantém o **Daily Commercial Report [BRL]** (dashboard 15) **logado** no **Browser do painel do chat** (MCP `cursor-ide-browser`). Em cada `/carga-mesas`, usar essa aba — **não** pedir cookie, **não** pedir copiar request do DevTools Network (aba vazia até recarregar é normal e **não** bloqueia o extract).
+   ```bash
+   node scripts/grafana-mesas-spin-write-extract-expr.mjs \
+     --de=YYYY-MM-DD --ate=YYYY-MM-DD
+   ```
 
-Fluxo agent (detalhe no MDC § Browser do chat):
+3. `browser_tabs` → aba Grafana; `browser_lock` → avaliar, em ordem, os
+   `*-chunk-N.js` e depois `*-run.js` gerados em `tmp/`.
+4. O extract faz uma chamada multi-query a `/api/ds/query` e deixa:
+   - `window.__mesasGrafana.network`
+   - `window.__mesasGrafana.dedicado`
+   - `window.__mesasGrafana.monthly`
+5. Salvar os três JSONs em `tmp/grafana-mesas-*.json`.
+6. Dry-run e gravação:
 
-1. `browser_tabs` → aba `superset-sg.proxylive.tech/.../dashboard/15`.
-2. Extract **network → dedicado → monthly** via `browser_cdp` (`Runtime.evaluate`), script canónico: `tmp/make-compact-extract.mjs` + chunks/`eval` (Smart Mode se Auto-review bloquear fetch).
-3. Dump `window.__mesasNet` / `__mesasDed` / `__mesasMon` → `tmp/superset-*.json`.
-4. `node scripts/superset-mesas-spin-run.mjs … --preencher-faltantes --escrever-sql --gravar` (ou `node scripts/carga-mesas-spin.mjs --so-gravar …` se JSON já existir).
+   ```bash
+   node scripts/mesas-spin-run.mjs \
+     --network=tmp/grafana-mesas-network-….json \
+     --dedicado=tmp/grafana-mesas-dedicado-….json \
+     --monthly=tmp/grafana-mesas-monthly-….json \
+     --de=YYYY-MM-DD --ate=YYYY-MM-DD \
+     --preencher-faltantes --dry-run
 
-Subagentes **não** enxergam o Browser do compositor — extract **neste chat**, não delegar.
+   node scripts/mesas-spin-run.mjs \
+     --network=tmp/grafana-mesas-network-….json \
+     --dedicado=tmp/grafana-mesas-dedicado-….json \
+     --monthly=tmp/grafana-mesas-monthly-….json \
+     --de=YYYY-MM-DD --ate=YYYY-MM-DD \
+     --preencher-faltantes --gravar
+   ```
 
-## Instruções
+7. Validar último dia dos dois canais e volume dos slugs Network.
+8. Sempre liberar o Browser ao terminar.
 
-1. Read `.cursor/rules/mesas-spin-carga.mdc`.
-2. Descobrir a janela: último dia em `relatorio_daily_summary` e `relatorio_network_daily_summary` (`tmp/ultimo-dia-supabase.mjs`). Só dias **completos**. **Não** D-0. `ATE` no Superset é exclusivo.
-3. **Extract:** Browser do chat (acima). **Fallback** (sem aba logada): `SUPERSET_MESAS_COOKIE` em `.env.gp-kpi` → `node scripts/carga-mesas-spin.mjs`, ou Chrome `--remote-debugging-port=9222` → `--cdp` (MDC § Comando único).
-4. Não pedir SQL no Editor salvo falha de `--gravar`. Não `FORCE=true` na rotina. Não slug de estúdio como `operadora_slug`.
-5. Validar slugs EsportivaBet no intervalo. Discrepância mesas vs daily ±1/±2: **sinalizar**, não corrigir sozinho.
-6. Informar dias carregados e slugs novos com volume. Commit/push **não**.
+O extract acontece **neste compositor**; subagentes não herdam o Browser.
 
-Reload histórico (`--de` / `--ate` explícitos) só se o usuário pedir; aí o MDC ainda manda.
+## Um comando local — fallback
+
+Com `GRAFANA_MESAS_COOKIE` (ou `GRAFANA_GP_KPI_COOKIE`) somente no
+`.env.gp-kpi`:
+
+```bash
+node scripts/carga-mesas-spin.mjs
+```
+
+O comando detecta a janela, extrai Network + Dedicada + Monthly numa chamada,
+grava e valida. Nunca colar cookie no chat ou versioná-lo.
+
+## Regras rápidas
+
+- Nunca D-0.
+- `--de` e `--ate` são **inclusivos**.
+- Dinheiro: `amount` / `payout` da `filtered_player_bets_view` com
+  `currency = 'BRL'`.
+- Apostas: `count(bet_id)`.
+- UAP: tabelas agregadas; EsportivaBet separada pelo último segmento de
+  `player_id`.
+- `live_dwh_agg` monetário é EUR: não usar `turnover/ggr` agregado para o
+  Overview Spin.
+- Discrepância fora de ±1/±2: não gravar; reportar.
+- Não pedir SQL Editor salvo falha explícita do UPSERT.
+- Commit/push: somente o usuário.
 
 ## Fora desta frente
 
-- UI / página nova → `/nova-feature`
-- Varredura → `/verificacao`
-- Grafana (GP KPI / sinais SM) → `/carga-grafana`
-
-## Exemplos
-
-```
-/carga-mesas
-Atualizar os dados até D-1.
-```
-
-```
-/carga-mesas
-Reload 01/09 a 06/09 (inclusivos).
-```
+- GP KPI / Sinais SM → `/carga-grafana`
+- Página nova → `/nova-feature`
+- Auditoria formal → `/verificacao`

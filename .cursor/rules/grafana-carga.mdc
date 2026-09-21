@@ -5,7 +5,7 @@ alwaysApply: false
 
 # Grafana — atualização diária (GP KPI + sinais SM)
 
-**Frente:** skill `/carga-grafana` (chat diário desta carga). **Não** misturar com `/carga-mesas` (Superset).
+**Frente:** skill `/carga-grafana` (GP KPI + Sinais). **Não** misturar com `/carga-mesas` (comercial do Overview Spin, também via Grafana).
 
 **Contrato:** sessão logada no Grafana (browser Cursor) → JSON em `tmp/` → runner com `--arquivo=` (UPSERT). Preferir extract na aba logada. **Nunca** colar cookie Pomerium no chat, git ou e-mail.
 
@@ -52,5 +52,5 @@ Upsert GP: chave `dia_brt, ambiente, table_id, game_presenter_id` (idempotente).
 - Cookie no chat / `.env` commitado.
 - Cron inventado (não há credencial de máquina).
 - Média de médias (a tabela guarda soma + amostras de propósito).
-- Confundir esta carga com Mesas Spin / Superset.
+- Confundir GP KPI/Sinais com a carga comercial Mesas Spin.
 - Corrigir órfãos no SQL em vez de apontar o cadastro em falta.

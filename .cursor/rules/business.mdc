@@ -28,7 +28,7 @@ A Spin Gaming opera **estúdios de live cassino** e fornece **sinal de mesas ao 
 - Canais de aquisição (influencers, afiliados, campanhas, UTM).
 - RH, comercial B2B e gestão de parceiros.
 
-A plataforma **não substitui** o PLS/fornecedor de relatórios. A origem continua sendo os prints/extracts; a carga operacional no Supabase segue **`mesas-spin-carga.mdc`** (Superset dashboard 15 → JSON em `tmp/` → UPSERT `--gravar`). **Não** pedir ao usuário colar SQL no Editor, salvo falha de `--gravar`. Reconciliação diária entre blocos Per table, Daily, UAP por jogo e Monthly.
+A plataforma **não substitui** o fornecedor do data lake. A carga operacional no Supabase segue **`mesas-spin-carga.mdc`** (Grafana → ClickHouse → JSON em `tmp/` → UPSERT `--gravar`). **Não** pedir ao usuário colar SQL no Editor, salvo falha de `--gravar`. Reconciliação diária entre mesa, daily, UAP por jogo e Monthly.
 
 ---
 
@@ -109,7 +109,7 @@ Relatórios PLS (Per table, Daily, UAP por jogo, Monthly) — leitura humana / p
 
 ### Grupo EsportivaBet (Network) — marcas no `player_id`
 
-No Superset/ClickHouse, `operator_name = EsportivaBet` e `brand_name` vem vazio (diferente de Blaze/Jon Bet, que usam `brand_name`). A marca do provedor aparece no **último segmento** de `player_id` (mesmo padrão do BKO):
+No ClickHouse, `operator_name = EsportivaBet` e `brand_name` vem vazio (diferente de Blaze/Jon Bet, que usam `brand_name`). A marca do provedor aparece no **último segmento** de `player_id` (mesmo padrão do BKO):
 
 | Token no `player_id` | Marca na plataforma | Slug canónico |
 |----------------------|---------------------|---------------|
@@ -121,11 +121,11 @@ No Superset/ClickHouse, `operator_name = EsportivaBet` e `brand_name` vem vazio 
 | `donaldbetbr_*` | Donald Bet | `donald_bet` |
 | `betpontobetbetbr_*` | Bet.Bet | `betponto_bet` |
 
-Carga: `scripts/superset-mesas-spin-extract-browser.js` + `scripts/superset-mesas-spin-run.mjs`. Operadoras do split (`bateu_bet`, `brx_bet`, `rico_bet`, `donald_bet`, `betponto_bet`, `esportiva_bet`) devem existir em **Gestão de Operadoras** (e IDs Network em Gestão de Estúdios / Mesas, se aplicável).
+Carga: `scripts/grafana-mesas-spin-extract-browser.js` + `scripts/mesas-spin-run.mjs`. Operadoras do split (`bateu_bet`, `brx_bet`, `rico_bet`, `donald_bet`, `betponto_bet`, `esportiva_bet`) devem existir em **Gestão de Operadoras** (e IDs Network em Gestão de Estúdios / Mesas, se aplicável).
 
 ### Atualização diária (padrão agent)
 
-Quando o pedido for **atualizar / carregar** Mesas Spin: frente **`/carga-mesas`** (chat diário). Lei em **`.cursor/rules/mesas-spin-carga.mdc`**. Não carregar D-0; `ATE` exclusivo no Superset; zeros no Detalhamento Diário após o 1º dia com dado — ver esse MDC. Não misturar carga com UI neste chat.
+Quando o pedido for **atualizar / carregar** Mesas Spin: frente **`/carga-mesas`** (chat diário). Lei em **`.cursor/rules/mesas-spin-carga.mdc`**. Não carregar D-0; `--de`/`--ate` inclusivos; zeros no Detalhamento Diário após o 1º dia com dado — ver esse MDC. Não misturar carga com UI neste chat.
 
 ### Regras de reconciliação (carga)
 

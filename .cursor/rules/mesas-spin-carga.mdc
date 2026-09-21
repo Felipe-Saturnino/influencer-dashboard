@@ -1,168 +1,204 @@
 ---
-description: Padrão de atualização diária Mesas Spin (Superset → JSON → UPSERT --gravar). Frente /carga-mesas — não always-on.
+description: Padrão de atualização diária Mesas Spin (Grafana/ClickHouse → JSON → UPSERT). Frente /carga-mesas.
 alwaysApply: false
 ---
 
-# Mesas Spin — atualização diária (padrão)
+# Mesas Spin — atualização diária
 
-**Frente:** skill `/carga-mesas` (Custom Mode no chat diário de carga). Este ficheiro é a lei — o skill só aponta para cá.
+**Frente:** `/carga-mesas`. Este ficheiro é a lei; o skill operacional aponta
+para cá.
 
-**Gatilho:** `/carga-mesas` ou «atualizar», «atualizar os dados», «carregar Mesas Spin», «rodar a carga», «atualizar desde …».
+**Contrato:** Grafana autenticado no Browser do chat → ClickHouse via
+`POST /api/ds/query` → JSON canônico em `tmp/` → UPSERT direto no Supabase.
 
-**Contrato:** extract no Superset (dashboard 15 — **Daily Commercial Report [BRL]**) → JSON em `tmp/` → UPSERT **direto** no Supabase com `--gravar`. **Não** pedir ao usuário colar SQL no Editor (salvo falha de `--gravar` ou pedido explícito).
+**Fonte monetária obrigatória:** `live_dwh.filtered_player_bets_view` com
+`currency = 'BRL'`.
 
-**Sessão Superset:** o usuário mantém o dashboard 15 **logado no Browser do painel do chat** (`cursor-ide-browser`). O agent consome a sessão via CDP nessa aba — **cookie no `.env` é opcional** (fallback para `node scripts/carga-mesas-spin.mjs` sem Browser MCP).
+- Turnover BRL = `sum(amount)`
+- GGR BRL = `sum(amount) - sum(payout)`
+- Apostas = `count(bet_id)`
+- O filtro da view já remove apostas não comerciais e moedas semi-reais.
 
-**Proibido:** commit/push (regra do repo); carregar o **dia corrente incompleto** (D-0); usar slug de estúdio (ex. Sports Club) como `operadora_slug`.
+**Nunca usar** `turnover`/`ggr` de `live_dwh_agg` no Overview Spin: esses
+agregados são EUR (`amount_eur`), não BRL. As tabelas agregadas são usadas
+somente para UAP.
 
----
+**Proibido:** commit/push; D-0 incompleto; cookie no chat/git; Sports Club como
+`operadora_slug`; misturar esta frente com GP KPI/Sinais.
 
-## Janela temporal
+## Janela
 
-1. Consultar último dia em `relatorio_daily_summary` e `relatorio_network_daily_summary` (helper `tmp/ultimo-dia-supabase.mjs` ou equivalente).
-2. Carregar só dias **completos** ainda não gravados (ou reload pedido explicitamente).
-3. No Superset, `ATE` é **exclusivo** — último dia a incluir = `ATE − 1 dia`.
-4. Ex.: hoje 07/09 → carregar até **06/09** → `ATE=2026-09-07`.
+1. Consultar o último dia de `relatorio_daily_summary` e
+   `relatorio_network_daily_summary`.
+2. Começar no **canal mais atrasado**. O runner filtra cada canal pelo seu
+   próprio último dia com `--preencher-faltantes`.
+3. Terminar em D-1 de Brasília. `--de` e `--ate` são inclusivos.
+4. Se ambos já estiverem em D-1, não extrair nem gravar.
+5. Reload histórico só com intervalo explícito solicitado pelo usuário.
 
-Histórico / reload: usar `--de` / `--ate` **inclusivos** no runner (`diasParaCarga` / `enumerarDias`).
+Se a janela cruzar meses, o extract devolve um snapshot mensal por mês tocado;
+o runner faz UPSERT de todos eles.
 
-### Preenchimento com zero (Detalhamento Diário) — obrigatório
+## Fontes ClickHouse
 
-Se uma operadora tiver **pelo menos 1 dia** com dado no extract da janela, **todos os dias seguintes** até o fim da carga (`--ate`) devem existir no daily (e mesas/UAP do catálogo) — com **0** quando o Superset não trouxer volume ou o dia estiver ausente.
+| Conteúdo | Fonte | Agregação |
+|---|---|---|
+| TO/GGR/apostas | `live_dwh.filtered_player_bets_view` | dia UTC + operadora/marca + mesa/jogo |
+| UAP normal | `live_dwh_agg.agg_reporting_uap` | `uniqExactMerge(uap)` |
+| UAP EsportivaBet | `live_dwh_agg.agg_player_bets` | `uniqExact(player_id)` após split |
+| UAP mensal | mesmas fontes UAP | mês até `--ate`, inclusivo |
 
-- Evita buracos no Detalhamento Diário (impressão de “sem dado”).
-- Com `--de` + `--ate`, o runner usa o **calendário completo** (não só dias presentes no JSON).
-- Operadora sem nenhum dia com atividade na janela: **não** inventar linhas *antes do 1º volume* (ex.: Donald/BetPonto).
-- **Exceção (runner):** se o slug **já tem** daily no Supabase **antes** do 1º dia da janela, emitir **zeros** na janela mesmo com extract vazio (evita buraco no D-1).
+Os dias comerciais do relatório são `toDate(at)` em UTC. Não deslocar para BRT:
+a paridade certificada de agosto/2026 usa exatamente esse bucket.
 
----
+## Mesas e canais
 
-## Split Network — grupo EsportivaBet (obrigatório)
+### Network
 
-`operator_name = EsportivaBet` + `brand_name` vazio. Separar pelo **último segmento** de `player_id` via coluna SQL `marca` (`multiIf` + `match` ClickHouse) numa **única query por métrica** — **não** 6× `playerWhere` e **não** filtrar com `brand_name`:
+Mesas:
 
-| Extract key | Slug Supabase | Critério (`marca`) |
-|-------------|---------------|-------------------|
-| `esportiva` | `esportiva_bet` | `esportivabetbr_*` **ou** sem prefixo de marca (default do `multiIf`) |
-| `bateu` | `bateu_bet` | `bateubetbr_*` |
-| `brx` | `brx_bet` | `brxbetbr_*` |
-| `rico` | `rico_bet` | `ricobetbr_*` |
-| `donald` | `donald_bet` | `donaldbetbr_*` |
-| `betponto` | `betponto_bet` | `betpontobetbetbr_*` (Bet.Bet) |
-| `casa` / `blaze` / `jonbet` | `casa_apostas` / `blaze` / `jonbet` | queries à parte (`brand_name` na Blaze/Jon) |
+- Sports Club Blackjack
+- Sports Club Futebol Brasileiro
+- Sports Club Roulette
+- Sports Club Speed Baccarat
 
-Volume Bateu/BRX/Rico/Donald/BetPonto pode ser **zero** em alguns dias — OK; o extract ainda devolve as 6 keys (bloco vazio + runner preenche zero se já houver histórico).
+Operadoras:
 
-Detalhe de domínio: `business.mdc` § Grupo EsportivaBet.
+- `Casa De Apostas` → `casa_apostas`
+- `Blaze` + `brand_name = Blaze.br` → `blaze`
+- `Blaze` + `brand_name = jonbet.bet.br` → `jonbet`
+- `EsportivaBet` → split obrigatório abaixo
 
----
+### Dedicada
 
-## Performance do extract (obrigatório em código novo)
+- Casa: Blackjack 1/2, Roulette, Speed Baccarat, VIP Blackjack 1 e Futebol
+  Brasileiro.
+- Blaze: Blackjack 1/2, Roulette, Speed Baccarat e VIP Blackjack 1.
 
-Fonte única: `scripts/superset-mesas-spin-extract-browser.js`.
+Os nomes canônicos gravados continuam definidos no runner:
+`Blackjack 1/2`, `Blackjack VIP`/`VIP Blackjack 1`, `Roleta`,
+`Speed Baccarat`, `Futebol Brasileiro`.
 
-| Alavanca | Padrão | Notas |
-|----------|--------|-------|
-| **Grupo Esportiva** | 1 query/métrica + split `marca` | ~5 queries Network no grupo (antes ~30) |
-| **Pool paralelo** | `CONCURRENCY = 4` | várias chart/data em voo via WebSocket |
-| **`FORCE`** | `false` | cache Superset; `true` só em reload histórico (`make-compact … --force`) |
-| **Contagem tipica/dia** | Network ~20 + Dedicado 10 + Monthly ~6 | vs ~66 sequenciais no legado |
+## Split EsportivaBet
 
----
+`operator_name = EsportivaBet`; `brand_name` não separa as marcas. Classificar
+o último segmento de `player_id`:
 
-## Browser do chat (padrão agent — sem cookie)
+| Prefixo | Slug |
+|---|---|
+| `bateubetbr_` | `bateu_bet` |
+| `brxbetbr_` | `brx_bet` |
+| `ricobetbr_` | `rico_bet` |
+| `donaldbetbr_` | `donald_bet` |
+| `betpontobetbetbr_` | `betponto_bet` |
+| demais / `esportivabetbr_` | `esportiva_bet` |
 
-Pré-requisito operacional: aba **Daily Commercial Report [BRL]** em `https://superset-sg.proxylive.tech/superset/dashboard/15/` aberta e logada no **Browser lateral do chat** (não substituir por Chrome externo salvo fallback CDP).
+Uma única query com coluna SQL `marca`; nunca 6 queries sequenciais e nunca
+filtrar as seis marcas por `brand_name`.
 
-1. **Tab** — `browser_tabs` (list) → `viewId` da aba dashboard 15; `browser_lock` durante o extract.
-2. **Extract** (ordem fixa): **network** → **dedicado** → **monthly** (`MODO` no script canónico).
-3. **CDP no Browser do chat** — preferir `node tmp/make-compact-extract.mjs <modo> <DE> <ATE>` → montar script em `window.__srcParts` (chunks ~3500) → `eval(window.__srcParts.join(''))` com `awaitPromise: true`. Dump: `JSON.stringify(window.__mesasNet|__mesasDed|__mesasMon)` → `tmp/superset-*.json`. Auto-review pode exigir **Smart Mode** no `browser_cdp` quando o script dispara `/api/v1/chart/data`.
-4. **DevTools Network vazio** até F5 é normal — o extract **não** depende de copiar request/cookie da aba Network.
-5. **Gravar** — `node scripts/superset-mesas-spin-run.mjs` ou `node scripts/carga-mesas-spin.mjs --so-gravar …` (ver abaixo).
-6. **Validar** — `node tmp/ultimo-dia-supabase.mjs`.
+## Browser do chat — padrão
 
-**Proibido** pedir cookie ao usuário quando a aba do Browser do chat estiver logada. **Proibido** colar cookie no chat ou git.
+Pré-requisito: qualquer página autenticada em
+`https://spingaming2.grafana.proxylive.tech`.
 
-Extract **neste compositor** — subagentes não herdam o Browser MCP do chat.
+1. Gerar a expressão:
 
----
+   ```bash
+   node scripts/grafana-mesas-spin-write-extract-expr.mjs \
+     --de=YYYY-MM-DD --ate=YYYY-MM-DD
+   ```
 
-## Comando único (fallback — cookie ou Chrome CDP)
+2. `browser_tabs` → Grafana; `browser_lock`.
+3. Avaliar, em ordem, os `tmp/grafana-mesas-extract-DE_ATE-chunk-N.js` e por
+   fim o `*-run.js` via `browser_cdp` (`Runtime.evaluate`, `awaitPromise: true`,
+   `returnByValue: true`). O arquivo completo fica disponível para Console.
+4. O resultado fica em `window.__mesasGrafana`. Dump:
+   - `JSON.stringify(window.__mesasGrafana.network)`
+   - `JSON.stringify(window.__mesasGrafana.dedicado)`
+   - `JSON.stringify(window.__mesasGrafana.monthly)`
+5. Salvar como `tmp/grafana-mesas-*.json`.
+6. Liberar o Browser ao terminar.
 
-Quando **não** houver aba Superset no Browser do chat (automação local, CI, ou chat sem MCP):
+O script canônico faz **uma chamada multi-query**. Não navegar para dashboards
+específicos: o datasource funciona a partir de qualquer página Grafana
+autenticada.
 
-Sessão no **Cookie** (renovar como Grafana — DevTools → Network → request ao dashboard 15 → header `Cookie`):
+## Fallback local com cookie
 
-```bash
-# .env.gp-kpi
-SUPERSET_MESAS_COOKIE=…
+No `.env.gp-kpi` (nunca versionar):
+
+```env
+GRAFANA_MESAS_COOKIE=...
 ```
 
-Depois, **extract + gravar até D-1** num passo:
+`GRAFANA_GP_KPI_COOKIE` também é aceito para compartilhar a mesma sessão.
 
 ```bash
 node scripts/carga-mesas-spin.mjs
+node scripts/carga-mesas-spin.mjs --de=2026-09-01 --ate=2026-09-06
 ```
 
-Chrome com `--remote-debugging-port=9222` + dashboard 15 logado: `node scripts/carga-mesas-spin.mjs --cdp`.
+O comando extrai os três JSONs, executa o runner e valida os últimos dias.
+401/302: renovar a sessão Pomerium; não improvisar outro segredo.
 
-Reload explícito: `node scripts/carga-mesas-spin.mjs --de=2026-09-01 --ate=2026-09-06` (inclusivos). Só UPSERT se JSON já existir: `--so-gravar --network=tmp/… --dedicado=tmp/… --monthly=tmp/…`.
+## Gravação
 
-Extract avulso: `node scripts/superset-mesas-spin-extract-node.mjs network 2026-09-16 2026-09-17 --out=tmp/….json` (`ATE` exclusivo).
+Dry-run antes da primeira carga de uma janela:
 
-Nunca commitar `.env.gp-kpi`.
+```bash
+node scripts/mesas-spin-run.mjs \
+  --network=tmp/grafana-mesas-network-….json \
+  --dedicado=tmp/grafana-mesas-dedicado-….json \
+  --monthly=tmp/grafana-mesas-monthly-….json \
+  --de=YYYY-MM-DD --ate=YYYY-MM-DD \
+  --preencher-faltantes --dry-run
+```
 
----
+Gravar:
 
-## Fluxo operacional (agent — detalhe extract)
+```bash
+node scripts/mesas-spin-run.mjs \
+  --network=tmp/grafana-mesas-network-….json \
+  --dedicado=tmp/grafana-mesas-dedicado-….json \
+  --monthly=tmp/grafana-mesas-monthly-….json \
+  --de=YYYY-MM-DD --ate=YYYY-MM-DD \
+  --preencher-faltantes --gravar
+```
 
-1. **Preferir** § Browser do chat. Cookie/CDP só se a aba do chat não existir ou estiver deslogada.
-2. **Extract** (nesta ordem):
-   - **Network** — `MODO=network` (split marcas via `marca`)
-   - **Dedicado** — `MODO=dedicado` (Casa + Blaze)
-   - **Monthly** — `MODO=monthly` para o(s) mês(es) tocados (`DE` = dia 1 do mês, `ATE` exclusivo = dia seguinte ao último dia carregado)
-3. **Preferir oneshot (rápido):**
-   ```bash
-   node tmp/make-oneshot-inject.mjs network <DE> <ATE>
-   node tmp/make-oneshot-inject.mjs dedicado <DE> <ATE>
-   node tmp/make-oneshot-inject.mjs monthly <DE_mes> <ATE>
-   ```
-   No Console do dashboard 15 (F12): colar `tmp/oneshot-<modo>.js` → Enter (grava `window.__mesasNet` / `__mesasDed` / `__mesasMon`).
-4. **Alternativa CDP:** `node tmp/make-compact-extract.mjs …` + inject em poucos batches (`tmp/inject-*-batch-*.js` + `inject-*-run.js`); Smart Mode approval se Auto-review bloquear.
-5. Empacotar resultado → `tmp/superset-*.json` (btoa chunks + `tmp/decode-pack.mjs` / dump CDP).
-6. Janelas longas: partir Network/Dedicado (~15 dias) e **mergir** `byDay` antes do runner.
-7. **Gravar:**
-   ```bash
-   node scripts/superset-mesas-spin-run.mjs \
-     --network=tmp/superset-network-….json \
-     --dedicado=tmp/superset-dedicado-….json \
-     --monthly=tmp/superset-monthly-….json \
-     --de=YYYY-MM-DD --ate=YYYY-MM-DD \
-     --escrever-sql --gravar
-   ```
-   Carga só dos faltantes: acrescentar `--preencher-faltantes` (ignora dias ≤ último no Supabase).
-8. Env: `.env.gp-kpi` + `.env` — `VITE_SUPABASE_URL` / `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` (mesmo `loadEnv` do runner).
-9. **Validar** após gravar: linhas em `bateu_bet` / `brx_bet` / `rico_bet` / `donald_bet` / `betponto_bet` / `esportiva_bet` (daily + monthly) no intervalo.
-10. Informar o usuário (dias, slugs novos com volume) e: alterações locais uncommitted — commit/push manual.
+O arquivo histórico `superset-mesas-spin-run.mjs` permanece apenas como
+implementação interna compatível; novos comandos e docs usam
+`mesas-spin-run.mjs`.
 
-Scripts canónicos: `scripts/carga-mesas-spin.mjs` (orquestrador), `scripts/superset-mesas-spin-extract-node.mjs` (cookie), `scripts/superset-mesas-spin-extract-cdp.mjs` (Chrome `--remote-debugging-port`), `scripts/superset-mesas-spin-extract-browser.js` (fonte), `scripts/superset-mesas-spin-run.mjs`, helpers `tmp/make-compact-extract.mjs`, `tmp/make-oneshot-inject.mjs`. Setup cookie: `docs/SETUP-MESAS-SPIN-CARGA.md`.
+## Zeros
 
----
+Depois do primeiro dia com atividade de uma operadora, todos os dias seguintes
+da janela devem existir. Se não houver volume, gravar daily/mesas/UAP com zero.
+Se o slug já tinha histórico antes da janela, também preencher zero quando o
+extract vier vazio. Não inventar linhas antes do primeiro volume histórico.
 
-## Reconciliação
+## Reconciliação e certificação
 
-Seguir `business.mdc` § Regras de reconciliação. Discrepância mesas vs daily (±1/±2): **não** corrigir sozinho — sinalizar.
+- Daily é a soma dos valores arredondados por mesa.
+- Tolerância histórica: ±1/±2 em TO/GGR entre daily e soma das mesas.
+- Apostas devem fechar exatamente.
+- UAP daily não é soma do UAP por jogo (há overlap).
+- UAP mensal é distinct do mês até a data de corte; não somar dias.
+- Fora da tolerância: não gravar, reportar.
 
----
+Paridade certificada em agosto/2026:
+
+- Network: daily, mesa, apostas e UAP (daily/jogo/mês) 100% iguais.
+- Dedicada: apostas e UAP 100%; TO/GGR apenas diferenças históricas ±1/±2.
+- Tempo medido: ~4,4 s bets + ~2,5 s UAP para 31 dias.
 
 ## Anti-patterns
 
-- Agregar todo EsportivaBet num único `esportiva_bet` (ignorar split).
-- Filtrar Bateu/BRX/Rico/Donald/BetPonto com `brand_name`.
-- Voltar a 6× `playerWhere` sequenciais sem necessidade (usar coluna `marca`).
-- `FORCE=true` em carga diária rotineira (só histórico).
-- Carregar D-0 incompleto.
-- Deixar buraco no Detalhamento Diário após o 1º dia com dado da operadora (deve preencher com 0).
-- Depender de `recv-json-server` / porta local se CDP dump funcionar.
-- Cloud Agent / commit automático após a carga.
-- Duplicar a lógica do extract em templates string (manter só o `.js` canónico + `make-compact-extract`).
+- Consultar painel S&SM ou GP KPI em vez do datasource ClickHouse.
+- Usar valores monetários de `live_dwh_agg` (EUR).
+- Converter EUR por taxa estimada.
+- Somar UAP diário para produzir mensal.
+- Voltar ao dashboard Superset na rotina normal.
+- Fazer várias chamadas por marca/operadora quando uma query agrupada resolve.
+- Carregar D-0.
+- Deixar Browser bloqueado após o extract.
+- Criar SQL manual como caminho principal.

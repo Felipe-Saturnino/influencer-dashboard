@@ -40,7 +40,7 @@ Compositores permanentes — nomes no Cursor. Não misturar com carga Mesas/Graf
 
 - **Git:** nunca `commit` / `push` / PR. Só o usuário. (`.cursor/rules/no-agent-git-commit.mdc`)
 - **Código:** não criar nem editar ficheiros de produto até o usuário **pedir expressamente** para implementar (ex.: «pode implementar», «aplica», «pode gravar»). Antes disso: discutir ideia, viabilidade e desenho para ele **aprovar**. Cargas `/carga-mesas` e `/carga-grafana` são exceção operacional — extract e gravação no Supabase seguem o MDC da frente.
-- **Carga:** nunca o dia corrente incompleto (D-0). Mesas: `ATE` no Superset é exclusivo. Grafana: `--ate` inclusivo no extract, só até D-1.
+- **Carga:** nunca o dia corrente incompleto (D-0). Mesas via Grafana/ClickHouse: `--de` e `--ate` inclusivos, só até D-1.
 - **Operadora ≠ estúdio.** Sports Club não é `operadora_slug`. Split EsportivaBet: lei na carga Mesas. Grafana: estúdio vem do cadastro Spin, não do filtro Studio do painel.
 - **Segredo:** nunca colar cookie Pomerium/Grafana no chat ou git.
 - **UI nova:** reusar componentes canónicos; copy PT-BR. Não reinventar filtro/tabela/modal.

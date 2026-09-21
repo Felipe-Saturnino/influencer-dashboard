@@ -33,5 +33,5 @@ Esta frente **pode** correr extract e gravar no Supabase (exceção operacional,
 
 ## Fora desta frente
 
-- Mesas Spin / Superset → `/carga-mesas`
+- Mesas Spin comercial / Overview Spin → `/carga-mesas`
 - UI → `/nova-feature` · varredura → `/verificacao`
