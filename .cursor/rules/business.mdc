@@ -120,8 +120,9 @@ No ClickHouse, `operator_name = EsportivaBet` e `brand_name` vem vazio (diferent
 | `ricobetbr_*` | Rico Bet | `rico_bet` |
 | `donaldbetbr_*` | Donald Bet | `donald_bet` |
 | `betpontobetbetbr_*` | Bet.Bet | `betponto_bet` |
+| `goldebetbr_*` | Goldebet | `goldebet` |
 
-Carga: `scripts/grafana-mesas-spin-extract-browser.js` + `scripts/mesas-spin-run.mjs`. Operadoras do split (`bateu_bet`, `brx_bet`, `rico_bet`, `donald_bet`, `betponto_bet`, `esportiva_bet`) devem existir em **Gestão de Operadoras** (e IDs Network em Gestão de Estúdios / Mesas, se aplicável).
+Carga: `scripts/grafana-mesas-spin-extract-browser.js` + `scripts/mesas-spin-run.mjs`. Operadoras do split (`bateu_bet`, `brx_bet`, `rico_bet`, `donald_bet`, `betponto_bet`, `goldebet`, `esportiva_bet`) devem existir em **Gestão de Operadoras** (e IDs Network em Gestão de Estúdios / Mesas, se aplicável). Sem `goldebetbr_*` no `player_id`, volume da Goldebet continua no resto da Esportiva Bet.
 
 ### Atualização diária (padrão agent)
 

@@ -85,7 +85,7 @@ grava e valida. Nunca colar cookie no chat ou versioná-lo.
   `currency = 'BRL'`.
 - Apostas: `count(bet_id)`.
 - UAP: tabelas agregadas; EsportivaBet separada pelo último segmento de
-  `player_id`.
+  `player_id` (inclui `goldebet` / `goldebetbr_*` quando o provedor taguear).
 - `live_dwh_agg` monetário é EUR: não usar `turnover/ggr` agregado para o
   Overview Spin.
 - Discrepância fora de ±1/±2: não gravar; reportar.

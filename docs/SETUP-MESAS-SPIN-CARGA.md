@@ -126,7 +126,7 @@ e rollback. Não fazem parte da rotina `/carga-mesas`.
 - UAP diário e por jogo fecham; UAP diário não é soma dos jogos.
 - Daily = soma das mesas após arredondamento.
 - TO/GGR aceitam somente a tolerância histórica ±1/±2.
-- Confirmar split EsportivaBet e zeros após o primeiro dia com histórico.
+- Confirmar split EsportivaBet (inclui `goldebet` / `goldebetbr_*`) e zeros após o primeiro dia com histórico.
 
 ## Paridade certificada
 

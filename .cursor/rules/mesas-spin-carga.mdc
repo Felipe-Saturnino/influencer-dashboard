@@ -91,10 +91,13 @@ o último segmento de `player_id`:
 | `ricobetbr_` | `rico_bet` |
 | `donaldbetbr_` | `donald_bet` |
 | `betpontobetbetbr_` | `betponto_bet` |
+| `goldebetbr_` | `goldebet` |
 | demais / `esportivabetbr_` | `esportiva_bet` |
 
-Uma única query com coluna SQL `marca`; nunca 6 queries sequenciais e nunca
-filtrar as seis marcas por `brand_name`.
+Uma única query com coluna SQL `marca`; nunca N queries sequenciais e nunca
+filtrar as marcas do grupo por `brand_name`. ULID/UUID sem prefixo continua
+Esportiva Bet — só separar Goldebet quando o último segmento nascer
+`goldebetbr_*`.
 
 ## Browser do chat — padrão
 

@@ -47,6 +47,7 @@
     rico_bet: "rico",
     donald_bet: "donald",
     betponto_bet: "betponto",
+    goldebet: "goldebet",
     casa_apostas: "casa",
     blaze: "blaze",
     jonbet: "jonbet",
@@ -99,6 +100,7 @@
     `match(${playerLast}, '^ricobetbr_'), 'rico_bet', ` +
     `match(${playerLast}, '^donaldbetbr_'), 'donald_bet', ` +
     `match(${playerLast}, '^betpontobetbetbr_'), 'betponto_bet', ` +
+    `match(${playerLast}, '^goldebetbr_'), 'goldebet', ` +
     `'esportiva_bet')`;
   const slugNetworkSql =
     `multiIf(` +

@@ -126,6 +126,8 @@ describe("grafana-mesas-spin-extract-browser", () => {
     expect(networkSql).toContain("sum(amount) AS turnover");
     expect(networkSql).toContain("sum(amount) - sum(payout) AS ggr");
     expect(networkSql).toContain("currency = 'BRL'");
+    expect(networkSql).toContain("goldebetbr_");
+    expect(networkSql).toContain("'goldebet'");
     expect(networkSql).not.toContain("amount_eur");
 
     expect(extracted.network.casa.TO.byDay["2026-09-17"]).toEqual([
@@ -140,5 +142,7 @@ describe("grafana-mesas-spin-extract-browser", () => {
     expect(extracted.monthly.net_casa.uap).toBe(8);
     expect(extracted.monthly.ded_blaze.uap).toBe(9);
     expect(extracted.monthly.net_betponto.uap).toBe(0);
+    expect(extracted.monthly.net_goldebet.uap).toBe(0);
+    expect(extracted.network.goldebet.TO.byDay).toEqual({});
   });
 });

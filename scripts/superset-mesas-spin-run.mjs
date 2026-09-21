@@ -34,6 +34,7 @@
  *   rico      → rico_bet
  *   donald    → donald_bet (donaldbetbr_*)
  *   betponto  → betponto_bet (betpontobetbetbr_* — Bet.Bet)
+ *   goldebet  → goldebet (goldebetbr_* — Gol de Bet; volume ainda pode ser zero)
  */
 
 import { readFileSync, writeFileSync } from "node:fs";
@@ -102,6 +103,13 @@ const OPS = {
   betponto: {
     slug: "betponto_bet",
     nome: "Bet.Bet",
+    canal: "network",
+    mesas: ["Blackjack 1", "Futebol Brasileiro", "Speed Baccarat", "Roleta"],
+    jogos: ["Blackjack", "Futebol Brasileiro", "Speed Baccarat", "Roleta"],
+  },
+  goldebet: {
+    slug: "goldebet",
+    nome: "Goldebet",
     canal: "network",
     mesas: ["Blackjack 1", "Futebol Brasileiro", "Speed Baccarat", "Roleta"],
     jogos: ["Blackjack", "Futebol Brasileiro", "Speed Baccarat", "Roleta"],
@@ -312,7 +320,7 @@ function montarDia(opKey, canal, block, dia) {
 function opsDoExtract(raw, canal) {
   const keys =
     canal === "network"
-      ? ["esportiva", "bateu", "brx", "rico", "donald", "betponto", "casa", "blaze", "jonbet"]
+      ? ["esportiva", "bateu", "brx", "rico", "donald", "betponto", "goldebet", "casa", "blaze", "jonbet"]
       : ["casa", "blaze"];
   const out = [];
   for (const k of keys) {
@@ -476,6 +484,7 @@ function monthlyDoExtract(raw) {
     net_rico: { canal: "network", slug: "rico_bet" },
     net_donald: { canal: "network", slug: "donald_bet" },
     net_betponto: { canal: "network", slug: "betponto_bet" },
+    net_goldebet: { canal: "network", slug: "goldebet" },
     net_casa: { canal: "network", slug: "casa_apostas" },
     net_blaze: { canal: "network", slug: "blaze" },
     net_jonbet: { canal: "network", slug: "jonbet" },
