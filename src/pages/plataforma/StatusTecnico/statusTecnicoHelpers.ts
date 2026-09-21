@@ -42,6 +42,7 @@ export const SYNC_LOG_SLUGS_GARANTIDOS = [
   "lobby_brx",
   "lobby_donald",
   "lobby_betponto",
+  "lobby_goldebet",
   "cs_atendimento_outlook",
 ] as const;
 
@@ -99,6 +100,7 @@ export const LABEL_UI_LOBBY_RICO = "Lobby Rico Bet";
 export const LABEL_UI_LOBBY_BRX = "Lobby BRX Bet";
 export const LABEL_UI_LOBBY_DONALD = "Lobby Donald Bet";
 export const LABEL_UI_LOBBY_BETPONTO = "Lobby BetPontoBet";
+export const LABEL_UI_LOBBY_GOLDEBET = "Lobby Goldebet";
 
 export function nomeIntegracaoStatusTecnicoUi(slug: string, nome: string): string {
   if (slug === "comercial_spa_lista") return LABEL_UI_COMERCIAL_SPA_LISTA;
@@ -113,6 +115,7 @@ export function nomeIntegracaoStatusTecnicoUi(slug: string, nome: string): strin
   if (slug === "lobby_brx") return LABEL_UI_LOBBY_BRX;
   if (slug === "lobby_donald") return LABEL_UI_LOBBY_DONALD;
   if (slug === "lobby_betponto") return LABEL_UI_LOBBY_BETPONTO;
+  if (slug === "lobby_goldebet") return LABEL_UI_LOBBY_GOLDEBET;
   return nome;
 }
 
@@ -193,6 +196,7 @@ export const LOBBY_OPERADORA_POR_INTEGRACAO: Record<string, string> = {
   lobby_brx: "brx_bet",
   lobby_donald: "donald_bet",
   lobby_betponto: "betponto_bet",
+  lobby_goldebet: "goldebet",
 };
 
 export const LOBBY_INTEGRACAO_SLUGS = Object.keys(LOBBY_OPERADORA_POR_INTEGRACAO);

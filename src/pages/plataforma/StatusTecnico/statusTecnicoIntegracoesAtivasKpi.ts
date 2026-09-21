@@ -17,7 +17,7 @@ import {
 } from "./statusTecnicoHelpers";
 
 /** Total de integrações no KPI «Integrações Ativas» (Status Técnico / Home Admin). */
-export const TOTAL_INTEGRACOES_STATUS_TECNICO = 19;
+export const TOTAL_INTEGRACOES_STATUS_TECNICO = 20;
 
 const LOBBY_INTEGRACAO_SLUGS = Object.keys(LOBBY_OPERADORA_POR_INTEGRACAO);
 const LOBBY_OPERADORA_SLUGS = [...new Set(Object.values(LOBBY_OPERADORA_POR_INTEGRACAO))];
@@ -71,7 +71,7 @@ function diarioStatusOk(
 
 /**
  * Mesma regra do card «INTEGRAÇÕES ATIVAS» em Status Técnico.
- * Conta quantas das 19 integrações estão OK (ok hoje ou último OK antes do horário agendado).
+ * Conta quantas das 20 integrações estão OK (ok hoje ou último OK antes do horário agendado).
  */
 export function computeIntegracoesAtivasCount(input: IntegracoesAtivasKpiInput): {
   ativas: number;

@@ -27,19 +27,15 @@
  * Doc: docs/TELECOM-MONITOR-LOBBY-GOLDEBET.md
  */
 
-import {
-  escanearLobbySoftGamingsFilterAteAcharTodos,
-  SOFTGAMINGS_FILTER_PER_PAGE,
-} from "./lib/monitorLobbySoftGamingsFilterScan.mjs";
-
 const OPERADORA = "goldebet";
 const GAMES_URL_DEFAULT = "https://goldebet.bet.br/v2/casino-games";
 const CATEGORY_ID_DEFAULT = "2";
 const ORDER_DEFAULT = "clicks";
 const PAGE_ORIGIN = "https://goldebet.bet.br";
 const PAGE_REFERER = `${PAGE_ORIGIN}/casino/live`;
-/** SoftGamings lib usa per_page 24; Goldebet devolve 20 — normalizamos via meta. */
 const PER_PAGE_FALLBACK = 20;
+const MAX_PAGES = 100;
+const MONITOR_LOBBY_SCAN_VERSION = "v1-v2-casino-games-live-all-ids-or-exhaust";
 
 const dryRun = process.argv.includes("--dry-run");
 
@@ -128,6 +124,78 @@ async function fetchPagina(page) {
   };
 }
 
+/**
+ * Live (category 2) — posição = (page-1)*per_page + índice (1-based).
+ * per_page vem de meta (hoje 20); não assumir SoftGamings 24.
+ */
+async function escanearLobbyLive(idsEsperados) {
+  const lobby = [];
+  const posicoes = new Map();
+  let page = 1;
+  let paginasLidas = 0;
+  let lastPage = MAX_PAGES;
+  let perPage = PER_PAGE_FALLBACK;
+
+  console.log(`scan=${MONITOR_LOBBY_SCAN_VERSION}`);
+
+  while (page <= lastPage && page <= MAX_PAGES) {
+    const data = await fetchPagina(page);
+    const records = data.data ?? [];
+
+    if (page === 1) {
+      lastPage = Math.max(1, Number(data.last_page) || MAX_PAGES);
+      perPage = Math.max(1, Number(data.per_page) || PER_PAGE_FALLBACK);
+      console.log(
+        `Goldebet meta: last_page=${lastPage}` +
+          (data.total != null ? ` total=${data.total}` : "") +
+          ` per_page=${perPage}`,
+      );
+    }
+
+    if (records.length === 0) {
+      console.log(`Página ${page} vazia — fim do catálogo.`);
+      break;
+    }
+
+    paginasLidas = page;
+
+    for (let i = 0; i < records.length; i++) {
+      const r = records[i];
+      const posicao = (page - 1) * perPage + i + 1;
+      const providerName = r.provider?.name ?? "";
+      const item = {
+        posicao,
+        game_id: String(r.id),
+        name: r.name ?? "",
+        slug: r.slug ?? "",
+        provider_name: providerName,
+        provider_slug: providerSlugFromName(providerName),
+      };
+      lobby.push(item);
+      if (idsEsperados.has(item.game_id)) {
+        posicoes.set(item.game_id, posicao);
+      }
+    }
+
+    if (posicoes.size >= idsEsperados.size) {
+      console.log(
+        `Todas as ${idsEsperados.size} mesas cadastradas encontradas (até página ${page}).`,
+      );
+      break;
+    }
+
+    page++;
+  }
+
+  const faltam = [...idsEsperados].filter((id) => !posicoes.has(id));
+  console.log(
+    `IDs encontrados: ${posicoes.size}/${idsEsperados.size}` +
+      (faltam.length ? ` (faltam: ${faltam.join(", ")})` : ""),
+  );
+
+  return { lobby, paginasLidas: paginasLidas || Math.max(0, page - 1) };
+}
+
 function ingestHeaders(serviceKey) {
   const headers = {
     Authorization: `Bearer ${serviceKey}`,
@@ -207,23 +275,7 @@ async function main() {
     `GET ${gamesBaseUrl()} category=${categoryId()} order=${orderParam()}`,
   );
 
-  const { lobby, paginasLidas } = await escanearLobbySoftGamingsFilterAteAcharTodos({
-    idsEsperados: ids,
-    fetchPagina: (page) => fetchPagina(page),
-    perPage: SOFTGAMINGS_FILTER_PER_PAGE,
-    logPrefix: "Goldebet ",
-    mapRecord: (r, posicao) => {
-      const providerName = r.provider?.name ?? "";
-      return {
-        posicao,
-        game_id: String(r.id),
-        name: r.name ?? "",
-        slug: r.slug ?? "",
-        provider_name: providerName,
-        provider_slug: providerSlugFromName(providerName),
-      };
-    },
-  });
+  const { lobby, paginasLidas } = await escanearLobbyLive(ids);
 
   console.log(`Lobby: ${lobby.length} jogos, ${paginasLidas} página(s).`);
 

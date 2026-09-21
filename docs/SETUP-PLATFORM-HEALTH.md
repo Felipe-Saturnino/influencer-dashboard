@@ -29,7 +29,7 @@ supabase functions deploy platform-health-check
 | Suíte | Exemplos | Não faz |
 |-------|----------|---------|
 | **A — Infra** | PostgREST, Auth, Storage (buckets essenciais), OPTIONS em todas as Edge Functions, pg_cron | Alterar dados |
-| **B — Jobs** | `sync_logs` **por slug**, pipeline social, e-mails do dia, fallback lobby nas 9 operadoras, métricas CDA D-1 | Disparar Sync |
+| **B — Jobs** | `sync_logs` **por slug**, pipeline social, e-mails do dia, fallback lobby nas 10 operadoras, métricas CDA D-1 | Disparar Sync |
 | **C — Pings** | Resend `/domains`, GitHub repo, Microsoft Graph (Inbox CS), CDA Reporting (1 dia, só GET), Revenue Sentinel Data Export (GET no POST `/v1/jogadores/spin`, sem gravar), Brasil API, HEAD RSS / gov.br SPA | Enviar e-mail ou scrape de lobby |
 | **D — Conflitos** | Slug esperado sem linha em `integrations`, CIDR de check-in vazio, secret de ingestão de lobby ausente | Corrigir sozinho |
 

@@ -266,15 +266,16 @@ export function ModalCriarPostagem({
         : editRef.contentType === "dica"
           ? "academy_portal_dica"
           : "academy_portal_manual";
-    const cols =
+    const cols: string =
       editRef.contentType === "comunicado"
         ? COLS_EDIT_COMUNICADO
         : editRef.contentType === "dica"
           ? COLS_EDIT_DICA
           : COLS_EDIT_MANUAL;
 
+    // Cast: união table×cols explode o gerador de tipos do supabase-js (TS2590).
     const { data, error } = await supabase
-      .from(table)
+      .from(table as "academy_portal_comunicado")
       .select(cols)
       .eq("id", editRef.id)
       .returns<Record<string, unknown>>()

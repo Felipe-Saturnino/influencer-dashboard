@@ -44,6 +44,7 @@ export const LOBBY_POS_SLUGS_CONSOLIDADOS = [
   "brx_bet",
   "donald_bet",
   "betponto_bet",
+  "goldebet",
 ] as const;
 
 export type LobbyPosSlugConsolidado = (typeof LOBBY_POS_SLUGS_CONSOLIDADOS)[number];

@@ -23,6 +23,7 @@ export type StatusIntegracaoSyncTipo =
   | "lobby_brx"
   | "lobby_donald"
   | "lobby_betponto"
+  | "lobby_goldebet"
   | "email"
   | "email_agenda"
   | "email_track"

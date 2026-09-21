@@ -47,6 +47,7 @@ import {
   LABEL_UI_LOBBY_BRX,
   LABEL_UI_LOBBY_DONALD,
   LABEL_UI_LOBBY_BETPONTO,
+  LABEL_UI_LOBBY_GOLDEBET,
   nomeIntegracaoStatusTecnicoUi,
   ERRO_SYNC_COMERCIAL_DOMINIO,
   ERRO_SYNC_COMERCIAL_CNPJ,
@@ -167,6 +168,8 @@ interface FluxoDia {
   lobbyDonald: number;
   /** Mesas localizadas no lobby BetPonto (sync_logs lobby_betponto). */
   lobbyBetponto: number;
+  /** Mesas localizadas no lobby Goldebet (sync_logs lobby_goldebet). */
+  lobbyGoldebet: number;
   /** Empresas enriquecidas (cidade/UF) — sync_logs comercial_cnpj_enriquecimento. */
   comercialCnpj: number;
   /** Jogadores Spin enriquecidos — sync_logs revenue_sentinel. */
@@ -306,6 +309,7 @@ export default function StatusTecnico() {
           "brx_bet",
           "donald_bet",
           "betponto_bet",
+          "goldebet",
         ])
         .gte("executado_em", syncDesdeUtc)
         .order("executado_em", { ascending: false })
@@ -364,6 +368,7 @@ export default function StatusTecnico() {
       resLobbyBrxSync,
       resLobbyDonaldSync,
       resLobbyBetpontoSync,
+      resLobbyGoldebetSync,
       resComercialCnpjSync,
       resRevenueSentinelSync,
     ] = await Promise.all([
@@ -437,6 +442,13 @@ export default function StatusTecnico() {
         .from("sync_logs")
         .select("executado_em, registros_inseridos, status")
         .eq("integracao_slug", "lobby_betponto")
+        .gte("executado_em", syncDesdeUtc)
+        .order("executado_em", { ascending: false })
+        .limit(500),
+      supabase
+        .from("sync_logs")
+        .select("executado_em, registros_inseridos, status")
+        .eq("integracao_slug", "lobby_goldebet")
         .gte("executado_em", syncDesdeUtc)
         .order("executado_em", { ascending: false })
         .limit(500),
@@ -534,6 +546,13 @@ export default function StatusTecnico() {
       (lobbyExecRes.data ?? []) as LobbyExecucaoMonitorRow[],
       "betponto_bet",
     );
+    const lobbyGoldebetPorData = mesclarLobbyFluxoPorData(
+      agregarSyncPorData(
+        (resLobbyGoldebetSync.data ?? []) as { executado_em: string; registros_inseridos: number | null; status: string }[],
+      ),
+      (lobbyExecRes.data ?? []) as LobbyExecucaoMonitorRow[],
+      "goldebet",
+    );
     const comercialCnpjPorData = agregarSyncPorData(
       (resComercialCnpjSync.data ?? []) as {
         executado_em: string;
@@ -591,6 +610,7 @@ export default function StatusTecnico() {
       ...Object.keys(lobbyBrxPorData),
       ...Object.keys(lobbyDonaldPorData),
       ...Object.keys(lobbyBetpontoPorData),
+      ...Object.keys(lobbyGoldebetPorData),
       ...Object.keys(comercialCnpjPorData),
       ...Object.keys(revenueSentinelPorData),
       ...Object.keys(emailsPorData),
@@ -612,6 +632,7 @@ export default function StatusTecnico() {
         const lobbyBrx = lobbyBrxPorData[data] ?? 0;
         const lobbyDonald = lobbyDonaldPorData[data] ?? 0;
         const lobbyBetponto = lobbyBetpontoPorData[data] ?? 0;
+        const lobbyGoldebet = lobbyGoldebetPorData[data] ?? 0;
         const comercialCnpj = comercialCnpjPorData[data] ?? 0;
         const revenueSentinel = revenueSentinelPorData[data] ?? 0;
         const emails = emailsPorData[data] ?? {};
@@ -630,6 +651,7 @@ export default function StatusTecnico() {
           lobbyBrx,
           lobbyDonald,
           lobbyBetponto,
+          lobbyGoldebet,
           comercialCnpj,
           revenueSentinel,
           emails,
@@ -646,6 +668,7 @@ export default function StatusTecnico() {
             lobbyBrx +
             lobbyDonald +
             lobbyBetponto +
+            lobbyGoldebet +
             comercialCnpj +
             revenueSentinel +
             emailTotal,
@@ -1674,6 +1697,7 @@ export default function StatusTecnico() {
   const ultimoSyncLobbyBrxLog = syncLogs.find((l) => l.integracao_slug === "lobby_brx");
   const ultimoSyncLobbyDonaldLog = syncLogs.find((l) => l.integracao_slug === "lobby_donald");
   const ultimoSyncLobbyBetpontoLog = syncLogs.find((l) => l.integracao_slug === "lobby_betponto");
+  const ultimoSyncLobbyGoldebetLog = syncLogs.find((l) => l.integracao_slug === "lobby_goldebet");
 
   const ultimoPipelineRun = pipelineRuns.reduce<PipelineRun | null>((max, r) => {
     if (!max) return r;
@@ -1772,6 +1796,9 @@ export default function StatusTecnico() {
   if (ultimoSyncLobbyBetpontoLog?.executado_em) {
     timestamps.push({ ts: ultimoSyncLobbyBetpontoLog.executado_em, label: LABEL_UI_LOBBY_BETPONTO });
   }
+  if (ultimoSyncLobbyGoldebetLog?.executado_em) {
+    timestamps.push({ ts: ultimoSyncLobbyGoldebetLog.executado_em, label: LABEL_UI_LOBBY_GOLDEBET });
+  }
   if (emailUltimoDiretoria) timestamps.push({ ts: emailUltimoDiretoria, label: "E-mail Diretoria" });
   if (emailUltimoAgenda) timestamps.push({ ts: emailUltimoAgenda, label: "E-mail Agenda" });
   const ultimoSyncQualquer = timestamps.length > 0 ? timestamps.reduce((a, b) => (a.ts > b.ts ? a : b)) : null;
@@ -1835,6 +1862,10 @@ export default function StatusTecnico() {
   const lobbyBetpontoFalhas = syncLogs.filter(
     (l) => l.integracao_slug === "lobby_betponto" && l.status === "falha",
   ).length;
+  const lobbyGoldebetTotal = syncLogs.filter((l) => l.integracao_slug === "lobby_goldebet").length;
+  const lobbyGoldebetFalhas = syncLogs.filter(
+    (l) => l.integracao_slug === "lobby_goldebet" && l.status === "falha",
+  ).length;
   const socialTotal = pipelineRuns.length;
   const socialFalhas = pipelineRuns.filter((r) => r.status === "error").length;
   const emailFalhas = techLogs.filter((l) =>
@@ -1861,6 +1892,7 @@ export default function StatusTecnico() {
     lobbyBrxTotal +
     lobbyDonaldTotal +
     lobbyBetpontoTotal +
+    lobbyGoldebetTotal +
     socialTotal +
     Math.max(emailTotal, 1);
   const totalFalhas =
@@ -1880,6 +1912,7 @@ export default function StatusTecnico() {
     lobbyBrxFalhas +
     lobbyDonaldFalhas +
     lobbyBetpontoFalhas +
+    lobbyGoldebetFalhas +
     socialFalhas +
     emailFalhas;
   const taxaErro = totalTentativas > 0 ? ((totalFalhas / totalTentativas) * 100).toFixed(1) : "0";
@@ -2433,6 +2466,36 @@ export default function StatusTecnico() {
     });
   }
 
+  const syncLogsLobbyGoldebet = syncLogs.filter((l) => l.integracao_slug === "lobby_goldebet");
+  const taxaErroLobbyGoldebet =
+    syncLogsLobbyGoldebet.length > 0
+      ? ((syncLogsLobbyGoldebet.filter((l) => l.status === "falha").length /
+          syncLogsLobbyGoldebet.length) *
+          100
+        ).toFixed(1)
+      : "0";
+  if (
+    !lobbyIntegracaoTemColetaComSucesso("lobby_goldebet", syncLogsLobbyGoldebet, lobbyExecucoes) &&
+    (syncLogsLobbyGoldebet.length > 0 ||
+      lobbyExecucoes.some((e) => e.operadora_slug === "goldebet"))
+  ) {
+    alertas.push({ nivel: "erro", msg: `Nenhuma coleta ${LABEL_UI_LOBBY_GOLDEBET} com sucesso` });
+  } else {
+    const ultimoOkEm = ultimaColetaLobbyOkEm("lobby_goldebet", syncLogsLobbyGoldebet, lobbyExecucoes);
+    if (ultimoOkEm && new Date(ultimoOkEm) < vinteQuatroHoras) {
+      alertas.push({
+        nivel: "aviso",
+        msg: `Coleta ${LABEL_UI_LOBBY_GOLDEBET} atrasada (> 24h sem execução OK)`,
+      });
+    }
+  }
+  if (parseFloat(taxaErroLobbyGoldebet) > 5 && syncLogsLobbyGoldebet.length > 0) {
+    alertas.push({
+      nivel: "erro",
+      msg: `Taxa de erro alta no ${LABEL_UI_LOBBY_GOLDEBET} (${taxaErroLobbyGoldebet}%)`,
+    });
+  }
+
   // Status por integração (última execução)
   const statusPorIntegracao = useMemo(
     () =>
@@ -2497,6 +2560,8 @@ export default function StatusTecnico() {
                               ? ("lobby_donald" as const)
                               : int.slug === "lobby_betponto"
                                 ? ("lobby_betponto" as const)
+                                : int.slug === "lobby_goldebet"
+                                  ? ("lobby_goldebet" as const)
                   : ("none" as const);
         return {
           ...int,
@@ -2666,7 +2731,7 @@ export default function StatusTecnico() {
     [rowFromSyncLogsFallback],
   );
 
-  /** Lobby Esportiva / Jonbet / Bateu / Rico / BRX / Donald / BetPonto — sempre na tabela Operadoras (mesmo sem row em `integrations`). */
+  /** Lobby Esportiva / Jonbet / Bateu / Rico / BRX / Donald / BetPonto / Goldebet — sempre na tabela Operadoras (mesmo sem row em `integrations`). */
   const lobbyEsportivaRow = useMemo(
     () => rowFromSyncLogsFallback("lobby_esportiva", LABEL_UI_LOBBY_ESPORTIVA, "lobby_esportiva"),
     [rowFromSyncLogsFallback],
@@ -2695,6 +2760,10 @@ export default function StatusTecnico() {
     () => rowFromSyncLogsFallback("lobby_betponto", LABEL_UI_LOBBY_BETPONTO, "lobby_betponto"),
     [rowFromSyncLogsFallback],
   );
+  const lobbyGoldebetRow = useMemo(
+    () => rowFromSyncLogsFallback("lobby_goldebet", LABEL_UI_LOBBY_GOLDEBET, "lobby_goldebet"),
+    [rowFromSyncLogsFallback],
+  );
 
   const linhasOperadoras = useMemo(
     () =>
@@ -2712,6 +2781,7 @@ export default function StatusTecnico() {
             lobbyBrxRow,
             lobbyDonaldRow,
             lobbyBetpontoRow,
+            lobbyGoldebetRow,
           ] as (StatusIntegracaoRow | null)[]
         ).filter(Boolean) as StatusIntegracaoRow[],
         sortOperadoras,
@@ -2725,6 +2795,7 @@ export default function StatusTecnico() {
       lobbyBrxRow,
       lobbyDonaldRow,
       lobbyBetpontoRow,
+      lobbyGoldebetRow,
       sortOperadoras,
     ],
   );
@@ -2822,6 +2893,8 @@ export default function StatusTecnico() {
                             ? LABEL_UI_LOBBY_DONALD
                             : log.integracao_slug === "lobby_betponto"
                               ? LABEL_UI_LOBBY_BETPONTO
+                              : log.integracao_slug === "lobby_goldebet"
+                                ? LABEL_UI_LOBBY_GOLDEBET
                 : log.integracao_slug);
         return nomeIntegracaoStatusTecnicoUi(log.integracao_slug, nomeDb);
       }
@@ -2853,6 +2926,7 @@ export default function StatusTecnico() {
           lobby_brx: LABEL_UI_LOBBY_BRX,
           lobby_donald: LABEL_UI_LOBBY_DONALD,
           lobby_betponto: LABEL_UI_LOBBY_BETPONTO,
+          lobby_goldebet: LABEL_UI_LOBBY_GOLDEBET,
           diagnostico_plataforma: "Diagnóstico da plataforma",
           diagnostico_ok: "Diagnóstico da plataforma",
           diagnostico_aviso: "Diagnóstico da plataforma",
@@ -2906,6 +2980,7 @@ export default function StatusTecnico() {
       lobby_brx: LABEL_UI_LOBBY_BRX,
       lobby_donald: LABEL_UI_LOBBY_DONALD,
       lobby_betponto: LABEL_UI_LOBBY_BETPONTO,
+      lobby_goldebet: LABEL_UI_LOBBY_GOLDEBET,
       relatorio_diretoria: "E-mail: Relatório",
       email_agenda_diaria: "E-mail: Agenda",
       boas_vindas: "E-mail: Boas-vindas",
@@ -2927,6 +3002,7 @@ export default function StatusTecnico() {
       lobby_brx: "#06b6d4",
       lobby_donald: "#eab308",
       lobby_betponto: "#d946ef",
+      lobby_goldebet: "#f59e0b",
       relatorio_diretoria: BRAND.verde,
       email_agenda_diaria: "#14b8a6",
       boas_vindas: "#8b5cf6",
@@ -3279,6 +3355,7 @@ export default function StatusTecnico() {
             { key: "lobby_brx", label: LABEL_UI_LOBBY_BRX },
             { key: "lobby_donald", label: LABEL_UI_LOBBY_DONALD },
             { key: "lobby_betponto", label: LABEL_UI_LOBBY_BETPONTO },
+            { key: "lobby_goldebet", label: LABEL_UI_LOBBY_GOLDEBET },
             { key: "comercial_cnpj", label: LABEL_UI_COMERCIAL_CNPJ_ESTADO_CIDADE },
             { key: "revenue_sentinel", label: LABEL_UI_REVENUE_SENTINEL },
             { key: "relatorio_diretoria", label: "E-mail de Relatório" },
@@ -3389,6 +3466,12 @@ export default function StatusTecnico() {
                         style={{ width: `${pct(f.lobbyBetponto)}%`, minWidth: f.lobbyBetponto > 0 ? 8 : 0, height: "100%", background: fluxoCor("lobby_betponto"), opacity: isHover ? 1 : 0.88, transition: "opacity 0.15s" }}
                       />
                     )}
+                    {f.lobbyGoldebet > 0 && (
+                      <div
+                        title={`${fluxoLabel("lobby_goldebet")}: ${f.lobbyGoldebet.toLocaleString("pt-BR")}`}
+                        style={{ width: `${pct(f.lobbyGoldebet)}%`, minWidth: f.lobbyGoldebet > 0 ? 8 : 0, height: "100%", background: fluxoCor("lobby_goldebet"), opacity: isHover ? 1 : 0.88, transition: "opacity 0.15s" }}
+                      />
+                    )}
                     {f.comercialCnpj > 0 && (
                       <div
                         title={`${fluxoLabel("comercial_cnpj")}: ${f.comercialCnpj.toLocaleString("pt-BR")}`}
@@ -3445,6 +3528,7 @@ export default function StatusTecnico() {
                       {f.lobbyBrx > 0 && <div style={{ padding: "2px 0" }}><span style={{ color: fluxoCor("lobby_brx"), fontWeight: 600 }} aria-hidden="true">●</span> {fluxoLabel("lobby_brx")}: {f.lobbyBrx.toLocaleString("pt-BR")}</div>}
                       {f.lobbyDonald > 0 && <div style={{ padding: "2px 0" }}><span style={{ color: fluxoCor("lobby_donald"), fontWeight: 600 }} aria-hidden="true">●</span> {fluxoLabel("lobby_donald")}: {f.lobbyDonald.toLocaleString("pt-BR")}</div>}
                       {f.lobbyBetponto > 0 && <div style={{ padding: "2px 0" }}><span style={{ color: fluxoCor("lobby_betponto"), fontWeight: 600 }} aria-hidden="true">●</span> {fluxoLabel("lobby_betponto")}: {f.lobbyBetponto.toLocaleString("pt-BR")}</div>}
+                      {f.lobbyGoldebet > 0 && <div style={{ padding: "2px 0" }}><span style={{ color: fluxoCor("lobby_goldebet"), fontWeight: 600 }} aria-hidden="true">●</span> {fluxoLabel("lobby_goldebet")}: {f.lobbyGoldebet.toLocaleString("pt-BR")}</div>}
                       {f.comercialCnpj > 0 && <div style={{ padding: "2px 0" }}><span style={{ color: fluxoCor("comercial_cnpj"), fontWeight: 600 }} aria-hidden="true">●</span> {fluxoLabel("comercial_cnpj")}: {f.comercialCnpj.toLocaleString("pt-BR")}</div>}
                       {f.revenueSentinel > 0 && <div style={{ padding: "2px 0" }}><span style={{ color: fluxoCor("revenue_sentinel"), fontWeight: 600 }} aria-hidden="true">●</span> {fluxoLabel("revenue_sentinel")}: {f.revenueSentinel.toLocaleString("pt-BR")}</div>}
                       {Object.entries(f.emails).filter(([, n]) => n > 0).map(([tipo, n]) => (

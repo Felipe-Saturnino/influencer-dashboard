@@ -25,6 +25,7 @@ Ao alterar um template de e-mail, replique o ficheiro em **todas** as functions 
 | `monitor-lobby-cda` |
 | `monitor-lobby-esportiva` |
 | `monitor-lobby-bateu` |
+| `monitor-lobby-goldebet` |
 | `monitor-lobby-donald` |
 | `monitor-lobby-betponto` |
 | `monitor-lobby-rico` |
