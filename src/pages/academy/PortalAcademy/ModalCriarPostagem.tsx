@@ -70,6 +70,27 @@ const ERRO_CARREGAR_EDICAO = "Não foi possível carregar a postagem para ediç�
 const ERRO_SALVAR =
   "Não foi possível salvar a postagem. Se o problema persistir, entre em contato com o suporte.";
 const ERRO_UPLOAD = "Não foi possível enviar o arquivo. Tente novamente.";
+const ERRO_JOGOS =
+  "Não foi possível carregar a lista de jogos. Se o problema persistir, entre em contato com o suporte.";
+
+const COLS_EDIT_COMUNICADO =
+  "id, titulo, corpo, status, imagem_storage_path, imagem_storage_paths, anexo_storage_path, anexo_nome, anexo_storage_paths, anexo_nomes, categoria:academy_portal_categoria(slug, scope)";
+const COLS_EDIT_DICA =
+  "id, titulo, corpo, status, jogo_mesa, imagem_storage_path, imagem_storage_paths, anexo_storage_path, anexo_nome, anexo_storage_paths, anexo_nomes, categoria:academy_portal_categoria(slug, scope)";
+const COLS_EDIT_MANUAL =
+  "id, titulo, corpo, introducao, status, jogo_mesa, codigo, versao, requires_acknowledgment, aplicavel_a, imagem_storage_path, imagem_storage_paths, anexo_storage_path, anexo_nome, anexo_storage_paths, anexo_nomes, categoria:academy_portal_categoria(slug, scope)";
+
+const BTN_RETRY_STYLE = {
+  fontFamily: FONT.body,
+  fontSize: 13,
+  fontWeight: 700,
+  padding: "8px 14px",
+  borderRadius: 10,
+  border: "1px solid rgba(232,64,37,0.35)",
+  background: "transparent",
+  color: "#e84025",
+  cursor: "pointer",
+} as const;
 
 export function ModalCriarPostagem({
   open,
@@ -108,6 +129,7 @@ export function ModalCriarPostagem({
   const [aplicavelA, setAplicavelA] = useState<string[]>([]);
   const [organogramaGrupos, setOrganogramaGrupos] = useState<RhOrgOrganogramaGrupoPrestador[]>([]);
   const [jogosOpcoes, setJogosOpcoes] = useState<string[]>([]);
+  const [erroJogos, setErroJogos] = useState<string | null>(null);
   const [imagemPaths, setImagemPaths] = useState<string[]>([]);
   const [imagemFiles, setImagemFiles] = useState<File[]>([]);
   const [anexoRefs, setAnexoRefs] = useState<AcademyPortalAnexoRef[]>([]);
@@ -222,15 +244,116 @@ export function ModalCriarPostagem({
     setSnapshotEdicao(null);
   }, []);
 
+  const carregarJogos = useCallback(async () => {
+    setErroJogos(null);
+    try {
+      const jogos = await carregarJogosMesasEstudio();
+      setJogosOpcoes(jogos);
+    } catch (e) {
+      console.error("[ModalCriarPostagem Academy] jogos:", e);
+      setJogosOpcoes([]);
+      setErroJogos(ERRO_JOGOS);
+    }
+  }, []);
+
+  const carregarEdicao = useCallback(async () => {
+    if (!editRef) return;
+    setLoadingData(true);
+    setErro(null);
+    const table =
+      editRef.contentType === "comunicado"
+        ? "academy_portal_comunicado"
+        : editRef.contentType === "dica"
+          ? "academy_portal_dica"
+          : "academy_portal_manual";
+    const cols =
+      editRef.contentType === "comunicado"
+        ? COLS_EDIT_COMUNICADO
+        : editRef.contentType === "dica"
+          ? COLS_EDIT_DICA
+          : COLS_EDIT_MANUAL;
+
+    const { data, error } = await supabase
+      .from(table)
+      .select(cols)
+      .eq("id", editRef.id)
+      .returns<Record<string, unknown>>()
+      .single();
+
+    setLoadingData(false);
+    if (error || !data) {
+      console.error("[ModalCriarPostagem Academy] carregar:", error);
+      setErro(ERRO_CARREGAR_EDICAO);
+      return;
+    }
+
+    const row = data as unknown as {
+      titulo: string;
+      corpo: string;
+      introducao?: string | null;
+      status: AcademyPostagemStatus;
+      imagem_storage_path: string | null;
+      anexo_storage_path: string | null;
+      anexo_nome: string | null;
+      jogo_mesa?: string | string[] | null;
+      codigo?: string | null;
+      versao?: string | null;
+      requires_acknowledgment?: boolean | null;
+      aplicavel_a?: string[] | null;
+      categoria?: { slug: string; scope: string } | { slug: string; scope: string }[] | null;
+    };
+
+    const cat = Array.isArray(row.categoria) ? row.categoria[0] : row.categoria;
+    const tipoUi = editRef.contentType;
+    setTipoPostagem(tipoUi);
+    if (tipoUi === "comunicado") {
+      setTipoSubcategoria(labelComunicadoFromSlug(cat?.slug ?? ""));
+    } else {
+      setTipoSubcategoria(labelDicaManualFromSlug(cat?.slug ?? ""));
+    }
+    setTitulo(row.titulo);
+    setIntroducao(row.introducao ?? "");
+    setDescricao(row.corpo);
+    setJogosMesa(normalizarJogosMesa(row.jogo_mesa));
+    setCodigoManual(row.codigo?.trim() ?? "");
+    const versaoSalva = row.versao?.trim() || "1.0";
+    setVersaoManual(tipoUi === "manual" ? proximaVersaoMajorManual(versaoSalva) : versaoSalva);
+    setExigeCiencia(row.requires_acknowledgment === false ? "nao" : "sim");
+    setAplicavelA(row.aplicavel_a?.length ? [...row.aplicavel_a] : []);
+    setImagemPaths(normalizarImagensAcademyPortal(row));
+    setAnexoRefs(normalizarAnexosAcademyPortal(row));
+    setImagemFiles([]);
+    setAnexoFiles([]);
+    setStatusAtual(row.status ?? "rascunho");
+    setSnapshotEdicao({
+      tipoPostagem: tipoUi,
+      tipoSubcategoria:
+        tipoUi === "comunicado"
+          ? labelComunicadoFromSlug(cat?.slug ?? "")
+          : labelDicaManualFromSlug(cat?.slug ?? ""),
+      titulo: row.titulo,
+      introducao: row.introducao ?? "",
+      descricao: row.corpo,
+      jogoMesa: normalizarJogosMesa(row.jogo_mesa),
+      codigo: row.codigo?.trim() ?? "",
+      versao: versaoSalva,
+      exigeCiencia: row.requires_acknowledgment === false ? "nao" : "sim",
+      aplicavelA: row.aplicavel_a?.length ? [...row.aplicavel_a] : [],
+      imagemPaths: normalizarImagensAcademyPortal(row),
+      anexoRefs: normalizarAnexosAcademyPortal(row),
+    });
+  }, [editRef]);
+
   useEffect(() => {
     if (!open) return;
-    void carregarJogosMesasEstudio().then(setJogosOpcoes);
+    void carregarJogos();
     void carregarOpcoesTimesOrganograma().then(({ grupos }) => setOrganogramaGrupos(grupos));
-  }, [open]);
+  }, [open, carregarJogos]);
 
   useEffect(() => {
     if (!open) {
       resetForm();
+      setErroJogos(null);
       return;
     }
     if (modo === "criar") {
@@ -238,87 +361,8 @@ export function ModalCriarPostagem({
       return;
     }
     if (!editRef) return;
-
-    setLoadingData(true);
-    void (async () => {
-      const table =
-        editRef.contentType === "comunicado"
-          ? "academy_portal_comunicado"
-          : editRef.contentType === "dica"
-            ? "academy_portal_dica"
-            : "academy_portal_manual";
-
-      const { data, error } = await supabase
-        .from(table)
-        .select("*, categoria:academy_portal_categoria(slug, scope)")
-        .eq("id", editRef.id)
-        .single();
-
-      setLoadingData(false);
-      if (error || !data) {
-        console.error("[ModalCriarPostagem Academy] carregar:", error);
-        setErro(ERRO_CARREGAR_EDICAO);
-        return;
-      }
-
-      const row = data as {
-        titulo: string;
-        corpo: string;
-        introducao?: string | null;
-        status: AcademyPostagemStatus;
-        imagem_storage_path: string | null;
-        anexo_storage_path: string | null;
-        anexo_nome: string | null;
-        jogo_mesa?: string | string[] | null;
-        codigo?: string | null;
-        versao?: string | null;
-        requires_acknowledgment?: boolean | null;
-        aplicavel_a?: string[] | null;
-        categoria?: { slug: string; scope: string } | { slug: string; scope: string }[] | null;
-      };
-
-      const cat = Array.isArray(row.categoria) ? row.categoria[0] : row.categoria;
-      const tipoUi = editRef.contentType;
-      setTipoPostagem(tipoUi);
-      if (tipoUi === "comunicado") {
-        setTipoSubcategoria(labelComunicadoFromSlug(cat?.slug ?? ""));
-      } else {
-        setTipoSubcategoria(labelDicaManualFromSlug(cat?.slug ?? ""));
-      }
-      setTitulo(row.titulo);
-      setIntroducao(row.introducao ?? "");
-      setDescricao(row.corpo);
-      setJogosMesa(normalizarJogosMesa(row.jogo_mesa));
-      setCodigoManual(row.codigo?.trim() ?? "");
-      const versaoSalva = row.versao?.trim() || "1.0";
-      // Manual em edição: sobe a major (1.0 → 2.0). Snapshot guarda a versão anterior p/ histórico.
-      setVersaoManual(tipoUi === "manual" ? proximaVersaoMajorManual(versaoSalva) : versaoSalva);
-      setExigeCiencia(row.requires_acknowledgment === false ? "nao" : "sim");
-      setAplicavelA(row.aplicavel_a?.length ? [...row.aplicavel_a] : []);
-      setImagemPaths(normalizarImagensAcademyPortal(row));
-      setAnexoRefs(normalizarAnexosAcademyPortal(row));
-      setImagemFiles([]);
-      setAnexoFiles([]);
-      setStatusAtual(row.status ?? "rascunho");
-      setSnapshotEdicao({
-        tipoPostagem: tipoUi,
-        tipoSubcategoria:
-          tipoUi === "comunicado"
-            ? labelComunicadoFromSlug(cat?.slug ?? "")
-            : labelDicaManualFromSlug(cat?.slug ?? ""),
-        titulo: row.titulo,
-        introducao: row.introducao ?? "",
-        descricao: row.corpo,
-        jogoMesa: normalizarJogosMesa(row.jogo_mesa),
-        codigo: row.codigo?.trim() ?? "",
-        versao: versaoSalva,
-        exigeCiencia: row.requires_acknowledgment === false ? "nao" : "sim",
-        aplicavelA: row.aplicavel_a?.length ? [...row.aplicavel_a] : [],
-        imagemPaths: normalizarImagensAcademyPortal(row),
-        anexoRefs: normalizarAnexosAcademyPortal(row),
-      });
-    })();
-  }, [open, modo, editRef, resetForm]);
+    void carregarEdicao();
+  }, [open, modo, editRef, resetForm, carregarEdicao]);
 
   const resolveCategoriaId = (scope: "comunicado" | "dica" | "manual", slug: string): string | null => {
     const list =
@@ -646,13 +690,35 @@ export function ModalCriarPostagem({
               {mostraJogo ? (
                 <div>
                   {lbl("ap-jogo-label", "Qual Jogo?", true)}
-                  <AcademyPortalJogosMultiSelect
-                    opcoes={jogosOpcoes}
-                    selected={jogosMesa}
-                    onChange={setJogosMesa}
-                    t={t}
-                    hasError={!!fieldErr.jogoMesa}
-                  />
+                  {erroJogos ? (
+                    <div
+                      role="alert"
+                      aria-live="polite"
+                      style={{
+                        color: "#e84025",
+                        fontSize: 13,
+                        fontFamily: FONT.body,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 12,
+                        flexWrap: "wrap",
+                        marginBottom: 8,
+                      }}
+                    >
+                      <span>{erroJogos}</span>
+                      <button type="button" onClick={() => void carregarJogos()} style={BTN_RETRY_STYLE}>
+                        Tentar de novo
+                      </button>
+                    </div>
+                  ) : (
+                    <AcademyPortalJogosMultiSelect
+                      opcoes={jogosOpcoes}
+                      selected={jogosMesa}
+                      onChange={setJogosMesa}
+                      t={t}
+                      hasError={!!fieldErr.jogoMesa}
+                    />
+                  )}
                 </div>
               ) : null}
 
@@ -772,9 +838,23 @@ export function ModalCriarPostagem({
         <div
           role="alert"
           aria-live="polite"
-          style={{ color: "#e84025", fontSize: 13, fontFamily: FONT.body, marginTop: 16 }}
+          style={{
+            color: "#e84025",
+            fontSize: 13,
+            fontFamily: FONT.body,
+            marginTop: 16,
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            flexWrap: "wrap",
+          }}
         >
-          {erro}
+          <span>{erro}</span>
+          {erro === ERRO_CARREGAR_EDICAO ? (
+            <button type="button" onClick={() => void carregarEdicao()} style={BTN_RETRY_STYLE}>
+              Tentar de novo
+            </button>
+          ) : null}
         </div>
       ) : null}
 

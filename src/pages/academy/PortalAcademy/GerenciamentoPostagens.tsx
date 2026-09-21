@@ -258,6 +258,7 @@ export function GerenciamentoPostagens({
           .select(`${colunasBase}${colunasAprovacao}, categoria:academy_portal_categoria(slug)`)
           .gte("created_at", inicio)
           .order("created_at", { ascending: false })
+          .order("id", { ascending: true })
           .range(from, to);
         return { data: res.data as unknown as Record<string, unknown>[] | null, error: res.error };
       });
@@ -504,8 +505,39 @@ export function GerenciamentoPostagens({
   return (
     <div>
       {erro ? (
-        <div role="alert" style={{ color: "#e84025", fontSize: 13, fontFamily: FONT.body, marginBottom: 12 }}>
-          {erro}
+        <div
+          role="alert"
+          aria-live="polite"
+          style={{
+            color: "#e84025",
+            fontSize: 13,
+            fontFamily: FONT.body,
+            marginBottom: 12,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 12,
+            flexWrap: "wrap",
+          }}
+        >
+          <span>{erro}</span>
+          <button
+            type="button"
+            onClick={() => void carregar()}
+            style={{
+              fontFamily: FONT.body,
+              fontSize: 13,
+              fontWeight: 700,
+              padding: "8px 14px",
+              borderRadius: 10,
+              border: "1px solid rgba(232,64,37,0.35)",
+              background: "transparent",
+              color: "#e84025",
+              cursor: "pointer",
+            }}
+          >
+            Tentar novamente
+          </button>
         </div>
       ) : null}
 
@@ -514,7 +546,7 @@ export function GerenciamentoPostagens({
           <Loader2 className="app-lucide-spin" size={24} color="var(--brand-primary, #7c3aed)" aria-hidden style={{ marginBottom: 12 }} />
           Carregando…
         </div>
-      ) : rowsFiltradas.length === 0 ? (
+      ) : erro ? null : rowsFiltradas.length === 0 ? (
         <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
           Nenhuma postagem encontrada.
         </div>
