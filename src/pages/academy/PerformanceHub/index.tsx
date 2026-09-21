@@ -144,7 +144,8 @@ export default function PerformanceHubPage() {
   /** Enquanto o usuário não navega o carrossel, sempre recoloca no mês corrente (inclui carga async). */
   const usuarioNavegouCarrossel = useRef(false);
   const { scoringPorTime, setScoringPorTime } = scoringDb;
-  const { avaliacoes, setAvaliacoes, persistirAvaliacao } = avaliacoesDb;
+  const { avaliacoes, setAvaliacoes, persistirAvaliacao, loadError: erroAvaliacoes, recarregar: recarregarAvaliacoes } =
+    avaliacoesDb;
   const [avaliacaoEmEdicao, setAvaliacaoEmEdicao] = useState<PerformanceHubAvaliacao | null>(null);
   const [modalModo, setModalModo] = useState<PerformanceHubModalModo>("ver");
   const [erroPersistencia, setErroPersistencia] = useState("");
@@ -426,6 +427,88 @@ export default function PerformanceHubPage() {
         </div>
       ) : null}
 
+      {erroAvaliacoes ? (
+        <div
+          role="alert"
+          aria-live="polite"
+          style={{
+            marginBottom: 14,
+            padding: "12px 16px",
+            borderRadius: 12,
+            border: "1px solid rgba(232,64,37,0.35)",
+            background: "color-mix(in srgb, #e84025 10%, transparent)",
+            color: "#e84025",
+            fontSize: 13,
+            fontFamily: FONT.body,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 12,
+            flexWrap: "wrap",
+          }}
+        >
+          <span>{erroAvaliacoes}</span>
+          <button
+            type="button"
+            onClick={() => void recarregarAvaliacoes()}
+            style={{
+              fontFamily: FONT.body,
+              fontSize: 13,
+              fontWeight: 700,
+              padding: "8px 14px",
+              borderRadius: 10,
+              border: "1px solid rgba(232,64,37,0.35)",
+              background: "transparent",
+              color: "#e84025",
+              cursor: "pointer",
+            }}
+          >
+            Tentar novamente
+          </button>
+        </div>
+      ) : null}
+
+      {cadastro.loadError ? (
+        <div
+          role="alert"
+          aria-live="polite"
+          style={{
+            marginBottom: 14,
+            padding: "12px 16px",
+            borderRadius: 12,
+            border: "1px solid rgba(232,64,37,0.35)",
+            background: "color-mix(in srgb, #e84025 10%, transparent)",
+            color: "#e84025",
+            fontSize: 13,
+            fontFamily: FONT.body,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 12,
+            flexWrap: "wrap",
+          }}
+        >
+          <span>{cadastro.loadError}</span>
+          <button
+            type="button"
+            onClick={() => cadastro.recarregar()}
+            style={{
+              fontFamily: FONT.body,
+              fontSize: 13,
+              fontWeight: 700,
+              padding: "8px 14px",
+              borderRadius: 10,
+              border: "1px solid rgba(232,64,37,0.35)",
+              background: "transparent",
+              color: "#e84025",
+              cursor: "pointer",
+            }}
+          >
+            Tentar novamente
+          </button>
+        </div>
+      ) : null}
+
       <PerformanceHubFiltroBar
         brand={brand}
         t={t}
@@ -463,40 +546,67 @@ export default function PerformanceHubPage() {
         showStaffFilter={aba !== "configuracao"}
       />
 
-      <div role="tabpanel" id={`panel-performance-hub-${aba}`} aria-labelledby={`tab-performance-hub-${aba}`}>
-        {aba === "avaliacoes" ? (
-          <PerformanceHubAbaAvaliacoes
-            avaliacoes={avaliacoesAbaAvaliacoes}
-            timeSelecionado={timeSelecionado}
-            canView={perm.canView}
-            canEditarOk={perm.canEditarOk}
-            roleUsuario={roleEfetivo ?? user?.role ?? "prestador"}
-            onVer={handleVerAvaliacao}
-            onAnalisar={handleAnalisarAvaliacao}
-            onHistorico={handleHistoricoAvaliacao}
-          />
-        ) : null}
+      <div
+        role="tabpanel"
+        id="panel-performance-hub-avaliacoes"
+        aria-labelledby="tab-performance-hub-avaliacoes"
+        hidden={aba !== "avaliacoes"}
+      >
+        <PerformanceHubAbaAvaliacoes
+          avaliacoes={avaliacoesAbaAvaliacoes}
+          timeSelecionado={timeSelecionado}
+          canView={perm.canView}
+          canEditarOk={perm.canEditarOk}
+          roleUsuario={roleEfetivo ?? user?.role ?? "prestador"}
+          cargaComErro={Boolean(erroAvaliacoes)}
+          onVer={handleVerAvaliacao}
+          onAnalisar={handleAnalisarAvaliacao}
+          onHistorico={handleHistoricoAvaliacao}
+        />
+      </div>
 
-        {aba === "feedback" && canEditarOk ? (
+      {canEditarOk ? (
+        <div
+          role="tabpanel"
+          id="panel-performance-hub-feedback"
+          aria-labelledby="tab-performance-hub-feedback"
+          hidden={aba !== "feedback"}
+        >
           <PerformanceHubAbaFeedback
             avaliacoes={avaliacoesFiltradasBase}
+            cargaComErro={Boolean(erroAvaliacoes)}
             onVer={handleVerAvaliacao}
             onAplicarFeedback={handleAplicarFeedback}
             onHistorico={handleHistoricoAvaliacao}
           />
-        ) : null}
+        </div>
+      ) : null}
 
-        {aba === "gerenciamento" && canCriarSim ? (
+      {canCriarSim ? (
+        <div
+          role="tabpanel"
+          id="panel-performance-hub-gerenciamento"
+          aria-labelledby="tab-performance-hub-gerenciamento"
+          hidden={aba !== "gerenciamento"}
+        >
           <PerformanceHubAbaGerenciamento
             avaliacoes={avaliacoesFiltradasBase}
             timeSelecionado={timeSelecionado}
             agenda={agendaFiltrada}
+            cargaComErro={Boolean(erroAvaliacoes || cadastro.loadError)}
             onAvaliar={handleAbrirAvaliacao}
             onAvaliarPorNome={handleSolicitarAvaliacaoPorNome}
           />
-        ) : null}
+        </div>
+      ) : null}
 
-        {aba === "configuracao" && canCriarSim ? (
+      {canCriarSim ? (
+        <div
+          role="tabpanel"
+          id="panel-performance-hub-configuracao"
+          aria-labelledby="tab-performance-hub-configuracao"
+          hidden={aba !== "configuracao"}
+        >
           <PerformanceHubAbaConfiguracao
             config={scoringPorTime[timeSelecionado]}
             onChange={(next) =>
@@ -506,10 +616,11 @@ export default function PerformanceHubPage() {
               }))
             }
             loadError={scoringDb.loadError}
+            onRetryLoad={scoringDb.recarregar}
             onSalvar={() => scoringDb.salvar(timeSelecionado, scoringPorTime[timeSelecionado])}
           />
-        ) : null}
-      </div>
+        </div>
+      ) : null}
 
       {avaliacaoEmEdicao && modalModo === "historico" ? (
         <ModalHistoricoPerformanceHub

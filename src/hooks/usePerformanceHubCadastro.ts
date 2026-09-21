@@ -25,6 +25,9 @@ import {
 
 type StaffTimeRow = PerformanceHubOrgTimeRow;
 
+const ERRO_CARREGAR_CADASTRO =
+  "Não foi possível carregar o cadastro (times, staff ou mesas). Se o problema persistir, entre em contato com o suporte.";
+
 function normalizarNomeStaff(nome: string): string {
   return nome.trim().toLowerCase();
 }
@@ -33,8 +36,28 @@ function turnoLabelStaff(row: Pick<RhFuncionario, "escala" | "staff_turno">): st
   return mapTurnoRhParaPerformanceHub(row) ?? "—";
 }
 
+function estadoVazioCadastro() {
+  return {
+    estudios: [] as PerformanceHubEstudioCadastro[],
+    mesas: [] as PerformanceHubMesaCadastro[],
+    staffPorTime: {
+      game_presenter: [],
+      shuffler: [],
+    } as Record<PerformanceHubTimeSlug, PerformanceHubStaffOption[]>,
+    staffAgendaPorTime: {
+      game_presenter: [],
+      shuffler: [],
+    } as Record<PerformanceHubTimeSlug, PerformanceHubStaffAgendaFonte[]>,
+    prefillPorStaffId: {} as Record<string, PerformanceHubDadosPrefill>,
+    prefillPorNome: {} as Record<string, PerformanceHubDadosPrefill>,
+    staffIdPorNome: {} as Record<string, string>,
+  };
+}
+
 export function usePerformanceHubCadastro() {
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [reloadTick, setReloadTick] = useState(0);
   const [estudios, setEstudios] = useState<PerformanceHubEstudioCadastro[]>([]);
   const [mesas, setMesas] = useState<PerformanceHubMesaCadastro[]>([]);
   const [staffPorTime, setStaffPorTime] = useState<Record<PerformanceHubTimeSlug, PerformanceHubStaffOption[]>>({
@@ -51,71 +74,74 @@ export function usePerformanceHubCadastro() {
     shuffler: [],
   });
 
+  const recarregar = useCallback(() => {
+    setReloadTick((n) => n + 1);
+  }, []);
+
   useEffect(() => {
     let cancelado = false;
 
     async function carregar() {
       setLoading(true);
+      setLoadError(null);
 
-      const [timesRes, timesOrgRes, estudiosRows, mesasSettled] = await Promise.all([
-        supabase.rpc("rh_staff_times_filtrados"),
-        supabase.from("rh_org_times").select("id, nome").eq("status", "ativo"),
-        fetchEstudiosSpinRows(),
-        fetchMesasSpinCadastroRows().then(
-          (rows) => ({ ok: true as const, rows }),
-          (e) => {
-            console.error(e);
-            return { ok: false as const, rows: [] as Awaited<ReturnType<typeof fetchMesasSpinCadastroRows>> };
-          },
-        ),
-      ]);
+      try {
+        const [timesRes, timesOrgRes, estudiosRows, mesasRows] = await Promise.all([
+          supabase.rpc("rh_staff_times_filtrados"),
+          supabase.from("rh_org_times").select("id, nome").eq("status", "ativo"),
+          fetchEstudiosSpinRows(),
+          fetchMesasSpinCadastroRows(),
+        ]);
 
-      if (cancelado) return;
+        if (cancelado) return;
 
-      const mesasRows = mesasSettled.rows;
-
-      const junctionFlat: { operadora_slug: string; estudio_slug: string; tipo: string }[] = [];
-      const estudiosAtivos: PerformanceHubEstudioCadastro[] = estudiosRows.map((e) => {
-        const joins = e.estudios_spin_operadoras;
-        const list = joins == null ? [] : Array.isArray(joins) ? joins : [joins];
-        for (const j of list) {
-          junctionFlat.push({
-            operadora_slug: j.operadora_slug,
-            estudio_slug: e.slug,
-            tipo: e.tipo,
-          });
+        if (timesRes.error && timesOrgRes.error) {
+          throw new Error(timesRes.error.message || timesOrgRes.error.message || "times");
         }
-        return { slug: e.slug, nome: e.nome };
-      });
+        if (timesRes.error) {
+          console.error("Performance Hub: falha ao carregar times (RPC)", timesRes.error);
+        }
+        if (timesOrgRes.error) {
+          console.error("Performance Hub: falha ao carregar times (organograma)", timesOrgRes.error);
+        }
 
-      const opParaEstudio = buildOperadoraParaEstudioMap(junctionFlat);
-      const mesasCatalogo: PerformanceHubMesaCadastro[] = mesasRows.map((m) => ({
-        estudio_slug: m.estudio_slug,
-        operadora_slug: m.operadora_slug ?? null,
-        tipo_jogo: m.tipo_jogo ?? "",
-        nome_mesa: m.nome_mesa ?? "",
-        mesa_identificacao: m.mesa_identificacao ?? "",
-      }));
+        const junctionFlat: { operadora_slug: string; estudio_slug: string; tipo: string }[] = [];
+        const estudiosAtivos: PerformanceHubEstudioCadastro[] = estudiosRows.map((e) => {
+          const joins = e.estudios_spin_operadoras;
+          const list = joins == null ? [] : Array.isArray(joins) ? joins : [joins];
+          for (const j of list) {
+            junctionFlat.push({
+              operadora_slug: j.operadora_slug,
+              estudio_slug: e.slug,
+              tipo: e.tipo,
+            });
+          }
+          return { slug: e.slug, nome: e.nome };
+        });
 
-      if (timesRes.error) {
-        console.error("Performance Hub: falha ao carregar times (RPC)", timesRes.error);
-      }
-      if (timesOrgRes.error) {
-        console.error("Performance Hub: falha ao carregar times (organograma)", timesOrgRes.error);
-      }
+        const opParaEstudio = buildOperadoraParaEstudioMap(junctionFlat);
+        const mesasCatalogo: PerformanceHubMesaCadastro[] = mesasRows.map((m) => ({
+          estudio_slug: m.estudio_slug,
+          operadora_slug: m.operadora_slug ?? null,
+          tipo_jogo: m.tipo_jogo ?? "",
+          nome_mesa: m.nome_mesa ?? "",
+          mesa_identificacao: m.mesa_identificacao ?? "",
+        }));
 
-      const timesPorId = new Map<string, StaffTimeRow>();
-      for (const row of [...((timesRes.data ?? []) as StaffTimeRow[]), ...((timesOrgRes.data ?? []) as StaffTimeRow[])]) {
-        const id = row.id?.trim();
-        if (!id) continue;
-        timesPorId.set(id, { id, nome: row.nome ?? "" });
-      }
-      const idsPorSlug = agruparTimeIdsPorSlugPerformanceHub([...timesPorId.values()]);
-      const timeIds = [...idsPorSlug.game_presenter, ...idsPorSlug.shuffler];
-      let funcionarios: RhFuncionarioPerformanceHubCadastro[] = [];
+        const timesPorId = new Map<string, StaffTimeRow>();
+        for (const row of [
+          ...((timesRes.data ?? []) as StaffTimeRow[]),
+          ...((timesOrgRes.data ?? []) as StaffTimeRow[]),
+        ]) {
+          const id = row.id?.trim();
+          if (!id) continue;
+          timesPorId.set(id, { id, nome: row.nome ?? "" });
+        }
+        const idsPorSlug = agruparTimeIdsPorSlugPerformanceHub([...timesPorId.values()]);
+        const timeIds = [...idsPorSlug.game_presenter, ...idsPorSlug.shuffler];
+        let funcionarios: RhFuncionarioPerformanceHubCadastro[] = [];
 
-      if (timeIds.length > 0) {
-        try {
+        if (timeIds.length > 0) {
           funcionarios = await fetchAllPages<RhFuncionarioPerformanceHubCadastro>(async (from, to) => {
             const { data, error } = await supabase
               .from("rh_funcionarios")
@@ -125,68 +151,79 @@ export function usePerformanceHubCadastro() {
               .in("org_time_id", timeIds)
               .in("status", ["ativo", "indisponivel"])
               .order("nome", { ascending: true })
+              .order("id", { ascending: true })
               .range(from, to);
             return { data: (data ?? null) as RhFuncionarioPerformanceHubCadastro[] | null, error };
           });
-        } catch (error) {
-          console.error("Performance Hub: falha ao carregar prestadores", error);
         }
+
+        if (cancelado) return;
+
+        const nextStaff: Record<PerformanceHubTimeSlug, PerformanceHubStaffOption[]> = {
+          game_presenter: [],
+          shuffler: [],
+        };
+        const nextStaffAgenda: Record<PerformanceHubTimeSlug, PerformanceHubStaffAgendaFonte[]> = {
+          game_presenter: [],
+          shuffler: [],
+        };
+        const nextPrefillId: Record<string, PerformanceHubDadosPrefill> = {};
+        const nextPrefillNome: Record<string, PerformanceHubDadosPrefill> = {};
+        const nextStaffIdNome: Record<string, string> = {};
+
+        for (const row of funcionarios) {
+          const timeSlug = slugTimePerformanceHubDeId(row.org_time_id, idsPorSlug);
+          if (!timeSlug) continue;
+
+          const turno = turnoLabelStaff(row);
+          nextStaff[timeSlug].push({
+            value: row.id,
+            label: row.nome,
+            turno,
+          });
+          nextStaffAgenda[timeSlug].push(mapStaffRhParaAgendaFonte({ ...row, turno }, timeSlug));
+
+          const prefill = mapRhFuncionarioParaPerformanceHubDados(row, opParaEstudio, mesasCatalogo);
+          nextPrefillId[row.id] = prefill;
+          nextPrefillNome[normalizarNomeStaff(row.nome)] = prefill;
+          nextStaffIdNome[normalizarNomeStaff(row.nome)] = row.id;
+        }
+
+        for (const slug of Object.keys(nextStaff) as PerformanceHubTimeSlug[]) {
+          nextStaff[slug].sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
+          nextStaffAgenda[slug].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+        }
+
+        setEstudios(estudiosAtivos);
+        setMesas(mesasCatalogo);
+        setStaffPorTime(nextStaff);
+        setStaffAgendaPorTime(nextStaffAgenda);
+        setPrefillPorStaffId(nextPrefillId);
+        setPrefillPorNome(nextPrefillNome);
+        setStaffIdPorNome(nextStaffIdNome);
+        setLoadError(null);
+      } catch (e) {
+        console.error("Performance Hub: falha ao carregar cadastro", e);
+        if (cancelado) return;
+        const vazio = estadoVazioCadastro();
+        setEstudios(vazio.estudios);
+        setMesas(vazio.mesas);
+        setStaffPorTime(vazio.staffPorTime);
+        setStaffAgendaPorTime(vazio.staffAgendaPorTime);
+        setPrefillPorStaffId(vazio.prefillPorStaffId);
+        setPrefillPorNome(vazio.prefillPorNome);
+        setStaffIdPorNome(vazio.staffIdPorNome);
+        setLoadError(ERRO_CARREGAR_CADASTRO);
+      } finally {
+        if (!cancelado) setLoading(false);
       }
-
-      if (cancelado) return;
-
-      const nextStaff: Record<PerformanceHubTimeSlug, PerformanceHubStaffOption[]> = {
-        game_presenter: [],
-        shuffler: [],
-      };
-      const nextStaffAgenda: Record<PerformanceHubTimeSlug, PerformanceHubStaffAgendaFonte[]> = {
-        game_presenter: [],
-        shuffler: [],
-      };
-      const nextPrefillId: Record<string, PerformanceHubDadosPrefill> = {};
-      const nextPrefillNome: Record<string, PerformanceHubDadosPrefill> = {};
-      const nextStaffIdNome: Record<string, string> = {};
-
-      for (const row of funcionarios) {
-        const timeSlug = slugTimePerformanceHubDeId(row.org_time_id, idsPorSlug);
-        if (!timeSlug) continue;
-
-        const turno = turnoLabelStaff(row);
-        nextStaff[timeSlug].push({
-          value: row.id,
-          label: row.nome,
-          turno,
-        });
-        nextStaffAgenda[timeSlug].push(
-          mapStaffRhParaAgendaFonte({ ...row, turno }, timeSlug),
-        );
-
-        const prefill = mapRhFuncionarioParaPerformanceHubDados(row, opParaEstudio, mesasCatalogo);
-        nextPrefillId[row.id] = prefill;
-        nextPrefillNome[normalizarNomeStaff(row.nome)] = prefill;
-        nextStaffIdNome[normalizarNomeStaff(row.nome)] = row.id;
-      }
-
-      for (const slug of Object.keys(nextStaff) as PerformanceHubTimeSlug[]) {
-        nextStaff[slug].sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
-        nextStaffAgenda[slug].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
-      }
-
-      setEstudios(estudiosAtivos);
-      setMesas(mesasCatalogo);
-      setStaffPorTime(nextStaff);
-      setStaffAgendaPorTime(nextStaffAgenda);
-      setPrefillPorStaffId(nextPrefillId);
-      setPrefillPorNome(nextPrefillNome);
-      setStaffIdPorNome(nextStaffIdNome);
-      setLoading(false);
     }
 
     void carregar();
     return () => {
       cancelado = true;
     };
-  }, []);
+  }, [reloadTick]);
 
   const getPrefill = useCallback(
     (staffId?: string | null, nome?: string | null): PerformanceHubDadosPrefill | null => {
@@ -218,6 +255,8 @@ export function usePerformanceHubCadastro() {
   return useMemo(
     () => ({
       loading,
+      loadError,
+      recarregar,
       estudios,
       mesas,
       staffPorTime,
@@ -230,8 +269,10 @@ export function usePerformanceHubCadastro() {
     [
       estudios,
       getPrefill,
+      loadError,
       loading,
       mesas,
+      recarregar,
       resolveStaffId,
       staffAgendaPorTime,
       staffAgendaPorTimeFn,

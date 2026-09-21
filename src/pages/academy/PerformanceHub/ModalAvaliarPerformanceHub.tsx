@@ -497,7 +497,7 @@ export function ModalAvaliarPerformanceHub({
       setStatusRascunho("");
       setErros((prev) => [
         ...prev,
-        "Não foi possível guardar o preenchimento automaticamente — clique em Salvar antes de fechar.",
+        "Não foi possível salvar o preenchimento automaticamente — clique em Salvar antes de fechar.",
       ]);
     }
   }

@@ -6,7 +6,12 @@ import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
 import { FONT } from "../../../constants/theme";
 import type { Role } from "../../../types";
 import type { PermissaoValor } from "../../../types";
-import type { PerformanceHubAvaliacao, PerformanceHubStatus, PerformanceHubTimeSlug } from "../../../lib/academyPerformanceHubTypes";
+import type {
+  PerformanceHubAvaliacao,
+  PerformanceHubStatus,
+  PerformanceHubTimeSlug,
+  PerformanceHubTurno,
+} from "../../../lib/academyPerformanceHubTypes";
 import {
   PERFORMANCE_HUB_KPI_SUB,
   PERFORMANCE_HUB_STATUS_COLOR,
@@ -24,15 +29,21 @@ import {
 } from "../../../lib/academyPerformanceHubWorkflow";
 import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
 import { getDataTableStyle, getDataTableWrapStyle } from "../../../lib/dataTableStyles";
+import { getFilterBarRowStyle } from "../../../lib/filterBarStyles";
+import { FilterBarIcons } from "../../../lib/filterBarIconCatalog";
+import {
+  TURNO_FILTRO_MANHA_TARDE_NOITE,
+  TURNO_FILTRO_TODOS_VALUE,
+} from "../../../lib/filtroTurnoConstants";
 import { SEARCH_PLACEHOLDER_ELLIPSIS } from "../../../lib/searchBarConstants";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
+import { FiltroTurnoSelect } from "../../../components/FiltroTurnoSelect";
 import { LinkAssistirVideoPerformanceHub } from "../../../components/LinkAssistirVideoPerformanceHub";
 import { TabelaComPaginacao } from "../../../components/TabelaPaginacaoBar";
-import { SectionTitle, SortTableTh, type SortDir } from "../../../components/dashboard";
+import { FiltroBarCampoSelect, SectionTitle, SortTableTh, type SortDir } from "../../../components/dashboard";
 import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
 import { textoContemBusca } from "../../../lib/searchText";
-import { roleGestorDepartamento } from "../../../lib/staffRoles";
 
 type Props = {
   avaliacoes: PerformanceHubAvaliacao[];
@@ -40,12 +51,27 @@ type Props = {
   canView: PermissaoValor;
   canEditarOk: boolean;
   roleUsuario: Role;
+  /** Falha de carga da lista — não mostrar empty falso. */
+  cargaComErro?: boolean;
   onVer: (row: PerformanceHubAvaliacao) => void;
   onAnalisar: (row: PerformanceHubAvaliacao) => void;
   onHistorico: (row: PerformanceHubAvaliacao) => void;
 };
 
 type SortCol = "data" | "avaliado" | "avaliador" | "status" | "total" | "imagem" | "comunicacao" | "terceira";
+type StatusFiltro = "todos" | "aguardando" | "feedback" | "aprovado";
+
+const STATUS_FILTRO_OPCOES: { value: StatusFiltro; label: string }[] = [
+  { value: "aguardando", label: "Aguardando" },
+  { value: "feedback", label: "Feedback" },
+  { value: "aprovado", label: "Aprovado" },
+];
+
+const TURNO_FILTRO_PARA_LABEL: Record<string, PerformanceHubTurno> = {
+  manha: "Manhã",
+  tarde: "Tarde",
+  noite: "Noite",
+};
 
 function scoreStatus(status: PerformanceHubStatus): number {
   const order: PerformanceHubStatus[] = [
@@ -127,7 +153,8 @@ export function PerformanceHubAbaAvaliacoes({
   timeSelecionado,
   canView,
   canEditarOk,
-  roleUsuario,
+  roleUsuario: _roleUsuario,
+  cargaComErro = false,
   onVer,
   onAnalisar,
   onHistorico,
@@ -145,9 +172,13 @@ export function PerformanceHubAbaAvaliacoes({
     (!isProprios && timeSelecionado === "shuffler");
   const [sort, setSort] = useState<{ col: SortCol; dir: SortDir }>({ col: "data", dir: "desc" });
   const [busca, setBusca] = useState("");
-  const showBusca = roleUsuario === "admin" || roleGestorDepartamento(roleUsuario);
+  const [filtroTurno, setFiltroTurno] = useState(TURNO_FILTRO_TODOS_VALUE);
+  const [filtroStatus, setFiltroStatus] = useState<StatusFiltro>("todos");
+  /** MDC: busca + Turno/Status com Ver amplo (não Próprios). */
+  const showFiltrosLista = !isProprios;
 
   const rowsVisiveis = useMemo(() => {
+    const turnoLabel = TURNO_FILTRO_PARA_LABEL[filtroTurno];
     const filtradas = avaliacoes
       .filter((row) =>
         isProprios
@@ -157,7 +188,16 @@ export function PerformanceHubAbaAvaliacoes({
             row.status === "concluida"
           : true,
       )
-      .filter((row) => (showBusca ? textoContemBusca(row.avaliadoNome, busca) : true));
+      .filter((row) => (showFiltrosLista ? textoContemBusca(row.avaliadoNome, busca) : true))
+      .filter((row) => {
+        if (!showFiltrosLista || filtroTurno === TURNO_FILTRO_TODOS_VALUE) return true;
+        return row.turno === turnoLabel;
+      })
+      .filter((row) => {
+        if (!showFiltrosLista || filtroStatus === "todos") return true;
+        if (filtroStatus === "aprovado") return row.status === "aprovado" || row.status === "concluida";
+        return row.status === filtroStatus;
+      });
 
     const sorted = [...filtradas].sort((a, b) => {
       let cmp = 0;
@@ -174,7 +214,7 @@ export function PerformanceHubAbaAvaliacoes({
       return sort.dir === "asc" ? cmp : -cmp;
     });
     return sorted;
-  }, [avaliacoes, isProprios, showBusca, busca, sort]);
+  }, [avaliacoes, isProprios, showFiltrosLista, busca, filtroTurno, filtroStatus, sort]);
 
   // Consolidados = avaliações publicadas do período (mesma base da tabela).
   const rowsKpi = rowsVisiveis;
@@ -195,6 +235,8 @@ export function PerformanceHubAbaAvaliacoes({
       </span>
     );
   }
+
+  if (cargaComErro) return null;
 
   return (
     <>
@@ -244,14 +286,38 @@ export function PerformanceHubAbaAvaliacoes({
       <div style={pageBox}>
         <SectionTitle sub="histórico de avaliações no período">Avaliações</SectionTitle>
 
-        {showBusca ? (
-          <div style={{ marginBottom: 12 }}>
+        {showFiltrosLista ? (
+          <div
+            style={{
+              ...getFilterBarRowStyle(),
+              marginBottom: 12,
+              justifyContent: "center",
+              flexWrap: "wrap",
+              gap: 10,
+            }}
+          >
             <BarraPesquisaPagina
               value={busca}
               onChange={setBusca}
               placeholder={`Buscar por Nome${SEARCH_PLACEHOLDER_ELLIPSIS}`}
               aria-label="Buscar avaliado por nome"
-              wrapperStyle={{ width: "100%", maxWidth: 380 }}
+              wrapperStyle={{ width: "100%", maxWidth: 280 }}
+            />
+            <FiltroTurnoSelect
+              value={filtroTurno}
+              onChange={setFiltroTurno}
+              options={TURNO_FILTRO_MANHA_TARDE_NOITE}
+              minWidth={160}
+            />
+            <FiltroBarCampoSelect
+              id="filtro-status-performance-hub-avaliacoes"
+              value={filtroStatus}
+              onChange={(v) => setFiltroStatus(v as StatusFiltro)}
+              options={STATUS_FILTRO_OPCOES}
+              icon={FilterBarIcons.status}
+              ariaLabel="Status da avaliação"
+              todasValue="todos"
+              todasLabel="Todos Status"
             />
           </div>
         ) : null}
@@ -264,7 +330,7 @@ export function PerformanceHubAbaAvaliacoes({
           <TabelaComPaginacao
             items={rowsVisiveis}
             t={t}
-            resetKey={`${busca}|${sort.col}|${sort.dir}|${timeSelecionado}`}
+            resetKey={`${busca}|${filtroTurno}|${filtroStatus}|${sort.col}|${sort.dir}|${timeSelecionado}`}
           >
             {(linhas, zebraIdx) => (
           <div className="app-table-wrap app-table-wrap--sticky-col" style={getDataTableWrapStyle()}>

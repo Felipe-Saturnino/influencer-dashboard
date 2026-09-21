@@ -5,6 +5,9 @@ import {
   upsertPerformanceHubAvaliacao,
 } from "../lib/academyPerformanceHubAvaliacoesFetch";
 
+const ERRO_CARREGAR_AVALIACOES =
+  "Não foi possível carregar as avaliações. Se o problema persistir, entre em contato com o suporte.";
+
 /** Substitui o id cliente (`novo-*`) ou o UUID já gravado, sem duplicar linhas na lista. */
 export function mesclarAvaliacaoNaLista(
   prev: PerformanceHubAvaliacao[],
@@ -30,6 +33,7 @@ export function mesclarAvaliacaoNaLista(
 export function usePerformanceHubAvaliacoes() {
   const [avaliacoes, setAvaliacoes] = useState<PerformanceHubAvaliacao[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   /** `novo-*` → UUID após o primeiro INSERT bem-sucedido (evita segundo INSERT no Concluir). */
   const idClienteParaServidor = useRef(new Map<string, string>());
   /** Promises de create em voo por id `novo-*`. */
@@ -39,9 +43,17 @@ export function usePerformanceHubAvaliacoes() {
 
   const recarregar = useCallback(async () => {
     setLoading(true);
-    const rows = await fetchPerformanceHubAvaliacoes();
-    setAvaliacoes(rows);
-    setLoading(false);
+    setLoadError(null);
+    try {
+      const rows = await fetchPerformanceHubAvaliacoes();
+      setAvaliacoes(rows);
+    } catch (e) {
+      console.error("Performance Hub: falha ao carregar avaliações", e);
+      setAvaliacoes([]);
+      setLoadError(ERRO_CARREGAR_AVALIACOES);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -107,6 +119,7 @@ export function usePerformanceHubAvaliacoes() {
     avaliacoes,
     setAvaliacoes,
     loading,
+    loadError,
     recarregar,
     persistirAvaliacao,
   };

@@ -201,22 +201,18 @@ const SELECT_AVALIACAO = `
 `;
 
 export async function fetchPerformanceHubAvaliacoes(): Promise<PerformanceHubAvaliacao[]> {
-  try {
-    const { inicio, fim } = periodoHistoricoPerformanceHub();
-    const rows = await fetchAllPages<AvaliacaoRow>(async (from, to) =>
-      supabase
-        .from("academy_performance_hub_avaliacao")
-        .select(SELECT_AVALIACAO)
-        .gte("data_avaliacao", inicio)
-        .lte("data_avaliacao", fim)
-        .order("data_avaliacao", { ascending: false })
-        .range(from, to),
-    );
-    return rows.map(mapRowParaAvaliacao);
-  } catch (error) {
-    console.error("Performance Hub: falha ao carregar avaliações", error);
-    return [];
-  }
+  const { inicio, fim } = periodoHistoricoPerformanceHub();
+  const rows = await fetchAllPages<AvaliacaoRow>(async (from, to) =>
+    supabase
+      .from("academy_performance_hub_avaliacao")
+      .select(SELECT_AVALIACAO)
+      .gte("data_avaliacao", inicio)
+      .lte("data_avaliacao", fim)
+      .order("data_avaliacao", { ascending: false })
+      .order("id", { ascending: true })
+      .range(from, to),
+  );
+  return rows.map(mapRowParaAvaliacao);
 }
 
 export async function upsertPerformanceHubAvaliacao(
@@ -261,10 +257,11 @@ export async function fetchHistoricoAvaliacaoPerformanceHub(
     .from("academy_performance_hub_avaliacao_historico")
     .select("id, avaliacao_id, created_at, acao, usuario_nome, mensagem")
     .eq("avaliacao_id", avaliacaoId)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: true });
   if (error) {
     console.error("Performance Hub: falha ao carregar histórico", error);
-    return [];
+    throw new Error(error.message);
   }
   return ((data ?? []) as HistoricoRow[]).map(mapHistoricoRow);
 }

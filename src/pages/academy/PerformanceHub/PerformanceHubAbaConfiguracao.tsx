@@ -13,10 +13,23 @@ type Props = {
   onChange: (next: Record<string, PerformanceHubDimensaoConfig>) => void;
   onSalvar: () => Promise<string | null>;
   loadError?: string | null;
+  onRetryLoad?: () => void;
 };
 
 const COL_CRITERIO_WIDTH = "76%";
 const COL_PESO_WIDTH = "24%";
+
+const BTN_RETRY_STYLE = {
+  fontFamily: FONT.body,
+  fontSize: 13,
+  fontWeight: 700,
+  padding: "8px 14px",
+  borderRadius: 10,
+  border: "1px solid rgba(232,64,37,0.35)",
+  background: "transparent",
+  color: "#e84025",
+  cursor: "pointer",
+} as const;
 
 const tableStyle = {
   width: "100%",
@@ -25,7 +38,13 @@ const tableStyle = {
   tableLayout: "fixed" as const,
 };
 
-export function PerformanceHubAbaConfiguracao({ config, onChange, onSalvar, loadError }: Props) {
+export function PerformanceHubAbaConfiguracao({
+  config,
+  onChange,
+  onSalvar,
+  loadError,
+  onRetryLoad,
+}: Props) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
   const pageBox = getPageContentBoxStyle(brand, t);
@@ -33,6 +52,7 @@ export function PerformanceHubAbaConfiguracao({ config, onChange, onSalvar, load
   const [saveError, setSaveError] = useState<string | null>(null);
   const [salvo, setSalvo] = useState(false);
   const dimKeys = orderedPerformanceHubConfigKeys(config);
+  const bloqueadoPorCarga = Boolean(loadError);
 
   function updatePesoDimensao(key: string, value: string) {
     const parsed = Number(value);
@@ -64,6 +84,7 @@ export function PerformanceHubAbaConfiguracao({ config, onChange, onSalvar, load
   }
 
   async function handleSalvar() {
+    if (bloqueadoPorCarga) return;
     setSalvando(true);
     setSaveError(null);
     setSalvo(false);
@@ -86,9 +107,23 @@ export function PerformanceHubAbaConfiguracao({ config, onChange, onSalvar, load
         <div
           role="alert"
           aria-live="polite"
-          style={{ color: "#e84025", fontSize: 12, fontFamily: FONT.body, marginBottom: 12 }}
+          style={{
+            color: "#e84025",
+            fontSize: 13,
+            fontFamily: FONT.body,
+            marginBottom: 12,
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            flexWrap: "wrap",
+          }}
         >
-          {loadError}
+          <span>{loadError}</span>
+          {onRetryLoad ? (
+            <button type="button" onClick={onRetryLoad} style={BTN_RETRY_STYLE}>
+              Tentar novamente
+            </button>
+          ) : null}
         </div>
       ) : null}
 
@@ -118,6 +153,7 @@ export function PerformanceHubAbaConfiguracao({ config, onChange, onSalvar, load
                     step={0.5}
                     value={dim.pesoDimensao}
                     onChange={(e) => updatePesoDimensao(dimKey, e.target.value)}
+                    disabled={bloqueadoPorCarga}
                     style={inputStyle(t)}
                     aria-label={`Peso da dimensão ${dim.label}`}
                   />
@@ -155,6 +191,7 @@ export function PerformanceHubAbaConfiguracao({ config, onChange, onSalvar, load
                               step={0.5}
                               value={criterio.peso}
                               onChange={(e) => updatePesoCriterio(dimKey, criterio.slug, e.target.value)}
+                              disabled={bloqueadoPorCarga}
                               style={inputStyle(t)}
                               aria-label={`Peso do critério ${criterio.label}`}
                             />
@@ -171,7 +208,13 @@ export function PerformanceHubAbaConfiguracao({ config, onChange, onSalvar, load
       </div>
 
       <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 16 }}>
-        <CtaCriarButton type="button" onClick={() => void handleSalvar()} loading={salvando} loadingLabel="Salvando…">
+        <CtaCriarButton
+          type="button"
+          onClick={() => void handleSalvar()}
+          loading={salvando}
+          loadingLabel="Salvando…"
+          disabled={bloqueadoPorCarga}
+        >
           <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
             <Save size={14} aria-hidden />
             Salvar
