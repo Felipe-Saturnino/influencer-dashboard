@@ -49,20 +49,29 @@ export function usePrestadorLista({
     col: "nome",
     dir: "asc",
   });
+  const [erroOrganograma, setErroOrganograma] = useState<string | null>(null);
+  const [orgReloadKey, setOrgReloadKey] = useState(0);
 
   useEffect(() => {
-    if (permOrg.loading || permOrg.canView === "nao") {
-      setOpcoesTimes([]);
-      setOrganogramaGrupos([]);
-      return;
-    }
     let cancel = false;
     void (async () => {
+      if (permOrg.loading || permOrg.canView === "nao") {
+        if (!cancel) {
+          setOpcoesTimes([]);
+          setOrganogramaGrupos([]);
+          setErroOrganograma(null);
+        }
+        return;
+      }
+      setErroOrganograma(null);
       const { opcoes, grupos, error } = await carregarOpcoesTimesOrganograma();
       if (cancel) return;
       if (error) {
         setOpcoesTimes([]);
         setOrganogramaGrupos([]);
+        setErroOrganograma(
+          "Não foi possível carregar o organograma. Se o problema persistir, entre em contato com o suporte.",
+        );
       } else {
         setOpcoesTimes(opcoes);
         setOrganogramaGrupos(grupos);
@@ -71,7 +80,11 @@ export function usePrestadorLista({
     return () => {
       cancel = true;
     };
-  }, [permOrg.loading, permOrg.canView]);
+  }, [permOrg.loading, permOrg.canView, orgReloadKey]);
+
+  const recarregarOrganograma = useCallback(() => {
+    setOrgReloadKey((k) => k + 1);
+  }, []);
 
   const carregar = useCallback(async () => {
     setLoading(true);
@@ -240,6 +253,8 @@ export function usePrestadorLista({
     carregar,
     erroCarregar,
     setErroCarregar,
+    erroOrganograma,
+    recarregarOrganograma,
     opcoesTimes,
     organogramaGrupos,
     opcoesVinculoFlat,

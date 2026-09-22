@@ -48,6 +48,8 @@ type Props = {
   tabelaAcoesRh: boolean;
   tabelaAnotacoesRh: boolean;
   loading: boolean;
+  /** Falha na carga da lista — não exibir empty state enganoso. */
+  erroCarregarLista?: boolean;
   filtrada: RhFuncionario[];
   filtradaOrdenada: RhFuncionario[];
   sortPrestadores: { col: PrestadoresSortCol; dir: SortDir };
@@ -78,6 +80,7 @@ export function PrestadorTabelaColaboradores({
   tabelaAcoesRh,
   tabelaAnotacoesRh,
   loading,
+  erroCarregarLista = false,
   filtrada,
   filtradaOrdenada,
   sortPrestadores,
@@ -236,6 +239,10 @@ export function PrestadorTabelaColaboradores({
                 <SkeletonTableRow cols={colunasTabela} />
                 <SkeletonTableRow cols={colunasTabela} />
               </>
+            ) : erroCarregarLista ? (
+              <tr>
+                <td colSpan={colunasTabela} style={{ ...dataTable.tdCenter, padding: "24px 16px" }} aria-hidden />
+              </tr>
             ) : filtrada.length === 0 ? (
               <tr>
                 <td

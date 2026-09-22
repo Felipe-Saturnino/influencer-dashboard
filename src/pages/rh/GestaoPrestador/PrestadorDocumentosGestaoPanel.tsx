@@ -7,7 +7,8 @@ import { descricaoModalExcluirItem, tooltipExcluir } from "../../../lib/excluirI
 import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
 import { useApp } from "../../../context/AppContext";
 import { FONT } from "../../../constants/theme";
-import { getThStyle, getTdStyle, zebraStripe } from "../../../lib/tableStyles";
+import { getDataTableStyle, getDataTableWrapStyle } from "../../../lib/dataTableStyles";
+import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
 import {
   RH_PRESTADOR_DOC_ACCEPT,
   RH_PRESTADOR_DOCUMENTO_CATEGORIA_LABEL,
@@ -41,8 +42,10 @@ export const PrestadorDocumentosGestaoPanel = forwardRef<
   const [pendentesUpload, setPendentesUpload] = useState<PendenteUpload[]>([]);
   const [pendentesExcluir, setPendentesExcluir] = useState<RhFuncionarioSelfMedia[]>([]);
 
-  const { rows, loading, erro, signedById, uploadingCategory, excluindoId, upload, excluir } =
+  const dataTable = useDataTableBlock();
+  const { rows, loading, erro, signedById, uploadingCategory, excluindoId, upload, excluir, recarregar } =
     useRhPrestadorDocumentosCategoria(funcionarioId, { podeEditar });
+  const erroCargaInicial = Boolean(erro && !loading && rows.length === 0);
 
   const categorias = useMemo(() => categoriasDocumentoPorTipoContrato(tipoContrato), [tipoContrato]);
   const idsExcluir = useMemo(() => new Set(pendentesExcluir.map((r) => r.id)), [pendentesExcluir]);
@@ -88,7 +91,7 @@ export const PrestadorDocumentosGestaoPanel = forwardRef<
     );
   }
 
-  if (loading && rows.length === 0) {
+  if (loading && rows.length === 0 && !erro) {
     return (
       <div
         style={{
@@ -108,9 +111,47 @@ export const PrestadorDocumentosGestaoPanel = forwardRef<
     );
   }
 
+  if (erroCargaInicial) {
+    return (
+      <div
+        role="alert"
+        aria-live="polite"
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 10,
+          color: "#e84025",
+          fontSize: 13,
+          fontFamily: FONT.body,
+          marginTop: 4,
+        }}
+      >
+        <span>{erro}</span>
+        <button
+          type="button"
+          onClick={() => void recarregar()}
+          style={{
+            padding: "8px 14px",
+            borderRadius: 10,
+            border: "1px solid rgba(232,64,37,0.35)",
+            background: "transparent",
+            color: "#e84025",
+            fontWeight: 700,
+            fontFamily: FONT.body,
+            cursor: "pointer",
+          }}
+        >
+          Tentar de novo
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div style={{ marginTop: 4 }}>
-      {erro ? (
+      {erro && !erroCargaInicial ? (
         <div role="alert" aria-live="polite" style={{ color: "#e84025", fontSize: 12, fontFamily: FONT.body, marginBottom: 12 }}>
           {erro}
         </div>
@@ -122,8 +163,8 @@ export const PrestadorDocumentosGestaoPanel = forwardRef<
         </p>
       ) : null}
 
-      <div className="app-table-wrap">
-        <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0, tableLayout: "fixed", minWidth: 520 }}>
+      <div className="app-table-wrap" style={getDataTableWrapStyle()}>
+        <table style={getDataTableStyle({ minWidth: 520, tableLayout: "fixed" })}>
           <caption style={{ display: "none" }}>Documentos cadastrais por categoria</caption>
           <colgroup>
             <col style={{ width: "34%" }} />
@@ -132,14 +173,14 @@ export const PrestadorDocumentosGestaoPanel = forwardRef<
           </colgroup>
           <thead>
             <tr>
-              <th scope="col" style={{ ...getThStyle(t), textAlign: "left", overflow: "hidden" }}>
+              <th scope="col" style={{ ...dataTable.thHeader, textAlign: "left", overflow: "hidden" }}>
                 Documento
               </th>
-              <th scope="col" style={{ ...getThStyle(t), textAlign: "left", overflow: "hidden" }}>
+              <th scope="col" style={{ ...dataTable.thHeader, textAlign: "left", overflow: "hidden" }}>
                 Arquivos
               </th>
               {podeEditar ? (
-                <th scope="col" style={{ ...getThStyle(t), textAlign: "center" }}>
+                <th scope="col" style={{ ...dataTable.thHeader, textAlign: "center" }}>
                   Enviar
                 </th>
               ) : null}
@@ -152,10 +193,10 @@ export const PrestadorDocumentosGestaoPanel = forwardRef<
               const inputId = inputIdDocumentoPrestador("gestao", funcionarioId, cat);
               const pendentesCat = pendentesUpload.filter((p) => p.categoria === cat);
               return (
-                <tr key={cat} style={{ background: zebraStripe(i) }}>
+                <tr key={cat} style={{ background: dataTable.zebraRow(i) }}>
                   <td
                     style={{
-                      ...getTdStyle(t),
+                      ...dataTable.tdCenter,
                       textAlign: "left",
                       verticalAlign: "top",
                       fontWeight: 600,
@@ -171,7 +212,7 @@ export const PrestadorDocumentosGestaoPanel = forwardRef<
                   </td>
                   <td
                     style={{
-                      ...getTdStyle(t),
+                      ...dataTable.tdCenter,
                       textAlign: "left",
                       verticalAlign: "top",
                       overflow: "hidden",
@@ -305,7 +346,7 @@ export const PrestadorDocumentosGestaoPanel = forwardRef<
                     )}
                   </td>
                   {podeEditar ? (
-                    <td style={{ ...getTdStyle(t), textAlign: "center", verticalAlign: "top" }}>
+                    <td style={{ ...dataTable.tdCenter, textAlign: "center", verticalAlign: "top" }}>
                       <CampoUploadArquivos
                         id={inputId}
                         label=""

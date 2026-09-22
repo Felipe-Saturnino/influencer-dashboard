@@ -45,10 +45,12 @@ export function PrestadorAcessoPlataformaPanel({
   loading,
   erro,
   dados,
+  onTentarDeNovo,
 }: {
   loading: boolean;
   erro: string | null;
   dados: RhPrestadorAcessoPlataforma | null;
+  onTentarDeNovo?: () => void;
 }) {
   const { theme: t } = useApp();
 
@@ -74,8 +76,39 @@ export function PrestadorAcessoPlataformaPanel({
 
   if (erro) {
     return (
-      <div role="alert" aria-live="polite" style={{ color: "#e84025", fontSize: 13, fontFamily: FONT.body }}>
-        {erro}
+      <div
+        role="alert"
+        aria-live="polite"
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 10,
+          color: "#e84025",
+          fontSize: 13,
+          fontFamily: FONT.body,
+        }}
+      >
+        <span>{erro}</span>
+        {onTentarDeNovo ? (
+          <button
+            type="button"
+            onClick={onTentarDeNovo}
+            style={{
+              padding: "8px 14px",
+              borderRadius: 10,
+              border: "1px solid rgba(232,64,37,0.35)",
+              background: "transparent",
+              color: "#e84025",
+              fontWeight: 700,
+              fontFamily: FONT.body,
+              cursor: "pointer",
+            }}
+          >
+            Tentar de novo
+          </button>
+        ) : null}
       </div>
     );
   }
