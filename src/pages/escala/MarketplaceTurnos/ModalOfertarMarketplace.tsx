@@ -37,6 +37,9 @@ const TIPOS_PUBLICAVEIS: { value: TipoOfertaMarketplace; label: string; ajuda: s
 const MSG_SEM_ESCALA_APROVADA =
   "Nenhuma escala aprovada encontrada para os próximos meses. Assim que for aprovada, os seus dias aparecem aqui.";
 
+const MSG_ERRO_GRADE =
+  "Não foi possível carregar a escala. Se o problema persistir, entre em contato com o suporte.";
+
 const MSG_ANTECEDENCIA_24H =
   "Apenas turnos com início a pelo menos 4h da publicação (horário do turno ofertado ou desejado).";
 
@@ -49,6 +52,9 @@ type Props = {
   contexto: MarketplaceMeuContexto | null;
   /** Células de todos os meses com escala aprovada (não só o mês do carrossel). */
   grade: MarketplaceMinhaGrade;
+  /** Falha de carga da grade — distinta de «sem escala aprovada». */
+  gradeError?: string | null;
+  onRetryGrade?: () => void;
   diasReservados: ReadonlySet<string>;
 };
 
@@ -58,6 +64,8 @@ export function ModalOfertarMarketplace({
   onCriada,
   contexto,
   grade,
+  gradeError = null,
+  onRetryGrade,
   diasReservados,
 }: Props) {
   const { theme: t } = useApp();
@@ -68,6 +76,7 @@ export function ModalOfertarMarketplace({
   const [turnoPorDia, setTurnoPorDia] = useState<Record<string, string>>({});
   const [observacao, setObservacao] = useState("");
   const [erro, setErro] = useState<string | null>(null);
+  const [erroRetentavel, setErroRetentavel] = useState(false);
   const [gravando, setGravando] = useState(false);
 
   useEffect(() => {
@@ -77,6 +86,7 @@ export function ModalOfertarMarketplace({
     setTurnoPorDia({});
     setObservacao("");
     setErro(null);
+    setErroRetentavel(false);
     setGravando(false);
   }, [open]);
 
@@ -84,6 +94,7 @@ export function ModalOfertarMarketplace({
     setDiasSelecionados([]);
     setTurnoPorDia({});
     setErro(null);
+    setErroRetentavel(false);
   }, [tipo]);
 
   const ehFolga = tipo === "venda_folga";
@@ -174,10 +185,12 @@ export function ModalOfertarMarketplace({
 
   function definirTurnoDia(iso: string, turno: string) {
     setErro(null);
+    setErroRetentavel(false);
     setTurnoPorDia((prev) => ({ ...prev, [iso]: turno }));
   }
 
   function validar(): string | null {
+    if (gradeError) return gradeError || MSG_ERRO_GRADE;
     if (!contexto?.funcionarioId) {
       return "Não encontramos o seu cadastro de prestador de estúdio. Entre em contato com o suporte.";
     }
@@ -201,10 +214,12 @@ export function ModalOfertarMarketplace({
     const v = validar();
     if (v) {
       setErro(v);
+      setErroRetentavel(false);
       return;
     }
     setGravando(true);
     setErro(null);
+    setErroRetentavel(false);
 
     const obs = observacao.trim() || null;
     const publicados: string[] = [];
@@ -237,6 +252,7 @@ export function ModalOfertarMarketplace({
     }
 
     const motivo = mensagemErroOfertaMarketplace(falhas[0].error);
+    setErroRetentavel(true);
     if (publicados.length === 0) {
       setErro(motivo);
       return;
@@ -248,7 +264,9 @@ export function ModalOfertarMarketplace({
     );
   }
 
-  const textoAjudaDias = !grade.aprovada
+  const textoAjudaDias = gradeError
+    ? gradeError
+    : !grade.aprovada
     ? MSG_SEM_ESCALA_APROVADA
     : semDias
       ? ehFolga
@@ -392,10 +410,79 @@ export function ModalOfertarMarketplace({
           ) : null}
         </div>
 
+        {gradeError ? (
+          <div
+            role="alert"
+            aria-live="polite"
+            style={{
+              margin: "0 0 12px",
+              fontSize: 13,
+              color: "#e84025",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
+              flexWrap: "wrap",
+            }}
+          >
+            <span>{gradeError}</span>
+            {onRetryGrade ? (
+              <button
+                type="button"
+                onClick={onRetryGrade}
+                style={{
+                  padding: "8px 14px",
+                  borderRadius: 10,
+                  border: "1px solid rgba(232,64,37,0.35)",
+                  background: "transparent",
+                  color: "#e84025",
+                  fontWeight: 700,
+                  fontFamily: FONT.body,
+                  cursor: "pointer",
+                }}
+              >
+                Tentar de novo
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+
         {erro ? (
-          <p style={{ margin: "0 0 12px", fontSize: 13, color: "#e84025" }} role="alert" aria-live="polite">
-            {erro}
-          </p>
+          <div
+            role="alert"
+            aria-live="polite"
+            style={{
+              margin: "0 0 12px",
+              fontSize: 13,
+              color: "#e84025",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
+              flexWrap: "wrap",
+            }}
+          >
+            <span>{erro}</span>
+            {erroRetentavel ? (
+              <button
+                type="button"
+                disabled={gravando}
+                onClick={() => void confirmar()}
+                style={{
+                  padding: "8px 14px",
+                  borderRadius: 10,
+                  border: "1px solid rgba(232,64,37,0.35)",
+                  background: "transparent",
+                  color: "#e84025",
+                  fontWeight: 700,
+                  fontFamily: FONT.body,
+                  cursor: gravando ? "not-allowed" : "pointer",
+                }}
+              >
+                Tentar de novo
+              </button>
+            ) : null}
+          </div>
         ) : null}
 
         <div

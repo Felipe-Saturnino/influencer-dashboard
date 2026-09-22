@@ -39,8 +39,12 @@ export function useHomeEstudioOfertasAtivas(): {
         }
 
         const refMes = refMesPrimeiroDiaISO(new Date());
-        const linhas = await carregarOfertasMarketplace(refMes);
+        const { rows: linhas, error } = await carregarOfertasMarketplace(refMes);
         if (cancelled) return;
+        if (error) {
+          setOfertas({ total: 0, emAnalise: 0 });
+          return;
+        }
 
         let total = 0;
         let emAnalise = 0;

@@ -22,10 +22,12 @@ type Props = {
 export function ModalCancelarOfertaMarketplace({ oferta, onClose, onCancelada }: Props) {
   const { theme: t } = useApp();
   const [erro, setErro] = useState<string | null>(null);
+  const [erroRetentavel, setErroRetentavel] = useState(false);
   const [gravando, setGravando] = useState(false);
 
   useEffect(() => {
     setErro(null);
+    setErroRetentavel(false);
     setGravando(false);
   }, [oferta?.id]);
 
@@ -37,10 +39,12 @@ export function ModalCancelarOfertaMarketplace({ oferta, onClose, onCancelada }:
   async function confirmar() {
     setGravando(true);
     setErro(null);
+    setErroRetentavel(false);
     const res = await cancelarOfertaMarketplace(oferta!.id);
     setGravando(false);
     if (!res.ok) {
       setErro(mensagemErroOfertaMarketplace(res.error));
+      setErroRetentavel(true);
       return;
     }
     onCancelada();
@@ -62,9 +66,41 @@ export function ModalCancelarOfertaMarketplace({ oferta, onClose, onCancelada }:
         </p>
 
         {erro ? (
-          <p style={{ margin: "0 0 12px", fontSize: 13, color: "#e84025" }} role="alert" aria-live="polite">
-            {erro}
-          </p>
+          <div
+            role="alert"
+            aria-live="polite"
+            style={{
+              margin: "0 0 12px",
+              fontSize: 13,
+              color: "#e84025",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
+              flexWrap: "wrap",
+            }}
+          >
+            <span>{erro}</span>
+            {erroRetentavel ? (
+              <button
+                type="button"
+                disabled={gravando}
+                onClick={() => void confirmar()}
+                style={{
+                  padding: "8px 14px",
+                  borderRadius: 10,
+                  border: "1px solid rgba(232,64,37,0.35)",
+                  background: "transparent",
+                  color: "#e84025",
+                  fontWeight: 700,
+                  fontFamily: FONT.body,
+                  cursor: gravando ? "not-allowed" : "pointer",
+                }}
+              >
+                Tentar de novo
+              </button>
+            ) : null}
+          </div>
         ) : null}
 
         <div

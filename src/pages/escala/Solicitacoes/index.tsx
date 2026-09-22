@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
-import { Archive, ChevronLeft, ChevronRight, Inbox, Loader2, MoreHorizontal } from "lucide-react";
+import { Archive, ChevronLeft, ChevronRight, Inbox, Loader2 } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
@@ -41,6 +41,7 @@ import {
   idxMesInicialEscalaCarrossel,
 } from "../../../lib/escalaMesCarrosselOverviewStyle";
 import { supabase } from "../../../lib/supabase";
+import { fetchAllPages } from "../../../lib/supabasePaginate";
 import type { RhFuncionario } from "../../../types/rhFuncionario";
 import {
   CALENDARIO_TIMES_FILTRO_ORDEM,
@@ -52,12 +53,25 @@ import {
   type StaffTimeRow,
 } from "../../../lib/rhCalendarioStaffFiltroHelpers";
 import { buscarRhFuncionarioAtivoPorEmailLogin } from "../../../lib/rhFuncionarioLoginMatch";
-import { BRAND } from "../../../lib/dashboardConstants";
 import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
 
-const MOCK_SOLICITACOES: LinhaOfertaMarketplace[] = [];
+/** Colunas mínimas para filtros Time/Staff — sem select(*). */
+const SOLICITACOES_FUNCIONARIO_SELECT =
+  "id, nome, staff_nickname, org_time_id, org_gerencia_id, status, email, email_spin";
 
-const MSG_VAZIO_SOLICITACOES = "Sem solicitações para os filtros selecionados.";
+const MSG_ERRO_STAFF =
+  "Não foi possível carregar os filtros de staff. Se o problema persistir, entre em contato com o suporte.";
+const MSG_ERRO_TREINAMENTO =
+  "Não foi possível carregar o filtro Treinamento. Se o problema persistir, entre em contato com o suporte.";
+
+/**
+ * Stub (C28 S1): não há RPC/tabela dedicada a Solicitações de Cliente (`escala_solicitacoes`).
+ * RH Solicitações (`rh_solicitacoes`) e Marketplace são frentes distintas — não inventar fila aqui.
+ */
+const LINHAS_SOLICITACOES: LinhaOfertaMarketplace[] = [];
+
+const MSG_STUB_SOLICITACOES =
+  "Ainda não há solicitações de cliente nesta página — a integração com a fonte oficial ainda não está disponível.";
 
 type SolicitacaoSortCol =
   | "dataAbertura"
@@ -160,8 +174,10 @@ export default function EscalaSolicitacoesPage() {
   const [prestadores, setPrestadores] = useState<RhFuncionario[]>([]);
   const [loadingStaff, setLoadingStaff] = useState(true);
   const [erroStaff, setErroStaff] = useState<string | null>(null);
+  const [staffRefreshTick, setStaffRefreshTick] = useState(0);
   const [treinamentoGerenciaId, setTreinamentoGerenciaId] = useState<string | null>(null);
   const [treinamentoTimeIdsList, setTreinamentoTimeIdsList] = useState<string[]>([]);
+  const [avisoTreinamento, setAvisoTreinamento] = useState<string | null>(null);
 
   const hoje = useMemo(() => new Date(), []);
   const mesesDisponiveis = useMemo(() => getMesesDisponiveisEscalaCarrossel(hoje), [hoje]);
@@ -198,12 +214,14 @@ export default function EscalaSolicitacoesPage() {
     setErroStaff(null);
     const { data, error } = await supabase.rpc("rh_staff_times_filtrados");
     if (error) {
-      setErroStaff("Não foi possível carregar os times de staff.");
+      setErroStaff(MSG_ERRO_STAFF);
       setTimes([]);
       return;
     }
     setTimes((data ?? []) as StaffTimeRow[]);
   }, []);
+
+  const retryStaff = useCallback(() => setStaffRefreshTick((n) => n + 1), []);
 
   const timeIds = useMemo(() => times.map((x) => x.id), [times]);
   const treinamentoTimeIds = useMemo(() => new Set(treinamentoTimeIdsList), [treinamentoTimeIdsList]);
@@ -218,7 +236,7 @@ export default function EscalaSolicitacoesPage() {
     }
     setLoadingStaff(true);
     void carregarTimes().finally(() => setLoadingStaff(false));
-  }, [perm.loading, perm.canView, carregarTimes]);
+  }, [perm.loading, perm.canView, carregarTimes, staffRefreshTick]);
 
   useEffect(() => {
     if (perm.loading || perm.canView !== "proprios") return;
@@ -229,26 +247,31 @@ export default function EscalaSolicitacoesPage() {
     }
     let cancelled = false;
     setLoadingStaff(true);
+    setErroStaff(null);
     void (async () => {
-      const row = await buscarRhFuncionarioAtivoPorEmailLogin(emailEfetivo);
-      if (cancelled) return;
-      if (row) {
-        setPrestadores([row]);
+      try {
+        const row = await buscarRhFuncionarioAtivoPorEmailLogin(emailEfetivo);
+        if (cancelled) return;
+        setPrestadores(row ? [row] : []);
         setErroStaff(null);
-      } else {
-        setPrestadores([]);
-        setErroStaff(null);
+      } catch {
+        if (!cancelled) {
+          setPrestadores([]);
+          setErroStaff(MSG_ERRO_STAFF);
+        }
+      } finally {
+        if (!cancelled) setLoadingStaff(false);
       }
-      setLoadingStaff(false);
     })();
     return () => {
       cancelled = true;
     };
-  }, [perm.loading, perm.canView, emailEfetivo]);
+  }, [perm.loading, perm.canView, emailEfetivo, staffRefreshTick]);
 
   useEffect(() => {
     if (perm.loading || perm.canView === "nao") return;
     let cancelled = false;
+    setAvisoTreinamento(null);
     void (async () => {
       const { data, error } = await supabase
         .from("rh_org_gerencias")
@@ -256,7 +279,12 @@ export default function EscalaSolicitacoesPage() {
         .eq("status", "ativo")
         .ilike("nome", "%treinamento%");
       if (cancelled) return;
-      if (error || !data?.length) {
+      if (error) {
+        setTreinamentoGerenciaId(null);
+        setAvisoTreinamento(MSG_ERRO_TREINAMENTO);
+        return;
+      }
+      if (!data?.length) {
         setTreinamentoGerenciaId(null);
         return;
       }
@@ -266,7 +294,7 @@ export default function EscalaSolicitacoesPage() {
     return () => {
       cancelled = true;
     };
-  }, [perm.loading, perm.canView]);
+  }, [perm.loading, perm.canView, staffRefreshTick]);
 
   useEffect(() => {
     if (perm.loading || perm.canView === "nao") return;
@@ -275,53 +303,88 @@ export default function EscalaSolicitacoesPage() {
     void (async () => {
       const idsStaff = times.map((x) => x.id);
       const merged = new Map<string, RhFuncionario>();
+      let falhou = false;
 
-      if (idsStaff.length > 0) {
-        const { data, error } = await supabase
-          .from("rh_funcionarios")
-          .select("*")
-          .in("org_time_id", idsStaff)
-          .in("status", ["ativo", "indisponivel"])
-          .order("nome", { ascending: true });
-        if (!cancelled && !error) (data ?? []).forEach((p: RhFuncionario) => merged.set(p.id, p));
-      }
-
-      let ttIdsLocal: string[] = [];
-      if (treinamentoGerenciaId) {
-        const { data: tt } = await supabase
-          .from("rh_org_times")
-          .select("id")
-          .eq("gerencia_id", treinamentoGerenciaId)
-          .eq("status", "ativo");
-        ttIdsLocal = (tt ?? []).map((r: { id: string }) => r.id);
-        if (!cancelled) setTreinamentoTimeIdsList(ttIdsLocal);
-
-        let q = supabase
-          .from("rh_funcionarios")
-          .select("*")
-          .in("status", ["ativo", "indisponivel"])
-          .order("nome", { ascending: true });
-        if (ttIdsLocal.length > 0) {
-          q = q.or(`org_gerencia_id.eq.${treinamentoGerenciaId},org_time_id.in.(${ttIdsLocal.join(",")})`);
-        } else {
-          q = q.eq("org_gerencia_id", treinamentoGerenciaId);
+      if (idsStaff.length === 0 && !treinamentoGerenciaId) {
+        if (!cancelled) {
+          setTreinamentoTimeIdsList([]);
+          setPrestadores([]);
         }
-        const { data: d2, error: e2 } = await q;
-        if (!cancelled && !e2) (d2 ?? []).forEach((p: RhFuncionario) => merged.set(p.id, p));
-      } else if (!cancelled) {
-        setTreinamentoTimeIdsList([]);
+        return;
       }
 
-      if (!cancelled) {
-        setPrestadores(
-          [...merged.values()].sort((a, b) => (a.nome ?? "").localeCompare(b.nome ?? "", "pt-BR")),
-        );
+      try {
+        if (idsStaff.length > 0) {
+          const rows = await fetchAllPages<RhFuncionario>(async (from, to) => {
+            const { data, error } = await supabase
+              .from("rh_funcionarios")
+              .select(SOLICITACOES_FUNCIONARIO_SELECT)
+              .in("org_time_id", idsStaff)
+              .in("status", ["ativo", "indisponivel"])
+              .order("nome", { ascending: true })
+              .order("id", { ascending: true })
+              .range(from, to);
+            return { data: (data as RhFuncionario[] | null) ?? [], error };
+          });
+          if (cancelled) return;
+          for (const p of rows) merged.set(p.id, p);
+        }
+
+        let ttIdsLocal: string[] = [];
+        if (treinamentoGerenciaId) {
+          const { data: tt, error: ttErr } = await supabase
+            .from("rh_org_times")
+            .select("id")
+            .eq("gerencia_id", treinamentoGerenciaId)
+            .eq("status", "ativo");
+          if (ttErr) {
+            falhou = true;
+          } else {
+            ttIdsLocal = (tt ?? []).map((r: { id: string }) => r.id);
+            if (!cancelled) setTreinamentoTimeIdsList(ttIdsLocal);
+
+            const rowsTt = await fetchAllPages<RhFuncionario>(async (from, to) => {
+              let q = supabase
+                .from("rh_funcionarios")
+                .select(SOLICITACOES_FUNCIONARIO_SELECT)
+                .in("status", ["ativo", "indisponivel"])
+                .order("nome", { ascending: true })
+                .order("id", { ascending: true });
+              if (ttIdsLocal.length > 0) {
+                q = q.or(
+                  `org_gerencia_id.eq.${treinamentoGerenciaId},org_time_id.in.(${ttIdsLocal.join(",")})`,
+                );
+              } else {
+                q = q.eq("org_gerencia_id", treinamentoGerenciaId);
+              }
+              const { data, error } = await q.range(from, to);
+              return { data: (data as RhFuncionario[] | null) ?? [], error };
+            });
+            if (cancelled) return;
+            for (const p of rowsTt) merged.set(p.id, p);
+          }
+        } else if (!cancelled) {
+          setTreinamentoTimeIdsList([]);
+        }
+      } catch {
+        falhou = true;
       }
+
+      if (cancelled) return;
+      if (falhou) {
+        setPrestadores([]);
+        setErroStaff(MSG_ERRO_STAFF);
+        return;
+      }
+      setErroStaff(null);
+      setPrestadores(
+        [...merged.values()].sort((a, b) => (a.nome ?? "").localeCompare(b.nome ?? "", "pt-BR")),
+      );
     })();
     return () => {
       cancelled = true;
     };
-  }, [perm.loading, perm.canView, times, treinamentoGerenciaId]);
+  }, [perm.loading, perm.canView, times, treinamentoGerenciaId, staffRefreshTick]);
 
   const filtroTimeSlug = useMemo((): EscalaTimeFiltro => {
     if (filtroTimeIds.length === 0) return "todos";
@@ -405,7 +468,7 @@ export default function EscalaSolicitacoesPage() {
     });
   }, [staffMultiselectItems]);
 
-  const linhasBase = MOCK_SOLICITACOES;
+  const linhasBase = LINHAS_SOLICITACOES;
 
   const staffFiltroId = filtroStaffIds[0];
 
@@ -459,7 +522,7 @@ export default function EscalaSolicitacoesPage() {
     if (sorted.length === 0) {
       return (
         <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
-          {MSG_VAZIO_SOLICITACOES}
+          {MSG_STUB_SOLICITACOES}
         </div>
       );
     }
@@ -545,9 +608,6 @@ export default function EscalaSolicitacoesPage() {
                   onSort={onSortSolicitacao}
                 />
               )}
-              <th scope="col" style={dataTable.thHeader}>
-                Ações
-              </th>
             </tr>
           </thead>
           <tbody>
@@ -576,25 +636,6 @@ export default function EscalaSolicitacoesPage() {
                   {comStatus && (
                     <td style={dataTable.tdCenter}>{r.status ? OFERTA_STATUS_LABEL[r.status] : "—"}</td>
                   )}
-                  <td style={dataTable.tdCenter}>
-                    <div style={{ display: "flex", justifyContent: "center" }}>
-                      <button
-                        type="button"
-                        aria-label="Ações da solicitação"
-                        title="Ações da solicitação"
-                        style={{
-                          border: `1px solid ${t.cardBorder}`,
-                          background: t.inputBg,
-                          borderRadius: 8,
-                          padding: 6,
-                          cursor: "pointer",
-                          color: t.text,
-                        }}
-                      >
-                        <MoreHorizontal size={16} aria-hidden="true" />
-                      </button>
-                    </div>
-                  </td>
                 </tr>
               );
             })}
@@ -666,9 +707,7 @@ export default function EscalaSolicitacoesPage() {
           <Loader2 size={14} className="app-lucide-spin" aria-hidden="true" color="var(--brand-primary, #7c3aed)" />
           {soProprios ? "Carregando…" : "Carregando staff…"}
         </span>
-      ) : erroStaff ? (
-        <span style={{ color: BRAND.vermelho, fontSize: 12, fontFamily: FONT.body }}>{erroStaff}</span>
-      ) : (
+      ) : erroStaff ? null : (
         <>
           <FiltroSolicitacoesTipoAcaoSelect value={filtroTipo} onChange={setFiltroTipo} />
           {showTimeFilter ? (
@@ -720,6 +759,86 @@ export default function EscalaSolicitacoesPage() {
         brand={brand}
         t={t}
       />
+
+      {erroStaff ? (
+        <div
+          role="alert"
+          aria-live="polite"
+          style={{
+            margin: "0 0 14px",
+            padding: "10px 14px",
+            borderRadius: 10,
+            fontSize: 13,
+            color: "#e84025",
+            border: "1px solid rgba(232,64,37,0.35)",
+            background: "rgba(232,64,37,0.08)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+            flexWrap: "wrap",
+            fontFamily: FONT.body,
+          }}
+        >
+          <span>{erroStaff}</span>
+          <button
+            type="button"
+            onClick={retryStaff}
+            style={{
+              padding: "8px 14px",
+              borderRadius: 10,
+              border: "1px solid rgba(232,64,37,0.35)",
+              background: "transparent",
+              color: "#e84025",
+              fontWeight: 700,
+              fontFamily: FONT.body,
+              cursor: "pointer",
+            }}
+          >
+            Tentar de novo
+          </button>
+        </div>
+      ) : null}
+
+      {avisoTreinamento && !erroStaff ? (
+        <div
+          role="alert"
+          aria-live="polite"
+          style={{
+            margin: "0 0 14px",
+            padding: "10px 14px",
+            borderRadius: 10,
+            fontSize: 13,
+            color: "#b45309",
+            border: "1px solid rgba(245,158,11,0.45)",
+            background: "rgba(245,158,11,0.1)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+            flexWrap: "wrap",
+            fontFamily: FONT.body,
+          }}
+        >
+          <span>{avisoTreinamento}</span>
+          <button
+            type="button"
+            onClick={retryStaff}
+            style={{
+              padding: "8px 14px",
+              borderRadius: 10,
+              border: "1px solid rgba(245,158,11,0.45)",
+              background: "transparent",
+              color: "#b45309",
+              fontWeight: 700,
+              fontFamily: FONT.body,
+              cursor: "pointer",
+            }}
+          >
+            Tentar de novo
+          </button>
+        </div>
+      ) : null}
 
       <div style={getFilterBarWrapperStyle(brand, t)}>
         <div style={filterBarSection(false)} role="group" aria-label="Período, tipo de ação, time e staff">
