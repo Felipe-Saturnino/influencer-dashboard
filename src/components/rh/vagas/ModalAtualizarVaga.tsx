@@ -5,10 +5,12 @@ import { FONT } from "../../../constants/theme";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { useListboxKeyboardNavigation } from "../../../hooks/useListboxKeyboardNavigation";
 import { carregarOpcoesTimesOrganograma } from "../../../lib/rhOrganogramaFetch";
+import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
+import { fetchAllPages } from "../../../lib/supabasePaginate";
+import { textoContemBusca } from "../../../lib/searchText";
 import {
   dataIsoDateOnly,
   hojeIsoDate,
-  normalizarBuscaVaga,
   tipoVagaParaEdicao,
   type RhVagaTipoSelecionavel,
 } from "../../../lib/rhVagasFormat";
@@ -37,11 +39,10 @@ type AcaoAtualizar = "" | "reabrir" | "atualizar" | "concluir" | "cancelar";
 
 type HcRow = { id: string; nome: string };
 
-function ctaGradient(brand: ReturnType<typeof useDashboardBrand>): string {
-  return brand.useBrand
-    ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
-    : "linear-gradient(135deg, var(--brand-action, #7c3aed), var(--brand-contrast, #1e36f8))";
-}
+const ERRO_CARGA_HC =
+  "Não foi possível carregar os prestadores. Se o problema persistir, entre em contato com o suporte.";
+const ERRO_SALVAR_VAGA =
+  "Não foi possível atualizar a vaga. Se o problema persistir, entre em contato com o suporte.";
 
 function opcoesAcaoSelect(status: RhVagaStatus): { value: AcaoAtualizar; label: string }[] {
   if (status === "cancelada") return [{ value: "reabrir", label: "Reabrir vaga" }];
@@ -192,27 +193,33 @@ export function ModalAtualizarVaga({
     let cancelled = false;
     setCarregandoHc(true);
     setErroHc(null);
-    void supabase
-      .from("rh_funcionarios")
-      .select("id, nome")
-      .in("status", ["ativo", "indisponivel"])
-      .order("nome")
-      .limit(5000)
-      .then(({ data, error }) => {
+    void (async () => {
+      try {
+        const data = await fetchAllPages(async (from, to) =>
+          supabase
+            .from("rh_funcionarios")
+            .select("id, nome")
+            .in("status", ["ativo", "indisponivel"])
+            .order("nome")
+            .range(from, to),
+        );
         if (cancelled) return;
-        setCarregandoHc(false);
-        if (error) setErroHc(error.message);
-        else setFuncionarios((data ?? []) as HcRow[]);
-      });
+        setFuncionarios((data ?? []) as HcRow[]);
+      } catch (e) {
+        console.error("[rh_vagas] HC concluir", e);
+        if (!cancelled) setErroHc(ERRO_CARGA_HC);
+      } finally {
+        if (!cancelled) setCarregandoHc(false);
+      }
+    })();
     return () => {
       cancelled = true;
     };
   }, [open, passo, accao]);
 
   const filtradosHc = useMemo(() => {
-    const q = normalizarBuscaVaga(buscaHc);
     let list = funcionarios;
-    if (q) list = list.filter((f) => normalizarBuscaVaga(f.nome).includes(q));
+    if (buscaHc.trim()) list = list.filter((f) => textoContemBusca(f.nome, buscaHc));
     return list.slice(0, 500);
   }, [funcionarios, buscaHc]);
   const funcionariosKeyboard = useListboxKeyboardNavigation({
@@ -365,7 +372,7 @@ export function ModalAtualizarVaga({
     const { error } = await supabase.from("rh_vagas").update(patch).eq("id", vaga.id);
     setSalvando(false);
     if (error) {
-      setErroSalvar(error.message);
+      console.error("[rh_vagas] atualizar", error); setErroSalvar(ERRO_SALVAR_VAGA);
       return;
     }
     onSalvo();
@@ -429,7 +436,7 @@ export function ModalAtualizarVaga({
                 padding: "10px 18px",
                 borderRadius: 10,
                 border: "none",
-                background: ctaGradient(brand),
+                background: getCtaCriarGradient(brand),
                 color: "#fff",
                 fontWeight: 700,
                 fontSize: 13,
@@ -740,7 +747,7 @@ export function ModalAtualizarVaga({
                 padding: "10px 18px",
                 borderRadius: 10,
                 border: "none",
-                background: ctaGradient(brand),
+                background: getCtaCriarGradient(brand),
                 color: "#fff",
                 fontWeight: 700,
                 fontSize: 13,

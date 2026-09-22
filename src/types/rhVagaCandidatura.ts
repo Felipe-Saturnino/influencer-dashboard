@@ -32,6 +32,7 @@ export type RhVagaCandidaturaVagaJoin = Pick<
   | "titulo"
   | "tipo_vaga"
   | "status"
+  | "data_fim_inscricoes"
   | "necessario_video_apresentacao"
   | "necessario_turno"
 > | null;

@@ -25,6 +25,7 @@ import {
 } from "../../../lib/rhVagasFormat";
 import type { RhVagaCandidaturaEtapa, RhVagaCandidaturaRow } from "../../../types/rhVagaCandidatura";
 import type { RhVagaTipo } from "../../../types/rhVaga";
+import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
 import { CampoUploadArquivos } from "../../CampoUploadArquivos";
 import { ModalBase, ModalHeader, MODAL_SCROLL_FOCUS_SAFE_PAD } from "../../OperacoesModal";
 
@@ -37,6 +38,13 @@ const CANDIDATURA_TAB_ICONS = {
   etapas: <GitBranch {...FILTRO_BAR_TAB_ICON_PROPS} />,
 } as const;
 
+const ERRO_CARGA_CANDIDATURA =
+  "Não foi possível carregar a candidatura. Se o problema persistir, entre em contato com o suporte.";
+const ERRO_SALVAR_CANDIDATURA =
+  "Não foi possível salvar. Se o problema persistir, entre em contato com o suporte.";
+const ERRO_ETAPA_CANDIDATURA =
+  "Não foi possível atualizar a etapa. Se o problema persistir, entre em contato com o suporte.";
+
 type AnotacaoRow = { id: string; conteudo: string; created_at: string; created_by: string | null; autor?: { name: string | null } | null };
 type AnexoRow = {
   id: string;
@@ -46,12 +54,6 @@ type AnexoRow = {
   created_by: string | null;
   autor?: { name: string | null } | null;
 };
-
-function ctaGradient(brand: ReturnType<typeof useDashboardBrand>): string {
-  return brand.useBrand
-    ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
-    : "linear-gradient(135deg, var(--brand-action, #7c3aed), var(--brand-contrast, #1e36f8))";
-}
 
 function tipoInterna(tipo: RhVagaTipo | undefined): boolean {
   return tipo === "interna" || tipo === "mista";
@@ -97,7 +99,8 @@ export function ModalCandidaturaVer({
     const { data, error } = await supabase.from("rh_vaga_candidaturas").select(RH_CANDIDATURAS_SELECT).eq("id", candidaturaId).maybeSingle();
     setLoading(false);
     if (error || !data) {
-      setErro(error?.message ?? "Candidatura não encontrada.");
+      if (error) console.error("[rh_vaga_candidaturas] ver", error);
+      setErro(error ? ERRO_CARGA_CANDIDATURA : "Candidatura não encontrada.");
       setC(null);
       return;
     }
@@ -194,7 +197,7 @@ export function ModalCandidaturaVer({
     }
     setSalvandoAnotacao(false);
     if (error) {
-      setErro(error.message);
+      console.error("[rh_vaga_candidaturas] ver", error); setErro(ERRO_SALVAR_CANDIDATURA);
       return;
     }
     setTextoAnotacao("");
@@ -250,7 +253,7 @@ export function ModalCandidaturaVer({
     const { error } = await supabase.from("rh_vaga_candidaturas").update(patch).eq("id", c.id);
     if (error) {
       setSalvandoEtapa(false);
-      setErroEtapa(error.message);
+      console.error("[rh_vaga_candidaturas] etapa", error); setErroEtapa(ERRO_ETAPA_CANDIDATURA);
       return;
     }
     await inserirHistoricoCandidatura(supabase, {
@@ -481,7 +484,7 @@ export function ModalCandidaturaVer({
                       padding: "8px 14px",
                       borderRadius: 10,
                       border: "none",
-                      background: ctaGradient(brand),
+                      background: getCtaCriarGradient(brand),
                       color: "#fff",
                       fontWeight: 700,
                       fontSize: 13,
@@ -620,7 +623,7 @@ export function ModalCandidaturaVer({
                   padding: "10px 18px",
                   borderRadius: 10,
                   border: "none",
-                  background: ctaGradient(brand),
+                  background: getCtaCriarGradient(brand),
                   color: "#fff",
                   fontWeight: 700,
                   fontSize: 13,

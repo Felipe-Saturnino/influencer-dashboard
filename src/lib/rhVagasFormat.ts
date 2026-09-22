@@ -1,6 +1,6 @@
 import type { RhVagaCandidaturaEtapa, RhVagasCandidaturasFiltroTipo } from "../types/rhVagaCandidatura";
 import type { RhVagaRow, RhVagaStatus, RhVagaTipo } from "../types/rhVaga";
-import { normalizarTextoBusca } from "./searchText";
+import { normalizarTextoBusca, textoContemBuscaEmAlgum } from "./searchText";
 
 export function hojeIsoDate(): string {
   const d = new Date();
@@ -80,13 +80,13 @@ export function organogramaLabelDeVaga(v: RhVagaRow): string {
 }
 
 export function vagaPassaBuscaNomeOuDiretoria(v: RhVagaRow, buscaRaw: string): boolean {
-  const q = normalizarBuscaVaga(buscaRaw);
-  if (!q) return true;
-  if (normalizarBuscaVaga(v.titulo).includes(q)) return true;
-  if (v.codigo_vaga && normalizarBuscaVaga(v.codigo_vaga).includes(q)) return true;
   const org = organogramaLabelDeVaga(v);
-  if (org !== "—" && normalizarBuscaVaga(org).includes(q)) return true;
-  return false;
+  return textoContemBuscaEmAlgum(
+    buscaRaw,
+    v.titulo,
+    v.codigo_vaga,
+    org !== "—" ? org : null,
+  );
 }
 
 export function labelVagaComCodigo(v: Pick<RhVagaRow, "codigo_vaga" | "titulo">): string {
