@@ -63,6 +63,7 @@ function LinhaAnexo({
   t: Theme;
 }) {
   const [abrindo, setAbrindo] = useState(false);
+  const [erroAnexo, setErroAnexo] = useState<string | null>(null);
 
   const label = fileName?.trim() || "Anexo";
   const temArquivo = Boolean(storagePath?.trim());
@@ -70,9 +71,13 @@ function LinhaAnexo({
   async function abrirAnexo() {
     if (!storagePath?.trim() || abrindo) return;
     setAbrindo(true);
+    setErroAnexo(null);
     const url = await urlAssinadaAtestadoPresencaCalendario(storagePath);
     setAbrindo(false);
-    if (!url) return;
+    if (!url) {
+      setErroAnexo("Não foi possível abrir o anexo. Se o problema persistir, entre em contato com o suporte.");
+      return;
+    }
     window.open(url, "_blank", "noopener,noreferrer");
   }
 
@@ -91,26 +96,33 @@ function LinhaAnexo({
         Anexo
       </div>
       {temArquivo ? (
-        <button
-          type="button"
-          onClick={() => void abrirAnexo()}
-          disabled={abrindo}
-          aria-label={`Abrir anexo ${label} em nova aba`}
-          title={`Abrir anexo ${label} em nova aba`}
-          style={{
-            padding: 0,
-            border: "none",
-            background: "transparent",
-            color: "var(--brand-primary, #7c3aed)",
-            fontFamily: FONT.body,
-            fontSize: 14,
-            fontWeight: 600,
-            textDecoration: "underline",
-            cursor: abrindo ? "wait" : "pointer",
-          }}
-        >
-          {abrindo ? "Carregando…" : label}
-        </button>
+        <>
+          <button
+            type="button"
+            onClick={() => void abrirAnexo()}
+            disabled={abrindo}
+            aria-label={`Abrir anexo ${label} em nova aba`}
+            title={`Abrir anexo ${label} em nova aba`}
+            style={{
+              padding: 0,
+              border: "none",
+              background: "transparent",
+              color: "var(--brand-primary, #7c3aed)",
+              fontFamily: FONT.body,
+              fontSize: 14,
+              fontWeight: 600,
+              textDecoration: "underline",
+              cursor: abrindo ? "wait" : "pointer",
+            }}
+          >
+            {abrindo ? "Carregando…" : label}
+          </button>
+          {erroAnexo ? (
+            <div role="alert" style={{ marginTop: 6, fontSize: 12, color: "#e84025", fontFamily: FONT.body }}>
+              {erroAnexo}
+            </div>
+          ) : null}
+        </>
       ) : (
         <div style={{ fontSize: 14, color: t.text, fontFamily: FONT.body }}>—</div>
       )}

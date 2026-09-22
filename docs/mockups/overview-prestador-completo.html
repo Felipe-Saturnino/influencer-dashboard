@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Mockup — Overview Prestador (completo · Escala · Mesa/OCR · Performance)</title>
+<title>Mockup — Overview Prestador (Ver=Próprios · Prestador)</title>
 <style>
   :root {
     --brand-action: #7c3aed;
@@ -260,6 +260,30 @@
     border: 1px solid var(--card-border); border-radius: 12px;
     padding: 12px 14px; background: var(--input-bg);
   }
+  .kpi--ok {
+    border-color: color-mix(in srgb, #22c55e 45%, var(--card-border));
+    background: color-mix(in srgb, #22c55e 10%, var(--input-bg));
+  }
+  .kpi--ok .kpi__label { color: #22c55e; }
+  .kpi--ok .kpi__value { color: #22c55e; }
+  .kpi--wait {
+    border-color: color-mix(in srgb, #f59e0b 45%, var(--card-border));
+    background: color-mix(in srgb, #f59e0b 10%, var(--input-bg));
+  }
+  .kpi--wait .kpi__label { color: #f59e0b; }
+  .kpi--wait .kpi__value { color: #f59e0b; }
+  .kpi--neutral {
+    border-color: color-mix(in srgb, #6b7280 45%, var(--card-border));
+    background: color-mix(in srgb, #6b7280 10%, var(--input-bg));
+  }
+  .kpi--neutral .kpi__label { color: #6b7280; }
+  .kpi--neutral .kpi__value { color: #6b7280; }
+  .kpi--total {
+    border-color: color-mix(in srgb, var(--brand-contrast) 40%, var(--card-border));
+    background: color-mix(in srgb, var(--brand-contrast) 8%, var(--input-bg));
+  }
+  .kpi--total .kpi__label { color: var(--brand-contrast); }
+  .kpi--total .kpi__value { color: var(--brand-contrast); }
   .kpi__label {
     font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
     color: var(--text-muted); margin-bottom: 6px;
@@ -328,22 +352,35 @@
 </head>
 <body data-theme="light">
 
-<!-- ══ Barra do mockup (não é produto) ═══════════════════════════ -->
-<div class="mock-bar">
-  <span class="mock-bar__label">Escopo</span>
-  <button type="button" class="mock-btn" data-visao="time" aria-pressed="true">Visão de time (líder)</button>
-  <button type="button" class="mock-btn" data-visao="ind" aria-pressed="false">Visão individual (Próprios)</button>
-  <span class="mock-sep" aria-hidden="true"></span>
-  <span class="mock-bar__label">Time</span>
-  <button type="button" class="mock-btn" data-time="gp" aria-pressed="true">Game Presenter</button>
-  <button type="button" class="mock-btn" data-time="shuf" aria-pressed="false">Shuffler</button>
-  <button type="button" class="mock-btn" data-time="sl" aria-pressed="false">Shift Leader</button>
-  <button type="button" class="mock-btn" data-time="sm" aria-pressed="false">Service Manager</button>
-  <span class="mock-sep" aria-hidden="true"></span>
-  <span class="mock-bar__label">Indiv.</span>
-  <button type="button" class="mock-btn" id="btn-mock-atestado" aria-pressed="true" title="Simula card Atestados no Absenteísmo">Atestados &gt; 0</button>
-  <span class="mock-sep" aria-hidden="true"></span>
-  <button type="button" class="mock-btn" id="btn-theme" aria-pressed="false">Dark</button>
+<!-- ══ Barra do mockup (não é produto) — escopo: Ver=Próprios · Prestador ══ -->
+<div class="mock-bar" style="flex-direction:column;align-items:stretch;gap:8px">
+  <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px">
+    <span class="mock-bar__label">Persona</span>
+    <button type="button" class="mock-btn" aria-pressed="true" disabled style="opacity:1;cursor:default">Prestador (Ver = Próprios)</button>
+    <span class="mock-sep" aria-hidden="true"></span>
+    <span class="mock-bar__label">Absenteísmo</span>
+    <button type="button" class="mock-btn" id="btn-mock-atestado" aria-pressed="true" title="Simula card Atestados no Absenteísmo">Atestados &gt; 0</button>
+    <button type="button" class="mock-btn" id="btn-mock-talks" aria-pressed="true" title="Simula RH Talks aplicáveis">RH Talks &gt; 0</button>
+    <span class="mock-sep" aria-hidden="true"></span>
+    <button type="button" class="mock-btn" id="btn-theme" aria-pressed="false">Dark</button>
+  </div>
+  <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px">
+    <span class="mock-bar__label">Canónicos</span>
+    <button type="button" class="mock-btn" data-time="gp" aria-pressed="true">Game Presenter</button>
+    <button type="button" class="mock-btn" data-time="shuf" aria-pressed="false">Shuffler</button>
+    <button type="button" class="mock-btn" data-time="sl" aria-pressed="false">Shift Leader</button>
+    <button type="button" class="mock-btn" data-time="sm" aria-pressed="false">Service Manager</button>
+  </div>
+  <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px">
+    <span class="mock-bar__label">Outros</span>
+    <button type="button" class="mock-btn" data-time="academy" aria-pressed="false">Academy</button>
+    <button type="button" class="mock-btn" data-time="people" aria-pressed="false">People</button>
+    <button type="button" class="mock-btn" data-time="comercial" aria-pressed="false">Comercial</button>
+    <button type="button" class="mock-btn" data-time="financeiro" aria-pressed="false">Financeiro</button>
+    <button type="button" class="mock-btn" data-time="di" aria-pressed="false">Data Intelligence</button>
+    <button type="button" class="mock-btn" data-time="marketing" aria-pressed="false">Marketing</button>
+    <button type="button" class="mock-btn" data-time="outro" aria-pressed="false">Outro time</button>
+  </div>
 </div>
 
 <div class="shell">
@@ -368,11 +405,12 @@
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
       </button>
       <span class="pill">Histórico</span>
-      <span class="pill pill--on" id="pill-time">
+      <!-- Prestador Ver=Próprios: Time/Staff ocultos (produto) -->
+      <span class="pill pill--on hidden" id="pill-time">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 21a6 6 0 0 0-12 0"/><circle cx="12" cy="8" r="4"/></svg>
         <span id="pill-time-label">Game Presenter</span>
       </span>
-      <span class="pill" id="pill-staff">
+      <span class="pill hidden" id="pill-staff">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><circle cx="8" cy="12" r="2.2"/><path d="M14 10h4M14 14h4"/></svg>
         <span id="pill-staff-label">Todo o time</span>
       </span>
@@ -391,14 +429,18 @@
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg>
           KPIs de Performance
         </button>
+        <button type="button" class="tab hidden" role="tab" data-aba="ciencia" aria-selected="false" id="tab-ciencia">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
+          Materiais
+        </button>
       </div>
     </div>
   </div>
 
   <div class="scope">
-    <span class="scope__kind" id="scope-kind">Visão de time</span>
-    <span class="scope__name" id="scope-name">Game Presenter · consolidado</span>
-    <span id="scope-meta">18 prestadores · Agosto 2026</span>
+    <span class="scope__kind" id="scope-kind">Próprios</span>
+    <span class="scope__name" id="scope-name">Ana Souza · Game Presenter</span>
+    <span id="scope-meta">Agosto 2026 · sem filtros Time/Staff</span>
   </div>
 
   <!-- ═══════════════ ABA ESCALA ═══════════════ -->
@@ -445,7 +487,7 @@
           <span class="sub" id="sub-det-escala">ocorrências do período</span>
         </div>
         <div class="subtabs hidden" id="subtabs-det-escala" role="tablist" aria-label="Tipo de detalhamento">
-          <button type="button" class="subtab subtab--on" role="tab" data-det-aba="negociacoes" aria-selected="true">
+          <button type="button" class="subtab subtab--on" role="tab" data-det-aba="negociacoes" aria-selected="true" id="subtab-negociacoes">
             Negociações
           </button>
           <button type="button" class="subtab" role="tab" data-det-aba="turno" aria-selected="false">
@@ -657,6 +699,52 @@
       </section>
     </div>
   </div>
+
+  <!-- ═══════════════ ABA MATERIAIS ═══════════════ -->
+  <div class="panel hidden" id="panel-ciencia" role="tabpanel">
+    <div class="note" style="margin-bottom:14px">
+      Aba <b>Materiais</b> em todos os times — lista só o que é <b>aplicável</b> ao prestador
+      (time/gerência ou «Todos os prestadores» / perfis em Informativos).
+      Sub-abas: <b>Manuais</b> (Academy · ciência),
+      <b>Comunicados</b> (Portal RH Lido + Informativos),
+      <b>Políticas</b> (Portal RH · ciência),
+      <b>RH Talks</b> (Portal RH · aplicável a).
+      Botão da origem <b>some</b> se não houver nenhum item aplicável.
+    </div>
+
+    <section class="box">
+      <div class="section-title">
+        <strong>Resumo de Materiais</strong><span class="dash">—</span>
+        <span class="sub">itens aplicáveis ao prestador · status atual</span>
+      </div>
+      <div class="grid-4" id="grid-ciencia-kpi"></div>
+    </section>
+
+    <section class="box">
+      <div class="section-title section-title--row">
+        <div class="section-title__left">
+          <strong>Detalhamento</strong><span class="dash">—</span>
+          <span class="sub" id="sub-ciencia-det">por origem</span>
+        </div>
+        <div class="subtabs" id="subtabs-ciencia" role="tablist" aria-label="Origem dos materiais">
+          <button type="button" class="subtab subtab--on" role="tab" data-ciencia-aba="manuais" aria-selected="true" id="subtab-mat-manuais">Manuais</button>
+          <button type="button" class="subtab" role="tab" data-ciencia-aba="comunicados" aria-selected="false" id="subtab-mat-comunicados">Comunicados</button>
+          <button type="button" class="subtab" role="tab" data-ciencia-aba="politicas" aria-selected="false" id="subtab-mat-politicas">Políticas</button>
+          <button type="button" class="subtab" role="tab" data-ciencia-aba="rhtalks" aria-selected="false" id="subtab-mat-rhtalks">RH Talks</button>
+        </div>
+      </div>
+      <div class="table-wrap" id="wrap-ciencia-table">
+        <table>
+          <caption>Materiais do prestador</caption>
+          <thead id="th-ciencia"></thead>
+          <tbody id="tb-ciencia"></tbody>
+        </table>
+      </div>
+      <div id="ciencia-vazio" class="hidden" style="padding:32px 0;text-align:center;color:var(--text-muted);font-size:13px">
+        Nenhum material aplicável ao seu time neste momento.
+      </div>
+    </section>
+  </div>
 </div>
 
 <!-- Modal Ver Feedback -->
@@ -695,7 +783,43 @@ const TIME_LABEL = {
   shuf: "Shuffler",
   sl: "Shift Leader",
   sm: "Service Manager",
+  academy: "Academy",
+  people: "People",
+  comercial: "Comercial",
+  financeiro: "Financeiro",
+  di: "Data Intelligence",
+  marketing: "Marketing",
+  outro: "Outro time",
 };
+
+const PRESTADOR_NOME = {
+  gp: "Ana Souza",
+  shuf: "Bruno Lima",
+  sl: "Diego Alves",
+  sm: "Carla Nunes",
+  academy: "Fernanda Rocha",
+  people: "Patricia Alves",
+  comercial: "Ricardo Mota",
+  financeiro: "Helena Costa",
+  di: "Lucas Pires",
+  marketing: "Beatriz Ramos",
+  outro: "João Silveira",
+};
+
+/** Caps alinhados a `overviewPrestadorTeamConfig` (canónicos vs CAPS_GENERICO). */
+function capsDoTime(key) {
+  const canon = key === "gp" || key === "shuf" || key === "sl" || key === "sm";
+  return {
+    canonico: canon,
+    negocia: canon,
+    kpisMesa: key === "gp" || key === "shuf",
+    kpisOcr: key === "sm",
+    kpisPerf: key === "gp" || key === "shuf",
+    showAbaKpis: key === "gp" || key === "shuf" || key === "sm",
+    /** Materiais: todos os times (canónicos e genéricos). */
+    ciencia: true,
+  };
+}
 
 const ICO = {
   check: '<svg class="icon-status" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.25"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4 12 14.01l-3-3"/></svg>',
@@ -704,19 +828,295 @@ const ICO = {
   x: '<svg class="icon-status" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2.25"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/></svg>',
 };
 
-let visao = "time"; // time | ind
-let timeKey = "gp"; // gp | shuf | sl | sm
-let aba = "escala"; // escala | kpis | perf
-let detEscalaAba = "negociacoes"; // negociacoes | turno | atestado — só visão individual
-/** Mock: dias/atestados no card Absenteísmo (individual). Tab Atestado só se > 0. */
+let visao = "ind"; // travado: Prestador Ver=Próprios (não líder)
+let timeKey = "gp";
+let aba = "escala"; // escala | kpis | perf | ciencia
+let detEscalaAba = "negociacoes"; // negociacoes | turno | atestado
+let cienciaAba = "manuais"; // manuais | comunicados | politicas | rhtalks
+/** Mock: dias/atestados no card Absenteísmo. Tab Atestado só se > 0. */
 let mockAtestadosInd = 3;
+/** Mock: zerar RH Talks para ver o botão sumir. */
+let mockRhTalksCount = 2;
+
+/**
+ * Itens já filtrados por Aplicável a / perfis do prestador (por time).
+ * Origens vazias = botão da sub-aba some (ex.: Outro time sem manuais; DI sem RH Talks de floor).
+ */
+function materiaisDoPrestador() {
+  const time = TIME_LABEL[timeKey] ?? "Outro time";
+  const floor = timeKey === "gp" || timeKey === "shuf" || timeKey === "sl" || timeKey === "sm";
+
+  const manuaisPorTime = {
+    gp: [
+      { pub: "10/08/2026", titulo: "Procedimento de abertura de mesa — Blackjack", codigo: "MAN-BJ-01", status: "pendente", quando: "—", aplicavel: "Game Presenter" },
+      { pub: "20/07/2026", titulo: "Roleta — ritmo e tipagem", codigo: "MAN-ROU-02", status: "nao_exigido", quando: "—", aplicavel: "Game Presenter" },
+    ],
+    shuf: [
+      { pub: "09/08/2026", titulo: "Embaralhamento — sequência e higiene de baralho", codigo: "MAN-SH-01", status: "pendente", quando: "—", aplicavel: "Shuffler" },
+      { pub: "18/07/2026", titulo: "Troca de sapato e postura em pé", codigo: "MAN-SH-03", status: "ciente", quando: "19/07/2026 08:15", aplicavel: "Shuffler" },
+    ],
+    sl: [
+      { pub: "07/08/2026", titulo: "Checklist de abertura de turno — Shift Leader", codigo: "MAN-SL-01", status: "pendente", quando: "—", aplicavel: "Shift Leader" },
+      { pub: "12/07/2026", titulo: "Escalonamento de ocorrências em mesa", codigo: "MAN-SL-02", status: "ciente", quando: "13/07/2026 11:40", aplicavel: "Shift Leader" },
+    ],
+    sm: [
+      { pub: "06/08/2026", titulo: "OCR — rotina de qualidade e feedback", codigo: "MAN-SM-01", status: "pendente", quando: "—", aplicavel: "Service Manager" },
+      { pub: "01/07/2026", titulo: "Acompanhamento de prestadores em mesa", codigo: "MAN-SM-02", status: "ciente", quando: "02/07/2026 09:00", aplicavel: "Service Manager" },
+    ],
+    academy: [
+      { pub: "11/08/2026", titulo: "Facilitação de trilhas — Academy", codigo: "MAN-AC-01", status: "pendente", quando: "—", aplicavel: "Academy" },
+      { pub: "25/07/2026", titulo: "Registro de ciência em manuais publicados", codigo: "MAN-AC-02", status: "ciente", quando: "26/07/2026 15:20", aplicavel: "Academy" },
+    ],
+    people: [
+      { pub: "04/08/2026", titulo: "Atendimento a prestadores — People", codigo: "MAN-PE-01", status: "ciente", quando: "05/08/2026 10:10", aplicavel: "People" },
+    ],
+    comercial: [
+      { pub: "03/08/2026", titulo: "Briefing de parceiros e NDAs", codigo: "MAN-COM-01", status: "pendente", quando: "—", aplicavel: "Comercial" },
+    ],
+    financeiro: [
+      { pub: "02/08/2026", titulo: "Fluxo de reembolsos e prestadores PJ", codigo: "MAN-FIN-01", status: "ciente", quando: "03/08/2026 14:00", aplicavel: "Financeiro" },
+    ],
+    di: [
+      { pub: "08/08/2026", titulo: "Governança de dados e acessos — DI", codigo: "MAN-DI-01", status: "pendente", quando: "—", aplicavel: "Data Intelligence" },
+    ],
+    marketing: [
+      { pub: "05/08/2026", titulo: "Uso de imagem de prestadores em campanhas", codigo: "MAN-MKT-01", status: "ciente", quando: "06/08/2026 12:30", aplicavel: "Marketing" },
+    ],
+    /** Outro time: sem manuais aplicáveis → botão Manuais some. */
+    outro: [],
+  };
+
+  const manuaisComuns = [
+    { pub: "02/08/2026", titulo: "Código de conduta em câmera", codigo: "MAN-GER-04", status: "ciente", quando: "03/08/2026 14:22", aplicavel: "Todos os prestadores" },
+  ];
+  /** Genéricos (exceto outro) recebem o comum; floor/academy/people idem. Outro = vazio de propósito. */
+  const manuais =
+    timeKey === "outro"
+      ? []
+      : [...(manuaisPorTime[timeKey] ?? [{ pub: "01/08/2026", titulo: `Manual operacional — ${time}`, codigo: "MAN-GEN-01", status: "pendente", quando: "—", aplicavel: time }]), ...manuaisComuns];
+
+  const comunicados = [
+    { pub: "12/08/2026", titulo: "Atualização do estacionamento — vagas visitantes", fonte: "Portal RH", status: "nao_lido", quando: "—" },
+    { pub: "11/08/2026", titulo: "Manutenção programada — VPN estúdio", fonte: "Informativos", status: "nao_lido", quando: "—" },
+    { pub: "05/08/2026", titulo: "Recesso de Corpus Christi — escala", fonte: "Portal RH", status: "lido", quando: "05/08/2026 09:10" },
+    { pub: "01/08/2026", titulo: "Campanha interna — indicação de talentos", fonte: "Informativos", status: "lido", quando: "01/08/2026 11:05" },
+  ];
+
+  const politicas = [
+    ...(timeKey === "outro"
+      ? []
+      : [
+          {
+            pub: "08/08/2026",
+            titulo: floor ? "Política de Assiduidade e Pontualidade" : `Política operacional — ${time}`,
+            codigo: floor ? "POL-RH-012" : "POL-GEN-01",
+            status: "pendente",
+            quando: "—",
+            aplicavel: time,
+          },
+        ]),
+    { pub: "15/07/2026", titulo: "Código de Ética Spin Gaming", codigo: "COD-001", status: "ciente", quando: "16/07/2026 10:02", aplicavel: "Todos os prestadores" },
+  ];
+
+  /** Floor: Talks de Game Floor + Todos. DI/Marketing: só Todos. Outro: nenhum (botão some). Toggle mock zera para todos. */
+  let rhtalks = [];
+  if (mockRhTalksCount > 0 && timeKey !== "outro") {
+    const todos = {
+      pub: "22/07/2026",
+      titulo: "RH Talk — Benefícios 2026",
+      numero: "RT-2026-07",
+      status: "ciente",
+      quando: "23/07/2026 16:40",
+      aplicavel: "Todos os prestadores",
+    };
+    const floorTalk = {
+      pub: "09/08/2026",
+      titulo: "RH Talk — Saúde mental no estúdio",
+      numero: "RT-2026-08",
+      status: "pendente",
+      quando: "—",
+      aplicavel: "Game Floor",
+    };
+    rhtalks = floor
+      ? [floorTalk, todos].slice(0, mockRhTalksCount)
+      : timeKey === "di" || timeKey === "marketing"
+        ? [] /* sem Talks aplicáveis neste mock → botão some */
+        : [todos];
+  }
+
+  return { manuais, comunicados, politicas, rhtalks };
+}
+
+function badgeStatusMateriais(status) {
+  if (status === "pendente" || status === "nao_lido") return `<span class="badge b-wait">${status === "nao_lido" ? "Não lido" : "Pendente"}</span>`;
+  if (status === "ciente" || status === "lido") return `<span class="badge b-ok">${status === "lido" ? "Lido" : "Ciente"}</span>`;
+  return `<span class="badge b-neutral">Não exigido</span>`;
+}
+
+function resumoMateriais(bags) {
+  const all = [...bags.manuais, ...bags.comunicados, ...bags.politicas, ...bags.rhtalks];
+  let pend = 0;
+  let ok = 0;
+  let neutro = 0;
+  for (const it of all) {
+    if (it.status === "pendente" || it.status === "nao_lido") pend += 1;
+    else if (it.status === "ciente" || it.status === "lido") ok += 1;
+    else neutro += 1;
+  }
+  return { pend, ok, neutro, total: all.length };
+}
+
+function renderCiencia() {
+  const bags = materiaisDoPrestador();
+  const resumo = resumoMateriais(bags);
+  document.getElementById("grid-ciencia-kpi").innerHTML = [
+    kpi("Pendentes", String(resumo.pend), "", "wait"),
+    kpi("Em dia", String(resumo.ok), "", "ok"),
+    kpi("Não exigidos", String(resumo.neutro), "", "neutral"),
+    kpi("Total aplicáveis", String(resumo.total), "", "total"),
+  ].join("");
+
+  const visivel = {
+    manuais: bags.manuais.length > 0,
+    comunicados: bags.comunicados.length > 0,
+    politicas: bags.politicas.length > 0,
+    rhtalks: bags.rhtalks.length > 0,
+  };
+  const ordem = ["manuais", "comunicados", "politicas", "rhtalks"];
+  const ids = {
+    manuais: "subtab-mat-manuais",
+    comunicados: "subtab-mat-comunicados",
+    politicas: "subtab-mat-politicas",
+    rhtalks: "subtab-mat-rhtalks",
+  };
+  for (const key of ordem) {
+    document.getElementById(ids[key]).classList.toggle("hidden", !visivel[key]);
+  }
+  if (!visivel[cienciaAba]) {
+    cienciaAba = ordem.find((k) => visivel[k]) ?? "manuais";
+  }
+
+  const alguma = ordem.some((k) => visivel[k]);
+  document.getElementById("wrap-ciencia-table").classList.toggle("hidden", !alguma);
+  document.getElementById("ciencia-vazio").classList.toggle("hidden", alguma);
+  document.getElementById("subtabs-ciencia").classList.toggle("hidden", !alguma);
+
+  document.querySelectorAll("[data-ciencia-aba]").forEach((b) => {
+    const on = b.dataset.cienciaAba === cienciaAba;
+    b.classList.toggle("subtab--on", on);
+    b.setAttribute("aria-selected", on ? "true" : "false");
+  });
+
+  if (!alguma) return;
+
+  const th = document.getElementById("th-ciencia");
+  const tb = document.getElementById("tb-ciencia");
+  const sub = document.getElementById("sub-ciencia-det");
+
+  if (cienciaAba === "manuais") {
+    sub.textContent = "Portal Academy · aplicável ao time · ciência formal";
+    th.innerHTML = `
+      <tr>
+        <th scope="col">Publicado em</th>
+        <th class="left" scope="col">Manual</th>
+        <th scope="col">Código</th>
+        <th scope="col">Aplicável a</th>
+        <th scope="col">Status</th>
+        <th scope="col">Data da ciência</th>
+      </tr>`;
+    tb.innerHTML = bags.manuais
+      .map(
+        (r) => `
+      <tr>
+        <td>${r.pub}</td>
+        <td class="left">${r.titulo}</td>
+        <td>${r.codigo}</td>
+        <td>${r.aplicavel}</td>
+        <td>${badgeStatusMateriais(r.status)}</td>
+        <td>${r.quando}</td>
+      </tr>`,
+      )
+      .join("");
+  } else if (cienciaAba === "comunicados") {
+    sub.textContent = "Portal RH (Lido) + Informativos · unificados";
+    th.innerHTML = `
+      <tr>
+        <th scope="col">Publicado em</th>
+        <th class="left" scope="col">Título</th>
+        <th scope="col">Fonte</th>
+        <th scope="col">Status</th>
+        <th scope="col">Lido em</th>
+      </tr>`;
+    tb.innerHTML = bags.comunicados
+      .map(
+        (r) => `
+      <tr>
+        <td>${r.pub}</td>
+        <td class="left">${r.titulo}</td>
+        <td>${r.fonte}</td>
+        <td>${badgeStatusMateriais(r.status)}</td>
+        <td>${r.quando}</td>
+      </tr>`,
+      )
+      .join("");
+  } else if (cienciaAba === "politicas") {
+    sub.textContent = "Portal RH · Políticas e normativas · Aplicável a";
+    th.innerHTML = `
+      <tr>
+        <th scope="col">Publicado em</th>
+        <th class="left" scope="col">Política</th>
+        <th scope="col">Código</th>
+        <th scope="col">Aplicável a</th>
+        <th scope="col">Status</th>
+        <th scope="col">Data da ciência</th>
+      </tr>`;
+    tb.innerHTML = bags.politicas
+      .map(
+        (r) => `
+      <tr>
+        <td>${r.pub}</td>
+        <td class="left">${r.titulo}</td>
+        <td>${r.codigo}</td>
+        <td>${r.aplicavel}</td>
+        <td>${badgeStatusMateriais(r.status)}</td>
+        <td>${r.quando}</td>
+      </tr>`,
+      )
+      .join("");
+  } else {
+    sub.textContent = "Portal RH · RH Talks · Aplicável a";
+    th.innerHTML = `
+      <tr>
+        <th scope="col">Publicado em</th>
+        <th class="left" scope="col">RH Talk</th>
+        <th scope="col">Número</th>
+        <th scope="col">Aplicável a</th>
+        <th scope="col">Status</th>
+        <th scope="col">Data da ciência</th>
+      </tr>`;
+    tb.innerHTML = bags.rhtalks
+      .map(
+        (r) => `
+      <tr>
+        <td>${r.pub}</td>
+        <td class="left">${r.titulo}</td>
+        <td>${r.numero}</td>
+        <td>${r.aplicavel}</td>
+        <td>${badgeStatusMateriais(r.status)}</td>
+        <td>${r.quando}</td>
+      </tr>`,
+      )
+      .join("");
+  }
+}
 
 function mom(pct, dir, inv = false) {
   const cls = `${inv ? "inv " : ""}${dir}`;
   return `<div class="kpi__mom"><span class="${cls}">${dir === "up" ? "↑" : dir === "down" ? "↓" : "→"} ${pct}</span><span>vs mês ant.</span></div>`;
 }
-function kpi(label, value, momHtml = "") {
-  return `<div class="kpi"><div class="kpi__label">${label}</div><div class="kpi__value">${value}</div>${momHtml}</div>`;
+function kpi(label, value, momHtml = "", tone = "") {
+  const cls = tone ? ` kpi--${tone}` : "";
+  return `<div class="kpi${cls}"><div class="kpi__label">${label}</div><div class="kpi__value">${value}</div>${momHtml}</div>`;
 }
 /** Feedbacks Aprovados — Solicitações RH. Orientação = data solicitação; demais = data atendimento. */
 const FEEDBACKS_MOCK = [
@@ -772,61 +1172,54 @@ function fmtNota(n) {
 }
 
 function render() {
-  const isTime = visao === "time";
-  const nome = TIME_LABEL[timeKey];
+  const isTime = false; // Prestador: sempre visão individual
+  const caps = capsDoTime(timeKey);
+  const nome = TIME_LABEL[timeKey] ?? "Outro time";
+  const pessoa = PRESTADOR_NOME[timeKey] ?? "Prestador";
 
-  // filtros
   document.getElementById("pill-time-label").textContent = nome;
-  const staffPill = document.getElementById("pill-staff");
-  const timePill = document.getElementById("pill-time");
-  if (isTime) {
-    staffPill.classList.remove("hidden");
-    timePill.classList.remove("hidden");
-    document.getElementById("pill-staff-label").textContent = "Todo o time";
-    document.getElementById("scope-kind").textContent = "Visão de time";
-    document.getElementById("scope-name").textContent = `${nome} · consolidado`;
-    document.getElementById("scope-meta").textContent = timeKey === "gp" ? "18 prestadores · Agosto 2026" : "12 prestadores · Agosto 2026";
-  } else {
-    staffPill.classList.add("hidden");
-    timePill.classList.add("hidden");
-    document.getElementById("scope-kind").textContent = "Próprios";
-    document.getElementById("scope-name").textContent = timeKey === "gp" ? "Ana Souza · Game Presenter" : timeKey === "shuf" ? "Bruno Lima · Shuffler" : timeKey === "sm" ? "Carla Nunes · Service Manager" : "Diego Alves · Shift Leader";
-    document.getElementById("scope-meta").textContent = "Agosto 2026";
-  }
+  document.getElementById("pill-time").classList.add("hidden");
+  document.getElementById("pill-staff").classList.add("hidden");
+  document.getElementById("scope-kind").textContent = "Próprios";
+  document.getElementById("scope-name").textContent = `${pessoa} · ${nome}`;
+  document.getElementById("scope-meta").textContent = caps.canonico
+    ? "Agosto 2026 · time canónico"
+    : "Agosto 2026 · time genérico · Escala + Materiais (sem Mesa/OCR/Performance · sem Marketplace)";
 
-  // abas produto
   const tabKpis = document.getElementById("tab-kpis");
   const tabPerf = document.getElementById("tab-perf");
-  const temPerf = timeKey === "gp" || timeKey === "shuf";
+  const tabCiencia = document.getElementById("tab-ciencia");
 
-  if (timeKey === "sl") {
-    tabKpis.hidden = true;
-    if (aba === "kpis") aba = "escala";
-  } else {
-    tabKpis.hidden = false;
-    document.getElementById("tab-kpis-label").textContent = timeKey === "sm" ? "KPIs de OCR" : "KPIs de Mesa";
+  tabKpis.hidden = !caps.showAbaKpis;
+  if (!caps.showAbaKpis && aba === "kpis") aba = "escala";
+  if (caps.showAbaKpis) {
+    document.getElementById("tab-kpis-label").textContent = caps.kpisOcr ? "KPIs de OCR" : "KPIs de Mesa";
   }
 
-  // KPIs de Performance só GP / Shuffler
-  tabPerf.hidden = !temPerf;
-  if (!temPerf && aba === "perf") aba = "escala";
+  tabPerf.hidden = !caps.kpisPerf;
+  if (!caps.kpisPerf && aba === "perf") aba = "escala";
 
-  // panels
+  tabCiencia.hidden = !caps.ciencia;
+  tabCiencia.classList.toggle("hidden", !caps.ciencia);
+  if (!caps.ciencia && aba === "ciencia") aba = "escala";
+
   document.getElementById("panel-escala").classList.toggle("hidden", aba !== "escala");
-  document.getElementById("panel-kpis").classList.toggle("hidden", aba !== "kpis");
-  document.getElementById("panel-perf").classList.toggle("hidden", aba !== "perf" || !temPerf);
+  document.getElementById("panel-kpis").classList.toggle("hidden", aba !== "kpis" || !caps.showAbaKpis);
+  document.getElementById("panel-perf").classList.toggle("hidden", aba !== "perf" || !caps.kpisPerf);
+  document.getElementById("panel-ciencia").classList.toggle("hidden", aba !== "ciencia" || !caps.ciencia);
   document.querySelectorAll(".tab").forEach((t) => {
     const on = t.dataset.aba === aba;
     t.classList.toggle("tab--on", on);
     t.setAttribute("aria-selected", on ? "true" : "false");
   });
 
-  renderEscala(isTime);
-  renderKpis(isTime);
-  if (temPerf) renderPerf(isTime);
+  renderEscala(isTime, caps);
+  if (caps.showAbaKpis) renderKpis(isTime);
+  if (caps.kpisPerf) renderPerf(isTime);
+  if (caps.ciencia) renderCiencia();
 }
 
-function renderEscala(isTime) {
+function renderEscala(isTime, caps = capsDoTime(timeKey)) {
   document.getElementById("t-resumo").textContent = isTime ? "Resumo operacional" : "KPIs Consolidados";
   document.getElementById("t-aderencia").textContent = isTime ? "Aderência à escala" : "Absenteísmo";
   document.getElementById("grid-resumo").innerHTML = [
@@ -856,11 +1249,15 @@ function renderEscala(isTime) {
   const th = document.getElementById("th-det-escala");
   const tb = document.getElementById("tb-det-escala");
   const tabAtestado = document.getElementById("subtab-atestado");
+  const tabNegociacoes = document.getElementById("subtab-negociacoes");
   const temAtestado = !isTime && mockAtestadosInd > 0;
+  const temNegocia = !isTime && caps.negocia;
 
   subtabs.classList.toggle("hidden", isTime);
+  tabNegociacoes.classList.toggle("hidden", !temNegocia);
   tabAtestado.classList.toggle("hidden", !temAtestado);
-  if (!temAtestado && detEscalaAba === "atestado") detEscalaAba = "negociacoes";
+  if (!temNegocia && detEscalaAba === "negociacoes") detEscalaAba = "turno";
+  if (!temAtestado && detEscalaAba === "atestado") detEscalaAba = temNegocia ? "negociacoes" : "turno";
 
   document.querySelectorAll("[data-det-aba]").forEach((b) => {
     const on = b.dataset.detAba === detEscalaAba;
@@ -884,8 +1281,8 @@ function renderEscala(isTime) {
     return;
   }
 
-  // Visão individual — Negociações | Turno | Atestado (condicional)
-  if (detEscalaAba === "negociacoes") {
+  // Prestador — Negociações (só se negocia) | Turno | Atestado (condicional)
+  if (detEscalaAba === "negociacoes" && temNegocia) {
     subLabel.textContent = "Marketplace · compras, vendas e trocas do período";
     th.innerHTML = `
       <tr>
@@ -960,7 +1357,6 @@ function renderEscala(isTime) {
         <td class="left">Justificado</td>
       </tr>`;
   } else {
-    // Atestado — 1 linha por dia civil coberto (mesmo pedido multi-dia)
     subLabel.textContent = "Solicitações RH · 1 linha por dia do atestado";
     th.innerHTML = `
       <tr>
@@ -968,7 +1364,6 @@ function renderEscala(isTime) {
         <th scope="col">Status do Atestado</th>
         <th class="left" scope="col">Detalhe</th>
       </tr>`;
-    // Ex.: 1 atestado 18–20/08 (Aprovado) = 3 linhas; outro dia Em análise
     tb.innerHTML = `
       <tr>
         <td>20/08</td>
@@ -1167,13 +1562,6 @@ function setAba(next) {
   render();
 }
 
-document.querySelectorAll("[data-visao]").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    visao = btn.dataset.visao;
-    document.querySelectorAll("[data-visao]").forEach((b) => b.setAttribute("aria-pressed", b === btn ? "true" : "false"));
-    render();
-  });
-});
 document.querySelectorAll("[data-time]").forEach((btn) => {
   btn.addEventListener("click", () => {
     timeKey = btn.dataset.time;
@@ -1194,12 +1582,28 @@ document.querySelectorAll("[data-det-aba]").forEach((btn) => {
     render();
   });
 });
+document.querySelectorAll("[data-ciencia-aba]").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    if (btn.classList.contains("hidden")) return;
+    cienciaAba = btn.dataset.cienciaAba;
+    render();
+  });
+});
 document.getElementById("btn-mock-atestado").addEventListener("click", () => {
   mockAtestadosInd = mockAtestadosInd > 0 ? 0 : 3;
   const on = mockAtestadosInd > 0;
   const b = document.getElementById("btn-mock-atestado");
   b.setAttribute("aria-pressed", on ? "true" : "false");
   b.textContent = on ? "Atestados > 0" : "Atestados = 0";
+  render();
+});
+document.getElementById("btn-mock-talks").addEventListener("click", () => {
+  mockRhTalksCount = mockRhTalksCount > 0 ? 0 : 2;
+  const on = mockRhTalksCount > 0;
+  const b = document.getElementById("btn-mock-talks");
+  b.setAttribute("aria-pressed", on ? "true" : "false");
+  b.textContent = on ? "RH Talks > 0" : "RH Talks = 0";
+  if (!on && cienciaAba === "rhtalks") cienciaAba = "manuais";
   render();
 });
 document.getElementById("btn-theme").addEventListener("click", () => {

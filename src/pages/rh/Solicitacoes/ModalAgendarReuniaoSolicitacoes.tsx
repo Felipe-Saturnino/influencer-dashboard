@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useState, type CSSProperties } from "react";
 import { Loader2 } from "lucide-react";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
@@ -7,16 +7,19 @@ import type { Theme } from "../../../constants/theme";
 import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
 import type { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { supabase } from "../../../lib/supabase";
+import { fetchAllPages } from "../../../lib/supabasePaginate";
 import {
   agendarReuniaoSolicitacoes,
   type RhSolicitacaoAgendarReuniaoTipo,
 } from "../../../lib/rhSolicitacoesAgendarReuniao";
 import { diaIsoEhEstritamenteFuturo } from "../../../lib/rhCalendarioAcaoHelpers";
-import { fetchRhLiderancaPrestadores } from "../../../lib/rhLiderancaEscopo";
 
 type Brand = ReturnType<typeof useDashboardBrand>;
 
 type PrestadorOpt = { id: string; nome: string };
+
+const ERRO_CARGA_PRESTADORES =
+  "Não foi possível carregar os prestadores. Se o problema persistir, entre em contato com o suporte.";
 
 export interface ModalAgendarReuniaoSolicitacoesProps {
   open: boolean;
@@ -42,8 +45,47 @@ export function ModalAgendarReuniaoSolicitacoes({
   const [observacao, setObservacao] = useState("");
   const [prestadores, setPrestadores] = useState<PrestadorOpt[]>([]);
   const [loadingPrest, setLoadingPrest] = useState(false);
+  const [erroPrest, setErroPrest] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+
+  const carregarPrestadores = useCallback(async () => {
+    setErroPrest(null);
+    setLoadingPrest(true);
+    try {
+      if (prestadorIdsPermitidos) {
+        const { data, error } = await supabase.rpc("rh_lideranca_prestadores", {
+          p_funcionario_id: null,
+        });
+        if (error) throw error;
+        const allow = new Set(prestadorIdsPermitidos);
+        setPrestadores(
+          ((data ?? []) as PrestadorOpt[])
+            .filter((p) => allow.has(p.id))
+            .map((p) => ({ id: p.id, nome: (p.nome ?? "").trim() || "—" }))
+            .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")),
+        );
+      } else {
+        const data = await fetchAllPages<PrestadorOpt>(async (from, to) =>
+          supabase
+            .from("rh_funcionarios")
+            .select("id, nome")
+            .in("status", ["ativo", "indisponivel"])
+            .order("nome", { ascending: true })
+            .order("id", { ascending: true })
+            .range(from, to),
+        );
+        setPrestadores(
+          data.map((p) => ({ id: p.id, nome: (p.nome ?? "").trim() || "—" })),
+        );
+      }
+    } catch (e) {
+      console.error("[ModalAgendarReuniaoSolicitacoes]", e);
+      setErroPrest(ERRO_CARGA_PRESTADORES);
+      setPrestadores([]);
+    }
+    setLoadingPrest(false);
+  }, [prestadorIdsPermitidos]);
 
   useEffect(() => {
     if (!open) return;
@@ -53,40 +95,8 @@ export function ModalAgendarReuniaoSolicitacoes({
     setObservacao("");
     setErr(null);
     setSaving(false);
-    setLoadingPrest(true);
-    if (prestadorIdsPermitidos) {
-      void fetchRhLiderancaPrestadores()
-        .then((list) => {
-          const allow = new Set(prestadorIdsPermitidos);
-          setPrestadores(
-            list
-              .filter((p) => allow.has(p.id))
-              .map((p) => ({ id: p.id, nome: (p.nome ?? "").trim() || "—" })),
-          );
-        })
-        .catch((e) => {
-          console.error("[ModalAgendarReuniaoSolicitacoes]", e);
-          setPrestadores([]);
-        })
-        .finally(() => setLoadingPrest(false));
-      return;
-    }
-    void supabase
-      .from("rh_funcionarios")
-      .select("id, nome")
-      .in("status", ["ativo", "indisponivel"])
-      .order("nome")
-      .limit(500)
-      .then(({ data, error }) => {
-        setLoadingPrest(false);
-        if (error) {
-          console.error("[ModalAgendarReuniaoSolicitacoes]", error);
-          setPrestadores([]);
-          return;
-        }
-        setPrestadores((data ?? []) as PrestadorOpt[]);
-      });
-  }, [open, prestadorIdsPermitidos]);
+    void carregarPrestadores();
+  }, [open, carregarPrestadores]);
 
   if (!open) return null;
 
@@ -152,6 +162,40 @@ export function ModalAgendarReuniaoSolicitacoes({
           </div>
         ) : null}
 
+        {erroPrest ? (
+          <div
+            role="alert"
+            style={{
+              color: "#e84025",
+              fontSize: 12,
+              marginBottom: 12,
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              flexWrap: "wrap",
+            }}
+          >
+            <span>{erroPrest}</span>
+            <button
+              type="button"
+              onClick={() => void carregarPrestadores()}
+              style={{
+                fontFamily: FONT.body,
+                fontSize: 12,
+                fontWeight: 700,
+                padding: "6px 12px",
+                borderRadius: 8,
+                border: "1px solid rgba(232,64,37,0.35)",
+                background: "transparent",
+                color: "#e84025",
+                cursor: "pointer",
+              }}
+            >
+              Tentar de novo
+            </button>
+          </div>
+        ) : null}
+
         <label style={{ display: "block", marginBottom: 14 }}>
           <span style={{ display: "block", fontSize: 12, fontWeight: 700, color: t.textMuted, marginBottom: 6 }}>
             Tipo de Reunião
@@ -180,10 +224,10 @@ export function ModalAgendarReuniaoSolicitacoes({
             onChange={(e) => setPrestadorId(e.target.value)}
             aria-label="Prestador"
             aria-required
-            disabled={loadingPrest}
+            disabled={loadingPrest || !!erroPrest}
             style={inputStyle}
           >
-            <option value="">{loadingPrest ? "Carregando…" : "Selecione…"}</option>
+            <option value="">{loadingPrest ? "Carregando…" : erroPrest ? "Indisponível" : "Selecione…"}</option>
             {prestadores.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.nome}
@@ -228,7 +272,7 @@ export function ModalAgendarReuniaoSolicitacoes({
           <button
             type="button"
             onClick={() => void confirmar()}
-            disabled={saving || loadingPrest}
+            disabled={saving || loadingPrest || !!erroPrest}
             style={{
               padding: "10px 20px",
               borderRadius: 10,

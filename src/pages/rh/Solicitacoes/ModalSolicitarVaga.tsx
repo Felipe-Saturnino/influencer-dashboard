@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useState, type CSSProperties } from "react";
 import { Loader2 } from "lucide-react";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
@@ -16,10 +16,13 @@ import {
 } from "../../../lib/rhVagaOrganograma";
 import { buscarRhFuncionarioAtivoPorEmailLogin } from "../../../lib/rhFuncionarioLoginMatch";
 import { supabase } from "../../../lib/supabase";
-import { useApp } from "../../../context/AppContext";
+import { useIdentidadeEfetiva } from "../../../hooks/useIdentidadeEfetiva";
 import type { RhOrgOrganogramaGrupoPrestador } from "../../../types/rhOrganograma";
 
 type Brand = ReturnType<typeof useDashboardBrand>;
+
+const ERRO_CARGA_ORG =
+  "Não foi possível carregar o organograma. Se o problema persistir, entre em contato com o suporte.";
 
 /** Soma ~15 dias úteis (seg–sex) a partir de hoje — hint de data de entrada. */
 function sugerirDataEntrada15DiasUteis(): string {
@@ -42,14 +45,29 @@ export interface ModalSolicitarVagaProps {
 }
 
 export function ModalSolicitarVaga({ open, onClose, onSaved, t, brand }: ModalSolicitarVagaProps) {
-  const { user } = useApp();
+  const { email: emailEfetivo } = useIdentidadeEfetiva();
   const [orgVinculo, setOrgVinculo] = useState<RhVagaOrgVinculo>(orgVinculoVazio());
   const [dataEntrada, setDataEntrada] = useState("");
   const [observacao, setObservacao] = useState("");
   const [grupos, setGrupos] = useState<RhOrgOrganogramaGrupoPrestador[]>([]);
   const [carregandoOrg, setCarregandoOrg] = useState(false);
+  const [erroOrg, setErroOrg] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+
+  const carregarOrg = useCallback(async () => {
+    setErroOrg(null);
+    setCarregandoOrg(true);
+    const { grupos: g, error } = await carregarOpcoesTimesOrganograma();
+    setCarregandoOrg(false);
+    if (error) {
+      console.error("[ModalSolicitarVaga]", error);
+      setErroOrg(ERRO_CARGA_ORG);
+      setGrupos([]);
+      return;
+    }
+    setGrupos(g);
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -58,17 +76,8 @@ export function ModalSolicitarVaga({ open, onClose, onSaved, t, brand }: ModalSo
     setObservacao("");
     setErr(null);
     setSaving(false);
-    setCarregandoOrg(true);
-    void carregarOpcoesTimesOrganograma().then(({ grupos: g, error }) => {
-      setCarregandoOrg(false);
-      if (error) {
-        console.error("[ModalSolicitarVaga]", error);
-        setGrupos([]);
-        return;
-      }
-      setGrupos(g);
-    });
-  }, [open]);
+    void carregarOrg();
+  }, [open, carregarOrg]);
 
   if (!open) return null;
 
@@ -98,7 +107,7 @@ export function ModalSolicitarVaga({ open, onClose, onSaved, t, brand }: ModalSo
       setErr("Informe a observação.");
       return;
     }
-    const email = user?.email?.trim();
+    const email = emailEfetivo?.trim();
     if (!email) {
       setErr("Não foi possível identificar o seu cadastro. Se o problema persistir, entre em contato com o suporte.");
       return;
@@ -157,6 +166,40 @@ export function ModalSolicitarVaga({ open, onClose, onSaved, t, brand }: ModalSo
           </div>
         ) : null}
 
+        {erroOrg ? (
+          <div
+            role="alert"
+            style={{
+              color: "#e84025",
+              fontSize: 12,
+              marginBottom: 12,
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              flexWrap: "wrap",
+            }}
+          >
+            <span>{erroOrg}</span>
+            <button
+              type="button"
+              onClick={() => void carregarOrg()}
+              style={{
+                fontFamily: FONT.body,
+                fontSize: 12,
+                fontWeight: 700,
+                padding: "6px 12px",
+                borderRadius: 8,
+                border: "1px solid rgba(232,64,37,0.35)",
+                background: "transparent",
+                color: "#e84025",
+                cursor: "pointer",
+              }}
+            >
+              Tentar de novo
+            </button>
+          </div>
+        ) : null}
+
         {carregandoOrg ? (
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, color: t.textMuted, fontSize: 13 }}>
             <Loader2 size={16} className="app-lucide-spin" aria-hidden />
@@ -169,7 +212,7 @@ export function ModalSolicitarVaga({ open, onClose, onSaved, t, brand }: ModalSo
           value={orgVinculo}
           onChange={setOrgVinculo}
           grupos={grupos}
-          disabled={carregandoOrg || grupos.length === 0}
+          disabled={carregandoOrg || grupos.length === 0 || !!erroOrg}
           style={inputStyle}
           t={t}
         />
@@ -212,7 +255,7 @@ export function ModalSolicitarVaga({ open, onClose, onSaved, t, brand }: ModalSo
           <button
             type="button"
             onClick={() => void confirmar()}
-            disabled={saving || carregandoOrg}
+            disabled={saving || carregandoOrg || !!erroOrg}
             style={{
               padding: "10px 20px",
               borderRadius: 10,
