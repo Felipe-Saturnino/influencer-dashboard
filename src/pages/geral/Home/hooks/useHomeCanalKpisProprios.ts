@@ -106,10 +106,13 @@ function useHomeCanalKpisBase(
  * KPIs do Overview (próprios) para Home Influencer / Afiliado — mês D-1 + MoM.
  * `comInvestimento`: true para Afiliado (GGR/ROI); Influencer Home não precisa.
  */
-export function useHomeCanalKpisProprios(userId: string | undefined, opts?: { comInvestimento?: boolean }) {
+export function useHomeCanalKpisProprios(
+  userId: string | undefined,
+  opts?: { comInvestimento?: boolean; comUapSpin?: boolean },
+) {
   return useHomeCanalKpisBase(userId ? [userId] : undefined, {
     comInvestimento: opts?.comInvestimento === true,
-    comUapSpin: false,
+    comUapSpin: opts?.comUapSpin === true,
     logTag: "useHomeCanalKpisProprios",
   });
 }

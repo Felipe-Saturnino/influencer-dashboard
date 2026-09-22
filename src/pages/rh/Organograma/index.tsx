@@ -12,6 +12,11 @@ import {
   contarTimesAtivosSobDiretoria,
   montarArvoreOrganograma,
 } from "../../../lib/rhOrganogramaTree";
+import {
+  ORG_DIRETORIA_SELECT,
+  ORG_GERENCIA_SELECT,
+  ORG_TIME_SELECT,
+} from "../../../lib/rhOrganogramaFetch";
 import type {
   RhOrgDiretoria,
   RhOrgDiretoriaComFilhos,
@@ -61,25 +66,40 @@ type ModalExcluir =
 
 const DELETE_CHUNK = 200;
 
-async function deleteIdsInChunks(tabela: "rh_org_times" | "rh_org_gerencias", ids: string[]): Promise<string | null> {
-  if (ids.length === 0) return null;
+const ERRO_ORG_CARREGAR =
+  "Não foi possível carregar o organograma. Se o problema persistir, entre em contato com o suporte.";
+const ERRO_ORG_SALVAR =
+  "Não foi possível salvar. Se o problema persistir, entre em contato com o suporte.";
+const ERRO_ORG_EXCLUIR =
+  "Não foi possível excluir. Se o problema persistir, entre em contato com o suporte.";
+const ERRO_ORG_DESATIVAR =
+  "Não foi possível desativar. Se o problema persistir, entre em contato com o suporte.";
+
+async function deleteIdsInChunks(tabela: "rh_org_times" | "rh_org_gerencias", ids: string[]): Promise<boolean> {
+  if (ids.length === 0) return true;
   for (let i = 0; i < ids.length; i += DELETE_CHUNK) {
     const slice = ids.slice(i, i + DELETE_CHUNK);
     const { error } = await supabase.from(tabela).delete().in("id", slice);
-    if (error) return error.message;
+    if (error) {
+      console.error("[Organograma] deleteIdsInChunks:", error);
+      return false;
+    }
   }
-  return null;
+  return true;
 }
 
 /** Soft-delete em lote — gerência/time saem da UI sem apagar o registro. */
-async function inativarIdsInChunks(tabela: "rh_org_times" | "rh_org_gerencias", ids: string[]): Promise<string | null> {
-  if (ids.length === 0) return null;
+async function inativarIdsInChunks(tabela: "rh_org_times" | "rh_org_gerencias", ids: string[]): Promise<boolean> {
+  if (ids.length === 0) return true;
   for (let i = 0; i < ids.length; i += DELETE_CHUNK) {
     const slice = ids.slice(i, i + DELETE_CHUNK);
     const { error } = await supabase.from(tabela).update({ status: "inativo" }).in("id", slice);
-    if (error) return error.message;
+    if (error) {
+      console.error("[Organograma] inativarIdsInChunks:", error);
+      return false;
+    }
   }
-  return null;
+  return true;
 }
 
 function ModalFocusBody({ children }: { children: ReactNode }) {
@@ -145,19 +165,29 @@ export default function RhOrganogramaPage() {
 
   const orgPanelBox = getPageContentBoxStyle(brand, t, { marginBottom: 0 });
 
+  const [erroCarregar, setErroCarregar] = useState(false);
+
   const carregar = useCallback(async () => {
     setLoading(true);
     setErroGlobal(null);
+    setErroCarregar(false);
     const [dr, gr, tr, fr] = await Promise.all([
-      supabase.from("rh_org_diretorias").select("*").order("nome"),
-      supabase.from("rh_org_gerencias").select("*").order("nome"),
-      supabase.from("rh_org_times").select("*").order("nome"),
+      supabase.from("rh_org_diretorias").select(ORG_DIRETORIA_SELECT).order("nome").order("id"),
+      supabase.from("rh_org_gerencias").select(ORG_GERENCIA_SELECT).order("nome").order("id"),
+      supabase.from("rh_org_times").select(ORG_TIME_SELECT).order("nome").order("id"),
       supabase.rpc("rh_organograma_prestadores_vinculo"),
     ]);
-    if (dr.error) setErroGlobal(dr.error.message);
-    else if (gr.error) setErroGlobal(gr.error.message);
-    else if (tr.error) setErroGlobal(tr.error.message);
-    else if (fr.error) setErroGlobal(fr.error.message);
+    if (dr.error || gr.error || tr.error || fr.error) {
+      console.error("[Organograma] carregar:", dr.error ?? gr.error ?? tr.error ?? fr.error);
+      setErroGlobal(ERRO_ORG_CARREGAR);
+      setErroCarregar(true);
+      setDiretorias([]);
+      setGerencias([]);
+      setTimes([]);
+      setFuncionarios([]);
+      setLoading(false);
+      return;
+    }
     setDiretorias((dr.data ?? []) as RhOrgDiretoria[]);
     setGerencias((gr.data ?? []) as RhOrgGerencia[]);
     setTimes((tr.data ?? []) as RhOrgTime[]);
@@ -438,7 +468,10 @@ export default function RhOrganogramaPage() {
       setSalvandoDir(false);
       if (error) {
         if (error.code === "23505") setErroGlobal("Este prestador já é diretor(a) de outra diretoria ativa.");
-        else setErroGlobal(error.message);
+        else {
+          console.error("[Organograma] salvar diretoria:", error);
+          setErroGlobal(ERRO_ORG_SALVAR);
+        }
         return;
       }
       setSucessoMsg("Diretoria criada.");
@@ -451,7 +484,10 @@ export default function RhOrganogramaPage() {
       setSalvandoDir(false);
       if (error) {
         if (error.code === "23505") setErroGlobal("Este prestador já é diretor(a) de outra diretoria ativa.");
-        else setErroGlobal(error.message);
+        else {
+          console.error("[Organograma] salvar diretoria:", error);
+          setErroGlobal(ERRO_ORG_SALVAR);
+        }
         return;
       }
       setSucessoMsg("Diretoria atualizada.");
@@ -510,7 +546,7 @@ export default function RhOrganogramaPage() {
         .insert({ id: newId, ...payload, diretoria_id: mdGer.diretoriaId, status: "ativo", centro_custos });
       setSalvandoGer(false);
       if (error) {
-        setErroGlobal(error.message);
+        console.error("[Organograma]:", error); setErroGlobal(ERRO_ORG_SALVAR);
         return;
       }
       setSucessoMsg("Gerência criada.");
@@ -518,7 +554,7 @@ export default function RhOrganogramaPage() {
       const { error } = await supabase.from("rh_org_gerencias").update(payload).eq("id", mdGer.row.id);
       setSalvandoGer(false);
       if (error) {
-        setErroGlobal(error.message);
+        console.error("[Organograma]:", error); setErroGlobal(ERRO_ORG_SALVAR);
         return;
       }
       setSucessoMsg("Gerência atualizada.");
@@ -571,7 +607,7 @@ export default function RhOrganogramaPage() {
       setSalvandoTime(false);
       if (error) {
         if (error.code === "23505") setErroGlobal("Este prestador já é líder imediato de outro time ativo.");
-        else setErroGlobal(error.message);
+        else { console.error("[Organograma] salvar:", error); setErroGlobal(ERRO_ORG_SALVAR); }
         return;
       }
       setSucessoMsg("Time criado.");
@@ -580,7 +616,7 @@ export default function RhOrganogramaPage() {
       setSalvandoTime(false);
       if (error) {
         if (error.code === "23505") setErroGlobal("Este prestador já é líder imediato de outro time ativo.");
-        else setErroGlobal(error.message);
+        else { console.error("[Organograma] salvar:", error); setErroGlobal(ERRO_ORG_SALVAR); }
         return;
       }
       setSucessoMsg("Time atualizado.");
@@ -630,7 +666,8 @@ export default function RhOrganogramaPage() {
     const { error } = await supabase.from(tabela).update({ status: "inativo" }).eq("id", modalOff.row.id);
     setDesativando(false);
     if (error) {
-      setErroGlobal(error.message);
+      console.error("[Organograma] desativar:", error);
+      setErroGlobal(ERRO_ORG_DESATIVAR);
       return;
     }
     setSucessoMsg("Registro desativado.");
@@ -683,7 +720,8 @@ export default function RhOrganogramaPage() {
       if (tipo === "time") {
         const { error } = await supabase.from("rh_org_times").update({ status: "inativo" }).eq("id", row.id);
         if (error) {
-          setErroGlobal(error.message);
+          console.error("[Organograma] excluir time:", error);
+          setErroGlobal(ERRO_ORG_EXCLUIR);
           return;
         }
         setSucessoMsg("Time removido do organograma.");
@@ -693,14 +731,15 @@ export default function RhOrganogramaPage() {
       }
       if (tipo === "gerencia") {
         const timeIds = times.filter((ti) => ti.gerencia_id === row.id).map((ti) => ti.id);
-        const errT = await inativarIdsInChunks("rh_org_times", timeIds);
-        if (errT) {
-          setErroGlobal(errT);
+        const okT = await inativarIdsInChunks("rh_org_times", timeIds);
+        if (!okT) {
+          setErroGlobal(ERRO_ORG_EXCLUIR);
           return;
         }
         const { error } = await supabase.from("rh_org_gerencias").update({ status: "inativo" }).eq("id", row.id);
         if (error) {
-          setErroGlobal(error.message);
+          console.error("[Organograma] excluir gerência:", error);
+          setErroGlobal(ERRO_ORG_EXCLUIR);
           return;
         }
         setSucessoMsg("Gerência removida do organograma.");
@@ -711,19 +750,20 @@ export default function RhOrganogramaPage() {
       const gerenciaIds = gerencias.filter((g) => g.diretoria_id === row.id).map((g) => g.id);
       const gerenciaIdSet = new Set(gerenciaIds);
       const timeIds = times.filter((ti) => gerenciaIdSet.has(ti.gerencia_id)).map((ti) => ti.id);
-      const errT = await deleteIdsInChunks("rh_org_times", timeIds);
-      if (errT) {
-        setErroGlobal(errT);
+      const okT = await deleteIdsInChunks("rh_org_times", timeIds);
+      if (!okT) {
+        setErroGlobal(ERRO_ORG_EXCLUIR);
         return;
       }
-      const errG = await deleteIdsInChunks("rh_org_gerencias", gerenciaIds);
-      if (errG) {
-        setErroGlobal(errG);
+      const okG = await deleteIdsInChunks("rh_org_gerencias", gerenciaIds);
+      if (!okG) {
+        setErroGlobal(ERRO_ORG_EXCLUIR);
         return;
       }
       const { error } = await supabase.from("rh_org_diretorias").delete().eq("id", row.id);
       if (error) {
-        setErroGlobal(error.message);
+        console.error("[Organograma] excluir diretoria:", error);
+        setErroGlobal(ERRO_ORG_EXCLUIR);
         return;
       }
       if (filtroDiretoriaId === row.id) setFiltroDiretoriaId(ORG_FILTRO_TODAS_DIRETORIAS);
@@ -795,11 +835,33 @@ export default function RhOrganogramaPage() {
             fontSize: 13,
             display: "flex",
             alignItems: "center",
+            justifyContent: "space-between",
             gap: 8,
+            flexWrap: "wrap",
           }}
         >
-          <AlertCircle size={14} color="#e84025" aria-hidden />
-          {erroGlobal}
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+            <AlertCircle size={14} color="#e84025" aria-hidden />
+            {erroGlobal}
+          </span>
+          {erroCarregar ? (
+            <button
+              type="button"
+              onClick={() => void carregar()}
+              style={{
+                padding: "8px 14px",
+                borderRadius: 10,
+                border: "1px solid rgba(232,64,37,0.35)",
+                background: "transparent",
+                color: "#e84025",
+                fontWeight: 700,
+                fontFamily: FONT.body,
+                cursor: "pointer",
+              }}
+            >
+              Tentar de novo
+            </button>
+          ) : null}
         </div>
       ) : null}
 
@@ -829,7 +891,7 @@ export default function RhOrganogramaPage() {
         filtroDiretoriaId={filtroDiretoriaId}
         onFiltroChange={setFiltroDiretoriaId}
         t={t}
-        brand={{ blockBg: brand.blockBg, accent: brand.accent, useBrand: brand.useBrand }}
+        brand={brand}
         loading={loading}
         podeEditar={podeEditar}
         modo={modo}
@@ -853,7 +915,7 @@ export default function RhOrganogramaPage() {
             />
             <div>Carregando…</div>
           </div>
-        ) : (
+        ) : erroCarregar ? null : (
           <>
             {modo === "gerenciar" ? (
               <div

@@ -1,4 +1,4 @@
-import { ArrowDownToLine, Clock, Eye, Loader2, Trophy, UserPlus, Video } from "lucide-react";
+import { ArrowDownToLine, Clock, Loader2, Trophy, UserPlus, Users, Video } from "lucide-react";
 import { useApp } from "../../../../context/AppContext";
 import { useDashboardBrand } from "../../../../hooks/useDashboardBrand";
 import { useAppPageNav } from "../../../../hooks/useAppPageNav";
@@ -39,6 +39,7 @@ export function KpisInfluencerHome({
   const brand = useDashboardBrand();
   const { loading, erro, atual, anterior, mesLabel } = useHomeCanalKpisProprios(userId, {
     comInvestimento: false,
+    comUapSpin: true,
   });
   const box = getPageContentBoxStyle(brand, t);
   const titleId = `${sectionIdPrefix}-kpis-title`;
@@ -111,15 +112,11 @@ export function KpisInfluencerHome({
               comparativoMensal={comparativoCard(atual.horas, anterior.horas, fmtHorasTotal)}
             />
             <HomeKpiCard
-              label="Média de Views"
-              value={atual.views > 0 ? fmtNum(atual.views) : "—"}
-              icon={<Eye size={16} aria-hidden />}
+              label="UAP Spin"
+              value={fmtNum(atual.uap_spin)}
+              icon={<Users size={16} aria-hidden />}
               accentVar="--brand-accent"
-              comparativoMensal={
-                atual.views > 0 || anterior.views > 0
-                  ? comparativoCard(atual.views, anterior.views, fmtNum)
-                  : null
-              }
+              comparativoMensal={comparativoCard(atual.uap_spin, anterior.uap_spin, fmtNum)}
             />
           </div>
           <p style={{ ...HOME_FOOTER_HINT, color: t.textMuted }}>

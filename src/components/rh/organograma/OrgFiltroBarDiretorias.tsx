@@ -1,11 +1,12 @@
 import { useMemo, type Dispatch, type SetStateAction } from "react";
 import { ChevronLeft, ChevronRight, LayoutList, Loader2, Network } from "lucide-react";
 import { FiltroBarTabButton } from "../../dashboard/FiltroBarTabButton";
-import { FILTRO_BAR_TAB_ICON_SIZE, handleFiltroBarTabsArrowKeyDown } from "../../../lib/filterBarStyles";
+import { FILTRO_BAR_TAB_ICON_SIZE, getFilterBarWrapperStyle, handleFiltroBarTabsArrowKeyDown } from "../../../lib/filterBarStyles";
 import { FilterBarIcons } from "../../../lib/filterBarIconCatalog";
 import { FiltroBarPillButton } from "../../dashboard/FiltroBarPillButton";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import type { RhOrgDiretoria } from "../../../types/rhOrganograma";
+import type { PageContentBoxBrand, PageContentBoxTheme } from "../../../lib/pageContentBoxStyles";
 import { AjudaContextualAcoes } from "../../AjudaContextualAcoes";
 
 const TODAS_KEY = "todas" as const;
@@ -14,9 +15,7 @@ export type FiltroDiretoriaOrganograma = typeof TODAS_KEY | string;
 
 export const ORG_FILTRO_TODAS_DIRETORIAS = TODAS_KEY;
 
-type Theme = { text: string; textMuted: string; cardBorder: string; inputBg: string; cardBg?: string };
-
-type BrandBar = { blockBg: string; accent: string; useBrand: boolean };
+type Theme = PageContentBoxTheme & { text: string; textMuted: string; cardBorder: string; inputBg: string; cardBg?: string };
 
 type ModoOrganograma = "visual" | "gerenciar";
 
@@ -35,7 +34,7 @@ export function OrgFiltroBarDiretorias({
   filtroDiretoriaId: FiltroDiretoriaOrganograma;
   onFiltroChange: (id: FiltroDiretoriaOrganograma) => void;
   t: Theme;
-  brand: BrandBar;
+  brand: PageContentBoxBrand;
   loading?: boolean;
   podeEditar: boolean;
   modo: ModoOrganograma;
@@ -97,14 +96,7 @@ export function OrgFiltroBarDiretorias({
 
   return (
     <div style={{ marginBottom: 14 }}>
-      <div
-        style={{
-          borderRadius: 14,
-          border: `1px solid ${t.cardBorder}`,
-          background: brand.blockBg,
-          padding: "12px 20px",
-        }}
-      >
+      <div style={getFilterBarWrapperStyle(brand, t)}>
         <div className="app-filter-bar-tabs-cta" style={{ marginBottom: podeEditar ? 12 : 0 }}>
           <span className="app-filter-bar-tabs-cta__spacer" aria-hidden="true" />
           <div className="app-filter-bar-tabs-cta__tabs">
