@@ -22,6 +22,9 @@ type Props = {
   brand: ReturnType<typeof useDashboardBrand>;
 };
 
+const MSG_ERRO_APROVAR_MES =
+  "Não foi possível aprovar a presença. Se o problema persistir, entre em contato com o suporte.";
+
 export function ModalAprovarPresencaMesCalendario({
   open,
   refMes,
@@ -56,7 +59,7 @@ export function ModalAprovarPresencaMesCalendario({
     const ok = await onAprovarTodos();
     setSalvando(false);
     if (!ok) {
-      setErr("Não foi possível aprovar a presença. Se o problema persistir, entre em contato com o suporte.");
+      setErr(MSG_ERRO_APROVAR_MES);
     }
   };
 
@@ -120,9 +123,36 @@ export function ModalAprovarPresencaMesCalendario({
         <div
           role="alert"
           aria-live="polite"
-          style={{ color: "#e84025", fontSize: 12, fontFamily: FONT.body, marginBottom: 12 }}
+          style={{
+            color: "#e84025",
+            fontSize: 12,
+            fontFamily: FONT.body,
+            marginBottom: 12,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+            flexWrap: "wrap",
+          }}
         >
-          {err}
+          <span>{err}</span>
+          <button
+            type="button"
+            disabled={salvando || linhas.length === 0}
+            onClick={() => void aprovarTodos()}
+            style={{
+              padding: "8px 14px",
+              borderRadius: 10,
+              border: "1px solid rgba(232,64,37,0.35)",
+              background: "transparent",
+              color: "#e84025",
+              fontWeight: 700,
+              fontFamily: FONT.body,
+              cursor: salvando || linhas.length === 0 ? "not-allowed" : "pointer",
+            }}
+          >
+            Tentar de novo
+          </button>
         </div>
       ) : null}
 

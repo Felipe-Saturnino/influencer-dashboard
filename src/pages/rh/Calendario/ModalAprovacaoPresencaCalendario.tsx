@@ -306,8 +306,41 @@ export function ModalAprovacaoPresencaCalendario({
           />
         </div>
         {err ? (
-          <div role="alert" aria-live="polite" style={{ color: "#e84025", fontSize: 12, fontFamily: FONT.body, marginBottom: 12 }}>
-            {err}
+          <div
+            role="alert"
+            aria-live="polite"
+            style={{
+              color: "#e84025",
+              fontSize: 12,
+              fontFamily: FONT.body,
+              marginBottom: 12,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
+              flexWrap: "wrap",
+            }}
+          >
+            <span>{err}</span>
+            {err === MSG_ERRO_CORRECAO || err === MSG_ERRO_CORRECAO_PERM ? (
+              <button
+                type="button"
+                disabled={salvando}
+                onClick={() => salvarCorrecao()}
+                style={{
+                  padding: "8px 14px",
+                  borderRadius: 10,
+                  border: "1px solid rgba(232,64,37,0.35)",
+                  background: "transparent",
+                  color: "#e84025",
+                  fontWeight: 700,
+                  fontFamily: FONT.body,
+                  cursor: salvando ? "not-allowed" : "pointer",
+                }}
+              >
+                Tentar de novo
+              </button>
+            ) : null}
           </div>
         ) : null}
         <div style={{ marginTop: 20, display: "flex", justifyContent: "flex-end", gap: 10 }}>
@@ -373,9 +406,38 @@ export function ModalAprovacaoPresencaCalendario({
         <div
           role="alert"
           aria-live="polite"
-          style={{ color: "#e84025", fontSize: 12, fontFamily: FONT.body, marginBottom: 12 }}
+          style={{
+            color: "#e84025",
+            fontSize: 12,
+            fontFamily: FONT.body,
+            marginBottom: 12,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+            flexWrap: "wrap",
+          }}
         >
-          {err}
+          <span>{err}</span>
+          {err === MSG_ERRO_APROVAR || err === MSG_ERRO_APROVAR_PERM ? (
+            <button
+              type="button"
+              disabled={salvando}
+              onClick={() => aprovarTurno()}
+              style={{
+                padding: "8px 14px",
+                borderRadius: 10,
+                border: "1px solid rgba(232,64,37,0.35)",
+                background: "transparent",
+                color: "#e84025",
+                fontWeight: 700,
+                fontFamily: FONT.body,
+                cursor: salvando ? "not-allowed" : "pointer",
+              }}
+            >
+              Tentar de novo
+            </button>
+          ) : null}
         </div>
       ) : null}
       <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, flexWrap: "wrap" }}>

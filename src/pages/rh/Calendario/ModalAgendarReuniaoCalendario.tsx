@@ -85,6 +85,9 @@ export function ModalAgendarReuniaoCalendario({
     return null;
   }
 
+  const MSG_ERRO_AGENDAR =
+    "Não foi possível agendar a reunião. Se o problema persistir, entre em contato com o suporte.";
+
   async function confirmar() {
     const v = validar();
     if (v) {
@@ -105,7 +108,7 @@ export function ModalAgendarReuniaoCalendario({
       });
       setGravando(false);
       if (!res.ok) {
-        setErro("Não foi possível agendar a reunião. Se o problema persistir, entre em contato com o suporte.");
+        setErro(MSG_ERRO_AGENDAR);
         return;
       }
     } else {
@@ -124,7 +127,7 @@ export function ModalAgendarReuniaoCalendario({
       });
       setGravando(false);
       if (error) {
-        setErro("Não foi possível agendar a reunião. Se o problema persistir, entre em contato com o suporte.");
+        setErro(MSG_ERRO_AGENDAR);
         console.error("[ModalAgendarReuniaoCalendario]", error);
         return;
       }
@@ -204,9 +207,40 @@ export function ModalAgendarReuniaoCalendario({
         </div>
 
         {erro ? (
-          <p style={{ margin: "0 0 12px", fontSize: 13, color: "#e84025" }} role="alert">
-            {erro}
-          </p>
+          <div
+            role="alert"
+            style={{
+              margin: "0 0 12px",
+              fontSize: 13,
+              color: "#e84025",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
+              flexWrap: "wrap",
+            }}
+          >
+            <span>{erro}</span>
+            {erro === MSG_ERRO_AGENDAR ? (
+              <button
+                type="button"
+                disabled={gravando || diasEscalados.length === 0}
+                onClick={() => void confirmar()}
+                style={{
+                  padding: "8px 14px",
+                  borderRadius: 10,
+                  border: "1px solid rgba(232,64,37,0.35)",
+                  background: "transparent",
+                  color: "#e84025",
+                  fontWeight: 700,
+                  fontFamily: FONT.body,
+                  cursor: gravando || diasEscalados.length === 0 ? "not-allowed" : "pointer",
+                }}
+              >
+                Tentar de novo
+              </button>
+            ) : null}
+          </div>
         ) : null}
 
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "flex-end", marginTop: 8 }}>

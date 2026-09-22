@@ -51,6 +51,8 @@ type Props = {
   contentBox: CSSProperties;
   linhas: RelatorioPresencaLinha[];
   loading: boolean;
+  /** Com loadError não mostrar empty «Nenhuma justificativa…» (só o banner do pai). */
+  loadError?: boolean;
   semTime: boolean;
   sortDir: SortDir;
   onToggleSortNome: () => void;
@@ -71,6 +73,7 @@ export function RelatorioPresencaPainel({
   contentBox,
   linhas,
   loading,
+  loadError = false,
   semTime,
   sortDir,
   onToggleSortNome,
@@ -124,17 +127,19 @@ export function RelatorioPresencaPainel({
             </div>
           ) : null}
           {linhas.length === 0 && !loading ? (
-            <div
-              style={{
-                padding: "40px 0",
-                textAlign: "center",
-                color: t.textMuted,
-                fontSize: 13,
-                fontFamily: FONT.body,
-              }}
-            >
-              Nenhuma justificativa pendente para o período e filtros selecionados.
-            </div>
+            loadError ? null : (
+              <div
+                style={{
+                  padding: "40px 0",
+                  textAlign: "center",
+                  color: t.textMuted,
+                  fontSize: 13,
+                  fontFamily: FONT.body,
+                }}
+              >
+                Nenhuma justificativa pendente para o período e filtros selecionados.
+              </div>
+            )
           ) : (
             <table style={getDataTableStyle({ minWidth: 960 })}>
               <caption style={{ display: "none" }}>
