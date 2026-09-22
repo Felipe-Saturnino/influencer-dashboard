@@ -107,7 +107,7 @@ export default function OverviewPrestador() {
         onFiltroTimeChange={dados.setFiltroTimeIds}
         filtroStaffIds={dados.filtroStaffIds}
         onFiltroStaffChange={dados.setFiltroStaffIds}
-        loading={dados.isLoading}
+        loading={dados.isLoading || dados.loadingSecundario}
       />
 
       <div role="tabpanel" id={`panel-overview-prestador-${aba}`} aria-labelledby={`tab-overview-prestador-${aba}`}>
@@ -118,6 +118,11 @@ export default function OverviewPrestador() {
             historico={dados.historico}
             loading={dados.isLoading}
             prontoParaExibir={dados.prontoParaExibir}
+            mensagemSemEscopo={
+              dados.soProprios && !dados.ehLider
+                ? "Não encontramos o seu cadastro de prestador vinculado a este login."
+                : "Selecione um time para visualizar os resultados."
+            }
             visaoTime={dados.visaoTime}
             caps={dados.caps}
             pontosAtencao={dados.pontosAtencao}

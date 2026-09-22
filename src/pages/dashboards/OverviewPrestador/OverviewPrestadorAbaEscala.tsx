@@ -51,6 +51,8 @@ type Props = {
   historico: boolean;
   loading: boolean;
   prontoParaExibir: boolean;
+  /** Empty state when escopo ainda não permite paint (time ou vínculo próprio). */
+  mensagemSemEscopo?: string;
   visaoTime: boolean;
   caps: OverviewPrestadorTimeCaps;
   pontosAtencao: OverviewPrestadorAtencaoLinha[];
@@ -274,6 +276,7 @@ export function OverviewPrestadorAbaEscala({
   historico,
   loading,
   prontoParaExibir,
+  mensagemSemEscopo = "Selecione um time para visualizar os resultados.",
   visaoTime,
   caps,
   pontosAtencao,
@@ -289,7 +292,7 @@ export function OverviewPrestadorAbaEscala({
   const pageBox = getPageContentBoxStyle(brand, t);
 
   const vazio = !prontoParaExibir
-    ? "Selecione um time para visualizar os resultados."
+    ? mensagemSemEscopo
     : "Sem dados para o período selecionado.";
 
   const labelDiasEsc = visaoTime ? "Jornadas escaladas" : "Dias Escalados";
@@ -480,6 +483,7 @@ export function OverviewPrestadorAbaEscala({
               accentColor={brand.primary}
               atual={metricas.horasEscaladasMin}
               anterior={metricasAnterior.horasEscaladasMin}
+              formatAnterior={horasLabelFromMinutos}
               isHistorico={historico}
             />
             <KpiCard
@@ -490,6 +494,7 @@ export function OverviewPrestadorAbaEscala({
               accentColor={brand.accent}
               atual={metricas.horasRealizadasMin}
               anterior={metricasAnterior.horasRealizadasMin}
+              formatAnterior={horasLabelFromMinutos}
               isHistorico={historico}
             />
           </div>

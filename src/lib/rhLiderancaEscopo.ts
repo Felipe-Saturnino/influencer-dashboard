@@ -62,20 +62,35 @@ function parseEscopo(raw: unknown): RhLiderancaEscopo {
 
 /**
  * Cascata Organograma do login (ou do prestador informado, se admin / Simulador).
- * Falha fechada: sem RPC ou erro → sem liderança.
+ * Distingue falha de rede/RPC de «não é líder» (escopo vazio com ok).
  */
-export async function fetchRhLiderancaEscopo(
+export type RhLiderancaEscopoFetch =
+  | { ok: true; escopo: RhLiderancaEscopo }
+  | { ok: false };
+
+export async function fetchRhLiderancaEscopoResult(
   funcionarioId?: string | null,
-): Promise<RhLiderancaEscopo> {
+): Promise<RhLiderancaEscopoFetch> {
   const id = (funcionarioId ?? "").trim() || null;
   const { data, error } = await supabase.rpc("rh_lideranca_escopo", {
     p_funcionario_id: id,
   });
   if (error) {
     console.error("[rh_lideranca_escopo]", error);
-    return ESCOPO_VAZIO;
+    return { ok: false };
   }
-  return parseEscopo(data);
+  return { ok: true, escopo: parseEscopo(data) };
+}
+
+/**
+ * Cascata Organograma do login (ou do prestador informado, se admin / Simulador).
+ * Falha fechada: sem RPC ou erro → sem liderança (use `fetchRhLiderancaEscopoResult` quando empty≠erro).
+ */
+export async function fetchRhLiderancaEscopo(
+  funcionarioId?: string | null,
+): Promise<RhLiderancaEscopo> {
+  const r = await fetchRhLiderancaEscopoResult(funcionarioId);
+  return r.ok ? r.escopo : ESCOPO_VAZIO;
 }
 
 /** `area_key` das abas já existentes da Escala Escritório (`eo_` / `eog_`). */

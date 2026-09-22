@@ -50,7 +50,7 @@ import {
   type OverviewPrestadorTimeRotulo,
 } from "../../../lib/overviewPrestadorTeamConfig";
 import {
-  fetchRhLiderancaEscopo,
+  fetchRhLiderancaEscopoResult,
   fetchRhLiderancaPrestadores,
   fetchUnidadesFiltroTimeEmpresa,
   unidadesParaFiltroTime,
@@ -91,6 +91,9 @@ const STAFF_SELECT_OVERVIEW =
 
 const ERRO_CARGA_ESCALA =
   "Não foi possível carregar a escala. Se o problema persistir, entre em contato com o suporte.";
+
+const ERRO_CARGA_ESCOPO =
+  "Não foi possível carregar o escopo de liderança. Se o problema persistir, entre em contato com o suporte.";
 
 async function mapPool<T, R>(items: T[], concurrency: number, fn: (item: T) => Promise<R>): Promise<R[]> {
   if (items.length === 0) return [];
@@ -143,6 +146,7 @@ export function useOverviewPrestadorDados(
   const [loadingStaffDados, setLoadingStaffDados] = useState(false);
   const [loadingSecundario, setLoadingSecundario] = useState(false);
   const [erroCarga, setErroCarga] = useState<string | null>(null);
+  const [erroEscopo, setErroEscopo] = useState<string | null>(null);
   const [reloadTick, setReloadTick] = useState(0);
 
   const mesSelecionado: MesCarrosselEscalaEntry | undefined = mesesDisponiveis[idxMes];
@@ -228,12 +232,25 @@ export function useOverviewPrestadorDados(
         setEhLider(false);
         setUnidadesLideradas([]);
         setUnidadesFiltro([]);
+        setErroEscopo(null);
         setLoadingStaff(false);
         return;
       }
       setMeuRhFuncionarioId(row.id);
-      const escopo = await fetchRhLiderancaEscopo(row.id);
+      const escopoFetch = await fetchRhLiderancaEscopoResult(row.id);
       if (cancelled) return;
+      if (!escopoFetch.ok) {
+        setEhLider(false);
+        setUnidadesLideradas([]);
+        setUnidadesFiltro([]);
+        setTimes([]);
+        setPrestadores([row]);
+        setErroEscopo(ERRO_CARGA_ESCOPO);
+        setLoadingStaff(false);
+        return;
+      }
+      const escopo = escopoFetch.escopo;
+      setErroEscopo(null);
       setEhLider(escopo.ehLider);
       setUnidadesLideradas(escopo.unidades);
       setUnidadesFiltro(escopo.ehLider ? escopo.unidades : []);
@@ -821,8 +838,7 @@ export function useOverviewPrestadorDados(
         const rank = { alta: 0, media: 1, ok: 2 };
         if (rank[a.severidade] !== rank[b.severidade]) return rank[a.severidade] - rank[b.severidade];
         return (a.presencaPct ?? 100) - (b.presencaPct ?? 100);
-      })
-      .slice(0, 12);
+      });
   }, [visaoTime, idsEscopo, metricasPorStaff, prestadorPorId, timeRotuloEfetivo]);
 
   const cobertura = useMemo(() => {
@@ -923,6 +939,7 @@ export function useOverviewPrestadorDados(
   const isLoading = loadingStaff || loadingGrade || loadingStaffDados;
   const recarregar = useCallback(() => {
     setErroCarga(null);
+    setErroEscopo(null);
     setReloadTick((n) => n + 1);
   }, []);
   const prontoParaExibir = visaoLiderProprios
@@ -965,7 +982,7 @@ export function useOverviewPrestadorDados(
     prontoParaExibir,
     isLoading,
     loadingSecundario,
-    erroCarga,
+    erroCarga: erroEscopo ?? erroCarga,
     recarregar,
   };
 }
