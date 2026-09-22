@@ -35,7 +35,12 @@ async function carregarPeriodo(
   }
   const base = agregarHomeCanalPeriodo(analytics, investimento);
   if (!comUapSpin) return base;
-  const uapRows = await fetchJogadoresUapSpin({ inicio, fim, influencerIds });
+  const uapRows = await fetchJogadoresUapSpin({
+    inicio,
+    fim,
+    influencerIds,
+    operadoraSlugs: null,
+  });
   const uap = uapSpinJogadoresAba(uapRows);
   return { ...base, uap_spin: uap.uap, uap_spin_rodadas: uap.rodadas };
 }
