@@ -281,97 +281,115 @@ export function ModalHistoricoDenuncia({
   t: Theme;
 }) {
   const [loading, setLoading] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
   const [items, setItems] = useState<{ sortAt: string; node: ReactNode }[]>([]);
 
   const load = useCallback(async () => {
     if (!denunciaId) return;
     setLoading(true);
-    const [hRes, nRes] = await Promise.all([
-      supabase
-        .from("canal_denuncia_status_historico")
-        .select("id, status_anterior, status_novo, descricao_resolucao, changed_at, changed_by")
-        .eq("denuncia_id", denunciaId)
-        .order("changed_at", { ascending: false }),
-      supabase
-        .from("canal_denuncia_anotacoes")
-        .select("id, texto, created_at, created_by, autor_origem, visivel_externo")
-        .eq("denuncia_id", denunciaId)
-        .order("created_at", { ascending: false }),
-    ]);
-    const hRows = hRes.data ?? [];
-    const nRows = nRes.data ?? [];
-    const uids = [...new Set([...hRows.map((r) => r.changed_by), ...nRows.map((r) => r.created_by)].filter(Boolean))] as string[];
-    const nameMap: Record<string, string> = {};
-    if (uids.length) {
-      const { data: profs } = await supabase.from("profiles").select("id, name").in("id", uids);
-      (profs ?? []).forEach((p) => {
-        nameMap[p.id] = p.name ?? "—";
-      });
-    }
-    const merged: { sortAt: string; node: ReactNode }[] = [];
-    for (const h of hRows) {
-      const who = h.changed_by ? nameMap[h.changed_by] ?? "—" : "—";
-      merged.push({
-        sortAt: h.changed_at,
-        node: (
-          <div
-            key={`h-${h.id}`}
-            style={{
-              padding: 14,
-              borderRadius: 12,
-              border: `1px solid ${t.cardBorder}`,
-              background: t.isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)",
-            }}
-          >
-            <div style={{ fontSize: 12, color: t.textMuted, marginBottom: 6 }}>
-              {fmtDt(h.changed_at)} · {who}
+    setErro(null);
+    try {
+      const [hRes, nRes] = await Promise.all([
+        supabase
+          .from("canal_denuncia_status_historico")
+          .select("id, status_anterior, status_novo, descricao_resolucao, changed_at, changed_by")
+          .eq("denuncia_id", denunciaId)
+          .order("changed_at", { ascending: false }),
+        supabase
+          .from("canal_denuncia_anotacoes")
+          .select("id, texto, created_at, created_by, autor_origem, visivel_externo")
+          .eq("denuncia_id", denunciaId)
+          .order("created_at", { ascending: false }),
+      ]);
+      if (hRes.error) throw hRes.error;
+      if (nRes.error) throw nRes.error;
+      const hRows = hRes.data ?? [];
+      const nRows = nRes.data ?? [];
+      const uids = [...new Set([...hRows.map((r) => r.changed_by), ...nRows.map((r) => r.created_by)].filter(Boolean))] as string[];
+      const nameMap: Record<string, string> = {};
+      if (uids.length) {
+        const { data: profs, error: profErr } = await supabase.from("profiles").select("id, name").in("id", uids);
+        if (profErr) throw profErr;
+        (profs ?? []).forEach((p) => {
+          nameMap[p.id] = p.name ?? "—";
+        });
+      }
+      const merged: { sortAt: string; node: ReactNode }[] = [];
+      for (const h of hRows) {
+        const who = h.changed_by ? nameMap[h.changed_by] ?? "—" : "—";
+        merged.push({
+          sortAt: h.changed_at,
+          node: (
+            <div
+              key={`h-${h.id}`}
+              style={{
+                padding: 14,
+                borderRadius: 12,
+                border: `1px solid ${t.cardBorder}`,
+                background: t.isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)",
+              }}
+            >
+              <div style={{ fontSize: 12, color: t.textMuted, marginBottom: 6 }}>
+                {fmtDt(h.changed_at)} · {who}
+              </div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: t.text, marginBottom: 4 }}>Alteração de status</div>
+              <div style={{ fontSize: 13, color: t.text }}>
+                {h.status_anterior ? `${statusLabel(h.status_anterior as DenunciaStatusDb)} → ` : ""}
+                {statusLabel(h.status_novo as DenunciaStatusDb)}
+              </div>
+              {h.descricao_resolucao ? (
+                <div style={{ fontSize: 13, color: t.text, marginTop: 8, whiteSpace: "pre-wrap" }}>{h.descricao_resolucao}</div>
+              ) : null}
             </div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: t.text, marginBottom: 4 }}>Alteração de status</div>
-            <div style={{ fontSize: 13, color: t.text }}>
-              {h.status_anterior ? `${statusLabel(h.status_anterior as DenunciaStatusDb)} → ` : ""}
-              {statusLabel(h.status_novo as DenunciaStatusDb)}
+          ),
+        });
+      }
+      for (const n of nRows) {
+        const origem = n.autor_origem === "relator" ? "relator" : "rh";
+        const who = labelAutorMensagemRh(origem, n.created_by ? nameMap[n.created_by] : null);
+        const titulo =
+          origem === "relator"
+            ? "Mensagem do relator"
+            : n.visivel_externo === false
+              ? "Anotação interna"
+              : "Anotação (visível na consulta)";
+        merged.push({
+          sortAt: n.created_at,
+          node: (
+            <div
+              key={`n-${n.id}`}
+              style={{
+                padding: 14,
+                borderRadius: 12,
+                border: `1px solid ${t.cardBorder}`,
+                background:
+                  origem === "relator"
+                    ? t.isDark
+                      ? "rgba(124,58,237,0.12)"
+                      : "rgba(124,58,237,0.06)"
+                    : t.isDark
+                      ? "rgba(255,255,255,0.03)"
+                      : "rgba(0,0,0,0.02)",
+              }}
+            >
+              <div style={{ fontSize: 12, color: t.textMuted, marginBottom: 6 }}>
+                {fmtDt(n.created_at)} · {who}
+              </div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: t.text, marginBottom: 4 }}>{titulo}</div>
+              <div style={{ fontSize: 13, color: t.text, whiteSpace: "pre-wrap" }}>{n.texto}</div>
             </div>
-            {h.descricao_resolucao ? (
-              <div style={{ fontSize: 13, color: t.text, marginTop: 8, whiteSpace: "pre-wrap" }}>{h.descricao_resolucao}</div>
-            ) : null}
-          </div>
-        ),
-      });
+          ),
+        });
+      }
+      merged.sort((a, b) => (a.sortAt < b.sortAt ? 1 : a.sortAt > b.sortAt ? -1 : 0));
+      setItems(merged);
+    } catch (e) {
+      console.error("[ModalHistoricoDenuncia]", e);
+      setErro(
+        "Não foi possível carregar o histórico. Se o problema persistir, entre em contato com o suporte.",
+      );
+      setItems([]);
     }
-    for (const n of nRows) {
-      const origem = n.autor_origem === "relator" ? "relator" : "rh";
-      const who = labelAutorMensagemRh(origem, n.created_by ? nameMap[n.created_by] : null);
-      const titulo = origem === "relator" ? "Mensagem do relator" : n.visivel_externo === false ? "Anotação interna" : "Anotação (visível na consulta)";
-      merged.push({
-        sortAt: n.created_at,
-        node: (
-          <div
-            key={`n-${n.id}`}
-            style={{
-              padding: 14,
-              borderRadius: 12,
-              border: `1px solid ${t.cardBorder}`,
-              background:
-                origem === "relator"
-                  ? t.isDark
-                    ? "rgba(124,58,237,0.12)"
-                    : "rgba(124,58,237,0.06)"
-                  : t.isDark
-                    ? "rgba(255,255,255,0.03)"
-                    : "rgba(0,0,0,0.02)",
-            }}
-          >
-            <div style={{ fontSize: 12, color: t.textMuted, marginBottom: 6 }}>
-              {fmtDt(n.created_at)} · {who}
-            </div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: t.text, marginBottom: 4 }}>{titulo}</div>
-            <div style={{ fontSize: 13, color: t.text, whiteSpace: "pre-wrap" }}>{n.texto}</div>
-          </div>
-        ),
-      });
-    }
-    merged.sort((a, b) => (a.sortAt < b.sortAt ? 1 : a.sortAt > b.sortAt ? -1 : 0));
-    setItems(merged);
     setLoading(false);
   }, [denunciaId, t.cardBorder, t.isDark, t.text, t.textMuted]);
 
@@ -422,8 +440,45 @@ export function ModalHistoricoDenuncia({
         </div>
         <div style={{ padding: 20 }}>
           {loading ? (
-            <div style={{ display: "flex", justifyContent: "center", padding: 24 }}>
+            <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 8, padding: 24, color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
               <Loader2 className="app-lucide-spin" size={22} color="var(--brand-primary, #7c3aed)" aria-hidden />
+              Carregando…
+            </div>
+          ) : erro ? (
+            <div
+              role="alert"
+              style={{
+                fontSize: 13,
+                color: "#e84025",
+                fontFamily: FONT.body,
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                flexWrap: "wrap",
+              }}
+            >
+              <span>{erro}</span>
+              <button
+                type="button"
+                onClick={() => void load()}
+                style={{
+                  fontFamily: FONT.body,
+                  fontSize: 12,
+                  fontWeight: 700,
+                  padding: "6px 12px",
+                  borderRadius: 8,
+                  border: "1px solid rgba(232,64,37,0.35)",
+                  background: "transparent",
+                  color: "#e84025",
+                  cursor: "pointer",
+                }}
+              >
+                Tentar de novo
+              </button>
+            </div>
+          ) : items.length === 0 ? (
+            <div style={{ padding: "24px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
+              Nenhum registro no histórico.
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>{items.map((x, i) => <div key={i}>{x.node}</div>)}</div>

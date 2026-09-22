@@ -608,7 +608,10 @@ CREATE POLICY rh_solicitacoes_insert ON public.rh_solicitacoes FOR INSERT TO aut
       )
     )
     OR (
-      public._rh_solicitacoes_perm('create')
+      (
+        public._rh_solicitacoes_perm('create')
+        OR public._rh_solicitacoes_perm('edit')
+      )
       AND public._rh_lideranca_funcionario_no_escopo(rh_funcionario_id)
     )
   );
