@@ -77,6 +77,7 @@ import { buscarRhFuncionarioAtivoPorEmailLogin } from "../../../lib/rhFuncionari
 import { normalizarSelecaoUnica } from "../../../lib/rhCalendarioStaffFiltroHelpers";
 import {
   fetchRhLiderancaEscopo,
+  fetchUnidadesFiltroTimeEmpresa,
   unidadesParaFiltroTime,
 } from "../../../lib/rhLiderancaEscopo";
 
@@ -308,22 +309,14 @@ export default function RhSolicitacoesPage() {
         setIdsEscopo(ids);
         return;
       }
-      const { data, error } = await supabase
-        .from("rh_org_times")
-        .select("id, nome")
-        .eq("status", "ativo")
-        .order("nome", { ascending: true });
-      if (cancelled) return;
-      if (error) {
-        console.error("[RhSolicitacoes] times", error);
+      try {
+        const unidades = await fetchUnidadesFiltroTimeEmpresa();
+        if (cancelled) return;
+        setTimeItems(unidadesParaFiltroTime(unidades));
+      } catch (err) {
+        if (cancelled) return;
+        console.error("[RhSolicitacoes] times", err);
         setTimeItems([]);
-      } else {
-        setTimeItems(
-          (data ?? []).map((t) => ({
-            id: String((t as { id: string }).id),
-            name: String((t as { nome: string }).nome ?? "").trim() || "Time",
-          })),
-        );
       }
       setIdsEscopo(null);
     })();

@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mockup — Home Investidor (revisão · espelho do código)</title>
+  <style>
+    :root {
+      --brand-primary: #7c3aed;
+      --brand-secondary: #1e36f8;
+      --brand-accent: #7c3aed;
+      --brand-roxo: #4a2082;
+      --brand-azul: #1e36f8;
+      --brand-ciano: #70cae4;
+      --verde: #22c55e;
+      --page-bg: #f4f4f8;
+      --card-bg: #ffffff;
+      --card-border: #e8e8f0;
+      --input-bg: #f8f8fc;
+      --text: #1a1a2e;
+      --text-muted: #666688;
+      --section-title: #1a1a2e;
+      --box-radius: 14px;
+      --box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+      --font: "Segoe UI", system-ui, -apple-system, sans-serif;
+      --font-title: "Segoe UI Semibold", "Segoe UI", system-ui, sans-serif;
+    }
+    body.dark {
+      --page-bg: #0f0f1a;
+      --card-bg: #1a1a2e;
+      --card-border: #2a2a4e;
+      --input-bg: rgba(255,255,255,0.07);
+      --text: #ffffff;
+      --text-muted: #e5dce1;
+      --section-title: #ffffff;
+      --box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font);
+      background: var(--page-bg);
+      color: var(--text);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+    .mock-banner {
+      background: linear-gradient(135deg, #4a2082, #1e36f8);
+      color: #fff; padding: 10px 16px; font-size: 12px; font-weight: 600;
+      display: flex; align-items: center; justify-content: center; gap: 16px; flex-wrap: wrap;
+    }
+    .mock-banner button {
+      border: 1px solid rgba(255,255,255,.5); background: rgba(255,255,255,.12); color: #fff;
+      padding: 5px 12px; border-radius: 999px; font-size: 11px; font-weight: 700; cursor: pointer;
+      font-family: var(--font);
+    }
+    .page-shell {
+      max-width: 1100px; margin: 0 auto; padding: 24px 20px 40px;
+      display: flex; flex-direction: column; gap: 14px;
+    }
+    .block-tag {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+      color: var(--brand-primary); background: rgba(124, 58, 237, 0.12);
+      border: 1px dashed rgba(124, 58, 237, 0.45);
+      padding: 3px 8px; border-radius: 999px; margin-bottom: -6px; width: max-content;
+    }
+    body.dark .block-tag { color: var(--brand-ciano); }
+    .welcome-card {
+      position: relative; overflow: hidden;
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: 20px; padding: 28px; box-shadow: var(--box-shadow);
+    }
+    .welcome-card .topbar {
+      position: absolute; top: 0; left: 0; right: 0; height: 4px;
+      background: linear-gradient(90deg, var(--brand-primary), var(--brand-azul));
+    }
+    .welcome-card h1 {
+      font-family: var(--font-title); font-size: 22px; font-weight: 800;
+      letter-spacing: .02em; margin: 0 0 12px;
+    }
+    .welcome-sub { font-size: 14px; color: var(--text-muted); line-height: 1.55; white-space: pre-line; }
+    .content-box {
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: var(--box-radius); box-shadow: var(--box-shadow); padding: 20px;
+    }
+    .section-title {
+      font-family: var(--font-title); font-size: 13px; font-weight: 800;
+      letter-spacing: .08em; text-transform: uppercase; color: var(--section-title);
+      margin: 0 0 14px;
+    }
+    .mes-sub {
+      margin: -6px 0 14px; font-size: 12px; font-weight: 600;
+      letter-spacing: .02em; color: var(--text-muted);
+    }
+    .hint { font-size: 13px; line-height: 1.5; color: var(--text-muted); margin: 0 0 16px; }
+    .grid-kpi-3 {
+      display: grid; gap: 12px;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .grid-2 {
+      display: grid; gap: 12px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    @media (max-width: 900px) {
+      .grid-kpi-3, .grid-2 { grid-template-columns: 1fr; }
+    }
+    .kpi-card {
+      border-radius: 14px; border: 1px solid var(--card-border);
+      background: var(--card-bg); overflow: hidden;
+    }
+    .kpi-card .kpi-bar {
+      height: 3px;
+      background: linear-gradient(90deg, var(--brand-primary), transparent);
+    }
+    .kpi-card .kpi-bar.sec { background: linear-gradient(90deg, var(--brand-azul), transparent); }
+    .kpi-card .kpi-bar.accent { background: linear-gradient(90deg, var(--brand-ciano), transparent); }
+    .kpi-card .kpi-body { padding: 14px 16px; }
+    .kpi-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+    .kpi-ic {
+      width: 30px; height: 30px; border-radius: 8px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(124,58,237,.1); border: 1px solid rgba(124,58,237,.22);
+      color: var(--brand-primary); font-size: 12px; font-weight: 800;
+    }
+    .kpi-ic.sec { background: rgba(30,54,248,.1); border-color: rgba(30,54,248,.22); color: var(--brand-azul); }
+    .kpi-ic.accent { background: rgba(112,202,228,.15); border-color: rgba(112,202,228,.35); color: #0891b2; }
+    .kpi-label {
+      font-size: 10px; font-weight: 600; letter-spacing: .07em;
+      text-transform: uppercase; color: var(--text-muted);
+    }
+    .kpi-value {
+      font-size: 22px; font-weight: 800; line-height: 1.1; color: var(--text);
+      font-variant-numeric: tabular-nums;
+    }
+    .kpi-break {
+      margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--card-border);
+      list-style: none; display: flex; flex-direction: column; gap: 6px;
+    }
+    .kpi-break li {
+      display: flex; justify-content: space-between; gap: 8px;
+      font-size: 12px; color: var(--text-muted);
+    }
+    .kpi-break li strong { color: var(--text); font-variant-numeric: tabular-nums; }
+    .footer-hint {
+      margin: 14px 0 0; font-size: 12px; color: var(--text-muted); line-height: 1.5;
+    }
+    .footer-hint a { font-weight: 700; color: var(--brand-accent); text-decoration: underline; }
+    .spin-list { list-style: none; display: flex; flex-direction: column; gap: 12px; }
+    .spin-card {
+      border: 1px solid var(--card-border); border-radius: 12px;
+      padding: 14px 16px; background: var(--input-bg);
+    }
+    .spin-card .meta { font-size: 11px; color: var(--text-muted); margin-bottom: 6px; }
+    .spin-card .titulo { font-size: 14px; font-weight: 700; margin-bottom: 6px; }
+    .spin-card .resumo { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+    .spin-card a { font-size: 12px; font-weight: 700; color: var(--brand-accent); }
+    .feed-list { list-style: none; display: flex; flex-direction: column; gap: 12px; }
+    .feed-card {
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: 14px; padding: 16px 18px; box-shadow: var(--box-shadow);
+    }
+    .feed-card h3 { font-size: 15px; font-weight: 800; margin: 0; }
+    .feed-body { margin-top: 12px; font-size: 13px; line-height: 1.55; }
+    .feed-footer { font-size: 12px; color: var(--text-muted); margin: 14px 0 0; }
+    .btn-li-ocultar {
+      display: inline-flex; margin-top: 14px; padding: 8px 14px; border-radius: 10px;
+      border: 1px solid var(--card-border); background: rgba(124, 58, 237, 0.12);
+      color: var(--brand-accent); font-size: 12px; font-weight: 700; cursor: pointer;
+      font-family: var(--font);
+    }
+    .grid-atalhos {
+      display: grid; gap: 12px;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+    }
+    .atalho {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 16px 18px; border-radius: 12px;
+      border: 1px solid var(--card-border); background: var(--input-bg);
+      color: var(--text); text-decoration: none;
+    }
+    .atalho .ic {
+      width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
+      background: rgba(74,32,130,0.2); color: var(--brand-accent);
+      display: flex; align-items: center; justify-content: center; font-weight: 800;
+    }
+    .atalho .tit { font-size: 14px; font-weight: 700; }
+    .atalho p { margin: 8px 0 0; font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+    .nota-mock {
+      display: flex; align-items: flex-start; gap: 6px; margin-top: 12px;
+      font-size: 11px; font-weight: 700; padding: 6px 10px; border-radius: 8px;
+      background: rgba(245,158,11,.12); color: #a16207; border: 1px dashed rgba(245,158,11,.55);
+    }
+    body.dark .nota-mock { color: #f59e0b; }
+    .legenda { max-width: 1100px; margin: 0 auto; padding: 0 20px 48px; }
+    .legenda .content-box { font-size: 12px; color: var(--text-muted); }
+    .legenda ul { padding-left: 18px; margin-top: 10px; }
+    .legenda li { margin-bottom: 6px; }
+    .legenda strong { color: var(--text); }
+  </style>
+</head>
+<body>
+  <div class="mock-banner">
+    <span>Mockup 5/5 — Home · perfil <strong>Investidor</strong> · espelho do código implantado</span>
+    <button type="button" id="btn-tema">Alternar tema claro / escuro</button>
+  </div>
+
+  <div class="page-shell">
+
+    <span class="block-tag">Bloco 1 · Boas-vindas (sem avatar)</span>
+    <div class="welcome-card">
+      <div class="topbar"></div>
+      <h1>Olá, Carlos Mendes!</h1>
+      <p class="welcome-sub">Acesso privilegiado. Parceria real.
+Você enxerga a operação de onde ela acontece. Dashboards e métricas calibrados com a profundidade de quem faz parte do resultado.</p>
+    </div>
+
+    <span class="block-tag">Bloco 2 · Principais KPIs — mesas (MTD até D-1)</span>
+    <div class="content-box">
+      <h2 class="section-title">Principais KPIs</h2>
+      <p class="mes-sub">Setembro 2026</p>
+      <div class="grid-kpi-3">
+        <article class="kpi-card">
+          <div class="kpi-bar"></div>
+          <div class="kpi-body">
+            <div class="kpi-head"><span class="kpi-ic">↑</span><span class="kpi-label">GGR</span></div>
+            <div class="kpi-value">R$ 1.842.300,00</div>
+            <ul class="kpi-break">
+              <li><span>Blaze</span><strong>R$ 920.100,00</strong></li>
+              <li><span>Betano</span><strong>R$ 612.400,00</strong></li>
+              <li><span>EsportivaBet</span><strong>R$ 309.800,00</strong></li>
+            </ul>
+          </div>
+        </article>
+        <article class="kpi-card">
+          <div class="kpi-bar sec"></div>
+          <div class="kpi-body">
+            <div class="kpi-head"><span class="kpi-ic sec">↕</span><span class="kpi-label">Turnover</span></div>
+            <div class="kpi-value">R$ 48.210.000,00</div>
+            <ul class="kpi-break">
+              <li><span>Blaze</span><strong>R$ 24.100.000,00</strong></li>
+              <li><span>Betano</span><strong>R$ 15.800.000,00</strong></li>
+              <li><span>EsportivaBet</span><strong>R$ 8.310.000,00</strong></li>
+            </ul>
+          </div>
+        </article>
+        <article class="kpi-card">
+          <div class="kpi-bar accent"></div>
+          <div class="kpi-body">
+            <div class="kpi-head"><span class="kpi-ic accent">#</span><span class="kpi-label">Apostas</span></div>
+            <div class="kpi-value">2.184.502</div>
+            <ul class="kpi-break">
+              <li><span>Blaze</span><strong>1.102.400</strong></li>
+              <li><span>Betano</span><strong>712.100</strong></li>
+              <li><span>EsportivaBet</span><strong>370.002</strong></li>
+            </ul>
+          </div>
+        </article>
+      </div>
+      <p class="footer-hint">Quer saber mais? Acessa o Dashboard de <a href="#">Overview Spin</a></p>
+      <p class="nota-mock">Fonte atual no código: só <code>relatorio_daily_summary</code> (Dedicado). Operador/Overview aba Overview somam Dedicado+Network — confirmar se Investidor deve seguir a mesma regra.</p>
+    </div>
+
+    <span class="block-tag">Bloco 3 · Ações de Aquisição</span>
+    <div class="content-box">
+      <h2 class="section-title">Ações de Aquisição</h2>
+      <p class="mes-sub">Setembro 2026</p>
+      <div class="grid-2">
+        <article class="kpi-card">
+          <div class="kpi-bar"></div>
+          <div class="kpi-body">
+            <div class="kpi-head"><span class="kpi-ic">TV</span><span class="kpi-label">Streamers</span></div>
+            <ul class="kpi-break" style="margin-top:0;padding-top:0;border:0">
+              <li><span>Lives realizadas</span><strong>186</strong></li>
+              <li><span>Horas realizadas</span><strong>412:30</strong></li>
+              <li><span>Depósitos</span><strong>R$ 1.240.500,00</strong></li>
+            </ul>
+          </div>
+        </article>
+        <article class="kpi-card">
+          <div class="kpi-bar sec"></div>
+          <div class="kpi-body">
+            <div class="kpi-head"><span class="kpi-ic sec">SM</span><span class="kpi-label">Mídias Sociais</span></div>
+            <ul class="kpi-break" style="margin-top:0;padding-top:0;border:0">
+              <li><span>Postagens</span><strong>94</strong></li>
+              <li><span>Novos Seguidores</span><strong>12.480</strong></li>
+              <li><span>Impressões totais</span><strong>3.210.000</strong></li>
+            </ul>
+          </div>
+        </article>
+      </div>
+      <p class="footer-hint">Quer saber mais? Acessa o Dashboard de <a href="#">Streamers</a> e de <a href="#">Mídias Sociais</a></p>
+    </div>
+
+    <span class="block-tag">Bloco 4 · Spin na Rede (MTD · some se vazio)</span>
+    <div class="content-box">
+      <h2 class="section-title">Spin na Rede</h2>
+      <ul class="spin-list">
+        <li class="spin-card">
+          <div class="meta">12 de setembro de 2026 · Twitch</div>
+          <div class="titulo">Menção Blaze Roleta VIP</div>
+          <p class="resumo">Streamer citou a mesa dedicada durante a live noturna…</p>
+          <a href="#">Ver menção</a>
+        </li>
+        <li class="spin-card">
+          <div class="meta">8 de setembro de 2026 · Kick</div>
+          <div class="titulo">Highlight Blackjack Network</div>
+          <p class="resumo">Clip com destaque da mesa Network no canal parceiro…</p>
+          <a href="#">Ver menção</a>
+        </li>
+      </ul>
+      <p class="nota-mock">Menções do mês (MTD) com <code>passou_filtro = true</code>. Bloco oculto se lista vazia.</p>
+    </div>
+
+    <span class="block-tag">Bloco 5 · Informações — Informativos (perfil investidor · 10 dias)</span>
+    <div class="content-box">
+      <h2 class="section-title">Informações</h2>
+      <ul class="feed-list">
+        <li>
+          <article class="feed-card">
+            <h3>Atualização operacional — mesas</h3>
+            <div class="feed-body"><p>Resumo mensal das mesas dedicadas e network disponível no Overview Spin.</p></div>
+            <p class="feed-footer">Equipe Data · 11/09/26 - 10:00</p>
+            <button type="button" class="btn-li-ocultar">Li e Ocultar</button>
+          </article>
+        </li>
+      </ul>
+      <p class="nota-mock">Feed <code>investidor</code>, 10 dias + «Li e Ocultar». Dados via RLS da Home (não gate de página Informativos).</p>
+    </div>
+
+    <span class="block-tag">Bloco 6 · Acesso rápido (fixos · subtítulo canónico)</span>
+    <div class="content-box">
+      <h2 class="section-title">Acesso rápido</h2>
+      <p class="hint">Clique em um atalho abaixo para ir diretamente à página desejada.</p>
+      <div class="grid-atalhos">
+        <a class="atalho" href="#"><span class="ic">Ag</span><div><div class="tit">Agenda</div><p>Visualize, agende e acompanhe as lives dos influencers.</p></div></a>
+        <a class="atalho" href="#"><span class="ic">OS</span><div><div class="tit">Overview Spin</div><p>Resultados financeiros e operacionais das mesas ao vivo por operadora.</p></div></a>
+        <a class="atalho" href="#"><span class="ic">St</span><div><div class="tit">Streamers</div><p>Acompanhe performance, conversão e financeiro do canal de influencers.</p></div></a>
+        <a class="atalho" href="#"><span class="ic">?</span><div><div class="tit">Ajuda</div><p>Conheça as funcionalidades da plataforma, o glossário, tutoriais passo a passo e soluções para problemas comuns.</p></div></a>
+      </div>
+      <p class="nota-mock">Lista fixa (não dump do menu). Ao clicar, o gate normal da rota vale — KPIs da Home não dependem de <code>canView</code> das páginas fonte.</p>
+    </div>
+  </div>
+
+  <div class="legenda">
+    <div class="content-box">
+      <h2 class="section-title">Notas para aprovação — Home Investidor</h2>
+      <ul>
+        <li><strong>Já implantado</strong> em <code>HomeInvestidor.tsx</code> — este mockup espelha o código.</li>
+        <li><strong>Boas-vindas:</strong> sem avatar / chip de role.</li>
+        <li><strong>KPIs:</strong> GGR / Turnover / Apostas + lista por operadora; link Overview Spin.</li>
+        <li><strong>Aquisição:</strong> Streamers (lives / horas / depósitos totais) + Mídias (postagens / seguidores / impressões).</li>
+        <li><strong>Spin na Rede + Informativos + atalhos</strong> conforme MDC <code>geral.mdc</code>.</li>
+        <li><strong>Ponto aberto:</strong> KPIs de mesas hoje só Dedicado — alinhar com Overview (Ded+Net) se desejado.</li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById("btn-tema").addEventListener("click", function () {
+      document.body.classList.toggle("dark");
+    });
+  </script>
+</body>
+</html>

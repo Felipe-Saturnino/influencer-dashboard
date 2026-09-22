@@ -8,6 +8,7 @@ import { buscarRhFuncionarioAtivoPorEmailLogin } from "../../../lib/rhFuncionari
 import {
   normalizarSelecaoUnica,
   prestadorAtendeFiltroTime,
+  staffTimeRowEhGerenciaSemTime,
   timeRowPorRotuloCanonica,
   type StaffTimeRow,
 } from "../../../lib/rhCalendarioStaffFiltroHelpers";
@@ -51,9 +52,11 @@ import {
 import {
   fetchRhLiderancaEscopo,
   fetchRhLiderancaPrestadores,
+  fetchUnidadesFiltroTimeEmpresa,
   unidadesParaFiltroTime,
   type RhLiderancaUnidade,
 } from "../../../lib/rhLiderancaEscopo";
+import { fetchAllPages, fetchInBatched } from "../../../lib/supabasePaginate";
 import {
   capFimAderenciaMesCorrente,
   refMesPrimeiroDiaISO,
@@ -72,6 +75,16 @@ import type { OverviewPrestadorMovimentacaoCelula } from "../../../lib/overviewP
 export type OverviewPrestadorTab = "escala" | "kpis_mesa";
 
 const CONCURRENCY_STAFF = 8;
+const STAFF_IN_CHUNK = 80;
+
+function unidadesParaStaffTimeRows(unidades: RhLiderancaUnidade[]): StaffTimeRow[] {
+  return unidades.map((u) => ({
+    id: u.id,
+    nome: u.nome,
+    gerencia_id: u.gerencia_id ?? (u.tipo === "gerencia" ? u.id : ""),
+    gerencia_nome: "",
+  }));
+}
 
 const STAFF_SELECT_OVERVIEW =
   "id, nome, email, email_spin, org_time_id, org_gerencia_id, status, staff_operadora_slug, staff_estudio_slug, staff_estudio_slugs, staff_id_tos, area_atuacao, escala, staff_turno, staff_horario_turno";
@@ -101,6 +114,7 @@ export function useOverviewPrestadorDados(
   const soProprios = !permLoading && permCanView === "proprios";
   const [ehLider, setEhLider] = useState(false);
   const [unidadesLideradas, setUnidadesLideradas] = useState<RhLiderancaUnidade[]>([]);
+  const [unidadesFiltro, setUnidadesFiltro] = useState<RhLiderancaUnidade[]>([]);
   const visaoLiderProprios = soProprios && ehLider;
   const mesesDisponiveis = useMemo(() => getMesesDisponiveisEscalaCarrossel(), []);
   const idxInicial = useMemo(() => idxMesInicialEscalaCarrossel(mesesDisponiveis), [mesesDisponiveis]);
@@ -153,6 +167,17 @@ export function useOverviewPrestadorDados(
   }, [mesesDisponiveis]);
 
   const carregarTimes = useCallback(async () => {
+    try {
+      const unidades = await fetchUnidadesFiltroTimeEmpresa();
+      if (unidades.length > 0) {
+        setUnidadesFiltro(unidades);
+        setTimes(unidadesParaStaffTimeRows(unidades));
+        return;
+      }
+    } catch (err) {
+      console.error("[OverviewPrestador] unidades filtro time", err);
+    }
+    setUnidadesFiltro([]);
     const { data, error } = await supabase.rpc("rh_staff_times_filtrados");
     if (error) {
       setTimes([]);
@@ -187,6 +212,7 @@ export function useOverviewPrestadorDados(
       setTimes([]);
       setEhLider(false);
       setUnidadesLideradas([]);
+      setUnidadesFiltro([]);
       setLoadingStaff(false);
       return;
     }
@@ -201,6 +227,7 @@ export function useOverviewPrestadorDados(
         setTimes([]);
         setEhLider(false);
         setUnidadesLideradas([]);
+        setUnidadesFiltro([]);
         setLoadingStaff(false);
         return;
       }
@@ -209,15 +236,10 @@ export function useOverviewPrestadorDados(
       if (cancelled) return;
       setEhLider(escopo.ehLider);
       setUnidadesLideradas(escopo.unidades);
+      setUnidadesFiltro(escopo.ehLider ? escopo.unidades : []);
 
       if (escopo.ehLider && escopo.unidades.length > 0) {
-        const timesLider: StaffTimeRow[] = escopo.unidades.map((u) => ({
-          id: u.id,
-          nome: u.nome,
-          gerencia_id: u.gerencia_id ?? (u.tipo === "gerencia" ? u.id : ""),
-          gerencia_nome: "",
-        }));
-        setTimes(timesLider);
+        setTimes(unidadesParaStaffTimeRows(escopo.unidades));
         const list = await fetchRhLiderancaPrestadores(row.id);
         if (cancelled) return;
         if (list.length === 0) {
@@ -258,27 +280,56 @@ export function useOverviewPrestadorDados(
     if (permLoading || permCanView === "nao" || soProprios) return;
     let cancelled = false;
     void (async () => {
-      const idsStaff = times.map((x) => x.id);
-      if (idsStaff.length === 0) {
+      const timeIds = times.filter((x) => !staffTimeRowEhGerenciaSemTime(x)).map((x) => x.id);
+      const gerenciaIds = times.filter((x) => staffTimeRowEhGerenciaSemTime(x)).map((x) => x.id);
+      if (timeIds.length === 0 && gerenciaIds.length === 0) {
         if (!cancelled) setPrestadores([]);
         return;
       }
-      const { data, error } = await supabase
-        .from("rh_funcionarios")
-        .select(STAFF_SELECT_OVERVIEW)
-        .in("org_time_id", idsStaff)
-        .in("status", ["ativo", "indisponivel"])
-        .order("nome", { ascending: true });
-      if (cancelled) return;
-      if (error) {
-        console.error(error);
+      try {
+        const [porTime, porGerencia] = await Promise.all([
+          fetchInBatched(timeIds, STAFF_IN_CHUNK, (slice) =>
+            fetchAllPages<RhFuncionario>(async (from, to) => {
+              const { data, error } = await supabase
+                .from("rh_funcionarios")
+                .select(STAFF_SELECT_OVERVIEW)
+                .in("org_time_id", slice)
+                .in("status", ["ativo", "indisponivel"])
+                .order("nome", { ascending: true })
+                .order("id", { ascending: true })
+                .range(from, to);
+              return { data: (data as RhFuncionario[] | null) ?? [], error };
+            }),
+          ),
+          fetchInBatched(gerenciaIds, STAFF_IN_CHUNK, (slice) =>
+            fetchAllPages<RhFuncionario>(async (from, to) => {
+              const { data, error } = await supabase
+                .from("rh_funcionarios")
+                .select(STAFF_SELECT_OVERVIEW)
+                .in("org_gerencia_id", slice)
+                .is("org_time_id", null)
+                .in("status", ["ativo", "indisponivel"])
+                .order("nome", { ascending: true })
+                .order("id", { ascending: true })
+                .range(from, to);
+              return { data: (data as RhFuncionario[] | null) ?? [], error };
+            }),
+          ),
+        ]);
+        if (cancelled) return;
+        const merged = new Map<string, RhFuncionario>();
+        for (const p of [...porTime, ...porGerencia]) {
+          if (p.id) merged.set(p.id, p);
+        }
+        setPrestadores(
+          [...merged.values()].sort((a, b) => (a.nome ?? "").localeCompare(b.nome ?? "", "pt-BR")),
+        );
+      } catch (err) {
+        if (cancelled) return;
+        console.error(err);
         setErroCarga(ERRO_CARGA_ESCALA);
         setPrestadores([]);
-        return;
       }
-      setPrestadores(
-        [...(data ?? [])].sort((a, b) => (a.nome ?? "").localeCompare(b.nome ?? "", "pt-BR")) as RhFuncionario[],
-      );
     })();
     return () => {
       cancelled = true;
@@ -329,8 +380,8 @@ export function useOverviewPrestadorDados(
   }, []);
 
   const timeMultiselectItems = useMemo(() => {
-    if (visaoLiderProprios) {
-      return unidadesParaFiltroTime(unidadesLideradas);
+    if (unidadesFiltro.length > 0) {
+      return unidadesParaFiltroTime(unidadesFiltro);
     }
     const items: { id: string; name: string }[] = [];
     const usados = new Set<string>();
@@ -344,7 +395,7 @@ export function useOverviewPrestadorDados(
       }
     }
     return items;
-  }, [visaoLiderProprios, unidadesLideradas, times]);
+  }, [unidadesFiltro, times]);
 
   /** Default Time = próprio time do líder, senão GP, senão o primeiro. */
   useEffect(() => {
@@ -400,8 +451,8 @@ export function useOverviewPrestadorDados(
   }, [soProprios, ehLider, prestadores, filtroTimeIdsReais, meuRhFuncionarioId]);
 
   const unidadeSelecionada = useMemo(
-    () => unidadesLideradas.find((u) => u.id === timeIdEscopo) ?? null,
-    [unidadesLideradas, timeIdEscopo],
+    () => unidadesFiltro.find((u) => u.id === timeIdEscopo) ?? unidadesLideradas.find((u) => u.id === timeIdEscopo) ?? null,
+    [unidadesFiltro, unidadesLideradas, timeIdEscopo],
   );
 
   /**

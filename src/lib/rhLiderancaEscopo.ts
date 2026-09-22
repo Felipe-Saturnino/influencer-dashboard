@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { fetchAllPages } from "./supabasePaginate";
 import type { RhFuncionario } from "../types/rhFuncionario";
 
 export type RhLiderancaUnidadeTipo = "time" | "gerencia";
@@ -89,12 +90,88 @@ export function areaKeysEscritorioDasUnidades(unidades: RhLiderancaUnidade[]): S
   return new Set(unidades.map(areaKeyEscritorioDaUnidade));
 }
 
+/**
+ * Filtro Time: times da gerência quando ela tem filhos; a própria gerência
+ * quando não tem time ativo abaixo. Mesma regra do Calendário.
+ */
+export function montarUnidadesFiltroTime(
+  times: { id: string; nome: string; gerencia_id?: string | null }[],
+  gerencias: { id: string; nome: string }[],
+): RhLiderancaUnidade[] {
+  const gerenciasComTime = new Set(
+    times.map((t) => (t.gerencia_id ?? "").trim()).filter(Boolean),
+  );
+  const unidades: RhLiderancaUnidade[] = [];
+  const seen = new Set<string>();
+  for (const t of times) {
+    const id = (t.id ?? "").trim();
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    unidades.push({
+      id,
+      tipo: "time",
+      nome: (t.nome ?? "").trim() || "Time",
+      gerencia_id: (t.gerencia_id ?? "").trim() || null,
+    });
+  }
+  for (const g of gerencias) {
+    const id = (g.id ?? "").trim();
+    if (!id || seen.has(id) || gerenciasComTime.has(id)) continue;
+    seen.add(id);
+    unidades.push({
+      id,
+      tipo: "gerencia",
+      nome: (g.nome ?? "").trim() || "Gerência",
+      gerencia_id: id,
+    });
+  }
+  return unidades;
+}
+
 export function unidadesParaFiltroTime(
   unidades: RhLiderancaUnidade[],
 ): { id: string; name: string }[] {
+  const times = unidades.filter((u) => u.tipo === "time");
+  const gerenciasComTime = new Set(
+    times.map((t) => (t.gerencia_id ?? "").trim()).filter(Boolean),
+  );
+  const seen = new Set<string>();
   return unidades
+    .filter((u) => {
+      if (!u.id || seen.has(u.id)) return false;
+      if (u.tipo === "gerencia" && gerenciasComTime.has(u.id)) return false;
+      seen.add(u.id);
+      return true;
+    })
     .map((u) => ({ id: u.id, name: u.nome }))
     .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+}
+
+/** Empresa inteira (Ver = Sim): times ativos + gerências sem time ativo. */
+export async function fetchUnidadesFiltroTimeEmpresa(): Promise<RhLiderancaUnidade[]> {
+  const [times, gerencias] = await Promise.all([
+    fetchAllPages<{ id: string; nome: string; gerencia_id: string | null }>(async (from, to) => {
+      const { data, error } = await supabase
+        .from("rh_org_times")
+        .select("id, nome, gerencia_id")
+        .eq("status", "ativo")
+        .order("nome", { ascending: true })
+        .order("id", { ascending: true })
+        .range(from, to);
+      return { data, error };
+    }),
+    fetchAllPages<{ id: string; nome: string }>(async (from, to) => {
+      const { data, error } = await supabase
+        .from("rh_org_gerencias")
+        .select("id, nome")
+        .eq("status", "ativo")
+        .order("nome", { ascending: true })
+        .order("id", { ascending: true })
+        .range(from, to);
+      return { data, error };
+    }),
+  ]);
+  return montarUnidadesFiltroTime(times, gerencias);
 }
 
 /** Prestadores da cascata (RPC SECURITY DEFINER — não exige Ver em rh_funcionarios). */
