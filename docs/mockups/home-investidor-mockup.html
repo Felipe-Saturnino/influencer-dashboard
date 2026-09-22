@@ -225,9 +225,8 @@ Você enxerga a operação de onde ela acontece. Dashboards e métricas calibrad
             <div class="kpi-head"><span class="kpi-ic">↑</span><span class="kpi-label">GGR</span></div>
             <div class="kpi-value">R$ 1.842.300,00</div>
             <ul class="kpi-break">
-              <li><span>Blaze</span><strong>R$ 920.100,00</strong></li>
-              <li><span>Betano</span><strong>R$ 612.400,00</strong></li>
-              <li><span>EsportivaBet</span><strong>R$ 309.800,00</strong></li>
+              <li><span>Dedicada</span><strong>R$ 1.120.000,00</strong></li>
+              <li><span>Network</span><strong>R$ 722.300,00</strong></li>
             </ul>
           </div>
         </article>
@@ -237,9 +236,8 @@ Você enxerga a operação de onde ela acontece. Dashboards e métricas calibrad
             <div class="kpi-head"><span class="kpi-ic sec">↕</span><span class="kpi-label">Turnover</span></div>
             <div class="kpi-value">R$ 48.210.000,00</div>
             <ul class="kpi-break">
-              <li><span>Blaze</span><strong>R$ 24.100.000,00</strong></li>
-              <li><span>Betano</span><strong>R$ 15.800.000,00</strong></li>
-              <li><span>EsportivaBet</span><strong>R$ 8.310.000,00</strong></li>
+              <li><span>Dedicada</span><strong>R$ 29.400.000,00</strong></li>
+              <li><span>Network</span><strong>R$ 18.810.000,00</strong></li>
             </ul>
           </div>
         </article>
@@ -249,15 +247,14 @@ Você enxerga a operação de onde ela acontece. Dashboards e métricas calibrad
             <div class="kpi-head"><span class="kpi-ic accent">#</span><span class="kpi-label">Apostas</span></div>
             <div class="kpi-value">2.184.502</div>
             <ul class="kpi-break">
-              <li><span>Blaze</span><strong>1.102.400</strong></li>
-              <li><span>Betano</span><strong>712.100</strong></li>
-              <li><span>EsportivaBet</span><strong>370.002</strong></li>
+              <li><span>Dedicada</span><strong>1.320.100</strong></li>
+              <li><span>Network</span><strong>864.402</strong></li>
             </ul>
           </div>
         </article>
       </div>
       <p class="footer-hint">Quer saber mais? Acessa o Dashboard de <a href="#">Overview Spin</a></p>
-      <p class="nota-mock">Fonte atual no código: só <code>relatorio_daily_summary</code> (Dedicado). Operador/Overview aba Overview somam Dedicado+Network — confirmar se Investidor deve seguir a mesma regra.</p>
+      <p class="nota-mock">Totais = Dedicado + Network (como Overview). Detalhe dos cards = <strong>Dedicada</strong> e <strong>Network</strong> (não por operadora). Vale também para Home Executivo (mesmo componente).</p>
     </div>
 
     <span class="block-tag">Bloco 3 · Ações de Aquisição</span>
@@ -347,10 +344,10 @@ Você enxerga a operação de onde ela acontece. Dashboards e métricas calibrad
       <ul>
         <li><strong>Já implantado</strong> em <code>HomeInvestidor.tsx</code> — este mockup espelha o código.</li>
         <li><strong>Boas-vindas:</strong> sem avatar / chip de role.</li>
-        <li><strong>KPIs:</strong> GGR / Turnover / Apostas + lista por operadora; link Overview Spin.</li>
+        <li><strong>KPIs:</strong> GGR / Turnover / Apostas + detalhe <strong>Dedicada</strong> / <strong>Network</strong>; totais = soma dos dois canais; link Overview Spin.</li>
         <li><strong>Aquisição:</strong> Streamers (lives / horas / depósitos totais) + Mídias (postagens / seguidores / impressões).</li>
         <li><strong>Spin na Rede + Informativos + atalhos</strong> conforme MDC <code>geral.mdc</code>.</li>
-        <li><strong>Ponto aberto:</strong> KPIs de mesas hoje só Dedicado — alinhar com Overview (Ded+Net) se desejado.</li>
+        <li><strong>Executivo:</strong> mesmo componente de KPIs — herda Dedicada/Network.</li>
       </ul>
     </div>
   </div>

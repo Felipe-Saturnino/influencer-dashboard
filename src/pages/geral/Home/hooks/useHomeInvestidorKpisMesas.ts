@@ -3,10 +3,28 @@ import { supabase } from "../../../../lib/supabase";
 import { fetchAllPages } from "../../../../lib/supabasePaginate";
 import { getHomeKpiPeriodo } from "../../../../lib/homeInvestidorMtd";
 import {
-  aggregateHomeKpisMesasMtd,
+  aggregateHomeKpisMesasPorCanal,
   type HomeKpisMesasAgregado,
   type RelatorioDailySummaryRow,
 } from "../../../../lib/homeInvestidorKpisMesas";
+
+const SELECT_COLS = "data, turnover, ggr, apostas, operadora_slug";
+
+async function fetchDailyTable(
+  table: "relatorio_daily_summary" | "relatorio_network_daily_summary",
+  inicio: string,
+  fim: string,
+): Promise<RelatorioDailySummaryRow[]> {
+  return fetchAllPages<RelatorioDailySummaryRow>(async (from, to) =>
+    supabase
+      .from(table)
+      .select(SELECT_COLS)
+      .gte("data", inicio)
+      .lte("data", fim)
+      .order("data", { ascending: true })
+      .range(from, to),
+  );
+}
 
 export function useHomeInvestidorKpisMesas() {
   const [loading, setLoading] = useState(true);
@@ -21,28 +39,14 @@ export function useHomeInvestidorKpisMesas() {
       setErro(false);
       try {
         const { inicio, fim } = getHomeKpiPeriodo();
-        const [dailyRows, operadorasRes] = await Promise.all([
-          fetchAllPages<RelatorioDailySummaryRow>(async (from, to) =>
-            supabase
-              .from("relatorio_daily_summary")
-              .select("data, turnover, ggr, apostas, operadora_slug")
-              .gte("data", inicio)
-              .lte("data", fim)
-              .order("data", { ascending: true })
-              .range(from, to),
-          ),
-          supabase.from("operadoras").select("slug, nome").order("nome"),
+        const [dedicado, network] = await Promise.all([
+          fetchDailyTable("relatorio_daily_summary", inicio, fim),
+          fetchDailyTable("relatorio_network_daily_summary", inicio, fim),
         ]);
 
         if (cancelled) return;
 
-        const slugToNome = new Map<string, string>();
-        for (const o of operadorasRes.data ?? []) {
-          const row = o as { slug: string; nome: string };
-          slugToNome.set(row.slug, row.nome);
-        }
-
-        setData(aggregateHomeKpisMesasMtd(dailyRows, slugToNome));
+        setData(aggregateHomeKpisMesasPorCanal(dedicado, network));
       } catch (e) {
         console.error("[HomeInvestidor] KPIs mesas:", e);
         if (!cancelled) {
