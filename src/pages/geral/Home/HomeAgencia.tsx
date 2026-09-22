@@ -27,8 +27,10 @@ export default function HomeAgencia() {
   const {
     ready,
     cadastrosIncompletosCount,
+    cadastrosIncompletosNomes,
     horasPendentesCount,
     horasPendentesTotal,
+    horasPendentesNomes,
     livesFuturas,
   } = useHomeAgenciaData(influencerIds);
 
@@ -91,8 +93,10 @@ export default function HomeAgencia() {
       />
       <AlertasAgenciaHome
         cadastrosIncompletosCount={cadastrosIncompletosCount}
+        cadastrosIncompletosNomes={cadastrosIncompletosNomes}
         horasPendentesCount={horasPendentesCount}
         horasPendentesTotal={horasPendentesTotal}
+        horasPendentesNomes={horasPendentesNomes}
       />
       <KpisAgenciaHome influencerIds={influencerIds} sectionIdPrefix={HOME_AGENCIA_PREFIX} />
       <ProximasLivesAgencia lives={livesFuturas} sectionIdPrefix={HOME_AGENCIA_PREFIX} />

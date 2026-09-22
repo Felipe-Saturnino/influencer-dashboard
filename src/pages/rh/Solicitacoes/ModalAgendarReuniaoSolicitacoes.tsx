@@ -12,6 +12,7 @@ import {
   type RhSolicitacaoAgendarReuniaoTipo,
 } from "../../../lib/rhSolicitacoesAgendarReuniao";
 import { diaIsoEhEstritamenteFuturo } from "../../../lib/rhCalendarioAcaoHelpers";
+import { fetchRhLiderancaPrestadores } from "../../../lib/rhLiderancaEscopo";
 
 type Brand = ReturnType<typeof useDashboardBrand>;
 
@@ -23,6 +24,8 @@ export interface ModalAgendarReuniaoSolicitacoesProps {
   onSaved: () => void;
   t: Theme;
   brand: Brand;
+  /** `null` = sem recorte (Ver/Editar Sim). Lista de ids da cascata quando Próprios. */
+  prestadorIdsPermitidos?: string[] | null;
 }
 
 export function ModalAgendarReuniaoSolicitacoes({
@@ -31,6 +34,7 @@ export function ModalAgendarReuniaoSolicitacoes({
   onSaved,
   t,
   brand,
+  prestadorIdsPermitidos = null,
 }: ModalAgendarReuniaoSolicitacoesProps) {
   const [tipo, setTipo] = useState<RhSolicitacaoAgendarReuniaoTipo | "">("");
   const [prestadorId, setPrestadorId] = useState("");
@@ -50,6 +54,23 @@ export function ModalAgendarReuniaoSolicitacoes({
     setErr(null);
     setSaving(false);
     setLoadingPrest(true);
+    if (prestadorIdsPermitidos) {
+      void fetchRhLiderancaPrestadores()
+        .then((list) => {
+          const allow = new Set(prestadorIdsPermitidos);
+          setPrestadores(
+            list
+              .filter((p) => allow.has(p.id))
+              .map((p) => ({ id: p.id, nome: (p.nome ?? "").trim() || "—" })),
+          );
+        })
+        .catch((e) => {
+          console.error("[ModalAgendarReuniaoSolicitacoes]", e);
+          setPrestadores([]);
+        })
+        .finally(() => setLoadingPrest(false));
+      return;
+    }
     void supabase
       .from("rh_funcionarios")
       .select("id, nome")
@@ -65,7 +86,7 @@ export function ModalAgendarReuniaoSolicitacoes({
         }
         setPrestadores((data ?? []) as PrestadorOpt[]);
       });
-  }, [open]);
+  }, [open, prestadorIdsPermitidos]);
 
   if (!open) return null;
 

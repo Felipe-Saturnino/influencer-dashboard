@@ -147,6 +147,10 @@ import {
 } from "./gestaoEscalaExcel";
 import { baixarXlsx } from "../../../lib/xlsxWriter";
 import { buscarRhFuncionarioAtivoPorEmailLogin } from "../../../lib/rhFuncionarioLoginMatch";
+import {
+  areaKeysEscritorioDasUnidades,
+  fetchRhLiderancaEscopo,
+} from "../../../lib/rhLiderancaEscopo";
 
 function vistaColunasInicialEscala(): EscalaVistaColunas {
   if (typeof window === "undefined") return "mes";
@@ -287,18 +291,28 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
         const meuId = meuFuncionario?.id ?? "";
         const eu = meuId ? prestadores.find((p) => p.id === meuId) : undefined;
         const myArea = eu ? areaKeyDoPrestadorEscala(modo, eu) : null;
-        if (!myArea) {
+        if (modo === "escritorio") {
+          const escopo = await fetchRhLiderancaEscopo(meuId || null);
+          const allowed = areaKeysEscritorioDasUnidades(escopo.unidades);
+          if (myArea) allowed.add(myArea);
+          abas = abas.filter((a) => allowed.has(a.areaKey));
+          if (abas.length === 0) {
+            setAvisoPropriosSemVinculo(
+              escopo.ehLider
+                ? "Você não lidera times de escritório nesta página. A escala fica vazia — a Escala Estúdio cobre os times de operação."
+                : "Seu login não está vinculado a um prestador ativo de escritório. A escala fica vazia — entre em contato com o RH.",
+            );
+          }
+        } else if (!myArea) {
           setAvisoPropriosSemVinculo(
-            modo === "escritorio"
-              ? "Seu login não está vinculado a um prestador ativo de escritório. A escala fica vazia — entre em contato com o RH."
-              : "Seu login não está vinculado a um prestador ativo nos times de Escala Estúdio. A escala fica vazia — entre em contato com o RH.",
+            "Seu login não está vinculado a um prestador ativo nos times de Escala Estúdio. A escala fica vazia — entre em contato com o RH.",
           );
           abas = [];
         } else {
           abas = abas.filter((a) => a.areaKey === myArea);
         }
         setAbasTimes(abas);
-        if (myArea) {
+        if (myArea && abas.some((a) => a.areaKey === myArea)) {
           setFiltroArea(myArea);
         } else if (abas[0]) {
           setFiltroArea(abas[0].areaKey);

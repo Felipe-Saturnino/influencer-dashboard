@@ -8,7 +8,7 @@
 **Perguntar** só se a ideia estiver ambígua (não dá para classificar tipo/área nem escrever a nota).
 **Leitura:** ao abrir este compositor, ou quando o usuário apontar um ID noutro chat.
 
-Próximo ID livre: **IDEIA-009**.
+Próximo ID livre: **IDEIA-010**.
 
 ## Como registrar
 
@@ -54,6 +54,10 @@ Status: `inbox` · `pronto` · `em curso` · `feito`.
 - **IDEIA-008** · 18/09/2026 · feature · Escala / Marketplace · inbox
   Processo e controle de solicitação de troca de turno.
   Hoje a Oferta de Troca já existe no Marketplace (publicar, aceitar, `ModalDecidirTrocaMarketplace` aprovar/recusar/desistir; grade grava Venda + Compra — Turno). A ideia é formalizar o processo e o controle da solicitação (fila, estados, quem aprova, visibilidade para gestão). Chat: `/nova-feature` — o que falta vs o fluxo atual e se Escala Escritório entra.
+
+- **IDEIA-009** · 22/09/2026 · UI · transversal (barra de filtros + Ajuda) · inbox
+  Reavaliar a responsividade das telas — filtros sobre os ícones de Ajuda.
+  Exemplo: Agenda com janela estreita — `FiltroOperadoraSelect` («Todas Operadoras») encosta/sobrepõe `AjudaContextualAcoes` (canto direito da barra). Lei: Ajuda fica no grupo à direita (`geral.mdc` / Brand §5); a fileira de filtros é `flexWrap` centrada. Varredura em todas as páginas com barra + Ajuda (não só Agenda). Chat: Ajustes Gerais — wrap, reserva de espaço para o grupo de Ajuda, viewports estreitos e zoom da UI.
 
 ## Feito
 

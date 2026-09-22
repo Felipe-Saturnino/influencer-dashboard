@@ -75,9 +75,18 @@ export function isOverviewPrestadorTimeRotulo(s: string): s is OverviewPrestador
   return (OVERVIEW_PRESTADOR_TIMES_ORDEM as readonly string[]).includes(s);
 }
 
+/** Times fora do catálogo v1 (escritório / outros do Organograma): sem mesa, sem estúdio. */
+const CAPS_GENERICO: OverviewPrestadorTimeCaps = {
+  negocia: false,
+  porEstudio: false,
+  distribuicaoEstudioIndividual: false,
+  kpisMesaMode: "hidden",
+  turnos: [],
+};
+
 export function capsOverviewPrestadorTime(rotulo: string | null | undefined): OverviewPrestadorTimeCaps {
   if (rotulo && isOverviewPrestadorTimeRotulo(rotulo)) return CAPS[rotulo];
-  return CAPS["Game Presenter"];
+  return CAPS_GENERICO;
 }
 
 /**
@@ -101,6 +110,18 @@ export function areaKeyGradeDoTime(rotulo: string | null | undefined): string | 
 export function areaKeyGradeDoTimeId(timeId: string | null | undefined): string | null {
   const id = (timeId ?? "").trim().toLowerCase().replace(/-/g, "");
   return id ? `t_${id}` : null;
+}
+
+/** `area_key` da Escala Escritório para o mesmo uuid de time (`eo_<hex32>`). */
+export function areaKeyGradeEscritorioDoTimeId(timeId: string | null | undefined): string | null {
+  const id = (timeId ?? "").trim().toLowerCase().replace(/-/g, "");
+  return id ? `eo_${id}` : null;
+}
+
+/** `area_key` de gerência sem times (`eog_` Escritório / `g_` Estúdio). */
+export function areaKeyGradeGerenciaId(gerenciaId: string | null | undefined): string[] {
+  const id = (gerenciaId ?? "").trim().toLowerCase().replace(/-/g, "");
+  return id ? [`eog_${id}`, `g_${id}`] : [];
 }
 
 export function rotuloTimeFromNomeOrganograma(nome: string | null | undefined): OverviewPrestadorTimeRotulo | null {

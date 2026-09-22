@@ -25,6 +25,7 @@ import {
   CtaCriarButton,
   FiltroBarPillButton,
   FiltroBarTabButton,
+  FiltroCalendarioTimeSelect,
   FILTRO_BAR_TAB_ICON_PROPS,
   onFiltroBarTabsKeyDown,
   SortTableTh,
@@ -71,6 +72,13 @@ import { ModalAtenderSolicitacao, ModalVerSolicitacao } from "./ModalsVerAtender
 import { ModalAgendarReuniaoSolicitacoes } from "./ModalAgendarReuniaoSolicitacoes";
 import { ModalRegistrarFeedback } from "./ModalRegistrarFeedback";
 import { ModalSolicitarVaga } from "./ModalSolicitarVaga";
+import { useIdentidadeEfetiva } from "../../../hooks/useIdentidadeEfetiva";
+import { buscarRhFuncionarioAtivoPorEmailLogin } from "../../../lib/rhFuncionarioLoginMatch";
+import { normalizarSelecaoUnica } from "../../../lib/rhCalendarioStaffFiltroHelpers";
+import {
+  fetchRhLiderancaEscopo,
+  unidadesParaFiltroTime,
+} from "../../../lib/rhLiderancaEscopo";
 
 const RH_SOLICITACOES_SELECT = `
   id,
@@ -97,7 +105,7 @@ const RH_SOLICITACOES_SELECT = `
   lideranca_nome,
   evidencias_storage_paths,
   calendario_acao:rh_calendario_acoes!rh_solicitacoes_rh_calendario_acao_id_fkey ( payload ),
-  solicitante:rh_funcionarios!rh_solicitacoes_rh_funcionario_id_fkey ( id, nome, org_time:rh_org_times!rh_funcionarios_org_time_id_fkey ( nome ) ),
+  solicitante:rh_funcionarios!rh_solicitacoes_rh_funcionario_id_fkey ( id, nome, org_time_id, org_gerencia_id, org_time:rh_org_times!rh_funcionarios_org_time_id_fkey ( nome ) ),
   atendente:profiles!rh_solicitacoes_atendido_por_fkey ( id, name ),
   vaga:rh_vagas!rh_solicitacoes_rh_vaga_id_fkey ( id, titulo )
 `.trim();
@@ -166,6 +174,15 @@ function nomeTimeSolicitante(row: RhSolicitacaoRow): string {
   return time?.nome?.trim() || "—";
 }
 
+function solicitantePassaFiltroTime(row: RhSolicitacaoRow, timeId: string | null): boolean {
+  if (!timeId) return true;
+  const s = unwrapEmbed(row.solicitante);
+  if (!s) return false;
+  if ((s.org_time_id ?? "").trim() === timeId) return true;
+  if (!(s.org_time_id ?? "").trim() && (s.org_gerencia_id ?? "").trim() === timeId) return true;
+  return false;
+}
+
 function nomeAtendente(row: RhSolicitacaoRow): string {
   return unwrapEmbed(row.atendente)?.name?.trim() || "—";
 }
@@ -196,11 +213,15 @@ export default function RhSolicitacoesPage() {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
   const perm = usePermission("rh_solicitacoes");
+  const { email: emailEfetivo } = useIdentidadeEfetiva();
   const dataTable = useDataTableBlock();
   const pageBox = getPageContentBoxStyle(brand, t);
 
   const [aba, setAba] = useState<RhSolicitacaoAba>("atestados");
   const [filtroStatus, setFiltroStatus] = useState<RhSolicitacaoFiltroStatus>(RH_SOLICITACAO_STATUS_DEFAULT);
+  const [filtroTimeIds, setFiltroTimeIds] = useState<string[]>([]);
+  const [timeItems, setTimeItems] = useState<{ id: string; name: string }[]>([]);
+  const [idsEscopo, setIdsEscopo] = useState<string[] | null>(null);
   const [lista, setLista] = useState<RhSolicitacaoRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [sort, setSort] = useState<{ col: SortCol; dir: SortDir }>({ col: "data", dir: "desc" });
@@ -273,14 +294,61 @@ export default function RhSolicitacoesPage() {
   }, [fetchLista, perm.loading, perm.canView]);
 
   useEffect(() => {
+    if (perm.loading || perm.canView === "nao") return;
+    let cancelled = false;
+    void (async () => {
+      if (perm.canView === "proprios") {
+        const me = emailEfetivo?.trim()
+          ? await buscarRhFuncionarioAtivoPorEmailLogin(emailEfetivo)
+          : null;
+        const escopo = await fetchRhLiderancaEscopo(me?.id ?? null);
+        if (cancelled) return;
+        setTimeItems(escopo.ehLider ? unidadesParaFiltroTime(escopo.unidades) : []);
+        const ids = escopo.funcionarioIds.length > 0 ? escopo.funcionarioIds : me?.id ? [me.id] : [];
+        setIdsEscopo(ids);
+        return;
+      }
+      const { data, error } = await supabase
+        .from("rh_org_times")
+        .select("id, nome")
+        .eq("status", "ativo")
+        .order("nome", { ascending: true });
+      if (cancelled) return;
+      if (error) {
+        console.error("[RhSolicitacoes] times", error);
+        setTimeItems([]);
+      } else {
+        setTimeItems(
+          (data ?? []).map((t) => ({
+            id: String((t as { id: string }).id),
+            name: String((t as { nome: string }).nome ?? "").trim() || "Time",
+          })),
+        );
+      }
+      setIdsEscopo(null);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [perm.loading, perm.canView, emailEfetivo]);
+
+  useEffect(() => {
     setSort({
       col: aba === "reunioes" ? "dataReuniao" : "data",
       dir: "desc",
     });
   }, [aba]);
 
+  const filtroTimeId = filtroTimeIds[0] ?? null;
+  const showTimeFilter = timeItems.length > 0 && (perm.canView === "sim" || perm.canView === "proprios");
+
+  const listaFiltrada = useMemo(
+    () => lista.filter((row) => solicitantePassaFiltroTime(row, filtroTimeId)),
+    [lista, filtroTimeId],
+  );
+
   const listaOrdenada = useMemo(() => {
-    const rows = [...lista];
+    const rows = [...listaFiltrada];
     const { col, dir } = sort;
     rows.sort((a, b) => {
       switch (col) {
@@ -323,7 +391,7 @@ export default function RhSolicitacoesPage() {
       }
     });
     return rows;
-  }, [lista, sort]);
+  }, [listaFiltrada, sort]);
 
   const exibirColunaStatus = todosStatusAtivo;
   const exibirColunasAtendimento =
@@ -375,7 +443,7 @@ export default function RhSolicitacoesPage() {
 
   function renderTabelaFeedback() {
     return (
-      <TabelaComPaginacao items={listaOrdenada} t={t} resetKey={`${aba}-${sort.col}-${sort.dir}-${filtroStatus}`}>
+      <TabelaComPaginacao items={listaOrdenada} t={t} resetKey={`${aba}-${sort.col}-${sort.dir}-${filtroStatus}-${filtroTimeId ?? ""}`}>
         {(linhas, zebraIdx) => (
       <div className="app-table-wrap app-table-wrap--sticky-col" style={getDataTableWrapStyle()}>
         <table style={getDataTableStyle({ minWidth: 860 })}>
@@ -431,7 +499,7 @@ export default function RhSolicitacoesPage() {
     const isVagas = aba === "vagas";
 
     return (
-      <TabelaComPaginacao items={listaOrdenada} t={t} resetKey={`${aba}-${sort.col}-${sort.dir}-${filtroStatus}`}>
+      <TabelaComPaginacao items={listaOrdenada} t={t} resetKey={`${aba}-${sort.col}-${sort.dir}-${filtroStatus}-${filtroTimeId ?? ""}`}>
         {(linhas, zebraIdx) => (
       <div className="app-table-wrap app-table-wrap--sticky-col" style={getDataTableWrapStyle()}>
         <table style={getDataTableStyle({ minWidth: 720 })}>
@@ -576,6 +644,15 @@ export default function RhSolicitacoesPage() {
               {RH_SOLICITACAO_TODOS_STATUS_LABEL}
             </FiltroBarPillButton>
 
+            {showTimeFilter ? (
+              <FiltroCalendarioTimeSelect
+                mode="single"
+                selected={filtroTimeIds}
+                onChange={(ids) => setFiltroTimeIds(normalizarSelecaoUnica(filtroTimeIds, ids))}
+                items={timeItems}
+              />
+            ) : null}
+
             {loading ? (
               <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, color: t.textMuted }}>
                 <Loader2 size={12} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden />
@@ -706,6 +783,7 @@ export default function RhSolicitacoesPage() {
         onSaved={() => void fetchLista()}
         t={t}
         brand={brand}
+        prestadorIdsPermitidos={idsEscopo}
       />
       <ModalRegistrarFeedback
         open={modalFeedback}
@@ -713,6 +791,7 @@ export default function RhSolicitacoesPage() {
         onSaved={() => void fetchLista()}
         t={t}
         brand={brand}
+        prestadorIdsPermitidos={idsEscopo}
       />
       <ModalSolicitarVaga
         open={modalVaga}

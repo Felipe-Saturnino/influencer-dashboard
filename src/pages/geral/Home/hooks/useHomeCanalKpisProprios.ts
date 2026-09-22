@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { fetchInfluencerAnalyticsPeriodoCached } from "../../../../lib/influencerAnalyticsQuery";
 import { buscarInvestimentoPago } from "../../../../lib/investimentoPago";
 import { getHomeKpiPeriodosComparativoMoM } from "../../../../lib/homeInvestidorMtd";
+import { fetchJogadoresUapSpin } from "../../../../lib/jogadoresAbaQuery";
+import { uapSpinJogadoresAba } from "../../../../lib/jogadoresAbaMetrics";
 import {
   type HomeCanalKpisTotais,
   ZERO_HOME_CANAL_KPIS,
@@ -15,6 +17,7 @@ async function carregarPeriodo(
   inicio: string,
   fim: string,
   comInvestimento: boolean,
+  comUapSpin: boolean,
 ): Promise<HomeCanalKpisTotais> {
   if (influencerIds.length === 0) return { ...ZERO_HOME_CANAL_KPIS };
   const analytics = await fetchInfluencerAnalyticsPeriodoCached({
@@ -30,14 +33,18 @@ async function carregarPeriodo(
     );
     investimento = invest.total;
   }
-  return agregarHomeCanalPeriodo(analytics, investimento);
+  const base = agregarHomeCanalPeriodo(analytics, investimento);
+  if (!comUapSpin) return base;
+  const uapRows = await fetchJogadoresUapSpin({ inicio, fim, influencerIds });
+  const uap = uapSpinJogadoresAba(uapRows);
+  return { ...base, uap_spin: uap.uap, uap_spin_rodadas: uap.rodadas };
 }
 
 function useHomeCanalKpisBase(
   influencerIds: string[] | undefined,
-  opts: { comInvestimento: boolean; logTag: string },
+  opts: { comInvestimento: boolean; comUapSpin: boolean; logTag: string },
 ) {
-  const { comInvestimento, logTag } = opts;
+  const { comInvestimento, comUapSpin, logTag } = opts;
   const idsKey = (influencerIds ?? []).slice().sort().join("|");
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState(false);
@@ -63,8 +70,8 @@ function useHomeCanalKpisBase(
       try {
         const { referencia, atual: perAtual, anterior: perAnt } = getHomeKpiPeriodosComparativoMoM();
         const [totAtual, totAnt] = await Promise.all([
-          carregarPeriodo(ids, perAtual.inicio, perAtual.fim, comInvestimento),
-          carregarPeriodo(ids, perAnt.inicio, perAnt.fim, comInvestimento),
+          carregarPeriodo(ids, perAtual.inicio, perAtual.fim, comInvestimento, comUapSpin),
+          carregarPeriodo(ids, perAnt.inicio, perAnt.fim, comInvestimento, comUapSpin),
         ]);
         if (cancelled) return;
         setAtual(totAtual);
@@ -85,7 +92,7 @@ function useHomeCanalKpisBase(
     return () => {
       cancelled = true;
     };
-  }, [idsKey, comInvestimento, logTag]);
+  }, [idsKey, comInvestimento, comUapSpin, logTag]);
 
   return { loading, erro, atual, anterior, mesLabel, zero: ZERO_HOME_CANAL_KPIS };
 }
@@ -97,6 +104,7 @@ function useHomeCanalKpisBase(
 export function useHomeCanalKpisProprios(userId: string | undefined, opts?: { comInvestimento?: boolean }) {
   return useHomeCanalKpisBase(userId ? [userId] : undefined, {
     comInvestimento: opts?.comInvestimento === true,
+    comUapSpin: false,
     logTag: "useHomeCanalKpisProprios",
   });
 }
@@ -107,10 +115,11 @@ export function useHomeCanalKpisProprios(userId: string | undefined, opts?: { co
  */
 export function useHomeCanalKpisEscopo(
   influencerIds: string[] | undefined,
-  opts?: { comInvestimento?: boolean },
+  opts?: { comInvestimento?: boolean; comUapSpin?: boolean },
 ) {
   return useHomeCanalKpisBase(influencerIds, {
     comInvestimento: opts?.comInvestimento !== false,
+    comUapSpin: opts?.comUapSpin === true,
     logTag: "useHomeCanalKpisEscopo",
   });
 }

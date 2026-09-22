@@ -28,9 +28,18 @@ export interface ModalRegistrarFeedbackProps {
   onSaved: () => void;
   t: Theme;
   brand: Brand;
+  /** `null` = sem recorte (Ver/Editar Sim). Lista de ids da cascata quando Próprios. */
+  prestadorIdsPermitidos?: string[] | null;
 }
 
-export function ModalRegistrarFeedback({ open, onClose, onSaved, t, brand }: ModalRegistrarFeedbackProps) {
+export function ModalRegistrarFeedback({
+  open,
+  onClose,
+  onSaved,
+  t,
+  brand,
+  prestadorIdsPermitidos = null,
+}: ModalRegistrarFeedbackProps) {
   const [timeFiltro, setTimeFiltro] = useState<"" | "gp" | "shuffler">("");
   const [prestadorId, setPrestadorId] = useState("");
   const [recomendacao, setRecomendacao] = useState<"" | RhSolicitacaoFeedbackRecomendacao>("");
@@ -50,13 +59,20 @@ export function ModalRegistrarFeedback({ open, onClose, onSaved, t, brand }: Mod
     setSaving(false);
     setLoadingPrest(true);
     void listPrestadoresGpShuffler()
-      .then((list) => setPrestadores(list))
+      .then((list) => {
+        if (prestadorIdsPermitidos) {
+          const allow = new Set(prestadorIdsPermitidos);
+          setPrestadores(list.filter((p) => allow.has(p.id)));
+          return;
+        }
+        setPrestadores(list);
+      })
       .catch((e) => {
         console.error("[ModalRegistrarFeedback]", e);
         setPrestadores([]);
       })
       .finally(() => setLoadingPrest(false));
-  }, [open]);
+  }, [open, prestadorIdsPermitidos]);
 
   const prestadoresFiltrados = useMemo(() => {
     if (!timeFiltro) return [];

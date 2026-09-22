@@ -39,12 +39,21 @@ import {
 import {
   areaKeyGradeDoTime,
   areaKeyGradeDoTimeId,
+  areaKeyGradeEscritorioDoTimeId,
+  areaKeyGradeGerenciaId,
   capsOverviewPrestadorTime,
+  isOverviewPrestadorTimeRotulo,
   OVERVIEW_PRESTADOR_TIME_DEFAULT,
   OVERVIEW_PRESTADOR_TIMES_ORDEM,
   rotuloTimeFromNomeOrganograma,
   type OverviewPrestadorTimeRotulo,
 } from "../../../lib/overviewPrestadorTeamConfig";
+import {
+  fetchRhLiderancaEscopo,
+  fetchRhLiderancaPrestadores,
+  unidadesParaFiltroTime,
+  type RhLiderancaUnidade,
+} from "../../../lib/rhLiderancaEscopo";
 import {
   capFimAderenciaMesCorrente,
   refMesPrimeiroDiaISO,
@@ -65,7 +74,7 @@ export type OverviewPrestadorTab = "escala" | "kpis_mesa";
 const CONCURRENCY_STAFF = 8;
 
 const STAFF_SELECT_OVERVIEW =
-  "id, nome, email, email_spin, org_time_id, status, staff_operadora_slug, staff_estudio_slug, staff_estudio_slugs, staff_id_tos, area_atuacao, escala, staff_turno, staff_horario_turno";
+  "id, nome, email, email_spin, org_time_id, org_gerencia_id, status, staff_operadora_slug, staff_estudio_slug, staff_estudio_slugs, staff_id_tos, area_atuacao, escala, staff_turno, staff_horario_turno";
 
 const ERRO_CARGA_ESCALA =
   "Não foi possível carregar a escala. Se o problema persistir, entre em contato com o suporte.";
@@ -90,6 +99,9 @@ export function useOverviewPrestadorDados(
   userEmail: string | undefined,
 ) {
   const soProprios = !permLoading && permCanView === "proprios";
+  const [ehLider, setEhLider] = useState(false);
+  const [unidadesLideradas, setUnidadesLideradas] = useState<RhLiderancaUnidade[]>([]);
+  const visaoLiderProprios = soProprios && ehLider;
   const mesesDisponiveis = useMemo(() => getMesesDisponiveisEscalaCarrossel(), []);
   const idxInicial = useMemo(() => idxMesInicialEscalaCarrossel(mesesDisponiveis), [mesesDisponiveis]);
 
@@ -162,11 +174,19 @@ export function useOverviewPrestadorDados(
   }, [permLoading, permCanView, soProprios, carregarTimes]);
 
   useEffect(() => {
-    if (permLoading || permCanView !== "proprios") return;
+    if (permLoading || permCanView !== "proprios") {
+      if (!permLoading && permCanView !== "proprios") {
+        setEhLider(false);
+        setUnidadesLideradas([]);
+      }
+      return;
+    }
     if (!userEmail?.trim()) {
       setPrestadores([]);
       setMeuRhFuncionarioId(null);
       setTimes([]);
+      setEhLider(false);
+      setUnidadesLideradas([]);
       setLoadingStaff(false);
       return;
     }
@@ -175,9 +195,39 @@ export function useOverviewPrestadorDados(
     void (async () => {
       const row = await buscarRhFuncionarioAtivoPorEmailLogin(userEmail);
       if (cancelled) return;
-      if (row) {
+      if (!row) {
+        setPrestadores([]);
+        setMeuRhFuncionarioId(null);
+        setTimes([]);
+        setEhLider(false);
+        setUnidadesLideradas([]);
+        setLoadingStaff(false);
+        return;
+      }
+      setMeuRhFuncionarioId(row.id);
+      const escopo = await fetchRhLiderancaEscopo(row.id);
+      if (cancelled) return;
+      setEhLider(escopo.ehLider);
+      setUnidadesLideradas(escopo.unidades);
+
+      if (escopo.ehLider && escopo.unidades.length > 0) {
+        const timesLider: StaffTimeRow[] = escopo.unidades.map((u) => ({
+          id: u.id,
+          nome: u.nome,
+          gerencia_id: u.gerencia_id ?? (u.tipo === "gerencia" ? u.id : ""),
+          gerencia_nome: "",
+        }));
+        setTimes(timesLider);
+        const list = await fetchRhLiderancaPrestadores(row.id);
+        if (cancelled) return;
+        if (list.length === 0) {
+          setPrestadores([row]);
+        } else {
+          if (!list.some((p) => p.id === row.id)) list.push(row);
+          setPrestadores(list.sort((a, b) => (a.nome ?? "").localeCompare(b.nome ?? "", "pt-BR")));
+        }
+      } else {
         setPrestadores([row]);
-        setMeuRhFuncionarioId(row.id);
         const timeId = (row.org_time_id ?? "").trim();
         if (timeId) {
           const { data: trow } = await supabase
@@ -196,10 +246,6 @@ export function useOverviewPrestadorDados(
             ]);
           } else if (!cancelled) setTimes([]);
         } else if (!cancelled) setTimes([]);
-      } else {
-        setPrestadores([]);
-        setMeuRhFuncionarioId(null);
-        setTimes([]);
       }
       setLoadingStaff(false);
     })();
@@ -240,10 +286,10 @@ export function useOverviewPrestadorDados(
   }, [permLoading, permCanView, soProprios, times, reloadTick]);
 
   useEffect(() => {
-    if (permCanView === "proprios" && meuRhFuncionarioId) {
+    if (permCanView === "proprios" && meuRhFuncionarioId && !ehLider) {
       setFiltroStaffIds([meuRhFuncionarioId]);
     }
-  }, [permCanView, meuRhFuncionarioId]);
+  }, [permCanView, meuRhFuncionarioId, ehLider]);
 
   useEffect(() => {
     let cancelled = false;
@@ -283,6 +329,9 @@ export function useOverviewPrestadorDados(
   }, []);
 
   const timeMultiselectItems = useMemo(() => {
+    if (visaoLiderProprios) {
+      return unidadesParaFiltroTime(unidadesLideradas);
+    }
     const items: { id: string; name: string }[] = [];
     const usados = new Set<string>();
     for (const rotulo of OVERVIEW_PRESTADOR_TIMES_ORDEM) {
@@ -295,18 +344,26 @@ export function useOverviewPrestadorDados(
       }
     }
     return items;
-  }, [times]);
+  }, [visaoLiderProprios, unidadesLideradas, times]);
 
-  /** Default Time = Game Presenter (sem agregador «Todos»). */
+  /** Default Time = próprio time do líder, senão GP, senão o primeiro. */
   useEffect(() => {
-    if (soProprios || timeMultiselectItems.length === 0) return;
+    if (soProprios && !ehLider) return;
+    if (timeMultiselectItems.length === 0) return;
+    const meuTimeId =
+      visaoLiderProprios && meuRhFuncionarioId
+        ? (prestadores.find((p) => p.id === meuRhFuncionarioId)?.org_time_id ??
+            prestadores.find((p) => p.id === meuRhFuncionarioId)?.org_gerencia_id ??
+            "")
+        : "";
+    const proprio = meuTimeId ? timeMultiselectItems.find((x) => x.id === meuTimeId) : undefined;
     const gp = timeMultiselectItems.find((x) => x.name === OVERVIEW_PRESTADOR_TIME_DEFAULT);
-    const fallback = gp?.id ?? timeMultiselectItems[0]!.id;
+    const fallback = proprio?.id ?? gp?.id ?? timeMultiselectItems[0]!.id;
     setFiltroTimeIds((prev) => {
       if (prev.length === 1 && timeMultiselectItems.some((x) => x.id === prev[0])) return prev;
       return [fallback];
     });
-  }, [soProprios, timeMultiselectItems]);
+  }, [soProprios, ehLider, visaoLiderProprios, timeMultiselectItems, meuRhFuncionarioId, prestadores]);
 
   const filtroTimeIdsReais = useMemo(() => {
     const allowed = new Set(timeMultiselectItems.map((x) => x.id));
@@ -315,28 +372,37 @@ export function useOverviewPrestadorDados(
 
   const filtroTimeAtivo = filtroTimeIdsReais.size > 0;
 
-  const timeRotuloSelecionado: OverviewPrestadorTimeRotulo | null = useMemo(() => {
-    if (soProprios) {
-      const p = prestadores[0];
+  const timeNomeSelecionado = useMemo(() => {
+    if (soProprios && !ehLider) {
+      const p = prestadores.find((x) => x.id === meuRhFuncionarioId) ?? prestadores[0];
       const time = times.find((t) => t.id === p?.org_time_id);
-      return rotuloTimeFromNomeOrganograma(time?.nome ?? null);
+      return time?.nome ?? null;
     }
     const id = [...filtroTimeIdsReais][0];
     if (!id) return null;
-    const item = timeMultiselectItems.find((x) => x.id === id);
-    return item && OVERVIEW_PRESTADOR_TIMES_ORDEM.includes(item.name as OverviewPrestadorTimeRotulo)
-      ? (item.name as OverviewPrestadorTimeRotulo)
-      : null;
-  }, [soProprios, prestadores, times, filtroTimeIdsReais, timeMultiselectItems]);
+    return timeMultiselectItems.find((x) => x.id === id)?.name ?? times.find((t) => t.id === id)?.nome ?? null;
+  }, [soProprios, ehLider, prestadores, times, filtroTimeIdsReais, timeMultiselectItems, meuRhFuncionarioId]);
 
-  /** Para próprios sem time no catálogo: inferir pelo nome via org se já carregado. */
-  const timeRotuloEfetivo = timeRotuloSelecionado ?? (soProprios ? "Game Presenter" : OVERVIEW_PRESTADOR_TIME_DEFAULT);
+  const timeRotuloSelecionado: OverviewPrestadorTimeRotulo | null = useMemo(
+    () => rotuloTimeFromNomeOrganograma(timeNomeSelecionado),
+    [timeNomeSelecionado],
+  );
+
+  const timeRotuloEfetivo = timeRotuloSelecionado ?? timeNomeSelecionado ?? OVERVIEW_PRESTADOR_TIME_DEFAULT;
   const caps = useMemo(() => capsOverviewPrestadorTime(timeRotuloEfetivo), [timeRotuloEfetivo]);
 
   const timeIdEscopo = useMemo(() => {
-    if (soProprios) return (prestadores[0]?.org_time_id ?? "").trim() || null;
+    if (soProprios && !ehLider) {
+      const p = prestadores.find((x) => x.id === meuRhFuncionarioId) ?? prestadores[0];
+      return (p?.org_time_id ?? p?.org_gerencia_id ?? "").trim() || null;
+    }
     return [...filtroTimeIdsReais][0] ?? null;
-  }, [soProprios, prestadores, filtroTimeIdsReais]);
+  }, [soProprios, ehLider, prestadores, filtroTimeIdsReais, meuRhFuncionarioId]);
+
+  const unidadeSelecionada = useMemo(
+    () => unidadesLideradas.find((u) => u.id === timeIdEscopo) ?? null,
+    [unidadesLideradas, timeIdEscopo],
+  );
 
   /**
    * Só as células da Escala Estúdio do time selecionado — sem isto, linhas de outras
@@ -345,14 +411,20 @@ export function useOverviewPrestadorDados(
    */
   const gradeRows = useMemo(() => {
     const permitidas = new Set(
-      [areaKeyGradeDoTime(timeRotuloEfetivo), areaKeyGradeDoTimeId(timeIdEscopo)].filter(
-        (x): x is string => Boolean(x),
-      ),
+      [
+        areaKeyGradeDoTime(timeRotuloEfetivo),
+        areaKeyGradeDoTimeId(timeIdEscopo),
+        areaKeyGradeEscritorioDoTimeId(timeIdEscopo),
+        ...areaKeyGradeGerenciaId(
+          unidadeSelecionada?.tipo === "gerencia" ? unidadeSelecionada.id : unidadeSelecionada?.gerencia_id,
+        ),
+      ].filter((x): x is string => Boolean(x)),
     );
     if (permitidas.size === 0) return rawGradeRows;
     const filtradas = rawGradeRows.filter((r) => permitidas.has((r.area_key ?? "").trim().toLowerCase()));
-    return filtradas.length > 0 ? filtradas : rawGradeRows;
-  }, [rawGradeRows, timeRotuloEfetivo, timeIdEscopo]);
+    if (filtradas.length > 0) return filtradas;
+    return isOverviewPrestadorTimeRotulo(timeRotuloEfetivo) ? rawGradeRows : filtradas;
+  }, [rawGradeRows, timeRotuloEfetivo, timeIdEscopo, unidadeSelecionada]);
 
   const staffMultiselectItems = useMemo(() => {
     const opts = {
@@ -368,14 +440,14 @@ export function useOverviewPrestadorDados(
   }, [prestadores, filtroTimeAtivo, filtroTimeIdsReais]);
 
   useEffect(() => {
-    if (soProprios) return;
+    if (soProprios && !ehLider) return;
     const allowedIds = new Set(staffMultiselectItems.map((x) => x.id));
     setFiltroStaffIds((prev) => {
       if (prev.length === 0) return prev;
       const next = prev.filter((id) => allowedIds.has(id));
       return next.length === prev.length ? prev : next;
     });
-  }, [staffMultiselectItems, soProprios]);
+  }, [staffMultiselectItems, soProprios, ehLider]);
 
   const prestadorPorId = useMemo(() => {
     const m = new Map<string, RhFuncionario>();
@@ -384,7 +456,7 @@ export function useOverviewPrestadorDados(
   }, [prestadores]);
 
   const staffSelecionadoId = filtroStaffIds[0] ?? null;
-  const visaoTime = !soProprios && !staffSelecionadoId;
+  const visaoTime = (!soProprios || ehLider) && !staffSelecionadoId;
 
   const idsEscopo = useMemo(() => {
     if (staffSelecionadoId) return [staffSelecionadoId];
@@ -802,7 +874,11 @@ export function useOverviewPrestadorDados(
     setErroCarga(null);
     setReloadTick((n) => n + 1);
   }, []);
-  const prontoParaExibir = soProprios ? Boolean(staffSelecionadoId) : filtroTimeAtivo;
+  const prontoParaExibir = visaoLiderProprios
+    ? filtroTimeAtivo
+    : soProprios
+      ? Boolean(staffSelecionadoId)
+      : filtroTimeAtivo;
 
   return {
     mesesDisponiveis,
@@ -815,8 +891,9 @@ export function useOverviewPrestadorDados(
     irMesProximo,
     toggleHistorico,
     soProprios,
-    showTimeFilter: !soProprios && timeMultiselectItems.length > 0,
-    showStaffFilter: !soProprios && staffMultiselectItems.length > 0,
+    ehLider,
+    showTimeFilter: (!soProprios || ehLider) && timeMultiselectItems.length > 0,
+    showStaffFilter: (!soProprios || ehLider) && staffMultiselectItems.length > 0,
     timeMultiselectItems,
     staffMultiselectItems,
     filtroTimeIds,
