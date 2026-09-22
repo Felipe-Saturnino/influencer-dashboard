@@ -707,8 +707,39 @@ export function ModalAlterarEscala({
           )}
 
           {err ? (
-            <div role="alert" aria-live="polite" style={{ color: "#e84025", fontSize: 12 }}>
-              {err}
+            <div
+              role="alert"
+              aria-live="polite"
+              style={{
+                color: "#e84025",
+                fontSize: 12,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 12,
+                flexWrap: "wrap",
+              }}
+            >
+              <span>{err}</span>
+              {err !== "Informe a observação sobre a alteração." ? (
+                <button
+                  type="button"
+                  disabled={salvando || !podeSalvar}
+                  onClick={() => void salvar()}
+                  style={{
+                    padding: "8px 14px",
+                    borderRadius: 10,
+                    border: "1px solid rgba(232,64,37,0.35)",
+                    background: "transparent",
+                    color: "#e84025",
+                    fontWeight: 700,
+                    fontFamily: FONT.body,
+                    cursor: salvando || !podeSalvar ? "not-allowed" : "pointer",
+                  }}
+                >
+                  Tentar de novo
+                </button>
+              ) : null}
             </div>
           ) : null}
         </div>

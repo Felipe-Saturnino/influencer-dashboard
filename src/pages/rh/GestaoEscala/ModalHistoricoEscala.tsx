@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import { Loader2 } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -29,6 +29,9 @@ export type EscalaHistoricoRow = {
   realizada_por_nome: string;
   detalhes: EscalaHistoricoDetalhes;
 };
+
+const ERRO_CARREGAR_HISTORICO =
+  "Não foi possível carregar o histórico. Se o problema persistir, entre em contato com o suporte.";
 
 const ACAO_LABEL: Record<EscalaHistoricoAcao, string> = {
   sugestao: "Sugestão de Escala",
@@ -78,6 +81,34 @@ function parseDetalhes(raw: unknown): EscalaHistoricoDetalhes {
     observacao:
       o.observacao === null || typeof o.observacao === "string" ? (o.observacao as string | null) : undefined,
   };
+}
+
+/** Payload jsonb (ou legado SETOF) de `rh_gestao_escala_historico_listar`. */
+function parseHistoricoListarPayload(data: unknown): EscalaHistoricoRow[] {
+  let payload: unknown = data;
+  if (typeof payload === "string") {
+    try {
+      payload = JSON.parse(payload) as unknown;
+    } catch {
+      return [];
+    }
+  }
+  if (!Array.isArray(payload)) return [];
+  const out: EscalaHistoricoRow[] = [];
+  for (const item of payload) {
+    if (!item || typeof item !== "object") continue;
+    const r = item as Record<string, unknown>;
+    const id = String(r.id ?? "").trim();
+    if (!id) continue;
+    out.push({
+      id,
+      acao: r.acao as EscalaHistoricoAcao,
+      realizada_em: String(r.realizada_em ?? ""),
+      realizada_por_nome: (String(r.realizada_por_nome ?? "").trim() || "Usuário"),
+      detalhes: parseDetalhes(r.detalhes),
+    });
+  }
+  return out;
 }
 
 /** Rótulo amigável do valor da célula no Histórico (Manhã / Folga / …). */
@@ -163,47 +194,27 @@ export function ModalHistoricoEscala({
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
+  const carregar = useCallback(async () => {
     setLoading(true);
     setErr(null);
-    void (async () => {
-      try {
-        const { data, error } = await supabase.rpc("rh_gestao_escala_historico_listar", {
-          p_ref_mes: refMesIso,
-          p_area_key: areaKey,
-        });
-        if (cancelled) return;
-        if (error) throw error;
-        const rows = (data ?? []) as {
-          id: string;
-          acao: string;
-          realizada_em: string;
-          realizada_por_nome: string | null;
-          detalhes: unknown;
-        }[];
-        setItens(
-          rows.map((r) => ({
-            id: r.id,
-            acao: r.acao as EscalaHistoricoAcao,
-            realizada_em: r.realizada_em,
-            realizada_por_nome: (r.realizada_por_nome ?? "").trim() || "Usuário",
-            detalhes: parseDetalhes(r.detalhes),
-          })),
-        );
-      } catch {
-        if (!cancelled) {
-          setErr("Não foi possível carregar o histórico. Se o problema persistir, entre em contato com o suporte.");
-          setItens([]);
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
+    try {
+      const { data, error } = await supabase.rpc("rh_gestao_escala_historico_listar", {
+        p_ref_mes: refMesIso,
+        p_area_key: areaKey,
+      });
+      if (error) throw error;
+      setItens(parseHistoricoListarPayload(data));
+    } catch {
+      setErr(ERRO_CARREGAR_HISTORICO);
+      setItens([]);
+    } finally {
+      setLoading(false);
+    }
   }, [refMesIso, areaKey]);
+
+  useEffect(() => {
+    void carregar();
+  }, [carregar]);
 
   return (
     <ModalBase maxWidth={560} onClose={onClose}>
@@ -214,8 +225,37 @@ export function ModalHistoricoEscala({
         </p>
 
         {err ? (
-          <div role="alert" aria-live="polite" style={{ color: "#e84025", fontSize: 12, marginBottom: 12 }}>
-            {err}
+          <div
+            role="alert"
+            aria-live="polite"
+            style={{
+              color: "#e84025",
+              fontSize: 12,
+              marginBottom: 12,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
+              flexWrap: "wrap",
+            }}
+          >
+            <span>{err}</span>
+            <button
+              type="button"
+              onClick={() => void carregar()}
+              style={{
+                padding: "8px 14px",
+                borderRadius: 10,
+                border: "1px solid rgba(232,64,37,0.35)",
+                background: "transparent",
+                color: "#e84025",
+                fontWeight: 700,
+                fontFamily: FONT.body,
+                cursor: "pointer",
+              }}
+            >
+              Tentar de novo
+            </button>
           </div>
         ) : null}
 
@@ -234,7 +274,7 @@ export function ModalHistoricoEscala({
             <Loader2 size={18} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden />
             Carregando…
           </div>
-        ) : itens.length === 0 ? (
+        ) : err ? null : itens.length === 0 ? (
           <div style={{ padding: "32px 0", textAlign: "center", color: t.textMuted, fontSize: 13 }}>
             Nenhum registro no histórico para este mês e área.
           </div>
