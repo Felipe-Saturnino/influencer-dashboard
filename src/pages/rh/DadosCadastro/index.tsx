@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
-import { AlertTriangle, CheckCircle2, Loader2 } from "lucide-react";
+import { AlertCircle, AlertTriangle, CheckCircle2, Loader2 } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
+import { fetchAllPages } from "../../../lib/supabasePaginate";
+import { PRESTADOR_HISTORICO_SELECT } from "../../../lib/rhPrestadorSalvar";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
@@ -320,16 +322,19 @@ export default function RhDadosCadastroPage() {
 
   const [histItems, setHistItems] = useState<RhFuncionarioHistorico[]>([]);
   const [histLoading, setHistLoading] = useState(false);
+  const [histErro, setHistErro] = useState<string | null>(null);
 
   const [declaracaoSemAlteracao, setDeclaracaoSemAlteracao] = useState(false);
   const [completudeExterna, setCompletudeExterna] = useState<RhCadastroCompletudeExterna | null>(null);
   const [completudeLoading, setCompletudeLoading] = useState(false);
+  const [erroCompletude, setErroCompletude] = useState<string | null>(null);
   const [confirmandoSemAlteracao, setConfirmandoSemAlteracao] = useState(false);
 
   const vistaCompleta = !perm.loading && dadosCadastroVistaCompleta(perm.canView);
   const vistaApenasProprio = !perm.loading && !vistaCompleta;
   const [prestadores, setPrestadores] = useState<RhFuncionario[]>([]);
   const [loadingStaff, setLoadingStaff] = useState(false);
+  const [erroStaff, setErroStaff] = useState<string | null>(null);
   const [filterStaffId, setFilterStaffId] = useState<string | null>(null);
   const [meuPrestadorId, setMeuPrestadorId] = useState<string | null>(null);
 
@@ -379,10 +384,14 @@ export default function RhDadosCadastroPage() {
 
   const recarregarCompletude = useCallback(async (fid: string): Promise<RhCadastroCompletudeExterna | null> => {
     setCompletudeLoading(true);
+    setErroCompletude(null);
     const { data, error } = await carregarCompletudeExternaCadastro(fid);
     setCompletudeLoading(false);
     if (error || !data) {
       setCompletudeExterna(null);
+      setErroCompletude(
+        "Não foi possível verificar a completude do cadastro. Se o problema persistir, entre em contato com o suporte.",
+      );
       return null;
     }
     setCompletudeExterna(data);
@@ -392,6 +401,7 @@ export default function RhDadosCadastroPage() {
   useEffect(() => {
     if (!row?.id) {
       setCompletudeExterna(null);
+      setErroCompletude(null);
       return;
     }
     void recarregarCompletude(row.id);
@@ -428,9 +438,11 @@ export default function RhDadosCadastroPage() {
       supabase.from("rh_funcionarios").select("*").ilike("email", emailNorm),
       supabase.from("rh_funcionarios").select("*").not("email_spin", "is", null).ilike("email_spin", emailNorm),
     ]);
-    const errMsg = byEmail.error?.message ?? bySpin.error?.message ?? null;
-    if (errMsg) {
-      setErroGlobal(errMsg);
+    if (byEmail.error || bySpin.error) {
+      console.error("[DadosCadastro] carregar próprio:", byEmail.error ?? bySpin.error);
+      setErroGlobal(
+        "Não foi possível carregar o seu cadastro. Se o problema persistir, entre em contato com o suporte.",
+      );
       setRow(null);
       setForm(null);
       setLoading(false);
@@ -494,29 +506,36 @@ export default function RhDadosCadastroPage() {
     void carregarFuncionarioProprio();
   }, [perm.loading, vistaCompleta, filterStaffId, carregarFuncionarioProprio, carregarFuncionarioPorId]);
 
-  useEffect(() => {
+  const carregarStaff = useCallback(async () => {
     if (perm.loading || !vistaCompleta) return;
     setLoadingStaff(true);
-    let cancelled = false;
-    void (async () => {
-      const { data, error } = await supabase
-        .from("rh_funcionarios")
-        .select("id, nome, staff_nickname, email, email_spin, status")
-        .in("status", ["ativo", "indisponivel"])
-        .order("nome", { ascending: true });
-      if (cancelled) return;
-      if (error) {
-        setPrestadores([]);
-        setLoadingStaff(false);
-        return;
-      }
-      setPrestadores((data ?? []) as RhFuncionario[]);
+    setErroStaff(null);
+    try {
+      const rows = await fetchAllPages<RhFuncionario>(async (from, to) => {
+        const res = await supabase
+          .from("rh_funcionarios")
+          .select("id, nome, staff_nickname, email, email_spin, status")
+          .in("status", ["ativo", "indisponivel"])
+          .order("nome", { ascending: true })
+          .order("id", { ascending: true })
+          .range(from, to);
+        return { data: (res.data ?? null) as RhFuncionario[] | null, error: res.error };
+      });
+      setPrestadores(rows);
+    } catch (e) {
+      console.error("[DadosCadastro] carregar staff:", e);
+      setPrestadores([]);
+      setErroStaff(
+        "Não foi possível carregar a lista de prestadores. Se o problema persistir, entre em contato com o suporte.",
+      );
+    } finally {
       setLoadingStaff(false);
-    })();
-    return () => {
-      cancelled = true;
-    };
+    }
   }, [perm.loading, vistaCompleta]);
+
+  useEffect(() => {
+    void carregarStaff();
+  }, [carregarStaff]);
 
   useEffect(() => {
     if (perm.loading || !emailEfetivo?.trim()) return;
@@ -550,21 +569,31 @@ export default function RhDadosCadastroPage() {
 
   const carregarHistorico = useCallback(async (fid: string, viewingSelf: boolean) => {
     setHistLoading(true);
-    const { data, error } = await supabase
-      .from("rh_funcionario_historico")
-      .select("*")
-      .eq("rh_funcionario_id", fid)
-      .order("created_at", { ascending: false });
-    setHistLoading(false);
-    if (error) {
+    setHistErro(null);
+    try {
+      const items = await fetchAllPages<RhFuncionarioHistorico>(async (from, to) => {
+        const res = await supabase
+          .from("rh_funcionario_historico")
+          .select(PRESTADOR_HISTORICO_SELECT)
+          .eq("rh_funcionario_id", fid)
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: false })
+          .range(from, to);
+        return {
+          data: (res.data ?? null) as RhFuncionarioHistorico[] | null,
+          error: res.error,
+        };
+      });
+      setHistItems(items.filter((h) => historicoVisivelAbaDadosCadastro(h, viewingSelf)));
+    } catch (e) {
+      console.error("[DadosCadastro] histórico:", e);
       setHistItems([]);
-      return;
+      setHistErro(
+        "Não foi possível carregar o histórico. Se o problema persistir, entre em contato com o suporte.",
+      );
+    } finally {
+      setHistLoading(false);
     }
-    setHistItems(
-      ((data ?? []) as RhFuncionarioHistorico[]).filter((h) =>
-        historicoVisivelAbaDadosCadastro(h, viewingSelf),
-      ),
-    );
   }, []);
 
   useEffect(() => {
@@ -852,6 +881,47 @@ export default function RhDadosCadastroPage() {
           title={getPageMenuLabel("rh_dados_cadastro")}
           subtitle={pageSubtitle}
         />
+        {erroStaff ? (
+          <div
+            role="alert"
+            style={{
+              padding: "10px 14px",
+              borderRadius: 10,
+              marginBottom: 12,
+              background: "rgba(232,64,37,0.12)",
+              border: "1px solid rgba(232,64,37,0.35)",
+              color: "#e84025",
+              fontSize: 13,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 8,
+              flexWrap: "wrap",
+              fontFamily: FONT.body,
+            }}
+          >
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+              <AlertCircle size={14} color="#e84025" aria-hidden />
+              {erroStaff}
+            </span>
+            <button
+              type="button"
+              onClick={() => void carregarStaff()}
+              style={{
+                padding: "8px 14px",
+                borderRadius: 10,
+                border: "1px solid rgba(232,64,37,0.35)",
+                background: "transparent",
+                color: "#e84025",
+                fontWeight: 700,
+                fontFamily: FONT.body,
+                cursor: "pointer",
+              }}
+            >
+              Tentar de novo
+            </button>
+          </div>
+        ) : null}
         <div style={getPageFilterBoxStyle(brand, t)}>
           <div className="app-marketplace-filtro-minhas">
             <div className="app-marketplace-filtro-minhas__centro" style={getFilterBarRowStyle({ width: "100%" })}>
@@ -878,14 +948,20 @@ export default function RhDadosCadastroPage() {
             </div>
           </div>
         </div>
-        <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
-          Selecione um prestador no filtro Staff para visualizar o cadastro.
-        </div>
+        {!erroStaff ? (
+          <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
+            Selecione um prestador no filtro Staff para visualizar o cadastro.
+          </div>
+        ) : null}
       </div>
     );
   }
 
   if (!row || !form) {
+    const retryCadastro = () => {
+      if (vistaCompleta && filterStaffId) void carregarFuncionarioPorId(filterStaffId);
+      else void carregarFuncionarioProprio();
+    };
     return (
       <div className="app-page-shell">
         <PageHeader
@@ -894,9 +970,51 @@ export default function RhDadosCadastroPage() {
           subtitle={pageSubtitle}
           actions={<AjudaContextualAcoes pageKey="rh_dados_cadastro" tutorial={TUTORIAL_CTX_DADOS_CADASTRO} />}
         />
-        <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
-          Não encontramos um cadastro de prestador vinculado ao seu e-mail de acesso. Em caso de dúvida, fale com o RH.
-        </div>
+        {erroGlobal ? (
+          <div
+            role="alert"
+            style={{
+              padding: "10px 14px",
+              borderRadius: 10,
+              marginBottom: 12,
+              background: "rgba(232,64,37,0.12)",
+              border: "1px solid rgba(232,64,37,0.35)",
+              color: "#e84025",
+              fontSize: 13,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 8,
+              flexWrap: "wrap",
+              fontFamily: FONT.body,
+            }}
+          >
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+              <AlertCircle size={14} color="#e84025" aria-hidden />
+              {erroGlobal}
+            </span>
+            <button
+              type="button"
+              onClick={retryCadastro}
+              style={{
+                padding: "8px 14px",
+                borderRadius: 10,
+                border: "1px solid rgba(232,64,37,0.35)",
+                background: "transparent",
+                color: "#e84025",
+                fontWeight: 700,
+                fontFamily: FONT.body,
+                cursor: "pointer",
+              }}
+            >
+              Tentar de novo
+            </button>
+          </div>
+        ) : (
+          <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
+            Não encontramos um cadastro de prestador vinculado ao seu e-mail de acesso. Em caso de dúvida, fale com o RH.
+          </div>
+        )}
       </div>
     );
   }
@@ -1080,6 +1198,43 @@ export default function RhDadosCadastroPage() {
                 <p style={{ margin: "0 0 12px", fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
                   Verificando completude do cadastro…
                 </p>
+              ) : erroCompletude ? (
+                <div
+                  role="alert"
+                  style={{
+                    margin: "0 0 12px",
+                    padding: "10px 12px",
+                    borderRadius: 10,
+                    border: "1px solid rgba(232,64,37,0.35)",
+                    background: "rgba(232,64,37,0.08)",
+                    fontSize: 12,
+                    color: "#e84025",
+                    fontFamily: FONT.body,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 8,
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <span>{erroCompletude}</span>
+                  <button
+                    type="button"
+                    onClick={() => void recarregarCompletude(row.id)}
+                    style={{
+                      padding: "6px 12px",
+                      borderRadius: 8,
+                      border: "1px solid rgba(232,64,37,0.35)",
+                      background: "transparent",
+                      color: "#e84025",
+                      fontWeight: 700,
+                      fontFamily: FONT.body,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Tentar de novo
+                  </button>
+                </div>
               ) : !completudeRevisao.ok && completudeRevisao.pendencias.length > 0 ? (
                 <div
                   role="status"
@@ -1883,7 +2038,54 @@ export default function RhDadosCadastroPage() {
       {aba === "historico" ? (
         <section>
           <h2 style={{ fontFamily: FONT_TITLE, fontSize: 16, color: t.text, marginBottom: 12 }}>Histórico de RH</h2>
-          <ListaHistoricoRh items={histItems} loading={histLoading} t={t} />
+          {histErro ? (
+            <div
+              role="alert"
+              style={{
+                padding: "10px 14px",
+                borderRadius: 10,
+                marginBottom: 12,
+                background: "rgba(232,64,37,0.12)",
+                border: "1px solid rgba(232,64,37,0.35)",
+                color: "#e84025",
+                fontSize: 13,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 8,
+                flexWrap: "wrap",
+                fontFamily: FONT.body,
+              }}
+            >
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                <AlertCircle size={14} color="#e84025" aria-hidden />
+                {histErro}
+              </span>
+              <button
+                type="button"
+                onClick={() => void carregarHistorico(row.id, visualizandoProprioCadastro)}
+                style={{
+                  padding: "8px 14px",
+                  borderRadius: 10,
+                  border: "1px solid rgba(232,64,37,0.35)",
+                  background: "transparent",
+                  color: "#e84025",
+                  fontWeight: 700,
+                  fontFamily: FONT.body,
+                  cursor: "pointer",
+                }}
+              >
+                Tentar de novo
+              </button>
+            </div>
+          ) : (
+            <ListaHistoricoRh
+              items={histItems}
+              loading={histLoading}
+              t={t}
+              emptyMessage="Nenhum registro de histórico."
+            />
+          )}
         </section>
       ) : null}
     </div>

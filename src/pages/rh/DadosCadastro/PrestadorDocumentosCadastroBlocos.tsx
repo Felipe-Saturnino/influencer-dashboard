@@ -37,18 +37,19 @@ export function PrestadorDocumentosCadastroBlocos({
   const pageBox = getPageContentBoxStyle(brand, t);
   const [alvoExcluir, setAlvoExcluir] = useState<{ row: RhFuncionarioSelfMedia; rotulo: string } | null>(null);
 
-  const { rows, loading, erro, signedById, uploadingCategory, excluindoId, upload, excluir } =
+  const { rows, loading, erro, signedById, uploadingCategory, excluindoId, upload, excluir, recarregar } =
     useRhPrestadorDocumentosCategoria(funcionarioId, { podeEditar });
 
   const categorias = useMemo(() => categoriasDocumentoPorTipoContrato(tipoContrato), [tipoContrato]);
   const porCategoria = useMemo(() => agruparDocumentosPorCategoria(rows, categorias), [rows, categorias]);
+  const erroCargaInicial = Boolean(erro && !loading && rows.length === 0);
 
   const handleUpload = async (cat: RhPrestadorDocumentoCategoria, files: FileList | null) => {
     const count = await upload(cat, files);
     if (count > 0 && onDocumentosAlterados) await onDocumentosAlterados();
   };
 
-  if (loading && rows.length === 0) {
+  if (loading && rows.length === 0 && !erro) {
     return (
       <div
         style={{
@@ -68,9 +69,50 @@ export function PrestadorDocumentosCadastroBlocos({
     );
   }
 
+  if (erroCargaInicial) {
+    return (
+      <div
+        role="alert"
+        aria-live="polite"
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 10,
+          color: "#e84025",
+          fontSize: 13,
+          fontFamily: FONT.body,
+        }}
+      >
+        <span>{erro}</span>
+        <button
+          type="button"
+          onClick={() => void recarregar()}
+          style={{
+            padding: "8px 14px",
+            borderRadius: 10,
+            border: "1px solid rgba(232,64,37,0.35)",
+            background: "transparent",
+            color: "#e84025",
+            fontWeight: 700,
+            fontFamily: FONT.body,
+            cursor: "pointer",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+          }}
+        >
+          <RefreshCw size={14} aria-hidden />
+          Tentar de novo
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-      {erro ? (
+      {erro && !erroCargaInicial ? (
         <div role="alert" aria-live="polite" style={{ color: "#e84025", fontSize: 13, fontFamily: FONT.body }}>
           {erro}
         </div>

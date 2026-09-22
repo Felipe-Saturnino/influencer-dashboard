@@ -125,6 +125,7 @@ export default function FormacaoCompetenciasPainel({
   const dataTable = useDataTableBlock();
   const pageBox = getPageContentBoxStyle(brand, t);
   const [loading, setLoading] = useState(true);
+  const [erroCarga, setErroCarga] = useState<string | null>(null);
   const [formacoes, setFormacoes] = useState<RhFuncionarioFormacao[]>([]);
   const [idiomasRows, setIdiomasRows] = useState<RhFuncionarioIdioma[]>([]);
   const [cursos, setCursos] = useState<RhFuncionarioCurso[]>([]);
@@ -174,37 +175,50 @@ export default function FormacaoCompetenciasPainel({
 
   const carregar = useCallback(async () => {
     setLoading(true);
+    setErroCarga(null);
+    const FORMACAO_SELECT =
+      "id, rh_funcionario_id, curso, instituicao, grau, ano_conclusao, status, created_at, updated_at";
+    const IDIOMA_SELECT = "id, rh_funcionario_id, rh_idioma_id, nivel, created_at, updated_at, rh_idiomas(nome)";
+    const CURSO_SELECT =
+      "id, rh_funcionario_id, nome, instituicao, carga_horaria_horas, ano, created_at, updated_at";
+    const PORTFOLIO_SELECT =
+      "id, rh_funcionario_id, titulo, tipo, origem, url, storage_path, file_name, mime_type, tamanho_bytes, created_at, updated_at";
     const [fRes, iRes, cRes, pRes, catRes] = await Promise.all([
       supabase
         .from("rh_funcionario_formacao")
-        .select("*")
+        .select(FORMACAO_SELECT)
         .eq("rh_funcionario_id", funcionarioId)
         .order("ano_conclusao", { ascending: false, nullsFirst: false }),
       supabase
         .from("rh_funcionario_idioma")
-        .select("*, rh_idiomas(nome)")
+        .select(IDIOMA_SELECT)
         .eq("rh_funcionario_id", funcionarioId),
       supabase
         .from("rh_funcionario_curso")
-        .select("*")
+        .select(CURSO_SELECT)
         .eq("rh_funcionario_id", funcionarioId)
         .order("ano", { ascending: false, nullsFirst: false }),
       supabase
         .from("rh_funcionario_portfolio")
-        .select("*")
+        .select(PORTFOLIO_SELECT)
         .eq("rh_funcionario_id", funcionarioId)
         .order("created_at", { ascending: false }),
       supabase.from("rh_idiomas").select("id, nome, ordem").order("ordem"),
     ]);
     setLoading(false);
     if (fRes.error || iRes.error || cRes.error || pRes.error) {
+      setFormacoes([]);
+      setIdiomasRows([]);
+      setCursos([]);
+      setPortfolio([]);
+      setErroCarga("Não foi possível carregar formação e competências.");
       notifyErro("Não foi possível carregar formação e competências.");
       return;
     }
-    setFormacoes((fRes.data ?? []) as RhFuncionarioFormacao[]);
-    setIdiomasRows((iRes.data ?? []) as RhFuncionarioIdioma[]);
-    setCursos((cRes.data ?? []) as RhFuncionarioCurso[]);
-    const portRows = (pRes.data ?? []) as RhFuncionarioPortfolio[];
+    setFormacoes((fRes.data ?? []) as unknown as RhFuncionarioFormacao[]);
+    setIdiomasRows((iRes.data ?? []) as unknown as RhFuncionarioIdioma[]);
+    setCursos((cRes.data ?? []) as unknown as RhFuncionarioCurso[]);
+    const portRows = (pRes.data ?? []) as unknown as RhFuncionarioPortfolio[];
     setPortfolio(portRows);
     setCatalogoIdiomas((catRes.data ?? []) as RhIdioma[]);
 
@@ -409,11 +423,16 @@ export default function FormacaoCompetenciasPainel({
         await logHistorico("excluir", "curso", alvo.row.nome);
       } else {
         const row = alvo.row;
-        if (row.storage_path) {
-          await supabase.storage.from(RH_FORMACAO_PORTFOLIO_BUCKET).remove([row.storage_path]);
-        }
         const { error } = await supabase.from("rh_funcionario_portfolio").delete().eq("id", row.id);
         if (error) throw error;
+        if (row.storage_path) {
+          const { error: storageErr } = await supabase.storage
+            .from(RH_FORMACAO_PORTFOLIO_BUCKET)
+            .remove([row.storage_path]);
+          if (storageErr) {
+            console.error("[FormacaoCompetencias] limpar storage portfólio:", storageErr);
+          }
+        }
         await logHistorico("excluir", "portfolio", row.titulo);
       }
       setDeleteTarget(null);
@@ -454,17 +473,55 @@ export default function FormacaoCompetenciasPainel({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      {erroCarga ? (
+        <div
+          role="alert"
+          style={{
+            padding: "10px 14px",
+            borderRadius: 10,
+            background: "rgba(232,64,37,0.12)",
+            border: "1px solid rgba(232,64,37,0.35)",
+            color: "#e84025",
+            fontSize: 13,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 8,
+            flexWrap: "wrap",
+            fontFamily: FONT.body,
+          }}
+        >
+          <span>{erroCarga}</span>
+          <button
+            type="button"
+            onClick={() => void carregar()}
+            style={{
+              padding: "8px 14px",
+              borderRadius: 10,
+              border: "1px solid rgba(232,64,37,0.35)",
+              background: "transparent",
+              color: "#e84025",
+              fontWeight: 700,
+              fontFamily: FONT.body,
+              cursor: "pointer",
+            }}
+          >
+            Tentar de novo
+          </button>
+        </div>
+      ) : null}
+
       {/* Formação acadêmica */}
       <div style={pageBox}>
         <div style={getFormacaoSectionHeaderStyle()}>
           <SectionTitle sub="Graduação, pós e demais níveis">Formação acadêmica</SectionTitle>
-          {podeEditar ? (
+          {podeEditar && !erroCarga ? (
             <CtaCriarButton onClick={() => setModalFormacao("novo")}>Nova formação</CtaCriarButton>
           ) : null}
         </div>
         {loading ? (
           loadingBlock
-        ) : formacoesSorted.length === 0 ? (
+        ) : erroCarga ? null : formacoesSorted.length === 0 ? (
           <div style={{ padding: "24px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
             {RH_FORMACAO_VAZIO.formacao}
           </div>
@@ -560,13 +617,13 @@ export default function FormacaoCompetenciasPainel({
       <div style={pageBox}>
         <div style={getFormacaoSectionHeaderStyle()}>
           <SectionTitle sub="Um registro por idioma">Idiomas</SectionTitle>
-          {podeEditar && idsIdiomaCadastrados.size < catalogoIdiomas.length ? (
+          {podeEditar && !erroCarga && idsIdiomaCadastrados.size < catalogoIdiomas.length ? (
             <CtaCriarButton onClick={() => setModalIdioma("novo")}>Novo idioma</CtaCriarButton>
           ) : null}
         </div>
         {loading ? (
           loadingBlock
-        ) : idiomasSorted.length === 0 ? (
+        ) : erroCarga ? null : idiomasSorted.length === 0 ? (
           <div style={{ padding: "24px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
             {RH_FORMACAO_VAZIO.idioma}
           </div>
@@ -609,11 +666,11 @@ export default function FormacaoCompetenciasPainel({
       <div style={pageBox}>
         <div style={getFormacaoSectionHeaderStyle()}>
           <SectionTitle sub="Certificações e cursos complementares">Cursos</SectionTitle>
-          {podeEditar ? <CtaCriarButton onClick={() => setModalCurso("novo")}>Novo curso</CtaCriarButton> : null}
+          {podeEditar && !erroCarga ? <CtaCriarButton onClick={() => setModalCurso("novo")}>Novo curso</CtaCriarButton> : null}
         </div>
         {loading ? (
           loadingBlock
-        ) : cursosSorted.length === 0 ? (
+        ) : erroCarga ? null : cursosSorted.length === 0 ? (
           <div style={{ padding: "24px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
             {RH_FORMACAO_VAZIO.curso}
           </div>
@@ -695,11 +752,11 @@ export default function FormacaoCompetenciasPainel({
       <div style={pageBox}>
         <div style={getFormacaoSectionHeaderStyle()}>
           <SectionTitle sub="Links ou arquivos (vídeo e áudio somente por URL)">Portfólio</SectionTitle>
-          {podeEditar ? <CtaCriarButton onClick={() => setModalPortfolio("novo")}>Novo item</CtaCriarButton> : null}
+          {podeEditar && !erroCarga ? <CtaCriarButton onClick={() => setModalPortfolio("novo")}>Novo item</CtaCriarButton> : null}
         </div>
         {loading ? (
           loadingBlock
-        ) : portfolio.length === 0 ? (
+        ) : erroCarga ? null : portfolio.length === 0 ? (
           <div style={{ padding: "24px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
             {RH_FORMACAO_VAZIO.portfolio}
           </div>

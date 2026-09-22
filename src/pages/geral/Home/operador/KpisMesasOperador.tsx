@@ -89,8 +89,7 @@ export function KpisMesasOperador() {
             Quer saber mais? Acessa o Dashboard de{" "}
             <a {...propsFor("mesas_spin")} style={HOME_LINK_BUTTON}>
               Overview Spin
-            </a>{" "}
-            (aba Posicionamento e Dados por mesa).
+            </a>.
           </p>
         </>
       )}
