@@ -149,7 +149,7 @@ import { baixarXlsx } from "../../../lib/xlsxWriter";
 import { buscarRhFuncionarioAtivoPorEmailLogin } from "../../../lib/rhFuncionarioLoginMatch";
 import {
   areaKeysEscritorioDasUnidades,
-  fetchRhLiderancaEscopo,
+  fetchRhLiderancaEscopoResult,
 } from "../../../lib/rhLiderancaEscopo";
 
 function vistaColunasInicialEscala(): EscalaVistaColunas {
@@ -292,7 +292,17 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
         const eu = meuId ? prestadores.find((p) => p.id === meuId) : undefined;
         const myArea = eu ? areaKeyDoPrestadorEscala(modo, eu) : null;
         if (modo === "escritorio") {
-          const escopo = await fetchRhLiderancaEscopo(meuId || null);
+          const escopoFetch = await fetchRhLiderancaEscopoResult(meuId || null);
+          if (!escopoFetch.ok) {
+            setErroPrestadores(
+              "Não foi possível carregar o escopo de liderança. Se o problema persistir, entre em contato com o suporte.",
+            );
+            setPrestadoresRaw([]);
+            setAbasTimes([]);
+            setLoadingPrestadores(false);
+            return;
+          }
+          const escopo = escopoFetch.escopo;
           const allowed = areaKeysEscritorioDasUnidades(escopo.unidades);
           if (myArea) allowed.add(myArea);
           abas = abas.filter((a) => allowed.has(a.areaKey));
@@ -382,8 +392,14 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
 
   useEffect(() => {
     if (perm.loading || perm.canView === "nao") return;
+    if (modo === "escritorio") {
+      setErroEstudios(null);
+      setEstudiosAtivosEscala([]);
+      setOpParaEstudio({});
+      return;
+    }
     void carregarEstudios();
-  }, [perm.loading, perm.canView, carregarEstudios]);
+  }, [perm.loading, perm.canView, modo, carregarEstudios]);
 
   useEffect(() => {
     if (
@@ -613,15 +629,29 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
             p_area_key: areaKey,
             p_celulas: celulas,
           });
-          if (!cancelled && !saveErr && (saveData as RpcGradeSalvarResult | null)?.ok) {
-            const { data: aprovData, error: aprovErr } = await supabase.rpc("rh_gestao_escala_grade_aprovar", {
-              p_ref_mes: ref,
-              p_area_key: areaKey,
-            });
-            if (!aprovErr && (aprovData as RpcGradeAprovarResult | null)?.ok) {
-              aprovadaEfetiva = true;
-            }
+          if (cancelled) return;
+          if (saveErr || !(saveData as RpcGradeSalvarResult | null)?.ok) {
+            console.error("[GestaoEscala] auto-salvar escritório", saveErr ?? saveData);
+            setErroGrade(
+              "Não foi possível preparar a escala do escritório. Se o problema persistir, entre em contato com o suporte.",
+            );
+            setLoadingGrade(false);
+            return;
           }
+          const { data: aprovData, error: aprovErr } = await supabase.rpc("rh_gestao_escala_grade_aprovar", {
+            p_ref_mes: ref,
+            p_area_key: areaKey,
+          });
+          if (cancelled) return;
+          if (aprovErr || !(aprovData as RpcGradeAprovarResult | null)?.ok) {
+            console.error("[GestaoEscala] auto-aprovar escritório", aprovErr ?? aprovData);
+            setErroGrade(
+              "Não foi possível aprovar a escala do escritório. Se o problema persistir, entre em contato com o suporte.",
+            );
+            setLoadingGrade(false);
+            return;
+          }
+          aprovadaEfetiva = true;
         }
         if (cancelled) return;
         const aprovadoEmIso =
@@ -1525,35 +1555,48 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
               : []),
           ];
 
-    const blocos: EscalaExcelBlocoTurno[] = turnos.map((turno) => {
-      const linhasEstudio = contarCelulasComSiglaPorEstudio(
-        prestadoresArea,
-        dias,
-        celulasGerarAtivas,
-        turno.sigla,
-        opParaEstudio,
-        estudiosNomeEscala,
-      );
-      return {
-        titulo: turno.titulo,
-        linhas: linhasEstudio.map((l) => ({ label: l.label, counts: l.counts })),
-        total: dias.map((_, i) => linhasEstudio.reduce((acc, l) => acc + (l.counts[i] ?? 0), 0)),
-      };
-    });
+    const blocos: EscalaExcelBlocoTurno[] =
+      modo === "escritorio"
+        ? turnos.map((turno) => {
+            const linhasExcel = prestadoresArea.map(mapLinhaPrestador);
+            const counts = contarCelulasComSigla(linhasExcel, dias, celulasGerarAtivas, turno.sigla);
+            return {
+              titulo: turno.titulo,
+              linhas: [{ label: "Equipe", counts }],
+              total: counts,
+            };
+          })
+        : turnos.map((turno) => {
+            const linhasEstudio = contarCelulasComSiglaPorEstudio(
+              prestadoresArea,
+              dias,
+              celulasGerarAtivas,
+              turno.sigla,
+              opParaEstudio,
+              estudiosNomeEscala,
+            );
+            return {
+              titulo: turno.titulo,
+              linhas: linhasEstudio.map((l) => ({ label: l.label, counts: l.counts })),
+              total: dias.map((_, i) => linhasEstudio.reduce((acc, l) => acc + (l.counts[i] ?? 0), 0)),
+            };
+          });
 
     const estudioPorPrestador = new Map<string, string>();
-    for (const p of prestadoresArea) {
-      estudioPorPrestador.set(
-        p.id,
-        bucketEstudioConsolidado(p, opParaEstudio, estudiosNomeEscala).label,
-      );
+    if (modo !== "escritorio") {
+      for (const p of prestadoresArea) {
+        estudioPorPrestador.set(
+          p.id,
+          bucketEstudioConsolidado(p, opParaEstudio, estudiosNomeEscala).label,
+        );
+      }
     }
 
     const linhasDetalhe: EscalaExcelLinhaDetalhe[] = linhasOrdenadasEscalaDiaria.map((row) => ({
       nome: row.nome,
       nickname: row.nickname,
       turno: row.turnoStaffNome,
-      estudio: estudioPorPrestador.get(row.id) ?? "",
+      estudio: modo === "escritorio" ? "" : (estudioPorPrestador.get(row.id) ?? ""),
       valoresPorDia: dias.map((dia) => {
         const ck = chaveCelulaGerar(row.id, dia.iso);
         const texto = gradeAprovada
@@ -1579,8 +1622,12 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
           mes,
         ),
         [
-          buildAbaConsolidadoEscalaExcel(diasExcel, blocos),
-          buildAbaDetalhadoEscalaExcel(diasExcel, linhasDetalhe),
+          buildAbaConsolidadoEscalaExcel(diasExcel, blocos, {
+            rotuloPrimeiraColuna: modo === "escritorio" ? "Equipe" : "Estúdio",
+          }),
+          buildAbaDetalhadoEscalaExcel(diasExcel, linhasDetalhe, {
+            incluirEstudio: modo !== "escritorio",
+          }),
         ],
       );
     } catch (e) {
@@ -3207,6 +3254,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
           prestadores={linhas}
           celulas={gerarPorFiltro[filtroArea]?.celulas ?? {}}
           canEditar={podeAlterarEscalaAprovada}
+          modoEscritorio={modo === "escritorio"}
           sanitizarValor={(_sigla, valor) => sanitizarValorCelulaAlterarEscala(valor, modo, filtroArea)}
           opcoesSelectCelula={() => opcoesSelectCelulaAlterarEscala(modo, filtroArea)}
           labelExibicaoCelula={(_sigla, valor) => labelExibicaoCelulaAlterarEscala(valor, modo, filtroArea)}

@@ -62,6 +62,8 @@ type ModalAlterarEscalaProps = {
   prestadores: LinhaColaboradorAlterarEscala[];
   celulas: Record<string, string>;
   canEditar: boolean;
+  /** Escala Escritório: sem copy/pill de Marketplace. */
+  modoEscritorio?: boolean;
   sanitizarValor: (siglaTurnoStaff: string, valorArmazenado: string, turnoStaffNome: string) => string;
   opcoesSelectCelula: (row: LinhaColaboradorAlterarEscala) => OpcaoCelula[];
   labelExibicaoCelula: (
@@ -156,6 +158,7 @@ export function ModalAlterarEscala({
   prestadores,
   celulas,
   canEditar,
+  modoEscritorio = false,
   sanitizarValor,
   opcoesSelectCelula,
   labelExibicaoCelula,
@@ -496,8 +499,9 @@ export function ModalAlterarEscala({
                   color: t.text,
                 }}
               >
-                Edite os dias a partir de hoje. Células de Marketplace (Compra / Venda) ficam travadas.
-                Ao salvar, só este prestador é atualizado — o restante da escala aprovada permanece intacto.
+                {modoEscritorio
+                  ? "Edite os dias a partir de hoje. Ao salvar, só este prestador é atualizado — o restante da escala aprovada permanece intacto."
+                  : "Edite os dias a partir de hoje. Células de Marketplace (Compra / Venda) ficam travadas. Ao salvar, só este prestador é atualizado — o restante da escala aprovada permanece intacto."}
               </div>
 
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
@@ -509,12 +513,16 @@ export function ModalAlterarEscala({
                     color: "#1e36f8",
                     border: "color-mix(in srgb, #1e36f8 35%, transparent)",
                   },
-                  {
-                    label: "Marketplace",
-                    bg: "color-mix(in srgb, #f59e0b 16%, transparent)",
-                    color: "#b45309",
-                    border: "color-mix(in srgb, #f59e0b 40%, transparent)",
-                  },
+                  ...(modoEscritorio
+                    ? []
+                    : [
+                        {
+                          label: "Marketplace",
+                          bg: "color-mix(in srgb, #f59e0b 16%, transparent)",
+                          color: "#b45309",
+                          border: "color-mix(in srgb, #f59e0b 40%, transparent)",
+                        },
+                      ]),
                 ].map((pill) => (
                   <span
                     key={pill.label}

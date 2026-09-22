@@ -115,7 +115,8 @@ function parseHistoricoListarPayload(data: unknown): EscalaHistoricoRow[] {
 function labelValorHistoricoEscala(raw: string | null | undefined, areaKey: string): string {
   const v = (raw ?? "").trim();
   if (!v) return "—";
-  const modo = areaKey.startsWith("eo_") ? "escritorio" : "estudio";
+  const modo =
+    areaKey.startsWith("eo_") || areaKey.startsWith("eog_") ? "escritorio" : "estudio";
   return labelExibicaoCelulaAlterarEscala(v, modo, areaKey);
 }
 
