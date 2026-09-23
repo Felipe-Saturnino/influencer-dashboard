@@ -5,14 +5,24 @@ import { ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
+import { TabelaComPaginacao } from "../../../components/TabelaPaginacaoBar";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { supabase } from "../../../lib/supabase";
+import { fetchAllPages } from "../../../lib/supabasePaginate";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { getPageContentBoxShellStyle } from "../../../lib/pageContentBoxStyles";
 import { usePermission } from "../../../hooks/usePermission";
 import {descricaoModalExcluirItem, tooltipExcluir} from "../../../lib/excluirItemUi";
 import { FONT, FONT_TITLE } from "../../../constants/theme";
+
+const ERRO_CARGA_MENCOES =
+  "Não foi possível carregar as menções. Se o problema persistir, entre em contato com o suporte.";
+const ERRO_EXCLUIR_MENCAO =
+  "Não foi possível excluir a menção. Se o problema persistir, entre em contato com o suporte.";
+
+const MENCAO_SELECT =
+  "id, item_url, titulo, resumo, published_at, feed_url, fonte_host, imagem_url";
 
 type SpinNaRedeMencaoRow = {
   id: string;
@@ -123,19 +133,23 @@ export default function SpinNaRede() {
     if (perm.loading || perm.canView === "nao") return;
     setLoading(true);
     setErro(null);
-    const { data, error } = await supabase
-      .from("spin_na_rede_mencao")
-      .select("id, item_url, titulo, resumo, published_at, feed_url, fonte_host, imagem_url")
-      .eq("passou_filtro", true)
-      .order("published_at", { ascending: false, nullsFirst: false })
-      .limit(200);
-    if (error) {
-      console.error("[SpinNaRede]", error.message);
-      setErro("Não foi possível carregar as menções. Tente novamente.");
-      setItens([]);
-    } else {
-      setItens((data ?? []) as SpinNaRedeMencaoRow[]);
+    try {
+      const rows = await fetchAllPages<SpinNaRedeMencaoRow>(async (from, to) => {
+        const { data, error } = await supabase
+          .from("spin_na_rede_mencao")
+          .select(MENCAO_SELECT)
+          .eq("passou_filtro", true)
+          .order("published_at", { ascending: false, nullsFirst: false })
+          .order("id", { ascending: true })
+          .range(from, to);
+        return { data: (data as SpinNaRedeMencaoRow[] | null) ?? null, error };
+      });
+      setItens(rows);
       setThumbPhase({});
+    } catch (err) {
+      console.error("[SpinNaRede]", err);
+      setErro(ERRO_CARGA_MENCOES);
+      setItens([]);
     }
     setLoading(false);
   }, [perm.loading, perm.canView]);
@@ -152,7 +166,7 @@ export default function SpinNaRede() {
     const { error } = await supabase.from("spin_na_rede_mencao").delete().eq("id", id);
     if (error) {
       console.error("[SpinNaRede] excluir menção", error.message);
-      setErro("Não foi possível excluir a menção. Tente novamente.");
+      setErro(ERRO_EXCLUIR_MENCAO);
       setExcluindo(false);
       return;
     }
@@ -208,9 +222,31 @@ export default function SpinNaRede() {
             border: "1px solid rgba(232,64,37,0.35)",
             color: "#e84025",
             fontSize: 13,
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "center",
+            gap: 12,
+            justifyContent: "space-between",
           }}
         >
-          {erro}
+          <span>{erro}</span>
+          <button
+            type="button"
+            onClick={() => void carregar()}
+            style={{
+              padding: "8px 14px",
+              borderRadius: 10,
+              border: "1px solid rgba(232,64,37,0.35)",
+              background: "rgba(232,64,37,0.08)",
+              color: "#e84025",
+              fontSize: 12,
+              fontWeight: 700,
+              cursor: "pointer",
+              fontFamily: FONT.body,
+            }}
+          >
+            Tentar de novo
+          </button>
         </div>
       )}
 
@@ -219,13 +255,15 @@ export default function SpinNaRede() {
           <Loader2 className="app-lucide-spin" size={20} color="var(--brand-primary, #7c3aed)" aria-hidden="true" />
           <span style={{ color: t.textMuted, fontSize: 13 }}>Carregando menções…</span>
         </div>
-      ) : itens.length === 0 ? (
+      ) : erro ? null : itens.length === 0 ? (
         <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13 }}>
           Ainda não há menções indexadas. Quando o agregador RSS estiver ativo, os itens aparecerão aqui.
         </div>
       ) : (
+        <TabelaComPaginacao items={itens} t={t} resetKey={itens.length}>
+          {(linhas) => (
         <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 12 }}>
-          {itens.map((row) => {
+          {linhas.map((row) => {
             const resumoLimpo = row.resumo ? stripHtml(row.resumo) : "";
             const resumoCard = resumoParaCartao(resumoLimpo);
             const fonte = row.fonte_host?.trim() || "—";
@@ -372,6 +410,8 @@ export default function SpinNaRede() {
             );
           })}
         </ul>
+          )}
+        </TabelaComPaginacao>
       )}
 
       {alvoExcluir ? (

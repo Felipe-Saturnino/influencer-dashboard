@@ -337,8 +337,9 @@ Imports de modais/gates (`ModalBloqueioAgendaLive`, `verificarElegibilidadeAgend
 - **Ver = Próprios:** só o próprio link (`linksMateriaisIsSelfMode`) + aba do perfil. Agência: select filtrado por `podeVerInfluencer`. No Simulador de Login, o perfil e o UTM emitido usam `useIdentidadeEfetiva().userId` — **proibido** `user.id` da conta viewer no modo self.
 - **Criar = Sim:** emitir para qualquer um da lista. **Criar = Próprios:** só o próprio link (RPC `can_criar`). Matriz: `hasCriar: true`, `hasEditar: false`.
 - **Nome de exibição:** Influencer = nome artístico; Afiliado = nome (`nomeExibicaoLinksEntidade`).
+- **Lista de entidades (select):** `fetchAllPages` + `fetchInBatched` em `influencer_perfil`; **`SelectListaComBusca`** (não `<select>` nativo). Erro de carga ≠ empty: alerta + **Tentar de novo**; empty só sem erro.
 - Bloco **Link de rastreamento:** `getPageContentBoxStyle` + `SectionTitle` (sem ícone no título de bloco).
-- Botão **Emitir:** gradiente canónico; `aria-disabled` + `title` contextual; `Loader2` branco em `salvando` / `verificandoGateEmissao`.
+- Botão **Emitir:** **`getCtaCriarGradient(brand)`**; `aria-disabled` + `title` contextual; `Loader2` branco em `salvando` / `verificandoGateEmissao`.
 - Erro de emissão ao usuário: `"Não foi possível emitir o link. Se o problema persistir, entre em contato com o suporte."`
 - Aviso parcial (canView sem Criar): bloco amarelo — pedir ativar **Criar** em Gestão de Usuários.
 - **Previews QR:** `aspectRatio: "600 / 760"`; skeleton com `app-skeleton-pulse`; `aria-label` específico por variante de download; `Loader2` em "Gerando…".
@@ -351,7 +352,7 @@ Imports de modais/gates (`ModalBloqueioAgendaLive`, `verificarElegibilidadeAgend
 - **Simulador de Login:** ciência e modo influencer usam `useIdentidadeEfetiva()` (id + perfil efetivo). Auditoria só se o perfil **simulado** tiver Editar Sim — **proibido** `user.role` da conta viewer.
 - Abas: ARIA completa + `onKeyDown` ArrowLeft/Right + `tabIndex` roving + fade de overflow; `tabpanel` com `tabIndex={0}`, topo `clamp(22px, 4vw, 32px)` (painel encosta nas abas) e laterais/base `clamp(14px, 4vw, 28px)`.
 - **BlocoCiencia:** `role="checkbox"` customizado; `key={itemKey}` para remount; `aria-live` na transição; erro upsert: `"Não foi possível registrar a confirmação. Tente novamente."`; `Loader2` branco em Confirmar Ciência.
-- **PainelAuditoria:** `Loader2` no loading; fallback nome `Influencer (${id.slice(0, 8)}…)` — nunca UUID completo.
+- **PainelAuditoria / stats do header:** `fetchAllPages` + `order` estável; falha de fetch ≠ «Todos confirmaram» / «0 de N» — alerta + **Tentar de novo**. Pendentes com **`TabelaComPaginacao`** (20). `Loader2` no loading; fallback nome `Influencer (${id.slice(0, 8)}…)` — nunca UUID completo.
 - **Fun Facts:** `value: "Sim"` — proibido `"✓"`.
 - **ConteudoJogos:** foco obrigatório Live Cassino SPIN — Blackjack, Roleta, Baccarat e **Futebol Brasileiro** exclusivamente nas mesas Spin Gaming; alerta de proibição inclui os quatro jogos.
 - Barra de progresso: `brand.useBrand ? linear-gradient(var(--brand-primary), var(--brand-accent)) : vermelho→azul`.
@@ -359,12 +360,13 @@ Imports de modais/gates (`ModalBloqueioAgendaLive`, `verificarElegibilidadeAgend
 ### SpinNaRede (`src/pages/conteudo/SpinNaRede/index.tsx`)
 
 - Header: `Radio` (Lucide), `h1` **18px**; listagem de menções filtradas (`passou_filtro`).
-- Lista: `<ul>` / `<li>`; cards com `getPageContentBoxShellStyle`.
+- Lista: `<ul>` / `<li>`; cards com `getPageContentBoxShellStyle`; vista paginada **`TabelaComPaginacao`** (20).
+- Carga: **`fetchAllPages`** (sem `.limit(200)`); empty ≠ erro — só alerta + **Tentar de novo** em falha; empty canónico só sem erro.
 - Rodapé do cartão: link **Ir para a matéria** (esquerda) + **`BtnExcluirLinha`** (direita) quando `perm.canExcluirOk` — pop-up **`ModalConfirmExcluirPadrao`**; delete em `spin_na_rede_mencao`.
 - Loading: `"Carregando menções…"` (PT-BR — nunca `"A carregar"`).
 - Link externo: `var(--brand-primary, #7c3aed)` — não `brand.accent`; `target="_blank"` + `rel="noopener noreferrer"`.
 - Miniatura: `<a tabIndex={-1} aria-hidden>` quando o link de texto cobre o mesmo destino; `<img width={160} height={90} alt="" />` decorativa.
-- Erro: `role="alert"`; mensagem fixa ao usuário.
+- Erro: `role="alert"`; mensagem fixa ao usuário + retry.
 
 ### Reações de layout (`conteudo_reacao`)
 

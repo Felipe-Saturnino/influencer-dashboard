@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Academy — Meus Cursos (Mockup)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --brand-primary: #7c3aed;
+      --brand-secondary: #1e36f8;
+      --brand-success: #22c55e;
+      --brand-danger: #e84025;
+      --brand-warning: #f59e0b;
+      --bg: #f4f4f8;
+      --card-bg: #ffffff;
+      --card-border: #e2e2ee;
+      --text: #1a1a2e;
+      --text-muted: #6b7280;
+      --input-bg: #f8f8fc;
+      --radius-box: 14px;
+      --radius-tab: 10px;
+      --radius-pill: 999px;
+      --shadow: 0 2px 8px rgba(0,0,0,0.07);
+      --font: "Inter", "Helvetica Neue", Arial, sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; padding: 24px; line-height: 1.4; }
+    .mockup-bar {
+      position: sticky; top: 0; z-index: 100; background: #1a1a2e; color: #fff;
+      padding: 10px 16px; border-radius: 10px; margin-bottom: 20px;
+      display: flex; flex-wrap: wrap; align-items: center; gap: 12px; font-size: 12px;
+    }
+    .mockup-bar strong { color: #a78bfa; }
+    .page-shell { max-width: 1100px; margin: 0 auto; }
+    .page-header { margin-bottom: 18px; }
+    .page-header-row { display: flex; align-items: center; gap: 10px; }
+    .page-icon {
+      width: 32px; height: 32px; border-radius: 9px;
+      background: color-mix(in srgb, var(--brand-primary) 12%, transparent);
+      border: 1px solid color-mix(in srgb, var(--brand-primary) 30%, transparent);
+      display: flex; align-items: center; justify-content: center; color: var(--brand-primary); flex-shrink: 0;
+    }
+    .page-header h1 { font-size: 18px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: var(--brand-primary); }
+    .page-header .subtitle { font-size: 13px; color: var(--text-muted); margin-top: 5px; padding-left: 42px; }
+    .content-box { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: var(--radius-box); box-shadow: var(--shadow); padding: 20px; margin-bottom: 14px; }
+    .section-title { font-size: 14px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; color: var(--brand-primary); margin-bottom: 14px; }
+    .section-title .sub { font-size: 11px; font-weight: 400; color: var(--text-muted); text-transform: none; letter-spacing: 0; }
+    .section-title .sub::before { content: " — "; font-size: 12px; }
+    .hint-box {
+      background: color-mix(in srgb, var(--brand-primary) 8%, var(--card-bg));
+      border: 1px dashed color-mix(in srgb, var(--brand-primary) 30%, transparent);
+      border-radius: 10px; padding: 12px 16px; font-size: 12px; color: var(--text-muted); margin-bottom: 14px;
+    }
+    .hint-box strong { color: var(--brand-primary); }
+    .badge {
+      display: inline-flex; align-items: center; font-size: 10px; font-weight: 700;
+      padding: 3px 9px; border-radius: 20px; white-space: nowrap;
+    }
+    .badge-ok { background: #22c55e22; color: #22c55e; border: 1px solid #22c55e44; }
+    .badge-warn { background: #f59e0b22; color: #f59e0b; border: 1px solid #f59e0b44; }
+    .badge-muted { background: #6b728022; color: #6b7280; border: 1px solid #6b728044; }
+    .badge-info { background: #1e36f822; color: #1e36f8; border: 1px solid #1e36f844; }
+    .badge-negativo { background: #e840251a; color: #e84025; border: 1px solid #e8402544; }
+    .badge-beneficio { background: #7c3aed1a; color: #7c3aed; border: 1px solid #7c3aed44; }
+    .tipo-tag {
+      display: inline-flex; align-items: center; font-size: 10px; font-weight: 700; padding: 3px 9px; border-radius: 20px;
+      background: #6b728018; color: #6b7280; border: 1px solid #6b728033; text-transform: uppercase; letter-spacing: 0.04em; vertical-align: middle;
+    }
+    .btn-icon {
+      width: 28px; height: 28px; border-radius: 8px; border: 1px solid var(--card-border); background: var(--input-bg);
+      display: inline-flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-muted); margin: 0 2px; flex-shrink: 0;
+    }
+    .btn-icon:hover { color: var(--brand-primary); border-color: color-mix(in srgb, var(--brand-primary) 30%, transparent); }
+    .cta {
+      display: inline-flex; align-items: center; gap: 6px; padding: 10px 20px; border-radius: 10px; border: none;
+      background: linear-gradient(135deg, #4a2082, #1e36f8); color: #fff; font-size: 13px; font-weight: 700; font-family: var(--font); cursor: pointer;
+    }
+    .cta:disabled { opacity: .5; cursor: not-allowed; }
+
+    .filter-box {
+      background: var(--card-bg); border: 1px solid var(--card-border); border-radius: var(--radius-box);
+      box-shadow: var(--shadow); padding: 12px 20px; margin-bottom: 14px;
+    }
+    .filter-row { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 10px; width: 100%; }
+    .pill {
+      display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: var(--radius-pill);
+      border: 1px solid var(--card-border); background: var(--input-bg); font-size: 13px; font-weight: 500; color: var(--text); cursor: pointer;
+    }
+    .pill.active {
+      border-color: color-mix(in srgb, var(--brand-primary) 35%, transparent);
+      background: color-mix(in srgb, var(--brand-primary) 15%, transparent); color: var(--brand-primary); font-weight: 600;
+    }
+
+    .kpi-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 14px; }
+    @media (max-width: 900px) { .kpi-grid-4 { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 480px) { .kpi-grid-4 { grid-template-columns: 1fr; } }
+    .kpi-card { border-radius: var(--radius-box); border: 1px solid var(--card-border); background: var(--card-bg); overflow: hidden; }
+    .kpi-card .bar { height: 3px; }
+    .kpi-card .body { padding: 14px 16px; }
+    .kpi-label { font-size: 10px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; }
+    .kpi-value { font-size: 22px; font-weight: 800; line-height: 1.1; }
+    .kpi-vs { font-size: 11px; color: var(--text-muted); margin-top: 6px; }
+
+    .progress-track { width: 100%; height: 8px; border-radius: 999px; background: rgba(255,255,255,0.15); overflow: hidden; }
+    .progress-track.light { background: var(--input-bg); border: 1px solid var(--card-border); }
+    .progress-fill { height: 100%; background: linear-gradient(90deg, #a78bfa, #60a5fa); border-radius: 999px; }
+
+    /* Catálogo — grid de cursos */
+    .curso-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+    .curso-card {
+      border: 1px solid var(--card-border); border-radius: var(--radius-box); background: var(--input-bg);
+      padding: 16px; display: flex; flex-direction: column; gap: 10px;
+    }
+    .curso-card.concluido { border-color: color-mix(in srgb, var(--brand-success) 35%, var(--card-border)); background: color-mix(in srgb, var(--brand-success) 5%, var(--input-bg)); }
+    .curso-card-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+    .curso-card h3 { font-size: 14px; font-weight: 700; }
+    .curso-card .desc { font-size: 12px; color: var(--text-muted); flex: 1; }
+    .progresso-mini { display: flex; flex-direction: column; gap: 6px; }
+    .progresso-texto { font-size: 11px; color: var(--text-muted); }
+    .curso-card-footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+    .curso-card-footer .cta { padding: 8px 16px; font-size: 12px; }
+
+    /* Modal genérico */
+    .modal-overlay { display: none; position: fixed; inset: 0; z-index: 1000; background: rgba(15,15,26,0.65); padding: 24px 16px; align-items: center; justify-content: center; }
+    .modal-overlay.open { display: flex; }
+    .modal-panel { width: min(640px, 100%); max-height: 90dvh; background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 14px; box-shadow: 0 20px 60px rgba(0,0,0,0.2); display: flex; flex-direction: column; overflow: hidden; }
+    .modal-panel.xl { width: min(1080px, 100%); }
+    .modal-header { padding: 18px 20px 12px; border-bottom: 1px solid var(--card-border); position: relative; }
+    .modal-header h2 { font-size: 16px; font-weight: 800; color: var(--brand-primary); text-transform: uppercase; letter-spacing: 0.04em; padding-right: 36px; }
+    .modal-header .modal-sub { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+    .modal-close {
+      position: absolute; top: 16px; right: 16px; width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--card-border);
+      background: var(--input-bg); cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text-muted);
+    }
+    .modal-body { padding: 16px 20px; overflow-y: auto; flex: 1; }
+    .modal-footer { padding: 14px 20px; border-top: 1px solid var(--card-border); display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .btn-modal { padding: 10px 18px; border-radius: 10px; font-size: 13px; font-weight: 700; font-family: var(--font); cursor: pointer; border: 1px solid var(--card-border); background: var(--input-bg); color: var(--text); }
+    .btn-modal.primary { background: linear-gradient(135deg, #4a2082, #1e36f8); color: #fff; border: none; }
+    .btn-modal:disabled { opacity: .5; cursor: not-allowed; }
+    .modal-footer-msg { font-size: 12px; color: #e84025; font-weight: 600; }
+    .quiz-questao { border: 1px solid var(--card-border); border-radius: 12px; padding: 14px; margin-bottom: 12px; background: var(--input-bg); }
+    .quiz-questao .enunciado { font-size: 13px; font-weight: 700; margin-bottom: 10px; }
+    .quiz-opcao { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 13px; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--card-border); background: #fff; cursor: pointer; }
+    .quiz-opcao:hover { border-color: color-mix(in srgb, var(--brand-primary) 40%, var(--card-border)); }
+    .quiz-opcao input { accent-color: var(--brand-primary); }
+    .resultado-prova { text-align: center; padding: 20px 10px; }
+    .resultado-prova .nota { font-size: 40px; font-weight: 800; margin-bottom: 6px; }
+    .resultado-prova.aprovado .nota { color: #22c55e; }
+    .resultado-prova.reprovado .nota { color: #e84025; }
+
+    /* Player do curso */
+    .player-layout { display: grid; grid-template-columns: 260px 1fr; gap: 18px; align-items: start; }
+    @media (max-width: 760px) { .player-layout { grid-template-columns: 1fr; } }
+    .player-sidebar { display: flex; flex-direction: column; gap: 14px; }
+    .player-modulo-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 6px; }
+    .player-aula-item {
+      display: flex; align-items: center; gap: 8px; font-size: 13px; padding: 9px 10px; border-radius: 8px;
+      cursor: pointer; border: 1px solid transparent; color: var(--text);
+    }
+    .player-aula-item:hover { background: var(--input-bg); }
+    .player-aula-item.atual { background: color-mix(in srgb, var(--brand-primary) 10%, var(--input-bg)); border-color: color-mix(in srgb, var(--brand-primary) 30%, transparent); font-weight: 700; }
+    .player-aula-item .check {
+      width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--card-border); flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center; font-size: 10px; color: transparent;
+    }
+    .player-aula-item.concluida .check { background: #22c55e; border-color: #22c55e; color: #fff; }
+    .player-aula-item .tipo-icon { flex-shrink: 0; font-size: 13px; }
+    .player-aula-item.bloqueada { opacity: .5; cursor: not-allowed; }
+    .player-content { border: 1px solid var(--card-border); border-radius: var(--radius-box); background: var(--input-bg); padding: 20px; min-height: 320px; }
+    .player-content h3 { font-size: 15px; font-weight: 800; margin-bottom: 12px; }
+    .midia-placeholder {
+      border: 1px dashed var(--card-border); border-radius: 12px; padding: 32px 16px; text-align: center;
+      background: var(--card-bg); margin-bottom: 14px; color: var(--text-muted); font-size: 13px;
+    }
+    .midia-placeholder .play-icon {
+      width: 48px; height: 48px; border-radius: 50%; background: color-mix(in srgb, var(--brand-primary) 12%, transparent);
+      color: var(--brand-primary); display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; font-size: 18px;
+    }
+    .player-texto { font-size: 13px; color: var(--text); background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px; padding: 16px; margin-bottom: 14px; }
+    .player-footer-actions { display: flex; justify-content: flex-end; gap: 8px; }
+
+    /* Certificado */
+    .certificado-preview {
+      text-align: center; border: 2px solid color-mix(in srgb, var(--brand-primary) 30%, transparent);
+      border-radius: 16px; padding: 28px 20px; background: linear-gradient(180deg, color-mix(in srgb, var(--brand-primary) 6%, #fff), #fff);
+    }
+    .certificado-preview .selo {
+      width: 56px; height: 56px; border-radius: 50%; background: color-mix(in srgb, var(--brand-primary) 14%, transparent);
+      display: flex; align-items: center; justify-content: center; font-size: 26px; margin: 0 auto 14px;
+    }
+    .certificado-preview h3 { font-size: 16px; font-weight: 800; color: var(--brand-primary); margin-bottom: 10px; }
+    .certificado-preview p { font-size: 13px; color: var(--text-muted); margin-bottom: 4px; }
+    .certificado-preview .prestador-nome { font-size: 18px; font-weight: 800; color: var(--text); margin: 6px 0; }
+  </style>
+</head>
+<body>
+
+<div class="mockup-bar">
+  <strong>MOCKUP</strong> Academy → Meus Cursos
+  <span style="opacity:0.4">|</span>
+  <span>4 de 4 páginas da Academy · catálogo self-paced do prestador, estilo Udemy — no seu próprio ritmo.</span>
+</div>
+
+<div class="page-shell">
+  <header class="page-header">
+    <div class="page-header-row">
+      <div class="page-icon" aria-hidden="true">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 1.7 3.3 3 6 3s6-1.3 6-3v-5"/></svg>
+      </div>
+      <h1>Meus Cursos</h1>
+    </div>
+    <p class="subtitle">Cursos livres da Academy Spin — no seu ritmo, quando quiser.</p>
+  </header>
+
+  <div class="kpi-grid-4">
+    <div class="kpi-card">
+      <div class="bar" style="background:#7c3aed"></div>
+      <div class="body">
+        <div class="kpi-label">Pontuação</div>
+        <div class="kpi-value" id="kpiPontos">0 pts</div>
+        <div class="kpi-vs" id="kpiBadge">⚪ Sem badge ainda</div>
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div class="bar" style="background:#f59e0b"></div>
+      <div class="body">
+        <div class="kpi-label">Cursos obrigatórios</div>
+        <div class="kpi-value" id="kpiObrigatorios">0/2</div>
+        <div class="kpi-vs" id="kpiObrigatoriosSub">Prazo mais próximo: —</div>
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div class="bar" style="background:#1e36f8"></div>
+      <div class="body">
+        <div class="kpi-label">Cursos em andamento</div>
+        <div class="kpi-value" id="kpiAndamento">0</div>
+        <div class="kpi-vs">iniciados, ainda não concluídos</div>
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div class="bar" style="background:#22c55e"></div>
+      <div class="body">
+        <div class="kpi-label">Certificados emitidos</div>
+        <div class="kpi-value" id="kpiCertificados">0</div>
+        <div class="kpi-vs">baixe quando quiser</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="hint-box">
+    Cursos <strong>obrigatórios</strong> têm prazo pra conclusão e são definidos pela sua área ou pelo RH — eles não dão pra pular.
+    Os demais são <strong>benefício</strong>: rendem certificado e, em alguns casos, pontos. O seu badge é calculado automaticamente pela
+    soma de pontos de todos os cursos concluídos — não é definido curso a curso.
+  </div>
+
+  <div class="filter-box">
+    <div class="filter-row">
+      <button type="button" class="pill active" id="pillTodos" onclick="setFiltroCursos('todos')">Todos</button>
+      <button type="button" class="pill" id="pillObrigatorios" onclick="setFiltroCursos('obrigatorios')">Obrigatórios</button>
+      <button type="button" class="pill" id="pillAndamento" onclick="setFiltroCursos('andamento')">Em andamento</button>
+      <button type="button" class="pill" id="pillConcluidos" onclick="setFiltroCursos('concluidos')">Concluídos</button>
+    </div>
+  </div>
+
+  <div class="content-box">
+    <h2 class="section-title">Catálogo disponível pra você <span class="sub" id="cursosContagem">3 cursos</span></h2>
+    <div class="curso-grid" id="cursoGrid">
+
+      <article class="curso-card" data-status="andamento" data-obrigatorio="true" id="card-pld">
+        <div class="curso-card-top">
+          <span class="tipo-tag">Compliance</span>
+          <span class="badge badge-warn">Obrigatório · prazo 31/12/2026</span>
+        </div>
+        <h3>Prevenção à Lavagem de Dinheiro</h3>
+        <p class="desc">Sinais de alerta, obrigações legais e o que fazer em caso de suspeita.</p>
+        <div class="progresso-mini">
+          <div class="progress-track light"><div class="progress-fill" id="barra-pld" style="width:43%"></div></div>
+          <span class="progresso-texto" id="texto-pld">3 de 7 aulas · 43%</span>
+        </div>
+        <div class="curso-card-footer">
+          <span class="badge badge-beneficio">🎓 Certificado</span>
+          <button type="button" class="cta" onclick="abrirPlayer('pld')">Continuar</button>
+        </div>
+      </article>
+
+      <article class="curso-card concluido" data-status="concluido" data-obrigatorio="true" id="card-etica">
+        <div class="curso-card-top">
+          <span class="tipo-tag">Compliance</span>
+          <span class="badge badge-warn">Obrigatório · prazo 31/12/2026</span>
+        </div>
+        <h3>Código de Ética e Compliance</h3>
+        <p class="desc">Conduta esperada, conflitos de interesse e canal de denúncias.</p>
+        <div class="progresso-mini">
+          <div class="progress-track light"><div class="progress-fill" id="barra-etica" style="width:100%"></div></div>
+          <span class="progresso-texto" id="texto-etica">Concluído · nota 95%</span>
+        </div>
+        <div class="curso-card-footer">
+          <span class="badge badge-ok">Concluído</span>
+          <button type="button" class="btn-modal" onclick="abrirModalCertificado('etica')">Ver certificado</button>
+        </div>
+      </article>
+
+      <article class="curso-card" data-status="nao_iniciado" data-obrigatorio="false" id="card-lideranca">
+        <div class="curso-card-top">
+          <span class="tipo-tag">Liderança</span>
+          <span class="badge badge-beneficio">Benefício · 80 pts</span>
+        </div>
+        <h3>Liderança para Novos Gestores</h3>
+        <p class="desc">Fundamentos de gestão de pessoas para quem acabou de assumir um time.</p>
+        <div class="progresso-mini">
+          <div class="progress-track light"><div class="progress-fill" id="barra-lideranca" style="width:0%"></div></div>
+          <span class="progresso-texto" id="texto-lideranca">Ainda não iniciado</span>
+        </div>
+        <div class="curso-card-footer">
+          <span class="badge badge-beneficio">🎓 Certificado</span>
+          <button type="button" class="cta" onclick="abrirPlayer('lideranca')">Começar</button>
+        </div>
+      </article>
+
+    </div>
+  </div>
+</div>
+
+<!-- Modal: player do curso -->
+<div id="modalPlayer" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalPlayerTitulo" onclick="if(event.target===this)fecharModais()">
+  <div class="modal-panel xl">
+    <div class="modal-header">
+      <button type="button" class="modal-close" onclick="fecharModais()" aria-label="Fechar">✕</button>
+      <h2 id="modalPlayerTitulo">Prevenção à Lavagem de Dinheiro</h2>
+      <p class="modal-sub" id="modalPlayerSub">3 de 7 aulas concluídas · 43%</p>
+    </div>
+    <div class="modal-body">
+      <div class="player-layout">
+        <nav class="player-sidebar" id="playerSidebar" aria-label="Módulos e aulas do curso"></nav>
+        <div class="player-content" id="playerConteudo"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn-modal" onclick="fecharModais()">Fechar</button>
+      <span style="font-size:12px;color:var(--text-muted)">Progresso salvo automaticamente</span>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: certificado -->
+<div id="modalCertificado" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalCertTitulo" onclick="if(event.target===this)fecharModais()">
+  <div class="modal-panel">
+    <div class="modal-header">
+      <button type="button" class="modal-close" onclick="fecharModais()" aria-label="Fechar">✕</button>
+      <h2 id="modalCertTitulo">Certificado de conclusão</h2>
+    </div>
+    <div class="modal-body">
+      <div class="certificado-preview">
+        <div class="selo">🎓</div>
+        <h3 id="certCursoNome">Código de Ética e Compliance</h3>
+        <p>Certificamos que</p>
+        <p class="prestador-nome" id="certPrestadorNome">Pedro Alves</p>
+        <p>concluiu o curso com nota <strong id="certNota">95%</strong>, em <span id="certData">15/09/2026</span>.</p>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn-modal" onclick="fecharModais()">Fechar</button>
+      <button type="button" class="btn-modal primary" onclick="fecharModais()">Baixar certificado (PDF)</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const CURSOS = {
+    pld: {
+      nome: "Prevenção à Lavagem de Dinheiro",
+      nota: null,
+      concluido: false,
+      obrigatorio: true,
+      prazo: "31/12/2026",
+      pontos: 0,
+      cert: true,
+      modulos: [
+        {
+          nome: "Introdução à Lavagem de Dinheiro",
+          aulas: [
+            { id: "pld-1-1", tipo: "video", titulo: "O que é lavagem de dinheiro", concluida: true },
+            { id: "pld-1-2", tipo: "texto", titulo: "Fases: colocação, ocultação, integração", concluida: true,
+              conteudo: "A lavagem de dinheiro geralmente segue três fases: colocação (inserir o valor ilícito no sistema financeiro), ocultação (dificultar o rastreamento através de múltiplas transações) e integração (reintroduzir o valor como se fosse lícito)." },
+          ],
+        },
+        {
+          nome: "Sinais de alerta no setor de apostas",
+          aulas: [
+            { id: "pld-2-1", tipo: "video", titulo: "Padrões suspeitos de aposta", concluida: true },
+            { id: "pld-2-2", tipo: "texto", titulo: "Estruturação e fracionamento de valores", concluida: false,
+              conteudo: "Estruturação é a prática de dividir uma quantia grande em vários depósitos menores pra evitar os limites de reporte. Fique atento a um mesmo cliente fazendo múltiplos depósitos pequenos em curto espaço de tempo." },
+            { id: "pld-2-3", tipo: "exercicio", titulo: "Exercício: identifique o sinal de alerta", concluida: false,
+              pergunta: { texto: "Qual das situações abaixo é o sinal de alerta MAIS forte de possível lavagem de dinheiro?", opcoes: ["Cliente joga por 2 horas seguidas", "Cliente faz 8 depósitos de R$ 900 no mesmo dia, em contas diferentes", "Cliente pede ajuda com as regras do jogo", "Cliente reclama do tempo de saque"], correta: 1 } },
+          ],
+        },
+        {
+          nome: "Obrigações legais e canal de denúncia",
+          aulas: [
+            { id: "pld-3-1", tipo: "pdf", titulo: "COAF e obrigações de reporte", concluida: false },
+            { id: "pld-3-2", tipo: "video", titulo: "Como reportar internamente", concluida: false },
+          ],
+        },
+      ],
+      prova: {
+        notaMinima: 70,
+        perguntas: [
+          { texto: "O que caracteriza a fase de \"colocação\" na lavagem de dinheiro?", opcoes: ["Inserir o valor ilícito no sistema financeiro", "Usar o dinheiro em um negócio legítimo", "Denunciar a movimentação ao COAF", "Fracionar o valor em contas de terceiros"], correta: 0 },
+          { texto: "Um cliente faz vários depósitos pequenos no mesmo dia pra evitar os limites de reporte. Isso é conhecido como:", opcoes: ["Integração", "Estruturação", "Estorno", "Estatística de jogo"], correta: 1 },
+          { texto: "Ao identificar um sinal de alerta, qual é o procedimento correto?", opcoes: ["Ignorar se o valor for pequeno", "Avisar o cliente que ele está sendo observado", "Reportar internamente pelo canal definido pela empresa", "Bloquear a conta sem informar ninguém"], correta: 2 },
+        ],
+      },
+    },
+    etica: {
+      nome: "Código de Ética e Compliance",
+      nota: 95,
+      concluido: true,
+      dataConclusao: "15/09/2026",
+      obrigatorio: true,
+      prazo: "31/12/2026",
+      pontos: 0,
+      cert: true,
+      modulos: [
+        {
+          nome: "Nosso código de conduta",
+          aulas: [
+            { id: "etica-1-1", tipo: "video", titulo: "Valores e conduta esperada", concluida: true },
+            { id: "etica-1-2", tipo: "texto", titulo: "Conflitos de interesse", concluida: true, conteudo: "Conflito de interesse é qualquer situação em que interesses pessoais possam influenciar decisões profissionais. Sempre declare situações desse tipo ao seu gestor." },
+          ],
+        },
+        {
+          nome: "Canal de denúncias",
+          aulas: [
+            { id: "etica-2-1", tipo: "video", titulo: "Como e quando denunciar", concluida: true },
+            { id: "etica-2-2", tipo: "pdf", titulo: "Confidencialidade e proteção ao denunciante", concluida: true },
+          ],
+        },
+      ],
+      prova: {
+        notaMinima: 70,
+        perguntas: [
+          { texto: "O canal de denúncias da Spin Gaming serve para:", opcoes: ["Reclamar do horário de trabalho", "Reportar violações de ética e conduta com confidencialidade", "Pedir aumento salarial", "Marcar férias"], correta: 1 },
+        ],
+      },
+    },
+    lideranca: {
+      nome: "Liderança para Novos Gestores",
+      nota: null,
+      concluido: false,
+      obrigatorio: false,
+      prazo: null,
+      pontos: 80,
+      cert: true,
+      modulos: [
+        {
+          nome: "Fundamentos de gestão de pessoas",
+          aulas: [
+            { id: "lid-1-1", tipo: "video", titulo: "Do individual contributor a gestor", concluida: false },
+            { id: "lid-1-2", tipo: "texto", titulo: "Feedback contínuo", concluida: false, conteudo: "Feedback contínuo é dado com frequência, de forma específica e logo após o fato observado — evite guardar tudo pra uma única conversa formal." },
+          ],
+        },
+        {
+          nome: "Rotina de liderança",
+          aulas: [
+            { id: "lid-2-1", tipo: "video", titulo: "1:1s eficazes", concluida: false },
+            { id: "lid-2-2", tipo: "exercicio", titulo: "Exercício: monte sua rotina semanal", concluida: false,
+              pergunta: { texto: "Qual é a prática mais recomendada pra 1:1s semanais com o time?", opcoes: ["Cancelar quando surgir algo mais urgente", "Ter uma pauta simples e manter a recorrência", "Fazer só quando alguém pedir", "Substituir por mensagens no chat"], correta: 1 } },
+          ],
+        },
+      ],
+      prova: {
+        notaMinima: 70,
+        perguntas: [
+          { texto: "Feedback contínuo funciona melhor quando é dado:", opcoes: ["Uma vez por ano, na avaliação formal", "Com frequência e logo após o fato observado", "Só quando o resultado é negativo", "Por escrito, sem conversa"], correta: 1 },
+        ],
+      },
+    },
+  };
+
+  let playerAtual = { cursoId: null, aulaId: null };
+
+  function fecharModais() {
+    document.querySelectorAll(".modal-overlay").forEach((m) => m.classList.remove("open"));
+  }
+
+  function setFiltroCursos(key) {
+    document.querySelectorAll(".filter-row .pill").forEach((p) => p.classList.remove("active"));
+    const pillMap = { todos: "pillTodos", obrigatorios: "pillObrigatorios", andamento: "pillAndamento", concluidos: "pillConcluidos" };
+    document.getElementById(pillMap[key]).classList.add("active");
+    let visiveis = 0;
+    document.querySelectorAll("#cursoGrid .curso-card").forEach((card) => {
+      const status = card.dataset.status;
+      const obrigatorio = card.dataset.obrigatorio === "true";
+      let mostra = true;
+      if (key === "obrigatorios") mostra = obrigatorio;
+      else if (key === "andamento") mostra = status === "andamento";
+      else if (key === "concluidos") mostra = status === "concluido";
+      card.style.display = mostra ? "" : "none";
+      if (mostra) visiveis++;
+    });
+    document.getElementById("cursosContagem").textContent = visiveis + (visiveis === 1 ? " curso" : " cursos");
+  }
+
+  function totalAulas(curso) {
+    return curso.modulos.reduce((acc, m) => acc + m.aulas.length, 0);
+  }
+  function aulasConcluidas(curso) {
+    return curso.modulos.reduce((acc, m) => acc + m.aulas.filter((a) => a.concluida).length, 0);
+  }
+  function todasAulasConcluidas(curso) {
+    return curso.modulos.every((m) => m.aulas.every((a) => a.concluida));
+  }
+
+  function atualizarCardCurso(cursoId) {
+    const curso = CURSOS[cursoId];
+    const card = document.getElementById("card-" + cursoId);
+    if (card) {
+      if (curso.concluido) {
+        card.dataset.status = "concluido";
+        card.classList.add("concluido");
+        document.getElementById("barra-" + cursoId).style.width = "100%";
+        document.getElementById("texto-" + cursoId).textContent = "Concluído · nota " + curso.nota + "%";
+        const footer = card.querySelector(".curso-card-footer");
+        footer.innerHTML =
+          '<span class="badge badge-ok">Concluído</span>' +
+          '<button type="button" class="btn-modal" onclick="abrirModalCertificado(\'' + cursoId + "')\">Ver certificado</button>";
+      } else {
+        const total = totalAulas(curso);
+        const feitas = aulasConcluidas(curso);
+        const pct = Math.round((feitas / total) * 100);
+        card.dataset.status = feitas > 0 ? "andamento" : "nao_iniciado";
+        document.getElementById("barra-" + cursoId).style.width = pct + "%";
+        document.getElementById("texto-" + cursoId).textContent =
+          feitas > 0 ? feitas + " de " + total + " aulas · " + pct + "%" : "Ainda não iniciado";
+        const btn = card.querySelector(".curso-card-footer .cta");
+        if (btn) btn.textContent = feitas > 0 ? "Continuar" : "Começar";
+      }
+    }
+    atualizarKpisTopo();
+  }
+
+  const BADGE_TIERS = [
+    { min: 0, nome: "Sem badge ainda", icone: "⚪" },
+    { min: 50, nome: "Bronze", icone: "🥉" },
+    { min: 150, nome: "Prata", icone: "🥈" },
+    { min: 300, nome: "Ouro", icone: "🥇" },
+  ];
+
+  function badgeAtual(pontos) {
+    let atual = BADGE_TIERS[0];
+    BADGE_TIERS.forEach((t) => {
+      if (pontos >= t.min) atual = t;
+    });
+    return atual;
+  }
+
+  function calcularPontosTotais() {
+    return Object.values(CURSOS).reduce((acc, c) => acc + (c.concluido ? c.pontos : 0), 0);
+  }
+
+  function contarObrigatorios() {
+    const obrig = Object.values(CURSOS).filter((c) => c.obrigatorio);
+    const concluidos = obrig.filter((c) => c.concluido).length;
+    const pendentesComPrazo = obrig.filter((c) => !c.concluido && c.prazo);
+    const prazoTexto = pendentesComPrazo.length
+      ? "Prazo mais próximo: " + pendentesComPrazo[0].prazo
+      : "Tudo em dia";
+    return { concluidos: concluidos, total: obrig.length, prazoTexto: prazoTexto };
+  }
+
+  function contarAndamento() {
+    return Object.values(CURSOS).filter((c) => !c.concluido && aulasConcluidas(c) > 0).length;
+  }
+
+  function contarCertificados() {
+    return Object.values(CURSOS).filter((c) => c.concluido && c.cert).length;
+  }
+
+  function atualizarKpisTopo() {
+    const pontos = calcularPontosTotais();
+    const badge = badgeAtual(pontos);
+    document.getElementById("kpiPontos").textContent = pontos + " pts";
+    document.getElementById("kpiBadge").textContent = badge.icone + " " + badge.nome;
+
+    const obr = contarObrigatorios();
+    document.getElementById("kpiObrigatorios").textContent = obr.concluidos + "/" + obr.total;
+    document.getElementById("kpiObrigatoriosSub").textContent = obr.prazoTexto;
+
+    document.getElementById("kpiAndamento").textContent = contarAndamento();
+    document.getElementById("kpiCertificados").textContent = contarCertificados();
+  }
+
+  function abrirPlayer(cursoId) {
+    playerAtual.cursoId = cursoId;
+    const curso = CURSOS[cursoId];
+    document.getElementById("modalPlayerTitulo").textContent = curso.nome;
+    renderSidebarPlayer(cursoId);
+    const primeiraPendente = primeiraAulaPendente(curso) || curso.modulos[0].aulas[0];
+    selecionarAula(cursoId, primeiraPendente.id);
+    document.getElementById("modalPlayer").classList.add("open");
+  }
+
+  function primeiraAulaPendente(curso) {
+    for (const m of curso.modulos) {
+      for (const a of m.aulas) {
+        if (!a.concluida) return a;
+      }
+    }
+    return null;
+  }
+
+  function iconeTipo(tipo) {
+    return { video: "🎬", pdf: "📄", texto: "📝", exercicio: "✅" }[tipo] || "📄";
+  }
+
+  function renderSidebarPlayer(cursoId) {
+    const curso = CURSOS[cursoId];
+    const total = totalAulas(curso);
+    const feitas = aulasConcluidas(curso);
+    const pct = curso.concluido ? 100 : Math.round((feitas / total) * 100);
+    document.getElementById("modalPlayerSub").textContent = curso.concluido
+      ? "Curso concluído · nota " + curso.nota + "%"
+      : feitas + " de " + total + " aulas concluídas · " + pct + "%";
+
+    let html = "";
+    curso.modulos.forEach((modulo) => {
+      html += '<div><p class="player-modulo-title">' + modulo.nome + "</p>";
+      modulo.aulas.forEach((aula) => {
+        const ativa = aula.id === playerAtual.aulaId ? " atual" : "";
+        const feita = aula.concluida ? " concluida" : "";
+        html +=
+          '<div class="player-aula-item' + ativa + feita + '" onclick="selecionarAula(\'' + cursoId + "','" + aula.id + "')\">" +
+          '<span class="check">✓</span><span class="tipo-icon">' + iconeTipo(aula.tipo) + "</span><span>" + aula.titulo + "</span></div>";
+      });
+      html += "</div>";
+    });
+    const provaAtiva = playerAtual.aulaId === "prova-final" ? " atual" : "";
+    const provaFeita = curso.concluido ? " concluida" : "";
+    const bloqueada = !todasAulasConcluidas(curso) && !curso.concluido;
+    html +=
+      '<div><p class="player-modulo-title">Avaliação</p>' +
+      '<div class="player-aula-item' + provaAtiva + provaFeita + (bloqueada ? " bloqueada" : "") + '" ' +
+      (bloqueada ? "" : 'onclick="abrirProvaFinal(\'' + cursoId + "')\"") +
+      '><span class="check">✓</span><span class="tipo-icon">' + (bloqueada ? "🔒" : "🏁") + "</span><span>Prova final" +
+      (bloqueada ? " — conclua as aulas antes" : "") + "</span></div></div>";
+
+    document.getElementById("playerSidebar").innerHTML = html;
+  }
+
+  function selecionarAula(cursoId, aulaId) {
+    playerAtual.cursoId = cursoId;
+    playerAtual.aulaId = aulaId;
+    const curso = CURSOS[cursoId];
+    let aulaAtual = null;
+    let modAtual = null;
+    curso.modulos.forEach((m) => m.aulas.forEach((a) => { if (a.id === aulaId) { aulaAtual = a; modAtual = m; } }));
+    renderSidebarPlayer(cursoId);
+    if (!aulaAtual) return;
+
+    const conteudo = document.getElementById("playerConteudo");
+    let corpo = "";
+    if (aulaAtual.tipo === "video") {
+      corpo =
+        '<div class="midia-placeholder"><div class="play-icon">▶</div>Vídeo-aula — reprodução simulada neste mockup</div>';
+    } else if (aulaAtual.tipo === "pdf") {
+      corpo =
+        '<div class="midia-placeholder"><div class="play-icon">📄</div>Material em PDF — <button type="button" class="btn-modal" style="margin-top:8px" disabled>Baixar material</button></div>';
+    } else if (aulaAtual.tipo === "texto") {
+      corpo = '<div class="player-texto">' + aulaAtual.conteudo + "</div>";
+    } else if (aulaAtual.tipo === "exercicio") {
+      corpo = renderExercicioHtml(cursoId, aulaAtual);
+    }
+
+    const jaFeita = aulaAtual.concluida;
+    const botaoAcao = aulaAtual.tipo === "exercicio"
+      ? ""
+      : '<div class="player-footer-actions"><button type="button" class="cta" id="btnConcluirAula" onclick="marcarAulaConcluida(\'' + cursoId + "','" + aulaId + '\')"' +
+        (jaFeita ? " disabled" : "") + ">" + (jaFeita ? "Aula já concluída ✓" : "Marcar aula concluída e continuar") + "</button></div>";
+
+    conteudo.innerHTML =
+      '<h3>' + (modAtual ? modAtual.nome + " — " : "") + aulaAtual.titulo + "</h3>" + corpo + botaoAcao;
+  }
+
+  function renderExercicioHtml(cursoId, aula) {
+    const p = aula.pergunta;
+    const opcoes = p.opcoes
+      .map((o, j) => '<label class="quiz-opcao"><input type="radio" name="ex_' + aula.id + '" value="' + j + '" />' + o + "</label>")
+      .join("");
+    const jaFeita = aula.concluida;
+    return (
+      '<div class="quiz-questao"><div class="enunciado">' + p.texto + "</div>" + opcoes + "</div>" +
+      '<div id="exFeedback_' + aula.id + '" style="font-size:12px;font-weight:600;margin-bottom:10px"></div>' +
+      '<div class="player-footer-actions"><button type="button" class="cta" id="btnExercicio_' + aula.id + '" onclick="confirmarExercicio(\'' + cursoId + "','" + aula.id + '\')"' +
+      (jaFeita ? " disabled" : "") + ">" + (jaFeita ? "Exercício já concluído ✓" : "Confirmar resposta") + "</button></div>"
+    );
+  }
+
+  function confirmarExercicio(cursoId, aulaId) {
+    const curso = CURSOS[cursoId];
+    let aula = null;
+    curso.modulos.forEach((m) => m.aulas.forEach((a) => { if (a.id === aulaId) aula = a; }));
+    const marcada = document.querySelector('input[name="ex_' + aulaId + '"]:checked');
+    const feedback = document.getElementById("exFeedback_" + aulaId);
+    if (!marcada) {
+      feedback.style.color = "#e84025";
+      feedback.textContent = "Selecione uma opção antes de confirmar.";
+      return;
+    }
+    const acertou = Number(marcada.value) === aula.pergunta.correta;
+    feedback.style.color = acertou ? "#22c55e" : "#e84025";
+    feedback.textContent = acertou ? "Resposta correta! ✓" : "Não foi essa — releia o material da aula quando puder.";
+    aula.concluida = true;
+    atualizarCardCurso(cursoId);
+    renderSidebarPlayer(cursoId);
+    const btn = document.getElementById("btnExercicio_" + aulaId);
+    btn.textContent = "Continuar";
+    btn.onclick = function () {
+      avancarProximaAula(cursoId);
+    };
+  }
+
+  function avancarProximaAula(cursoId) {
+    const curso = CURSOS[cursoId];
+    const proxima = primeiraAulaPendente(curso);
+    if (proxima) {
+      selecionarAula(cursoId, proxima.id);
+    } else {
+      abrirProvaFinal(cursoId);
+    }
+  }
+
+  function marcarAulaConcluida(cursoId, aulaId) {
+    const curso = CURSOS[cursoId];
+    let aula = null;
+    curso.modulos.forEach((m) => m.aulas.forEach((a) => { if (a.id === aulaId) aula = a; }));
+    if (!aula) return;
+    aula.concluida = true;
+    atualizarCardCurso(cursoId);
+    avancarProximaAula(cursoId);
+  }
+
+  function abrirProvaFinal(cursoId) {
+    playerAtual.cursoId = cursoId;
+    playerAtual.aulaId = "prova-final";
+    renderSidebarPlayer(cursoId);
+    const curso = CURSOS[cursoId];
+    const conteudo = document.getElementById("playerConteudo");
+
+    if (curso.concluido) {
+      conteudo.innerHTML =
+        '<h3>Prova final</h3><div class="resultado-prova aprovado"><div class="nota">' + curso.nota + '%</div>' +
+        '<p style="font-weight:700;margin-bottom:6px">Aprovado! 🎉</p>' +
+        '<p style="font-size:13px;color:var(--text-muted)">Curso concluído em ' + curso.dataConclusao + '.</p></div>' +
+        '<div class="player-footer-actions"><button type="button" class="cta" onclick="abrirModalCertificado(\'' + cursoId + "')\">Ver certificado</button></div>";
+      return;
+    }
+
+    const perguntasHtml = curso.prova.perguntas
+      .map((p, i) => {
+        const opcoes = p.opcoes
+          .map((o, j) => '<label class="quiz-opcao"><input type="radio" name="pf_q' + i + '" value="' + j + '" />' + o + "</label>")
+          .join("");
+        return '<div class="quiz-questao"><div class="enunciado">' + (i + 1) + ". " + p.texto + "</div>" + opcoes + "</div>";
+      })
+      .join("");
+    conteudo.innerHTML =
+      '<h3>Prova final</h3><p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">' +
+      curso.prova.perguntas.length + " questões · nota mínima " + curso.prova.notaMinima + "% · resultado sai na hora</p>" +
+      perguntasHtml +
+      '<div id="provaFinalErro" style="font-size:12px;color:#e84025;font-weight:600;margin-bottom:8px"></div>' +
+      '<div class="player-footer-actions"><button type="button" class="cta" onclick="enviarProvaFinal(\'' + cursoId + "')\">Enviar prova</button></div>";
+  }
+
+  function enviarProvaFinal(cursoId) {
+    const curso = CURSOS[cursoId];
+    const total = curso.prova.perguntas.length;
+    let respondidas = 0;
+    let acertos = 0;
+    curso.prova.perguntas.forEach((p, i) => {
+      const marcada = document.querySelector('input[name="pf_q' + i + '"]:checked');
+      if (marcada) {
+        respondidas++;
+        if (Number(marcada.value) === p.correta) acertos++;
+      }
+    });
+    if (respondidas < total) {
+      document.getElementById("provaFinalErro").textContent = "Responda todas as " + total + " questões antes de enviar.";
+      return;
+    }
+    const nota = Math.round((acertos / total) * 100);
+    const aprovado = nota >= curso.prova.notaMinima;
+    const conteudo = document.getElementById("playerConteudo");
+    if (aprovado) {
+      curso.concluido = true;
+      curso.nota = nota;
+      curso.dataConclusao = new Date().toLocaleDateString("pt-BR");
+      atualizarCardCurso(cursoId);
+      renderSidebarPlayer(cursoId);
+      conteudo.innerHTML =
+        '<h3>Prova final</h3><div class="resultado-prova aprovado"><div class="nota">' + nota + '%</div>' +
+        '<p style="font-weight:700;margin-bottom:6px">Aprovado! 🎉</p>' +
+        '<p style="font-size:13px;color:var(--text-muted)">Curso concluído — seu certificado já está disponível.</p></div>' +
+        '<div class="player-footer-actions"><button type="button" class="cta" onclick="abrirModalCertificado(\'' + cursoId + "')\">Ver certificado</button></div>";
+    } else {
+      conteudo.innerHTML =
+        '<h3>Prova final</h3><div class="resultado-prova reprovado"><div class="nota">' + nota + '%</div>' +
+        '<p style="font-weight:700;margin-bottom:6px">Não foi dessa vez</p>' +
+        '<p style="font-size:13px;color:var(--text-muted)">Nota mínima: ' + curso.prova.notaMinima + '%. Revise as aulas e tente de novo quando quiser.</p></div>' +
+        '<div class="player-footer-actions"><button type="button" class="cta" onclick="abrirProvaFinal(\'' + cursoId + "')\">Tentar novamente</button></div>";
+    }
+  }
+
+  function abrirModalCertificado(cursoId) {
+    const curso = CURSOS[cursoId];
+    document.getElementById("certCursoNome").textContent = curso.nome;
+    document.getElementById("certPrestadorNome").textContent = "Pedro Alves";
+    document.getElementById("certNota").textContent = curso.nota + "%";
+    document.getElementById("certData").textContent = curso.dataConclusao || new Date().toLocaleDateString("pt-BR");
+    document.getElementById("modalCertificado").classList.add("open");
+  }
+
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") fecharModais();
+  });
+
+  atualizarKpisTopo();
+</script>
+</body>
+</html>

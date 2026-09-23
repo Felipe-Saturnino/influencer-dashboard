@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, type CSSProperties } from "react";
 import { supabase } from "../../../lib/supabase";
+import { fetchAllPages } from "../../../lib/supabasePaginate";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { useIdentidadeEfetiva } from "../../../hooks/useIdentidadeEfetiva";
@@ -18,10 +19,16 @@ import { FILTRO_BAR_TAB_ICON_SIZE } from "../../../lib/filterBarStyles";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
+import { TabelaComPaginacao } from "../../../components/TabelaPaginacaoBar";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { PAGE_HEADER_SUBTITLE_PADDING_LEFT } from "../../../lib/pageHeaderStyles";
 import { getPageKpiSectionGapStyle } from "../../../lib/pageContentBoxStyles";
 import { ROLES_GESTOR_DEPARTAMENTO, ROLES_PARIDADE_INFLUENCER, roleParidadeInfluencer } from "../../../lib/staffRoles";
+
+const ERRO_CARGA_AUDITORIA =
+  "Não foi possível carregar a auditoria. Se o problema persistir, entre em contato com o suporte.";
+const ERRO_CARGA_STATS =
+  "Não foi possível carregar o progresso. Se o problema persistir, entre em contato com o suporte.";
 
 /** Papéis que podem ver o painel de auditoria (além de usePermission.canEditarOk). Operador fica de fora. */
 const ROLES_AUDITORIA_PLAYBOOK: Role[] = [
@@ -438,18 +445,44 @@ function PainelAuditoria({
   const [confirmacoes, setConfirmacoes] = useState<Confirmacao[]>([]);
   const [pendentes, setPendentes] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
+  const [erro, setErro] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function load() {
-      setLoading(true);
-      const [confRes, influRes, perfilRes] = await Promise.all([
-        supabase.from("guia_confirmacoes").select("id, influencer_id, item_key, confirmed_at").eq("item_key", itemKey),
-        supabase.from("profiles").select("id, name, ativo").in("role", [...ROLES_PARIDADE_INFLUENCER]).eq("ativo", true),
-        supabase.from("influencer_perfil").select("id, status, nome_artistico"),
+  const carregar = useCallback(async () => {
+    setLoading(true);
+    setErro(null);
+    try {
+      type ProfileRow = { id: string; name: string | null };
+      const [confs, influsRaw, perfilRows] = await Promise.all([
+        fetchAllPages<Confirmacao>(async (from, to) => {
+          const { data, error } = await supabase
+            .from("guia_confirmacoes")
+            .select("id, influencer_id, item_key, confirmed_at")
+            .eq("item_key", itemKey)
+            .order("id", { ascending: true })
+            .range(from, to);
+          return { data: (data as Confirmacao[] | null) ?? null, error };
+        }),
+        fetchAllPages<ProfileRow>(async (from, to) => {
+          const { data, error } = await supabase
+            .from("profiles")
+            .select("id, name")
+            .in("role", [...ROLES_PARIDADE_INFLUENCER])
+            .eq("ativo", true)
+            .order("id", { ascending: true })
+            .range(from, to);
+          return { data: (data as ProfileRow[] | null) ?? null, error };
+        }),
+        fetchAllPages<PerfilAuditoriaRow>(async (from, to) => {
+          const { data, error } = await supabase
+            .from("influencer_perfil")
+            .select("id, status, nome_artistico")
+            .order("id", { ascending: true })
+            .range(from, to);
+          return { data: (data as PerfilAuditoriaRow[] | null) ?? null, error };
+        }),
       ]);
-      const perfilMap = mapaPerfilAuditoria((perfilRes.data ?? []) as PerfilAuditoriaRow[]);
-      const confs = (confRes.data ?? []) as Confirmacao[];
-      const influs = ((influRes.data ?? []) as { id: string; name: string | null }[])
+      const perfilMap = mapaPerfilAuditoria(perfilRows);
+      const influs = influsRaw
         .filter(
           (i) =>
             podeVerInfluencer(i.id) &&
@@ -459,28 +492,74 @@ function PainelAuditoria({
           id: i.id,
           name: nomeExibicaoAuditoria(i.id, perfilMap, i.name),
         }));
-      const confIds = new Set(
-        confs
-          .filter((c) => podeVerInfluencer(c.influencer_id) && influencerElegivelAuditoria(c.influencer_id, perfilMap))
-          .map((c) => c.influencer_id),
+      const confFiltradas = confs.filter(
+        (c) => podeVerInfluencer(c.influencer_id) && influencerElegivelAuditoria(c.influencer_id, perfilMap),
       );
+      const confIds = new Set(confFiltradas.map((c) => c.influencer_id));
 
-      setConfirmacoes(
-        confs.filter(
-          (c) => podeVerInfluencer(c.influencer_id) && influencerElegivelAuditoria(c.influencer_id, perfilMap),
-        ),
-      );
+      setConfirmacoes(confFiltradas);
       setPendentes(influs.filter((i) => !confIds.has(i.id)));
-      setLoading(false);
+      setErro(null);
+    } catch (err) {
+      console.error("[PlaybookInfluencers] auditoria:", err);
+      setConfirmacoes([]);
+      setPendentes([]);
+      setErro(ERRO_CARGA_AUDITORIA);
     }
-    load();
+    setLoading(false);
   }, [itemKey, podeVerInfluencer]);
+
+  useEffect(() => {
+    void carregar();
+  }, [carregar]);
 
   if (loading) {
     return (
       <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "16px 0", color: t.textMuted, fontFamily: FONT.body, fontSize: 13 }}>
         <Loader2 size={18} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden />
         Carregando…
+      </div>
+    );
+  }
+
+  if (erro) {
+    return (
+      <div
+        role="alert"
+        style={{
+          marginTop: 24,
+          padding: "12px 14px",
+          borderRadius: 12,
+          background: "rgba(232,64,37,0.08)",
+          border: "1px solid rgba(232,64,37,0.35)",
+          color: "#e84025",
+          fontSize: 13,
+          fontFamily: FONT.body,
+          display: "flex",
+          flexWrap: "wrap",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 12,
+        }}
+      >
+        <span>{erro}</span>
+        <button
+          type="button"
+          onClick={() => void carregar()}
+          style={{
+            padding: "8px 14px",
+            borderRadius: 10,
+            border: "1px solid rgba(232,64,37,0.35)",
+            background: "rgba(232,64,37,0.08)",
+            color: "#e84025",
+            fontSize: 12,
+            fontWeight: 700,
+            cursor: "pointer",
+            fontFamily: FONT.body,
+          }}
+        >
+          Tentar de novo
+        </button>
       </div>
     );
   }
@@ -508,13 +587,17 @@ function PainelAuditoria({
         {pendentes.length === 0 ? (
           <span style={{ fontSize: 12, color: BRAND.verde, fontFamily: FONT.body, fontWeight: 600 }}>Todos confirmaram.</span>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            {pendentes.map((p) => (
-              <div key={p.id} style={{ padding: "8px 10px", borderRadius: 8, background: dark ? "rgba(232,64,37,0.06)" : "rgba(232,64,37,0.04)", border: "1px solid rgba(232,64,37,0.18)" }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: dark ? "#ff9980" : "#b02a14", fontFamily: FONT.body }}>{p.name}</div>
+          <TabelaComPaginacao items={pendentes} t={t} resetKey={`${itemKey}-${pendentes.length}`}>
+            {(linhas) => (
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {linhas.map((p) => (
+                  <div key={p.id} style={{ padding: "8px 10px", borderRadius: 8, background: dark ? "rgba(232,64,37,0.06)" : "rgba(232,64,37,0.04)", border: "1px solid rgba(232,64,37,0.18)" }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: dark ? "#ff9980" : "#b02a14", fontFamily: FONT.body }}>{p.name}</div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            )}
+          </TabelaComPaginacao>
         )}
       </div>
     </div>
@@ -747,6 +830,7 @@ export default function PlaybookInfluencers() {
   const [totalInflu, setTotalInflu] = useState(0);
   const [totalConfAll, setTotalConfAll] = useState(0);
   const [loadingStats, setLoadingStats] = useState(true);
+  const [erroStats, setErroStats] = useState<string | null>(null);
 
   const exibirAuditoria =
     perm.canEditarOk &&
@@ -761,45 +845,86 @@ export default function PlaybookInfluencers() {
 
   const carregarConfirmacoes = useCallback(async () => {
     setLoadingStats(true);
+    setErroStats(null);
     const itensOb = ITENS_OBRIGATORIOS.map((a) => a.itemKey!);
 
-    if (exibirAuditoria) {
-      const [{ data: influsRaw }, { data: perfilRows }] = await Promise.all([
-        supabase.from("profiles").select("id").in("role", [...ROLES_PARIDADE_INFLUENCER]).eq("ativo", true),
-        supabase.from("influencer_perfil").select("id, status, nome_artistico"),
-      ]);
-      const perfilMap = mapaPerfilAuditoria((perfilRows ?? []) as PerfilAuditoriaRow[]);
-      const influsVis = (influsRaw ?? []).filter(
-        (row: { id: string }) =>
-          podeVerInfluencer(row.id) && influencerElegivelAuditoria(row.id, perfilMap),
-      );
-      setTotalInflu(influsVis.length);
+    try {
+      if (exibirAuditoria) {
+        type ProfileIdRow = { id: string };
+        type ConfRow = { influencer_id: string; item_key: string };
+        const [influsRaw, perfilRows, confRows] = await Promise.all([
+          fetchAllPages<ProfileIdRow>(async (from, to) => {
+            const { data, error } = await supabase
+              .from("profiles")
+              .select("id")
+              .in("role", [...ROLES_PARIDADE_INFLUENCER])
+              .eq("ativo", true)
+              .order("id", { ascending: true })
+              .range(from, to);
+            return { data: (data as ProfileIdRow[] | null) ?? null, error };
+          }),
+          fetchAllPages<PerfilAuditoriaRow>(async (from, to) => {
+            const { data, error } = await supabase
+              .from("influencer_perfil")
+              .select("id, status, nome_artistico")
+              .order("id", { ascending: true })
+              .range(from, to);
+            return { data: (data as PerfilAuditoriaRow[] | null) ?? null, error };
+          }),
+          fetchAllPages<ConfRow>(async (from, to) => {
+            const { data, error } = await supabase
+              .from("guia_confirmacoes")
+              .select("influencer_id, item_key")
+              .in("item_key", itensOb)
+              .order("influencer_id", { ascending: true })
+              .order("item_key", { ascending: true })
+              .range(from, to);
+            return { data: (data as ConfRow[] | null) ?? null, error };
+          }),
+        ]);
+        const perfilMap = mapaPerfilAuditoria(perfilRows);
+        const influsVis = influsRaw.filter(
+          (row) =>
+            podeVerInfluencer(row.id) && influencerElegivelAuditoria(row.id, perfilMap),
+        );
+        setTotalInflu(influsVis.length);
 
-      const { data: confRows } = await supabase.from("guia_confirmacoes").select("influencer_id, item_key").in("item_key", itensOb);
-      const porInflu: Record<string, Set<string>> = {};
-      (confRows ?? []).forEach((c: { influencer_id: string; item_key: string }) => {
-        if (!podeVerInfluencer(c.influencer_id)) return;
-        if (!influencerElegivelAuditoria(c.influencer_id, perfilMap)) return;
-        if (!porInflu[c.influencer_id]) porInflu[c.influencer_id] = new Set();
-        porInflu[c.influencer_id].add(c.item_key);
-      });
-      const completos = influsVis.filter((row: { id: string }) =>
-        itensOb.every((k) => porInflu[row.id]?.has(k)),
-      ).length;
-      setTotalConfAll(completos);
-    } else if (roleParidadeInfluencer(roleEfetivo) && influencerId) {
-      const { data } = await supabase.from("guia_confirmacoes").select("item_key").eq("influencer_id", influencerId);
-      setConfirmacoes(new Set((data ?? []).map((c: { item_key: string }) => c.item_key)));
-    } else {
+        const porInflu: Record<string, Set<string>> = {};
+        confRows.forEach((c) => {
+          if (!podeVerInfluencer(c.influencer_id)) return;
+          if (!influencerElegivelAuditoria(c.influencer_id, perfilMap)) return;
+          if (!porInflu[c.influencer_id]) porInflu[c.influencer_id] = new Set();
+          porInflu[c.influencer_id].add(c.item_key);
+        });
+        const completos = influsVis.filter((row) =>
+          itensOb.every((k) => porInflu[row.id]?.has(k)),
+        ).length;
+        setTotalConfAll(completos);
+      } else if (roleParidadeInfluencer(roleEfetivo) && influencerId) {
+        const { data, error } = await supabase
+          .from("guia_confirmacoes")
+          .select("item_key")
+          .eq("influencer_id", influencerId);
+        if (error) throw new Error(error.message);
+        setConfirmacoes(new Set((data ?? []).map((c: { item_key: string }) => c.item_key)));
+      } else {
+        setConfirmacoes(new Set());
+        setTotalInflu(0);
+        setTotalConfAll(0);
+      }
+      setErroStats(null);
+    } catch (err) {
+      console.error("[PlaybookInfluencers] stats:", err);
       setConfirmacoes(new Set());
       setTotalInflu(0);
       setTotalConfAll(0);
+      setErroStats(ERRO_CARGA_STATS);
     }
     setLoadingStats(false);
   }, [exibirAuditoria, influencerId, roleEfetivo, podeVerInfluencer]);
 
   useEffect(() => {
-    carregarConfirmacoes();
+    void carregarConfirmacoes();
   }, [carregarConfirmacoes]);
 
   if (perm.canView === "nao") {
@@ -818,6 +943,7 @@ export default function PlaybookInfluencers() {
 
   const playbookHeaderActions =
     !loadingStats &&
+    !erroStats &&
     (exibirAuditoria ? (
       <div
         style={{
@@ -890,6 +1016,46 @@ export default function PlaybookInfluencers() {
         }
       />
 
+      {erroStats && (
+        <div
+          role="alert"
+          style={{
+            ...getPageKpiSectionGapStyle(),
+            padding: "10px 14px",
+            borderRadius: 10,
+            background: "rgba(232,64,37,0.12)",
+            border: "1px solid rgba(232,64,37,0.35)",
+            color: "#e84025",
+            fontSize: 13,
+            fontFamily: FONT.body,
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "center",
+            gap: 12,
+            justifyContent: "space-between",
+          }}
+        >
+          <span>{erroStats}</span>
+          <button
+            type="button"
+            onClick={() => void carregarConfirmacoes()}
+            style={{
+              padding: "8px 14px",
+              borderRadius: 10,
+              border: "1px solid rgba(232,64,37,0.35)",
+              background: "rgba(232,64,37,0.08)",
+              color: "#e84025",
+              fontSize: 12,
+              fontWeight: 700,
+              cursor: "pointer",
+              fontFamily: FONT.body,
+            }}
+          >
+            Tentar de novo
+          </button>
+        </div>
+      )}
+
       <div
         style={{
           paddingLeft: PAGE_HEADER_SUBTITLE_PADDING_LEFT,
@@ -908,7 +1074,7 @@ export default function PlaybookInfluencers() {
         </p>
       </div>
 
-      {roleParidadeInfluencer(roleEfetivo) && tudoConfirmado && (
+      {roleParidadeInfluencer(roleEfetivo) && !erroStats && tudoConfirmado && (
         <div style={{
           ...getPageKpiSectionGapStyle(), padding: "16px 20px", borderRadius: 12,
           background: dark ? "rgba(34,197,94,0.10)" : "rgba(34,197,94,0.07)",
@@ -929,7 +1095,7 @@ export default function PlaybookInfluencers() {
         </div>
       )}
 
-      {roleParidadeInfluencer(roleEfetivo) && !tudoConfirmado && totalOb > 0 && (
+      {roleParidadeInfluencer(roleEfetivo) && !erroStats && !tudoConfirmado && totalOb > 0 && (
         <div style={getPageKpiSectionGapStyle()}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
             <span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.08em" }}>

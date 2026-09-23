@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Academy — Meu Onboarding (Mockup)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --brand-primary: #7c3aed;
+      --brand-secondary: #1e36f8;
+      --brand-success: #22c55e;
+      --brand-danger: #e84025;
+      --brand-warning: #f59e0b;
+      --bg: #f4f4f8;
+      --card-bg: #ffffff;
+      --card-border: #e2e2ee;
+      --text: #1a1a2e;
+      --text-muted: #6b7280;
+      --input-bg: #f8f8fc;
+      --radius-box: 14px;
+      --radius-tab: 10px;
+      --radius-pill: 999px;
+      --shadow: 0 2px 8px rgba(0,0,0,0.07);
+      --font: "Inter", "Helvetica Neue", Arial, sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; padding: 24px; line-height: 1.4; }
+    .mockup-bar {
+      position: sticky; top: 0; z-index: 100; background: #1a1a2e; color: #fff;
+      padding: 10px 16px; border-radius: 10px; margin-bottom: 20px;
+      display: flex; flex-wrap: wrap; align-items: center; gap: 12px; font-size: 12px;
+    }
+    .mockup-bar strong { color: #a78bfa; }
+    .page-shell { max-width: 1040px; margin: 0 auto; }
+    .page-header { margin-bottom: 18px; }
+    .page-header-row { display: flex; align-items: center; gap: 10px; }
+    .page-icon {
+      width: 32px; height: 32px; border-radius: 9px;
+      background: color-mix(in srgb, var(--brand-primary) 12%, transparent);
+      border: 1px solid color-mix(in srgb, var(--brand-primary) 30%, transparent);
+      display: flex; align-items: center; justify-content: center; color: var(--brand-primary); flex-shrink: 0;
+    }
+    .page-header h1 { font-size: 18px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: var(--brand-primary); }
+    .page-header .subtitle { font-size: 13px; color: var(--text-muted); margin-top: 5px; padding-left: 42px; }
+    .content-box { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: var(--radius-box); box-shadow: var(--shadow); padding: 20px; margin-bottom: 14px; }
+    .section-title { font-size: 14px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; color: var(--brand-primary); margin-bottom: 14px; }
+    .section-title .sub { font-size: 11px; font-weight: 400; color: var(--text-muted); text-transform: none; letter-spacing: 0; }
+    .section-title .sub::before { content: " — "; font-size: 12px; }
+    .hint-box {
+      background: color-mix(in srgb, var(--brand-primary) 8%, var(--card-bg));
+      border: 1px dashed color-mix(in srgb, var(--brand-primary) 30%, transparent);
+      border-radius: 10px; padding: 12px 16px; font-size: 12px; color: var(--text-muted); margin-bottom: 14px;
+    }
+    .hint-box strong { color: var(--brand-primary); }
+    .badge {
+      display: inline-flex; align-items: center; font-size: 10px; font-weight: 700;
+      padding: 3px 9px; border-radius: 20px; white-space: nowrap;
+    }
+    .badge-ok { background: #22c55e22; color: #22c55e; border: 1px solid #22c55e44; }
+    .badge-warn { background: #f59e0b22; color: #f59e0b; border: 1px solid #f59e0b44; }
+    .badge-muted { background: #6b728022; color: #6b7280; border: 1px solid #6b728044; }
+    .badge-info { background: #1e36f822; color: #1e36f8; border: 1px solid #1e36f844; }
+    .badge-negativo { background: #e840251a; color: #e84025; border: 1px solid #e8402544; }
+    .tipo-tag {
+      display: inline-flex; align-items: center; font-size: 10px; font-weight: 700; padding: 3px 9px; border-radius: 20px;
+      background: #6b728018; color: #6b7280; border: 1px solid #6b728033; text-transform: uppercase; letter-spacing: 0.04em; vertical-align: middle;
+    }
+    .btn-icon {
+      width: 28px; height: 28px; border-radius: 8px; border: 1px solid var(--card-border); background: var(--input-bg);
+      display: inline-flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-muted); margin: 0 2px; flex-shrink: 0;
+    }
+    .btn-icon:hover { color: var(--brand-primary); border-color: color-mix(in srgb, var(--brand-primary) 30%, transparent); }
+    .cta {
+      display: inline-flex; align-items: center; gap: 6px; padding: 10px 20px; border-radius: 10px; border: none;
+      background: linear-gradient(135deg, #4a2082, #1e36f8); color: #fff; font-size: 13px; font-weight: 700; font-family: var(--font); cursor: pointer;
+    }
+    .cta:disabled { opacity: .5; cursor: not-allowed; }
+
+    .filter-box {
+      background: var(--card-bg); border: 1px solid var(--card-border); border-radius: var(--radius-box);
+      box-shadow: var(--shadow); padding: 12px 20px; margin-bottom: 14px;
+    }
+    .filter-row { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 10px; width: 100%; }
+    .tab-btn {
+      display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; min-height: 44px; border-radius: var(--radius-tab);
+      border: 1px solid var(--card-border); background: var(--input-bg); font-size: 13px; font-weight: 500; color: var(--text-muted); cursor: pointer;
+    }
+    .tab-btn.active {
+      border-color: color-mix(in srgb, var(--brand-secondary) 35%, transparent);
+      background: color-mix(in srgb, var(--brand-secondary) 15%, transparent); color: var(--brand-secondary); font-weight: 700;
+    }
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    .kpi-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 14px; }
+    @media (max-width: 700px) { .kpi-grid-3 { grid-template-columns: 1fr; } }
+    .kpi-card { border-radius: var(--radius-box); border: 1px solid var(--card-border); background: var(--card-bg); overflow: hidden; }
+    .kpi-card .bar { height: 3px; }
+    .kpi-card .body { padding: 14px 16px; }
+    .kpi-label { font-size: 10px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; }
+    .kpi-value { font-size: 22px; font-weight: 800; line-height: 1.1; }
+    .kpi-vs { font-size: 11px; color: var(--text-muted); margin-top: 6px; }
+
+    .table-wrap { overflow-x: auto; border-radius: var(--radius-box); border: 1px solid var(--card-border); }
+    table { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 520px; font-size: 13px; }
+    thead th {
+      background: color-mix(in srgb, var(--card-bg) 86%, var(--brand-primary) 14%); font-size: 12px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.08em; padding: 10px 12px; text-align: center; color: var(--text-muted);
+      border-bottom: 1px solid var(--card-border); white-space: nowrap;
+    }
+    thead th:first-child, tbody td:first-child { text-align: left; }
+    tbody td { padding: 10px 12px; text-align: center; border-bottom: 1px solid var(--card-border); }
+    tbody tr:nth-child(even) { background: var(--input-bg); }
+    tbody tr:last-child td { border-bottom: none; }
+
+    .relatorio-item {
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      padding: 10px 0; border-bottom: 1px solid var(--card-border); font-size: 13px;
+    }
+    .relatorio-item:last-child { border-bottom: none; }
+    .comentario-treinador {
+      background: var(--input-bg); border-left: 3px solid var(--brand-primary); border-radius: 0 10px 10px 0;
+      padding: 14px 16px; font-size: 13px; color: var(--text); font-style: italic; margin-top: 4px;
+    }
+    .comentario-treinador .autor { font-style: normal; font-weight: 700; font-size: 12px; color: var(--text-muted); margin-top: 10px; }
+
+    /* Hero da turma */
+    .turma-hero {
+      background: linear-gradient(135deg, #2c1152, #182a8f);
+      color: #fff; border-radius: var(--radius-box); padding: 22px 24px; margin-bottom: 14px;
+      display: flex; flex-wrap: wrap; gap: 20px; align-items: center; justify-content: space-between;
+    }
+    .turma-hero .info h2 { font-size: 17px; font-weight: 800; margin-bottom: 4px; }
+    .turma-hero .info .meta { font-size: 12px; color: #c9c3f5; display: flex; flex-wrap: wrap; gap: 10px; }
+    .turma-hero .progresso { min-width: 220px; }
+    .turma-hero .progresso .rotulo { font-size: 11px; color: #c9c3f5; margin-bottom: 6px; display: flex; justify-content: space-between; }
+    .progress-track { width: 100%; height: 8px; border-radius: 999px; background: rgba(255,255,255,0.15); overflow: hidden; }
+    .progress-track.light { background: var(--input-bg); border: 1px solid var(--card-border); }
+    .progress-fill { height: 100%; background: linear-gradient(90deg, #a78bfa, #60a5fa); border-radius: 999px; }
+    .stat-row { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 14px; }
+    .stat-row .stat { font-size: 12px; color: #c9c3f5; }
+    .stat-row .stat strong { display: block; font-size: 18px; color: #fff; font-weight: 800; }
+
+    /* Timeline do prestador */
+    .timeline { display: flex; flex-direction: column; gap: 0; }
+    .timeline-step { display: grid; grid-template-columns: 36px 1fr; gap: 14px; align-items: stretch; }
+    .timeline-rail { display: flex; flex-direction: column; align-items: center; }
+    .timeline-dot {
+      width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--card-border);
+      background: var(--input-bg); color: var(--text-muted); font-size: 13px; font-weight: 800;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .timeline-dot.concluida { background: #22c55e; border-color: #22c55e; color: #fff; }
+    .timeline-dot.hoje { background: color-mix(in srgb, var(--brand-primary) 15%, #fff); border-color: var(--brand-primary); color: var(--brand-primary); box-shadow: 0 0 0 4px color-mix(in srgb, var(--brand-primary) 15%, transparent); }
+    .timeline-line { width: 2px; flex: 1; min-height: 16px; background: var(--card-border); }
+    .timeline-card {
+      border: 1px solid var(--card-border); border-radius: 12px; background: var(--input-bg); padding: 14px 16px; margin-bottom: 12px;
+    }
+    .timeline-card.hoje { border-color: color-mix(in srgb, var(--brand-primary) 45%, var(--card-border)); background: color-mix(in srgb, var(--brand-primary) 5%, var(--card-bg)); }
+    .timeline-card.futura { opacity: .6; }
+    .timeline-card h3 { font-size: 14px; font-weight: 700; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .timeline-meta { font-size: 12px; color: var(--text-muted); display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 8px; }
+    .material-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+    .material-row {
+      display: flex; align-items: center; gap: 10px; font-size: 13px; background: var(--card-bg);
+      border: 1px solid var(--card-border); border-radius: 8px; padding: 8px 10px;
+    }
+    .material-row .icon { font-size: 14px; flex-shrink: 0; }
+    .material-row .nome { flex: 1; }
+    .prova-status { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
+    .locked-msg { font-size: 12px; color: var(--text-muted); display: flex; align-items: center; gap: 6px; }
+
+    /* Modal genérico + quiz */
+    .modal-overlay { display: none; position: fixed; inset: 0; z-index: 1000; background: rgba(15,15,26,0.65); padding: 24px 16px; align-items: center; justify-content: center; }
+    .modal-overlay.open { display: flex; }
+    .modal-panel { width: min(640px, 100%); max-height: 90dvh; background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 14px; box-shadow: 0 20px 60px rgba(0,0,0,0.2); display: flex; flex-direction: column; overflow: hidden; }
+    .modal-header { padding: 18px 20px 12px; border-bottom: 1px solid var(--card-border); position: relative; }
+    .modal-header h2 { font-size: 16px; font-weight: 800; color: var(--brand-primary); text-transform: uppercase; letter-spacing: 0.04em; padding-right: 36px; }
+    .modal-header .modal-sub { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+    .modal-close {
+      position: absolute; top: 16px; right: 16px; width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--card-border);
+      background: var(--input-bg); cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text-muted);
+    }
+    .modal-body { padding: 16px 20px; overflow-y: auto; flex: 1; }
+    .modal-footer { padding: 14px 20px; border-top: 1px solid var(--card-border); display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .btn-modal { padding: 10px 18px; border-radius: 10px; font-size: 13px; font-weight: 700; font-family: var(--font); cursor: pointer; border: 1px solid var(--card-border); background: var(--input-bg); color: var(--text); }
+    .btn-modal.primary { background: linear-gradient(135deg, #4a2082, #1e36f8); color: #fff; border: none; }
+    .modal-footer-msg { font-size: 12px; color: #e84025; font-weight: 600; }
+    .quiz-questao { border: 1px solid var(--card-border); border-radius: 12px; padding: 14px; margin-bottom: 12px; background: var(--input-bg); }
+    .quiz-questao .enunciado { font-size: 13px; font-weight: 700; margin-bottom: 10px; }
+    .quiz-opcao { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 13px; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--card-border); background: #fff; cursor: pointer; }
+    .quiz-opcao:hover { border-color: color-mix(in srgb, var(--brand-primary) 40%, var(--card-border)); }
+    .quiz-opcao input { accent-color: var(--brand-primary); }
+    .resultado-prova { text-align: center; padding: 20px 10px; }
+    .resultado-prova .nota { font-size: 40px; font-weight: 800; margin-bottom: 6px; }
+    .resultado-prova.aprovado .nota { color: #22c55e; }
+    .resultado-prova.reprovado .nota { color: #e84025; }
+  </style>
+</head>
+<body>
+
+<div class="mockup-bar">
+  <strong>MOCKUP</strong> Academy → Meu Onboarding
+  <span style="opacity:0.4">|</span>
+  <span>3 de 4 páginas da Academy · visão do prestador da própria turma — leitura + fazer prova. Presença e liberação são do instrutor.</span>
+</div>
+
+<div class="page-shell">
+  <header class="page-header">
+    <div class="page-header-row">
+      <div class="page-icon" aria-hidden="true">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 1.7 3.3 3 6 3s6-1.3 6-3v-5"/></svg>
+      </div>
+      <h1>Meu Onboarding</h1>
+    </div>
+    <p class="subtitle">Acompanhe sua turma de formação, dia a dia.</p>
+  </header>
+
+  <div class="turma-hero">
+    <div class="info">
+      <h2>Onboarding GP — Outubro <span class="badge badge-ok" style="vertical-align:middle;margin-left:6px">Em andamento</span></h2>
+      <div class="meta">
+        <span>Turma GP-14</span>
+        <span>·</span>
+        <span>Instrutora Juliana Mendes</span>
+        <span>·</span>
+        <span>Hoje: 08:00 – 12:00</span>
+      </div>
+      <div class="stat-row">
+        <div class="stat"><strong>4/8</strong>Trilhas concluídas</div>
+        <div class="stat"><strong>2/2</strong>Provas aprovadas</div>
+        <div class="stat"><strong>100%</strong>Presença</div>
+      </div>
+    </div>
+    <div class="progresso">
+      <div class="rotulo"><span>Dia 6 de 15</span><span>40%</span></div>
+      <div class="progress-track"><div class="progress-fill" style="width:40%"></div></div>
+    </div>
+  </div>
+
+  <div class="filter-box">
+    <div class="filter-row" role="tablist" aria-label="Abas de Meu Onboarding">
+      <button type="button" class="tab-btn active" id="tabCronograma" role="tab" aria-selected="true" onclick="setTab('cronograma')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h10M4 18h7"/></svg>
+        Cronograma e Andamento
+      </button>
+      <button type="button" class="tab-btn" id="tabAvaliacao" role="tab" aria-selected="false" onclick="setTab('avaliacao')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        Avaliação
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══ ABA CRONOGRAMA ═══ -->
+  <div id="panel-cronograma" class="panel active">
+  <div class="hint-box">
+    Esta é a agenda da <strong>sua</strong> turma — não é um catálogo pra navegar livremente. Presença é marcada pela sua instrutora.
+    A liberação para a mesa acontece quando todas as trilhas forem concluídas — é sempre uma decisão da instrutora, a prova aprovada não libera sozinha.
+  </div>
+
+  <div class="content-box">
+    <h2 class="section-title">Sua trilha de formação <span class="sub">Onboarding de Game Presenter</span></h2>
+    <div class="timeline" id="timelineOnboarding">
+
+      <div class="timeline-step">
+        <div class="timeline-rail"><div class="timeline-dot concluida">✓</div><div class="timeline-line"></div></div>
+        <article class="timeline-card">
+          <h3>Onboarding Spin <span class="tipo-tag">Institucional</span></h3>
+          <div class="timeline-meta"><span>Dia 1</span><span class="badge badge-ok">Concluída</span></div>
+          <div class="material-list">
+            <div class="material-row"><span class="icon">📄</span><span class="nome">Código de ética, LGPD e compliance</span><button class="btn-icon" title="Baixar">↓</button></div>
+            <div class="material-row"><span class="icon">📄</span><span class="nome">Conhecendo o business Spin</span><button class="btn-icon" title="Baixar">↓</button></div>
+          </div>
+        </article>
+      </div>
+
+      <div class="timeline-step">
+        <div class="timeline-rail"><div class="timeline-dot concluida">✓</div><div class="timeline-line"></div></div>
+        <article class="timeline-card">
+          <h3>Imagem e postura <span class="tipo-tag">Institucional</span></h3>
+          <div class="timeline-meta"><span>Dia 1</span><span class="badge badge-ok">Concluída</span></div>
+          <div class="material-list">
+            <div class="material-row"><span class="icon">📄</span><span class="nome">Política de imagem e postura</span><button class="btn-icon" title="Baixar">↓</button></div>
+          </div>
+        </article>
+      </div>
+
+      <div class="timeline-step">
+        <div class="timeline-rail"><div class="timeline-dot concluida">✓</div><div class="timeline-line"></div></div>
+        <article class="timeline-card">
+          <h3>Blackjack <span class="tipo-tag">Jogo</span></h3>
+          <div class="timeline-meta"><span>Dias 1 a 5</span><span class="badge badge-ok">Concluída</span></div>
+          <div class="material-list">
+            <div class="material-row"><span class="icon">📄</span><span class="nome">Blackjack — regras e contagem</span><button class="btn-icon" title="Baixar">↓</button></div>
+            <div class="material-row"><span class="icon">📄</span><span class="nome">Blackjack — apostas laterais</span><button class="btn-icon" title="Baixar">↓</button></div>
+            <div class="material-row"><span class="icon">🎬</span><span class="nome">Blackjack — software e sabot</span><button class="btn-icon" title="Assistir">▶</button></div>
+            <div class="material-row"><span class="icon">📄</span><span class="nome">Incidentes em Blackjack</span><button class="btn-icon" title="Baixar">↓</button></div>
+          </div>
+          <div class="prova-status"><span class="badge badge-ok">Prova: 90% · Aprovado</span></div>
+        </article>
+      </div>
+
+      <div class="timeline-step">
+        <div class="timeline-rail"><div class="timeline-dot concluida">✓</div><div class="timeline-line"></div></div>
+        <article class="timeline-card">
+          <h3>Procedimentos do Sistema <span class="tipo-tag">Operação</span></h3>
+          <div class="timeline-meta"><span>Dia 5</span><span class="badge badge-ok">Concluída</span></div>
+          <div class="material-list">
+            <div class="material-row"><span class="icon">📄</span><span class="nome">Botões do sistema e jogo responsável</span><button class="btn-icon" title="Baixar">↓</button></div>
+          </div>
+          <div class="prova-status"><span class="badge badge-ok">Prova: 85% · Aprovado</span></div>
+        </article>
+      </div>
+
+      <div class="timeline-step">
+        <div class="timeline-rail"><div class="timeline-dot hoje">●</div><div class="timeline-line"></div></div>
+        <article class="timeline-card hoje" id="cardRoleta">
+          <h3>Roleta <span class="tipo-tag">Jogo</span> <span class="badge badge-info">HOJE</span></h3>
+          <div class="timeline-meta"><span>Dias 5 a 7</span></div>
+          <div class="material-list">
+            <div class="material-row"><span class="icon">📄</span><span class="nome">Roleta — regras e tipos de aposta</span><button class="btn-icon" title="Baixar">↓</button></div>
+            <div class="material-row"><span class="icon">📄</span><span class="nome">Roleta — mesa e giro</span><button class="btn-icon" title="Baixar">↓</button></div>
+            <div class="material-row"><span class="icon">🎬</span><span class="nome">Roleta — anúncio e pagamento</span><button class="btn-icon" title="Assistir">▶</button></div>
+          </div>
+          <div class="prova-status" id="statusProvaRoleta">
+            <span class="badge badge-warn">Prova disponível</span>
+            <button type="button" class="cta" onclick="abrirModalProva()">Fazer prova</button>
+          </div>
+        </article>
+      </div>
+
+      <div class="timeline-step">
+        <div class="timeline-rail"><div class="timeline-dot">🔒</div><div class="timeline-line"></div></div>
+        <article class="timeline-card futura">
+          <h3>Baccarat <span class="tipo-tag">Jogo</span></h3>
+          <div class="timeline-meta"><span>Dias 8 e 9</span></div>
+          <p class="locked-msg">🔒 Libera quando você concluir a trilha Roleta.</p>
+        </article>
+      </div>
+
+      <div class="timeline-step">
+        <div class="timeline-rail"><div class="timeline-dot">🔒</div><div class="timeline-line"></div></div>
+        <article class="timeline-card futura">
+          <h3>Futebol Studio <span class="tipo-tag">Jogo</span></h3>
+          <div class="timeline-meta"><span>Dias 11 e 12</span></div>
+          <p class="locked-msg">🔒 Libera na sequência do cronograma.</p>
+        </article>
+      </div>
+
+      <div class="timeline-step">
+        <div class="timeline-rail"><div class="timeline-dot">🔒</div></div>
+        <article class="timeline-card futura">
+          <h3>Prática e rotação <span class="tipo-tag">Prática</span></h3>
+          <div class="timeline-meta"><span>Dias 7, 10, 13 a 15</span></div>
+          <p class="locked-msg">🔒 Prática supervisionada em sala — sua instrutora avisa quando começar.</p>
+        </article>
+      </div>
+
+    </div>
+  </div>
+  </div>
+  <!-- ═══ FIM ABA CRONOGRAMA ═══ -->
+
+  <!-- ═══ ABA AVALIAÇÃO ═══ -->
+  <div id="panel-avaliacao" class="panel">
+    <div class="kpi-grid-3">
+      <div class="kpi-card">
+        <div class="bar" style="background:#22c55e"></div>
+        <div class="body">
+          <div class="kpi-label">Nota média nas provas</div>
+          <div class="kpi-value">88%</div>
+          <div class="kpi-vs">2 de 2 provas realizadas</div>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="bar" style="background:#1e36f8"></div>
+        <div class="body">
+          <div class="kpi-label">Provas aprovadas</div>
+          <div class="kpi-value">2/2</div>
+          <div class="kpi-vs">Roleta ainda não realizada</div>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="bar" style="background:#7c3aed"></div>
+        <div class="body">
+          <div class="kpi-label">Avaliação geral da instrutora</div>
+          <div class="kpi-value" style="font-size:16px">Muito bom</div>
+          <div class="kpi-vs">Atualizado em 22/09/2026</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-box">
+      <h2 class="section-title">Provas realizadas <span class="sub">nota automática, por gabarito</span></h2>
+      <div class="table-wrap">
+        <table>
+          <caption style="position:absolute;width:1px;height:1px;overflow:hidden">Provas realizadas no onboarding</caption>
+          <thead>
+            <tr>
+              <th scope="col">Trilha</th>
+              <th scope="col">Nota</th>
+              <th scope="col">Nota mínima</th>
+              <th scope="col">Status</th>
+              <th scope="col">Data</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Blackjack</td>
+              <td>90%</td>
+              <td>70%</td>
+              <td><span class="badge badge-ok">Aprovado</span></td>
+              <td>19/09/2026</td>
+            </tr>
+            <tr>
+              <td>Procedimentos do Sistema</td>
+              <td>85%</td>
+              <td>70%</td>
+              <td><span class="badge badge-ok">Aprovado</span></td>
+              <td>22/09/2026</td>
+            </tr>
+            <tr>
+              <td>Roleta</td>
+              <td>—</td>
+              <td>70%</td>
+              <td><span class="badge badge-warn">Disponível hoje</span></td>
+              <td>—</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="content-box">
+      <h2 class="section-title">Relatório da instrutora <span class="sub">observações registradas em sala, ao longo da turma</span></h2>
+      <div class="relatorio-item"><span>Postura e imagem</span><span class="badge badge-ok">Ótimo</span></div>
+      <div class="relatorio-item"><span>Domínio das regras do jogo</span><span class="badge badge-ok">Ótimo</span></div>
+      <div class="relatorio-item"><span>Agilidade e postura na mesa</span><span class="badge badge-warn">A desenvolver</span></div>
+      <div class="relatorio-item"><span>Atendimento e comunicação</span><span class="badge badge-ok">Bom</span></div>
+      <div class="comentario-treinador">
+        "Ponto de atenção pra semana que vem: ganhar mais fluidez nas apostas de Roleta antes da prática supervisionada."
+        <div class="autor">— Juliana Mendes, instrutora · 22/09/2026</div>
+      </div>
+      <div class="comentario-treinador" style="margin-top:10px">
+        "Em Blackjack, mostrou domínio rápido das regras e das apostas laterais."
+        <div class="autor">— Juliana Mendes, instrutora · 20/09/2026</div>
+      </div>
+      <div class="comentario-treinador" style="margin-top:10px">
+        "Primeiro dia de turma — bastante atento à parte institucional e ao código de conduta."
+        <div class="autor">— Juliana Mendes, instrutora · 18/09/2026</div>
+      </div>
+    </div>
+
+    <div class="content-box">
+      <h2 class="section-title">Liberação para a mesa</h2>
+      <p style="font-size:13px;color:var(--text-muted)">
+        Você está em formação — 4 de 8 trilhas concluídas, nota média de 88% nas provas realizadas. A liberação para atender ao vivo
+        é uma decisão da sua instrutora, tomada quando o cronograma inteiro estiver concluído — passar em todas as provas é necessário,
+        mas não libera sozinho.
+      </p>
+    </div>
+  </div>
+  <!-- ═══ FIM ABA AVALIAÇÃO ═══ -->
+</div>
+
+<!-- Modal: fazer prova -->
+<div id="modalProva" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalProvaTitulo" onclick="if(event.target===this)fecharModalProva()">
+  <div class="modal-panel">
+    <div class="modal-header">
+      <button type="button" class="modal-close" onclick="fecharModalProva()" aria-label="Fechar">✕</button>
+      <h2 id="modalProvaTitulo">Prova — Roleta</h2>
+      <p class="modal-sub">10 questões · nota mínima 70% · resultado sai na hora</p>
+    </div>
+    <div class="modal-body" id="modalProvaBody">
+      <!-- preenchido via JS -->
+    </div>
+    <div class="modal-footer">
+      <span class="modal-footer-msg" id="provaErro"></span>
+      <button type="button" class="btn-modal primary" id="btnEnviarProva" onclick="enviarProva()">Enviar prova</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const PROVA_ROLETA = {
+    notaMinima: 70,
+    perguntas: [
+      { texto: "Qual número não existe na roleta europeia?", opcoes: ["0", "37", "13", "21"], correta: 1 },
+      { texto: "Quantas casas tem a roleta europeia, incluindo o zero?", opcoes: ["36", "37", "38", "35"], correta: 1 },
+      { texto: "O que é uma aposta \"Pleno\" (straight up)?", opcoes: ["Aposta em um único número", "Aposta em uma dúzia inteira", "Aposta em vermelho ou preto", "Aposta em par ou ímpar"], correta: 0 },
+    ],
+  };
+
+  function renderProva() {
+    const body = document.getElementById("modalProvaBody");
+    body.innerHTML = PROVA_ROLETA.perguntas
+      .map(function (p, i) {
+        const opcoes = p.opcoes
+          .map(function (o, j) {
+            return (
+              '<label class="quiz-opcao"><input type="radio" name="prova_q' + i + '" value="' + j + '" />' + o + "</label>"
+            );
+          })
+          .join("");
+        return '<div class="quiz-questao"><div class="enunciado">' + (i + 1) + ". " + p.texto + "</div>" + opcoes + "</div>";
+      })
+      .join("");
+  }
+
+  function abrirModalProva() {
+    renderProva();
+    document.getElementById("provaErro").textContent = "";
+    document.getElementById("btnEnviarProva").style.display = "";
+    document.getElementById("btnEnviarProva").textContent = "Enviar prova";
+    document.getElementById("btnEnviarProva").onclick = enviarProva;
+    document.getElementById("modalProva").classList.add("open");
+  }
+
+  function fecharModalProva() {
+    document.getElementById("modalProva").classList.remove("open");
+  }
+
+  function enviarProva() {
+    const total = PROVA_ROLETA.perguntas.length;
+    let respondidas = 0;
+    let acertos = 0;
+    PROVA_ROLETA.perguntas.forEach(function (p, i) {
+      const marcada = document.querySelector('input[name="prova_q' + i + '"]:checked');
+      if (marcada) {
+        respondidas++;
+        if (Number(marcada.value) === p.correta) acertos++;
+      }
+    });
+    if (respondidas < total) {
+      document.getElementById("provaErro").textContent = "Responda todas as " + total + " questões antes de enviar.";
+      return;
+    }
+    document.getElementById("provaErro").textContent = "";
+    const nota = Math.round((acertos / total) * 100);
+    const aprovado = nota >= PROVA_ROLETA.notaMinima;
+    mostrarResultadoProva(nota, aprovado);
+  }
+
+  function mostrarResultadoProva(nota, aprovado) {
+    const body = document.getElementById("modalProvaBody");
+    body.innerHTML =
+      '<div class="resultado-prova ' + (aprovado ? "aprovado" : "reprovado") + '">' +
+      '<div class="nota">' + nota + "%</div>" +
+      "<p style=\"font-weight:700;margin-bottom:6px\">" + (aprovado ? "Aprovado! 🎉" : "Não foi dessa vez") + "</p>" +
+      '<p style="font-size:13px;color:var(--text-muted)">' +
+      (aprovado
+        ? "Sua trilha de Roleta foi marcada como concluída."
+        : "Nota mínima: " + PROVA_ROLETA.notaMinima + "%. Revise o material com sua instrutora e tente de novo.") +
+      "</p></div>";
+    const btn = document.getElementById("btnEnviarProva");
+    if (aprovado) {
+      btn.textContent = "Fechar";
+      btn.onclick = function () {
+        fecharModalProva();
+        marcarRoletaConcluida(nota);
+      };
+    } else {
+      btn.textContent = "Tentar novamente";
+      btn.onclick = function () {
+        renderProva();
+        document.getElementById("provaErro").textContent = "";
+      };
+    }
+  }
+
+  function marcarRoletaConcluida(nota) {
+    document.getElementById("cardRoleta").classList.remove("hoje");
+    document.getElementById("cardRoleta").querySelector(".badge-info").remove();
+    document.getElementById("statusProvaRoleta").innerHTML = '<span class="badge badge-ok">Prova: ' + nota + '% · Aprovado</span>';
+    const dot = document.querySelector("#cardRoleta").closest(".timeline-step").querySelector(".timeline-dot");
+    dot.classList.remove("hoje");
+    dot.classList.add("concluida");
+    dot.textContent = "✓";
+  }
+
+  function setTab(tab) {
+    document.querySelectorAll(".panel").forEach(function (p) {
+      p.classList.remove("active");
+    });
+    document.getElementById("panel-" + tab).classList.add("active");
+    document.querySelectorAll(".tab-btn").forEach(function (b) {
+      b.classList.remove("active");
+      b.setAttribute("aria-selected", "false");
+    });
+    const el = document.getElementById(tab === "cronograma" ? "tabCronograma" : "tabAvaliacao");
+    el.classList.add("active");
+    el.setAttribute("aria-selected", "true");
+  }
+
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") fecharModalProva();
+  });
+</script>
+</body>
+</html>

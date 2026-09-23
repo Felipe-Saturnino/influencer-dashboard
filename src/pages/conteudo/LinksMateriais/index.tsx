@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { useIdentidadeEfetiva } from "../../../hooks/useIdentidadeEfetiva";
@@ -7,6 +7,8 @@ import { useRouteTab } from "../../../hooks/useRouteTab";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
+import { fetchAllPages, fetchInBatched } from "../../../lib/supabasePaginate";
+import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
 import { verificarElegibilidadeAgendaLive } from "../../../lib/influencerAgendaGate";
 import {
   trackingBasePorCanal,
@@ -33,17 +35,16 @@ import {
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
+import { SelectListaComBusca } from "../../../components/SelectListaComBusca";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { getPageContentBoxStyle, getPageFilterBoxStyle } from "../../../lib/pageContentBoxStyles";
 import { QRCodeCanvas } from "qrcode.react";
 import { useMediaQuery } from "../../../hooks/useMediaQuery";
 import type { ReactNode } from "react";
+import { FILTER_SEARCH_AFILIADO, FILTER_SEARCH_INFLUENCER } from "../../../lib/searchBarConstants";
 
-function ctaGradient(brand: ReturnType<typeof useDashboardBrand>): string {
-  return brand.useBrand
-    ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
-    : "linear-gradient(135deg, #4a2082, #1e36f8)";
-}
+const ERRO_CARGA_ENTIDADES =
+  "Não foi possível carregar a lista. Se o problema persistir, entre em contato com o suporte.";
 
 function ctaButtonContent(loading: boolean, idle: ReactNode, busy: string): ReactNode {
   if (!loading) return idle;
@@ -147,6 +148,7 @@ export default function LinksMateriais() {
   const [influencerSelecionado, setInfluencerSelecionado] = useState("");
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const [erroLista, setErroLista] = useState<string | null>(null);
   const [copiado, setCopiado] = useState(false);
   const [previewEscuro, setPreviewEscuro] = useState<string | null>(null);
   const [previewClaro, setPreviewClaro] = useState<string | null>(null);
@@ -218,58 +220,52 @@ export default function LinksMateriais() {
     void carregarMeuPerfil();
   }, [carregarMeuPerfil]);
 
-  useEffect(() => {
+  const carregarEntidades = useCallback(async () => {
     if (perm.loading) return;
     if (!user || isSelfMode || perm.canView === "nao" || !precisaSelecionarInfluencer) {
       setInfluenceres([]);
       setInfluencerSelecionado("");
       setLoadingInfluenceres(false);
+      setErroLista(null);
       return;
     }
-    let cancelled = false;
     setLoadingInfluenceres(true);
-    void (async () => {
-      const roleFiltro = canal === "afiliado" ? "afiliado" : "influencer";
-      // Mesmo padrão da página Influencers: profiles + perfil em duas queries (evita falha do embed).
-      const { data: profiles, error } = await supabase
-        .from("profiles")
-        .select("id, name, role")
-        .eq("role", roleFiltro)
-        .order("name");
-      if (cancelled) return;
-      if (error) {
-        console.error("[LinksMateriais] lista entidades:", error.message);
-        setInfluenceres([]);
-        setInfluencerSelecionado("");
-        setLoadingInfluenceres(false);
-        return;
-      }
-      type ProfileRow = { id: string; name: string | null; role: string | null };
-      let lista = (profiles ?? []) as ProfileRow[];
-      // Escopo só para Agência — Admin / Ver=Sim / Criar=Sim veem todos.
+    setErroLista(null);
+    const roleFiltro = canal === "afiliado" ? "afiliado" : "influencer";
+    type ProfileRow = { id: string; name: string | null; role: string | null };
+    try {
+      const profiles = await fetchAllPages<ProfileRow>(async (from, to) => {
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("id, name, role")
+          .eq("role", roleFiltro)
+          .order("name", { ascending: true })
+          .order("id", { ascending: true })
+          .range(from, to);
+        return { data: (data as ProfileRow[] | null) ?? null, error };
+      });
+      let lista = profiles;
       if (filtrarEscopoAgencia) {
         lista = lista.filter((r) => podeVerInfluencer(r.id));
       }
       const ids = lista.map((r) => r.id);
       const perfilById = new Map<string, PerfilEmbed>();
       if (ids.length > 0) {
-        const { data: perfis, error: errPerfil } = await supabase
-          .from("influencer_perfil")
-          .select("id, nome_artistico, nome_completo")
-          .in("id", ids);
-        if (cancelled) return;
-        if (errPerfil) {
-          console.error("[LinksMateriais] perfis:", errPerfil.message);
-        } else {
-          for (const p of perfis ?? []) {
-            perfilById.set(p.id, {
-              nome_artistico: p.nome_artistico,
-              nome_completo: p.nome_completo,
-            });
-          }
+        const perfis = await fetchInBatched(ids, 80, async (slice) => {
+          const { data, error } = await supabase
+            .from("influencer_perfil")
+            .select("id, nome_artistico, nome_completo")
+            .in("id", slice);
+          if (error) throw new Error(error.message);
+          return (data ?? []) as { id: string; nome_artistico: string | null; nome_completo: string | null }[];
+        });
+        for (const p of perfis) {
+          perfilById.set(p.id, {
+            nome_artistico: p.nome_artistico,
+            nome_completo: p.nome_completo,
+          });
         }
       }
-      if (cancelled) return;
       const rows: EntidadeOpcao[] = lista.map((r) => {
         const perfil = perfilById.get(r.id) ?? null;
         return {
@@ -285,11 +281,14 @@ export default function LinksMateriais() {
       setInfluenceres(rows);
       if (rows.length === 1) setInfluencerSelecionado(rows[0].id);
       else setInfluencerSelecionado("");
-      setLoadingInfluenceres(false);
-    })();
-    return () => {
-      cancelled = true;
-    };
+      setErroLista(null);
+    } catch (err) {
+      console.error("[LinksMateriais] lista entidades:", err);
+      setInfluenceres([]);
+      setInfluencerSelecionado("");
+      setErroLista(ERRO_CARGA_ENTIDADES);
+    }
+    setLoadingInfluenceres(false);
   }, [
     user,
     perm.loading,
@@ -300,6 +299,21 @@ export default function LinksMateriais() {
     precisaSelecionarInfluencer,
     filtrarEscopoAgencia,
   ]);
+
+  useEffect(() => {
+    void carregarEntidades();
+  }, [carregarEntidades]);
+
+  const opcoesEntidade = useMemo(
+    () => [
+      { value: "", label: loadingInfluenceres ? "Carregando…" : "Selecione…" },
+      ...influenceres.map((inf) => ({
+        value: inf.id,
+        label: inf.nome.trim() || inf.id.slice(0, 8),
+      })),
+    ],
+    [influenceres, loadingInfluenceres],
+  );
 
   useEffect(() => {
     if (isSelfMode) return;
@@ -624,6 +638,51 @@ export default function LinksMateriais() {
           podeEmitir &&
           !loadingInfluenceres &&
           !perm.loading &&
+          erroLista && (
+          <div
+            role="alert"
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
+              padding: 12,
+              borderRadius: 12,
+              background: "rgba(232,64,37,0.08)",
+              border: "1px solid rgba(232,64,37,0.35)",
+              color: "#e84025",
+              fontSize: 13,
+              fontFamily: FONT.body,
+              marginBottom: 16,
+            }}
+          >
+            <span>{erroLista}</span>
+            <button
+              type="button"
+              onClick={() => void carregarEntidades()}
+              style={{
+                padding: "8px 14px",
+                borderRadius: 10,
+                border: "1px solid rgba(232,64,37,0.35)",
+                background: "rgba(232,64,37,0.08)",
+                color: "#e84025",
+                fontSize: 12,
+                fontWeight: 700,
+                cursor: "pointer",
+                fontFamily: FONT.body,
+              }}
+            >
+              Tentar de novo
+            </button>
+          </div>
+        )}
+
+        {precisaSelecionarInfluencer &&
+          podeEmitir &&
+          !loadingInfluenceres &&
+          !perm.loading &&
+          !erroLista &&
           influenceres.length === 0 && (
           <div style={{
             display: "flex",
@@ -680,40 +739,18 @@ export default function LinksMateriais() {
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {precisaSelecionarInfluencer && podeEmitir && (
               <div>
-                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: t.textMuted, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                  {labelEntidade}
-                </label>
-                <select
+                <SelectListaComBusca
+                  id="links-materiais-entidade"
+                  label={labelEntidade}
+                  searchPlaceholder={
+                    canal === "afiliado" ? FILTER_SEARCH_AFILIADO : FILTER_SEARCH_INFLUENCER
+                  }
+                  variant="campo"
                   value={influencerSelecionado}
-                  onChange={(e) => setInfluencerSelecionado(e.target.value)}
-                  disabled={!podeEmitir || loadingInfluenceres || salvando || influenceres.length === 0}
-                  aria-label={labelEntidade}
-                  style={{
-                    width: "100%",
-                    boxSizing: "border-box",
-                    padding: "12px 14px",
-                    borderRadius: 12,
-                    border: brand.primaryTransparentBorder,
-                    background: brand.primaryTransparentBg,
-                    color: t.text,
-                    fontSize: 14,
-                    fontFamily: FONT.body,
-                    cursor: loadingInfluenceres || influenceres.length === 0 ? "not-allowed" : "pointer",
-                  }}
-                >
-                  <option value="">
-                    {loadingInfluenceres
-                      ? "Carregando…"
-                      : influenceres.length === 0
-                        ? `Nenhum ${labelEntidadeLower} encontrado`
-                        : "Selecione…"}
-                  </option>
-                  {influenceres.map((inf) => (
-                    <option key={inf.id} value={inf.id}>
-                      {inf.nome.trim() || inf.id.slice(0, 8)}
-                    </option>
-                  ))}
-                </select>
+                  onChange={setInfluencerSelecionado}
+                  disabled={!podeEmitir || loadingInfluenceres || salvando || Boolean(erroLista) || influenceres.length === 0}
+                  options={opcoesEntidade}
+                />
               </div>
             )}
 
@@ -803,7 +840,7 @@ export default function LinksMateriais() {
                   fontWeight: 700,
                   fontSize: 14,
                   fontFamily: FONT.body,
-                  background: ctaGradient(brand),
+                  background: getCtaCriarGradient(brand),
                   color: "#fff",
                 }}
               >
