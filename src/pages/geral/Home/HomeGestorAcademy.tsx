@@ -1,4 +1,4 @@
-import { BookOpen, GraduationCap, HelpCircle } from "lucide-react";
+import { BookOpen, CalendarRange, GraduationCap, HelpCircle } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useIdentidadeEfetiva } from "../../../hooks/useIdentidadeEfetiva";
 import { FONT } from "../../../constants/theme";
@@ -17,6 +17,7 @@ const PREFIX = "home-gestor-academy";
 const ATALHOS = [
   { key: "academy_performance_hub" as const, icon: GraduationCap },
   { key: "academy_portal" as const, icon: BookOpen },
+  { key: "academy_cronograma" as const, icon: CalendarRange },
   { key: "ajuda" as const, icon: HelpCircle },
 ];
 

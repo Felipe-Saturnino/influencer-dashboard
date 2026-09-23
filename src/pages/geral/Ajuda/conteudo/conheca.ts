@@ -1072,6 +1072,25 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       },
     ],
   },
+  academy_cronograma: {
+    titulo: "Cronograma",
+    blocos: [
+      {
+        texto:
+          "Catálogo do onboarding de Prestadores: **cronogramas**, **trilhas**, **materiais das aulas** e **provas**. O cronograma é o currículo — uma sequência de trilhas, sem datas. Datas, treinador e check-in ficam em **Gestão de Turmas** (página seguinte).\n\nNão mistura com o **Portal da Academy** (comunicados, dicas e manuais) nem com o **Performance Hub** (avaliação de desempenho). Os materiais desta página são lidos na turma.\n\nO acesso começa bloqueado para todos os perfis, exceto **Administrador**. Libere em **Gestão de Usuários → Permissões**.",
+      },
+      {
+        subtitulo: "Abas",
+        texto:
+          "**Cronogramas** — escolha um currículo, veja a ordem das trilhas, a duração prevista e quantas provas entram na sequência.\n\n**Trilhas** — módulos reutilizáveis (Institucional, Jogo, Operação ou Prática). Uma trilha pode entrar em vários cronogramas e também ser usada sozinha no retreinamento.\n\n**Materiais** — PDF, vídeo ou apresentação da aula, com introdução e arquivo.\n\n**Provas** — múltipla escolha, nota mínima e gabarito. A nota **não** libera o prestador para Live — isso continua com o treinador.",
+      },
+      {
+        subtitulo: "Filtros e ações",
+        texto:
+          "Na aba Cronogramas, o seletor escolhe o currículo e **Novo Cronograma** cria outro. Nas outras abas, a busca ignora acentos e o filtro **Status** começa em **Publicado** (troque para **Arquivado** quando precisar). **Ver** e **Editar** são ícones com tooltip, no padrão da plataforma.",
+      },
+    ],
+  },
   playbook_influencers: {
     titulo: "Playbook Influencers",
     blocos: [

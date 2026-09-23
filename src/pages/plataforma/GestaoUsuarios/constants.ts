@@ -156,6 +156,14 @@ const PAGES_META: {
     hasEditar: true,
     hasExcluir: false,
   },
+  {
+    key: "academy_cronograma",
+    label: "Cronograma",
+    secao: "Academy",
+    hasCriar: true,
+    hasEditar: true,
+    hasExcluir: false,
+  },
   // Escala (ordem = menu.ts)
   { key: "rh_staff", label: "Gestão de Staff", secao: "Escala", hasCriar: false, hasEditar: true, hasExcluir: false },
   { key: "escala_solicitacoes", label: "Solicitações de Cliente", secao: "Escala", hasCriar: true, hasEditar: true, hasExcluir: false },

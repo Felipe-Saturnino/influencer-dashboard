@@ -12,7 +12,7 @@ export const ALL_PAGE_KEYS: PageKey[] = [
   "influencers", "scout", "afiliados", "afiliados_network", "financeiro", "banca_jogo", "gestao_links", "campanhas", "galeria_fotos",
   "comercial_integracao", "comercial_pipeline_b2b", "comercial_pipeline_agregadoras", "cs_atendimento",
   "gestao_dealers", "central_notificacoes", "rh_figurinos", "roteiro_mesa", "incidentes", "escala_controle_turno",
-  "academy_performance_hub", "academy_portal",
+  "academy_performance_hub", "academy_portal", "academy_cronograma",
   "rh_staff", "escala_solicitacoes", "rh_gestao_escala", "rh_calendario", "escala_marketplace_turnos",
   "rh_funcionarios", "rh_dados_cadastro", "rh_organograma", "escala_escritorio", "rh_vagas", "rh_solicitacoes", "rh_central_denuncias",
   "playbook_influencers", "links_materiais", "spin_na_rede", "rh_portal", "informativos",

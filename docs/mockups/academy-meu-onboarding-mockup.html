@@ -34,6 +34,11 @@
       display: flex; flex-wrap: wrap; align-items: center; gap: 12px; font-size: 12px;
     }
     .mockup-bar strong { color: #a78bfa; }
+    .mockup-bar button {
+      font-family: var(--font); font-size: 12px; padding: 5px 10px;
+      border-radius: 6px; border: 1px solid #3a3a5c; background: #2a2a40; color: #fff; cursor: pointer;
+    }
+    .mockup-bar button.active { background: var(--brand-primary); border-color: var(--brand-primary); }
     .page-shell { max-width: 1040px; margin: 0 auto; }
     .page-header { margin-bottom: 18px; }
     .page-header-row { display: flex; align-items: center; gap: 10px; }
@@ -127,22 +132,43 @@
     }
     .comentario-treinador .autor { font-style: normal; font-weight: 700; font-size: 12px; color: var(--text-muted); margin-top: 10px; }
 
-    /* Hero da turma */
+    /* Resumo da turma — mesmo bloco de conteúdo da plataforma */
     .turma-hero {
-      background: linear-gradient(135deg, #2c1152, #182a8f);
-      color: #fff; border-radius: var(--radius-box); padding: 22px 24px; margin-bottom: 14px;
+      background: var(--card-bg); border: 1px solid var(--card-border); border-radius: var(--radius-box);
+      box-shadow: var(--shadow); padding: 20px; margin-bottom: 14px;
       display: flex; flex-wrap: wrap; gap: 20px; align-items: center; justify-content: space-between;
     }
-    .turma-hero .info h2 { font-size: 17px; font-weight: 800; margin-bottom: 4px; }
-    .turma-hero .info .meta { font-size: 12px; color: #c9c3f5; display: flex; flex-wrap: wrap; gap: 10px; }
+    .turma-hero .info h2 { font-size: 16px; font-weight: 800; margin-bottom: 6px; color: var(--text); }
+    .turma-hero .info .meta { font-size: 12px; color: var(--text-muted); display: flex; flex-wrap: wrap; gap: 10px; }
     .turma-hero .progresso { min-width: 220px; }
-    .turma-hero .progresso .rotulo { font-size: 11px; color: #c9c3f5; margin-bottom: 6px; display: flex; justify-content: space-between; }
-    .progress-track { width: 100%; height: 8px; border-radius: 999px; background: rgba(255,255,255,0.15); overflow: hidden; }
-    .progress-track.light { background: var(--input-bg); border: 1px solid var(--card-border); }
-    .progress-fill { height: 100%; background: linear-gradient(90deg, #a78bfa, #60a5fa); border-radius: 999px; }
+    .turma-hero .progresso .rotulo { font-size: 11px; color: var(--text-muted); margin-bottom: 6px; display: flex; justify-content: space-between; }
+    .progress-track { width: 100%; height: 8px; border-radius: 999px; background: var(--input-bg); border: 1px solid var(--card-border); overflow: hidden; }
+    .progress-fill { height: 100%; background: var(--brand-primary); border-radius: 999px; }
     .stat-row { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 14px; }
-    .stat-row .stat { font-size: 12px; color: #c9c3f5; }
-    .stat-row .stat strong { display: block; font-size: 18px; color: #fff; font-weight: 800; }
+    .stat-row .stat { font-size: 12px; color: var(--text-muted); }
+    .stat-row .stat strong { display: block; font-size: 18px; color: var(--text); font-weight: 800; }
+    .checkin-box { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+    .checkin-box .hora { font-size: 13px; color: var(--text-muted); }
+    .checkin-box .hora strong { color: var(--text); }
+    .filtro-select-label { font-size: 12px; font-weight: 600; color: var(--text-muted); }
+    .filtro-select {
+      min-width: 240px; font-family: var(--font); font-size: 13px; padding: 8px 12px;
+      border-radius: 999px; border: 1px solid var(--card-border); background: var(--input-bg);
+    }
+    .pill {
+      display: inline-flex; align-items: center; padding: 6px 14px; border-radius: 999px;
+      border: 1px solid var(--card-border); background: var(--input-bg); font-size: 13px; cursor: pointer;
+    }
+    .pill.active { border-color: color-mix(in srgb, var(--brand-secondary) 35%, transparent); background: color-mix(in srgb, var(--brand-secondary) 15%, transparent); color: var(--brand-secondary); font-weight: 700; }
+    .cert-sheet {
+      border: 1px solid var(--card-border); border-radius: 12px; padding: 36px 28px; text-align: center;
+      background: color-mix(in srgb, var(--brand-primary) 4%, #fff);
+    }
+    .cert-sheet .cert-kicker { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--brand-primary); font-weight: 700; }
+    .cert-sheet h3 { font-size: 22px; margin: 10px 0 18px; color: var(--text); text-transform: none; letter-spacing: 0; }
+    .cert-sheet p { font-size: 13px; color: var(--text-muted); }
+    .cert-sheet .cert-nome { font-size: 26px; font-weight: 800; color: var(--text); margin: 10px 0; }
+    .cert-sheet .cert-curso { font-size: 16px; font-weight: 700; color: var(--brand-primary); margin: 8px 0 16px; }
 
     /* Timeline do prestador */
     .timeline { display: flex; flex-direction: column; gap: 0; }
@@ -203,9 +229,12 @@
 <body>
 
 <div class="mockup-bar">
-  <strong>MOCKUP</strong> Academy → Meu Onboarding
+  <strong>MOCKUP Onboarding · 3/3</strong> Academy → Meu Onboarding
   <span style="opacity:0.4">|</span>
-  <span>3 de 4 páginas da Academy · visão do prestador da própria turma — leitura + fazer prova. Presença e liberação são do instrutor.</span>
+  <span>PageKey sugerido: <code>academy_meu_onboarding</code> · duas visões no mesmo mockup (Admin / Prestador). Cursos Livres fica fora desta feature.</span>
+  <span style="opacity:0.4">|</span>
+  <button type="button" class="active" id="btnVisaoPrestador" onclick="setVisao('prestador')">Prestador</button>
+  <button type="button" id="btnVisaoAdmin" onclick="setVisao('admin')">Admin</button>
 </div>
 
 <div class="page-shell">
@@ -216,28 +245,54 @@
       </div>
       <h1>Meu Onboarding</h1>
     </div>
-    <p class="subtitle">Acompanhe sua turma de formação, dia a dia.</p>
+    <p class="subtitle" id="pageSubtitle">Acompanhe sua turma de formação, dia a dia.</p>
   </header>
+
+  <div class="filter-box" id="filtroAdmin" hidden>
+    <div class="filter-row">
+      <label class="filtro-select-label" for="selectPrestador">Prestador</label>
+      <select class="filtro-select" id="selectPrestador" onchange="trocarPrestadorAdmin(this.value)">
+        <option value="pedro">Pedro Alves</option>
+        <option value="larissa">Larissa Souza</option>
+        <option value="thiago">Thiago Ramos</option>
+      </select>
+      <button type="button" class="pill" onclick="setVisao('prestador')">Meu Onboarding</button>
+      <button type="button" class="btn-modal" title="Ajuda contextual — tutorial da página" style="margin-left:auto">Ajuda</button>
+    </div>
+  </div>
 
   <div class="turma-hero">
     <div class="info">
-      <h2>Onboarding GP — Outubro <span class="badge badge-ok" style="vertical-align:middle;margin-left:6px">Em andamento</span></h2>
+      <h2 id="heroTitulo">Onboarding GP — Outubro <span class="badge badge-ok" style="vertical-align:middle;margin-left:6px">Em andamento</span></h2>
       <div class="meta">
         <span>Turma GP-14</span>
         <span>·</span>
-        <span>Instrutora Juliana Mendes</span>
+        <span>Treinador Juliana Mendes</span>
         <span>·</span>
         <span>Hoje: 08:00 – 12:00</span>
       </div>
       <div class="stat-row">
         <div class="stat"><strong>4/8</strong>Trilhas concluídas</div>
         <div class="stat"><strong>2/2</strong>Provas aprovadas</div>
-        <div class="stat"><strong>100%</strong>Presença</div>
+        <div class="stat"><strong>8/8</strong>Check-ins aprovados</div>
       </div>
     </div>
     <div class="progresso">
       <div class="rotulo"><span>Dia 6 de 15</span><span>40%</span></div>
       <div class="progress-track"><div class="progress-fill" style="width:40%"></div></div>
+    </div>
+  </div>
+
+  <div class="content-box" id="blocoCheckin">
+    <div class="checkin-box">
+      <div>
+        <h2 class="section-title" style="margin-bottom:6px">Presença de hoje</h2>
+        <p class="hora">Horário da turma <strong>08:00 – 12:00</strong> · Check-in às <strong id="checkinHora">—</strong> · Check-out <strong id="checkoutHora">—</strong></p>
+      </div>
+      <div id="checkinAcoes" style="display:flex;gap:8px;flex-wrap:wrap">
+        <button type="button" class="cta" id="btnCheckin" onclick="fazerCheckin()">Check-in</button>
+        <button type="button" class="btn-modal" id="btnCheckout" disabled onclick="fazerCheckout()">Check-out</button>
+      </div>
     </div>
   </div>
 
@@ -251,14 +306,15 @@
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
         Avaliação
       </button>
+      <button type="button" class="btn-modal" title="Ajuda contextual — tutorial da página" style="margin-left:auto">Ajuda</button>
     </div>
   </div>
 
   <!-- ═══ ABA CRONOGRAMA ═══ -->
   <div id="panel-cronograma" class="panel active">
   <div class="hint-box">
-    Esta é a agenda da <strong>sua</strong> turma — não é um catálogo pra navegar livremente. Presença é marcada pela sua instrutora.
-    A liberação para a mesa acontece quando todas as trilhas forem concluídas — é sempre uma decisão da instrutora, a prova aprovada não libera sozinha.
+    Esta é a agenda da <strong>sua</strong> turma — não é um catálogo pra navegar livremente. Você faz check-in e check-out; o treinador só aprova ou ajusta.
+    Se reprovar uma prova, ela some até o treinador liberar de novo. A liberação para a mesa grava Fim de Treinamento no cadastro — a prova aprovada não libera sozinha.
   </div>
 
   <div class="content-box">
@@ -271,8 +327,8 @@
           <h3>Onboarding Spin <span class="tipo-tag">Institucional</span></h3>
           <div class="timeline-meta"><span>Dia 1</span><span class="badge badge-ok">Concluída</span></div>
           <div class="material-list">
-            <div class="material-row"><span class="icon">📄</span><span class="nome">Código de ética, LGPD e compliance</span><button class="btn-icon" title="Baixar">↓</button></div>
-            <div class="material-row"><span class="icon">📄</span><span class="nome">Conhecendo o business Spin</span><button class="btn-icon" title="Baixar">↓</button></div>
+            <div class="material-row"><span class="icon">PDF</span><span class="nome">Código de ética, LGPD e compliance</span><button class="btn-icon" title="Baixar">↓</button></div>
+            <div class="material-row"><span class="icon">PDF</span><span class="nome">Conhecendo o business Spin</span><button class="btn-icon" title="Baixar">↓</button></div>
           </div>
         </article>
       </div>
@@ -283,7 +339,7 @@
           <h3>Imagem e postura <span class="tipo-tag">Institucional</span></h3>
           <div class="timeline-meta"><span>Dia 1</span><span class="badge badge-ok">Concluída</span></div>
           <div class="material-list">
-            <div class="material-row"><span class="icon">📄</span><span class="nome">Política de imagem e postura</span><button class="btn-icon" title="Baixar">↓</button></div>
+            <div class="material-row"><span class="icon">PDF</span><span class="nome">Política de imagem e postura</span><button class="btn-icon" title="Baixar">↓</button></div>
           </div>
         </article>
       </div>
@@ -294,10 +350,10 @@
           <h3>Blackjack <span class="tipo-tag">Jogo</span></h3>
           <div class="timeline-meta"><span>Dias 1 a 5</span><span class="badge badge-ok">Concluída</span></div>
           <div class="material-list">
-            <div class="material-row"><span class="icon">📄</span><span class="nome">Blackjack — regras e contagem</span><button class="btn-icon" title="Baixar">↓</button></div>
-            <div class="material-row"><span class="icon">📄</span><span class="nome">Blackjack — apostas laterais</span><button class="btn-icon" title="Baixar">↓</button></div>
-            <div class="material-row"><span class="icon">🎬</span><span class="nome">Blackjack — software e sabot</span><button class="btn-icon" title="Assistir">▶</button></div>
-            <div class="material-row"><span class="icon">📄</span><span class="nome">Incidentes em Blackjack</span><button class="btn-icon" title="Baixar">↓</button></div>
+            <div class="material-row"><span class="icon">PDF</span><span class="nome">Blackjack — regras e contagem</span><button class="btn-icon" title="Baixar">↓</button></div>
+            <div class="material-row"><span class="icon">PDF</span><span class="nome">Blackjack — apostas laterais</span><button class="btn-icon" title="Baixar">↓</button></div>
+            <div class="material-row"><span class="icon">VID</span><span class="nome">Blackjack — software e sabot</span><button class="btn-icon" title="Assistir">▶</button></div>
+            <div class="material-row"><span class="icon">PDF</span><span class="nome">Incidentes em Blackjack</span><button class="btn-icon" title="Baixar">↓</button></div>
           </div>
           <div class="prova-status"><span class="badge badge-ok">Prova: 90% · Aprovado</span></div>
         </article>
@@ -309,7 +365,7 @@
           <h3>Procedimentos do Sistema <span class="tipo-tag">Operação</span></h3>
           <div class="timeline-meta"><span>Dia 5</span><span class="badge badge-ok">Concluída</span></div>
           <div class="material-list">
-            <div class="material-row"><span class="icon">📄</span><span class="nome">Botões do sistema e jogo responsável</span><button class="btn-icon" title="Baixar">↓</button></div>
+            <div class="material-row"><span class="icon">PDF</span><span class="nome">Botões do sistema e jogo responsável</span><button class="btn-icon" title="Baixar">↓</button></div>
           </div>
           <div class="prova-status"><span class="badge badge-ok">Prova: 85% · Aprovado</span></div>
         </article>
@@ -321,9 +377,9 @@
           <h3>Roleta <span class="tipo-tag">Jogo</span> <span class="badge badge-info">HOJE</span></h3>
           <div class="timeline-meta"><span>Dias 5 a 7</span></div>
           <div class="material-list">
-            <div class="material-row"><span class="icon">📄</span><span class="nome">Roleta — regras e tipos de aposta</span><button class="btn-icon" title="Baixar">↓</button></div>
-            <div class="material-row"><span class="icon">📄</span><span class="nome">Roleta — mesa e giro</span><button class="btn-icon" title="Baixar">↓</button></div>
-            <div class="material-row"><span class="icon">🎬</span><span class="nome">Roleta — anúncio e pagamento</span><button class="btn-icon" title="Assistir">▶</button></div>
+            <div class="material-row"><span class="icon">PDF</span><span class="nome">Roleta — regras e tipos de aposta</span><button class="btn-icon" title="Baixar">↓</button></div>
+            <div class="material-row"><span class="icon">PDF</span><span class="nome">Roleta — mesa e giro</span><button class="btn-icon" title="Baixar">↓</button></div>
+            <div class="material-row"><span class="icon">VID</span><span class="nome">Roleta — anúncio e pagamento</span><button class="btn-icon" title="Assistir">▶</button></div>
           </div>
           <div class="prova-status" id="statusProvaRoleta">
             <span class="badge badge-warn">Prova disponível</span>
@@ -333,29 +389,29 @@
       </div>
 
       <div class="timeline-step">
-        <div class="timeline-rail"><div class="timeline-dot">🔒</div><div class="timeline-line"></div></div>
+        <div class="timeline-rail"><div class="timeline-dot">–</div><div class="timeline-line"></div></div>
         <article class="timeline-card futura">
           <h3>Baccarat <span class="tipo-tag">Jogo</span></h3>
           <div class="timeline-meta"><span>Dias 8 e 9</span></div>
-          <p class="locked-msg">🔒 Libera quando você concluir a trilha Roleta.</p>
+          <p class="locked-msg">Libera quando você concluir a trilha Roleta.</p>
         </article>
       </div>
 
       <div class="timeline-step">
-        <div class="timeline-rail"><div class="timeline-dot">🔒</div><div class="timeline-line"></div></div>
+        <div class="timeline-rail"><div class="timeline-dot">–</div><div class="timeline-line"></div></div>
         <article class="timeline-card futura">
           <h3>Futebol Studio <span class="tipo-tag">Jogo</span></h3>
           <div class="timeline-meta"><span>Dias 11 e 12</span></div>
-          <p class="locked-msg">🔒 Libera na sequência do cronograma.</p>
+          <p class="locked-msg">Libera na sequência do cronograma.</p>
         </article>
       </div>
 
       <div class="timeline-step">
-        <div class="timeline-rail"><div class="timeline-dot">🔒</div></div>
+        <div class="timeline-rail"><div class="timeline-dot">–</div></div>
         <article class="timeline-card futura">
           <h3>Prática e rotação <span class="tipo-tag">Prática</span></h3>
           <div class="timeline-meta"><span>Dias 7, 10, 13 a 15</span></div>
-          <p class="locked-msg">🔒 Prática supervisionada em sala — sua instrutora avisa quando começar.</p>
+          <p class="locked-msg">Prática supervisionada em sala — o treinador avisa quando começar.</p>
         </article>
       </div>
 
@@ -386,7 +442,7 @@
       <div class="kpi-card">
         <div class="bar" style="background:#7c3aed"></div>
         <div class="body">
-          <div class="kpi-label">Avaliação geral da instrutora</div>
+          <div class="kpi-label">Avaliação geral da turma</div>
           <div class="kpi-value" style="font-size:16px">Muito bom</div>
           <div class="kpi-vs">Atualizado em 22/09/2026</div>
         </div>
@@ -435,31 +491,31 @@
     </div>
 
     <div class="content-box">
-      <h2 class="section-title">Relatório da instrutora <span class="sub">observações registradas em sala, ao longo da turma</span></h2>
+      <h2 class="section-title">Relatório de Acompanhamento <span class="sub">mesmo log da página Gestão de Turmas — somente leitura</span></h2>
       <div class="relatorio-item"><span>Postura e imagem</span><span class="badge badge-ok">Ótimo</span></div>
       <div class="relatorio-item"><span>Domínio das regras do jogo</span><span class="badge badge-ok">Ótimo</span></div>
       <div class="relatorio-item"><span>Agilidade e postura na mesa</span><span class="badge badge-warn">A desenvolver</span></div>
       <div class="relatorio-item"><span>Atendimento e comunicação</span><span class="badge badge-ok">Bom</span></div>
       <div class="comentario-treinador">
-        "Ponto de atenção pra semana que vem: ganhar mais fluidez nas apostas de Roleta antes da prática supervisionada."
-        <div class="autor">— Juliana Mendes, instrutora · 22/09/2026</div>
+        <div class="autor">22/09/2026 · Juliana Mendes, treinador</div>
+        Muito atento aos procedimentos e à parte institucional. Em Blackjack, mostrou domínio rápido das regras e das apostas laterais.
+        Ponto de atenção pra próxima semana: ganhar mais fluidez nas apostas de Roleta antes da prática supervisionada.
       </div>
       <div class="comentario-treinador" style="margin-top:10px">
-        "Em Blackjack, mostrou domínio rápido das regras e das apostas laterais."
-        <div class="autor">— Juliana Mendes, instrutora · 20/09/2026</div>
-      </div>
-      <div class="comentario-treinador" style="margin-top:10px">
-        "Primeiro dia de turma — bastante atento à parte institucional e ao código de conduta."
-        <div class="autor">— Juliana Mendes, instrutora · 18/09/2026</div>
+        <div class="autor">19/09/2026 · Juliana Mendes, treinador</div>
+        Chegou pontual e participou da aula de Blackjack. Ainda trava nas apostas laterais — reforçar material antes da prova.
       </div>
     </div>
 
     <div class="content-box">
       <h2 class="section-title">Liberação para a mesa</h2>
       <p style="font-size:13px;color:var(--text-muted)">
-        Você está em formação — 4 de 8 trilhas concluídas, nota média de 88% nas provas realizadas. A liberação para atender ao vivo
-        é uma decisão da sua instrutora, tomada quando o cronograma inteiro estiver concluído — passar em todas as provas é necessário,
-        mas não libera sozinho.
+        Você está em formação — 4 de 8 trilhas concluídas, nota média de 88% nas provas realizadas. Quando o treinador liberar,
+        o campo <strong>Fim de Treinamento</strong> é preenchido no cadastro RH e o certificado padrão da Academy fica disponível aqui.
+        Passar nas provas é necessário, mas não libera sozinho.
+      </p>
+      <p style="margin-top:12px">
+        <button type="button" class="btn-modal" disabled title="Disponível depois do Fim de Treinamento">Ver certificado</button>
       </p>
     </div>
   </div>
@@ -480,6 +536,31 @@
     <div class="modal-footer">
       <span class="modal-footer-msg" id="provaErro"></span>
       <button type="button" class="btn-modal primary" id="btnEnviarProva" onclick="enviarProva()">Enviar prova</button>
+    </div>
+  </div>
+</div>
+
+<div id="modalCertificado" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalCertificadoTitulo" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal-panel">
+    <div class="modal-header">
+      <button type="button" class="modal-close" onclick="document.getElementById('modalCertificado').classList.remove('open')" aria-label="Fechar">✕</button>
+      <h2 id="modalCertificadoTitulo">Certificado</h2>
+      <p class="modal-sub">Layout padrão da Academy — só os preenchimentos mudam. O mesmo gerador serve no onboarding e nos cursos livres.</p>
+    </div>
+    <div class="modal-body">
+      <div class="cert-sheet">
+        <p class="cert-kicker">Academy Spin Gaming</p>
+        <h3>Certificado de conclusão</h3>
+        <p>Certificamos que</p>
+        <p class="cert-nome">Pedro Alves</p>
+        <p>concluiu o cronograma</p>
+        <p class="cert-curso">Onboarding de Game Presenter</p>
+        <p>Turma GP-14 · Treinador Juliana Mendes · Fim de Treinamento —</p>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn-modal" onclick="document.getElementById('modalCertificado').classList.remove('open')">Fechar</button>
+      <button type="button" class="btn-modal primary" onclick="document.getElementById('modalCertificado').classList.remove('open')">Gerar PDF</button>
     </div>
   </div>
 </div>
@@ -549,26 +630,24 @@
     body.innerHTML =
       '<div class="resultado-prova ' + (aprovado ? "aprovado" : "reprovado") + '">' +
       '<div class="nota">' + nota + "%</div>" +
-      "<p style=\"font-weight:700;margin-bottom:6px\">" + (aprovado ? "Aprovado! 🎉" : "Não foi dessa vez") + "</p>" +
+      "<p style=\"font-weight:700;margin-bottom:6px\">" + (aprovado ? "Aprovado" : "Não foi dessa vez") + "</p>" +
       '<p style="font-size:13px;color:var(--text-muted)">' +
       (aprovado
         ? "Sua trilha de Roleta foi marcada como concluída."
-        : "Nota mínima: " + PROVA_ROLETA.notaMinima + "%. Revise o material com sua instrutora e tente de novo.") +
+        : "Nota mínima: " + PROVA_ROLETA.notaMinima + "%. A prova ficou bloqueada até o treinador liberar de novo.") +
       "</p></div>";
     const btn = document.getElementById("btnEnviarProva");
-    if (aprovado) {
-      btn.textContent = "Fechar";
-      btn.onclick = function () {
-        fecharModalProva();
-        marcarRoletaConcluida(nota);
-      };
-    } else {
-      btn.textContent = "Tentar novamente";
-      btn.onclick = function () {
-        renderProva();
-        document.getElementById("provaErro").textContent = "";
-      };
-    }
+    btn.textContent = "Fechar";
+    btn.onclick = function () {
+      fecharModalProva();
+      if (aprovado) marcarRoletaConcluida(nota);
+      else marcarRoletaBloqueada(nota);
+    };
+  }
+
+  function marcarRoletaBloqueada(nota) {
+    document.getElementById("statusProvaRoleta").innerHTML =
+      '<span class="badge badge-negativo">Reprovado · ' + nota + '%</span><span class="badge badge-muted">Aguardando o treinador liberar novamente</span>';
   }
 
   function marcarRoletaConcluida(nota) {
@@ -595,8 +674,49 @@
     el.setAttribute("aria-selected", "true");
   }
 
+  function setVisao(visao) {
+    const admin = visao === "admin";
+    document.getElementById("btnVisaoAdmin").classList.toggle("active", admin);
+    document.getElementById("btnVisaoPrestador").classList.toggle("active", !admin);
+    document.getElementById("filtroAdmin").hidden = !admin;
+    document.getElementById("pageSubtitle").textContent = admin
+      ? "Consulta e acompanhamento do onboarding de qualquer prestador em formação."
+      : "Acompanhe sua turma de formação, dia a dia.";
+    const acoes = document.getElementById("checkinAcoes");
+    if (admin) {
+      acoes.innerHTML = '<span class="badge badge-muted">Somente leitura — check-in é ação do prestador</span>';
+    } else {
+      acoes.innerHTML =
+        '<button type="button" class="cta" id="btnCheckin" onclick="fazerCheckin()">Check-in</button>' +
+        '<button type="button" class="btn-modal" id="btnCheckout" disabled onclick="fazerCheckout()">Check-out</button>';
+    }
+  }
+
+  function trocarPrestadorAdmin(id) {
+    const nomes = { pedro: "Pedro Alves", larissa: "Larissa Souza", thiago: "Thiago Ramos" };
+    document.getElementById("heroTitulo").innerHTML =
+      "Onboarding GP — Outubro · " + (nomes[id] || id) + ' <span class="badge badge-ok" style="vertical-align:middle;margin-left:6px">Em andamento</span>';
+  }
+
+  function fazerCheckin() {
+    document.getElementById("checkinHora").textContent = "08:04";
+    const btn = document.getElementById("btnCheckin");
+    const out = document.getElementById("btnCheckout");
+    if (btn) { btn.disabled = true; btn.textContent = "Check-in feito"; }
+    if (out) out.disabled = false;
+  }
+
+  function fazerCheckout() {
+    document.getElementById("checkoutHora").textContent = "12:01";
+    const out = document.getElementById("btnCheckout");
+    if (out) { out.disabled = true; out.textContent = "Check-out feito"; }
+  }
+
   document.addEventListener("keydown", function (e) {
-    if (e.key === "Escape") fecharModalProva();
+    if (e.key === "Escape") {
+      fecharModalProva();
+      document.getElementById("modalCertificado").classList.remove("open");
+    }
   });
 </script>
 </body>

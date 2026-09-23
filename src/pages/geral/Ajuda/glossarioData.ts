@@ -1585,7 +1585,7 @@ export const GLOSSARIO_CATEGORIA_PAGE_KEYS: Record<string, PageKey[]> = {
   permissoes_plataforma: ["gestao_usuarios", "gestao_operadoras", "gestao_mesas", "status_tecnico"],
   home_perfis: ["informativos", "mesas_spin", "streamers", "gestao_operadoras"],
   whitelabel: ["gestao_operadoras"],
-  academy: ["academy_performance_hub", "academy_portal"],
+  academy: ["academy_performance_hub", "academy_portal", "academy_cronograma"],
   tech_ops_estoque: ["tech_ops_estoque"],
   tech_ops_ordem_saida: ["tech_ops_ordem_saida"],
   tech_ops_itens_alocados: ["tech_ops_itens_alocados"],

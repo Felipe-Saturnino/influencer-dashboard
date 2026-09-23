@@ -288,6 +288,12 @@ export const APP_ROUTE_CATALOG: AppRouteDef[] = [
       access: "academy_portal_gerenciamento",
     },
   ]),
+  page("Cronograma", "academy_cronograma", "Cronograma", [
+    { tabId: "cronogramas", slug: "Cronogramas", label: "Cronogramas", access: "always" },
+    { tabId: "trilhas", slug: "Trilhas", label: "Trilhas", access: "always" },
+    { tabId: "materiais", slug: "Materiais", label: "Materiais", access: "always" },
+    { tabId: "provas", slug: "Provas", label: "Provas", access: "always" },
+  ]),
   page("Informativos", "informativos", "Informativos", [
     { tabId: "informativos", slug: "Informativos", label: "Informativos", access: "always" },
     {

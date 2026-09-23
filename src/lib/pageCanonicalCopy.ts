@@ -92,6 +92,7 @@ export const PAGE_CANONICAL_SUBTITLE: Partial<Record<PageKey, string>> = {
   // ── Academy / CS ───────────────────────────────────────────────────
   academy_performance_hub: "Portal de avaliação de desempenho dos Prestadores.",
   academy_portal: "Comunicados, dicas e manuais de treinamento para a operação.",
+  academy_cronograma: "Monte as trilhas, os materiais das aulas e as provas dos cronogramas de entrada e atualização.",
   cs_atendimento:
     "Gerencie os chamados para CS, acompanhe SLA e veja os atendimentos da equipe.",
 };

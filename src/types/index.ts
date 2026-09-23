@@ -50,6 +50,7 @@ export type PageKey =
   | "dash_overview_prestador"
   | "academy_performance_hub"
   | "academy_portal"
+  | "academy_cronograma"
   | "mesas_spin"
   | "dash_midias_sociais"
   | "agenda"

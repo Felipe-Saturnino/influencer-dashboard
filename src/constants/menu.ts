@@ -139,6 +139,7 @@ export const MENU: MenuSection[] = [
     items: [
       { key: "academy_performance_hub", label: "Performance Hub", icon: GraduationCap },
       { key: "academy_portal", label: "Portal da Academy", icon: BookOpen },
+      { key: "academy_cronograma", label: "Cronograma", icon: CalendarRange },
     ],
   },
   {

@@ -5,6 +5,7 @@ globs:
   - src/pages/academy/**/*.ts
   - src/lib/academyPerformanceHub*.ts
   - src/lib/academyPortal*.ts
+  - src/lib/academyCronograma*.ts
 alwaysApply: false
 ---
 
@@ -22,6 +23,7 @@ alwaysApply: false
 |---|---|---|
 | `academy_performance_hub` | Performance Hub | Portal de avaliação de desempenho dos Prestadores. |
 | `academy_portal` | Portal da Academy | Comunicados, dicas e manuais de treinamento para a operação. |
+| `academy_cronograma` | Cronograma | Monte as trilhas, os materiais das aulas e as provas dos cronogramas de entrada e atualização. |
 
 ---
 
@@ -31,10 +33,41 @@ alwaysApply: false
 |---------|--------|---------|
 | `academy_performance_hub` | Performance Hub | `academy/PerformanceHub/` |
 | `academy_portal` | Portal da Academy | `academy/PortalAcademy/` |
+| `academy_cronograma` | Cronograma | `academy/Cronograma/` |
 
-**Ajuda contextual:** ambas as páginas usam **`AjudaContextualAcoes`** no grupo de ações à direita da linha principal da barra de filtros (contrato em `geral.mdc` § Ajuda contextual). **Performance Hub:** Conheça + Troubleshooting; tutorial por aba — **Avaliações** → `performance-hub-analisar-avaliacao` (`PerformanceHubAnalisarAvaliacao`); **Feedback** → `performance-hub-aplicar-feedback` (`PerformanceHubAplicarFeedback`); **Gerenciamento** → `performance-hub-avaliar` (`PerformanceHubAvaliar`); **Configuração** → `performance-hub-configuracao-pesos` (`PerformanceHubConfiguracaoPesos`). **Portal da Academy:** tutorial por aba — **Manuais** → `ciencia-manuais-academy` (`CienciaManuaisAcademy`); **Gerenciamento** → `postagem-academy-aprovacao` (`DicasAcademy`); **Comunicados** e **Dicas** sem tutorial. O grupo entra via prop `acoesAjuda` de `PortalAcademyBlocoFiltros`, na mesma linha do carrossel e do Histórico.
+**Ajuda contextual:** as páginas Academy usam **`AjudaContextualAcoes`** no grupo de ações à direita da linha principal da barra de filtros (contrato em `geral.mdc` § Ajuda contextual). **Performance Hub:** Conheça + Troubleshooting; tutorial por aba — **Avaliações** → `performance-hub-analisar-avaliacao` (`PerformanceHubAnalisarAvaliacao`); **Feedback** → `performance-hub-aplicar-feedback` (`PerformanceHubAplicarFeedback`); **Gerenciamento** → `performance-hub-avaliar` (`PerformanceHubAvaliar`); **Configuração** → `performance-hub-configuracao-pesos` (`PerformanceHubConfiguracaoPesos`). **Portal da Academy:** tutorial por aba — **Manuais** → `ciencia-manuais-academy` (`CienciaManuaisAcademy`); **Gerenciamento** → `postagem-academy-aprovacao` (`DicasAcademy`); **Comunicados** e **Dicas** sem tutorial. **Cronograma:** Conheça + Troubleshooting; sem tutorial na v1. O grupo entra via prop `acoesAjuda` de `PortalAcademyBlocoFiltros` (Portal) ou na linha de abas (`CronogramaFiltroBar` / Performance Hub).
 
-Libs de domínio: `src/lib/academyPerformanceHubTypes.ts`, `academyPerformanceHubScoring.ts`, `academyPerformanceHubConstants.ts`, `academyPerformanceHubMockData.ts` (temporário até schema Supabase); **`academyPortalWorkflow.ts`**, **`academyPortalPostagemFiles.ts`**, **`academyPortalJogosMesa.ts`**, **`academyPortalAutorMeta.ts`**, **`academyPortalCiencia.ts`**, **`academyPortalAplicavel.ts`**, **`academyPortalManualCodigo.ts`**, **`academyPortalUi.ts`**.
+Libs de domínio: `src/lib/academyPerformanceHubTypes.ts`, `academyPerformanceHubScoring.ts`, `academyPerformanceHubConstants.ts`, `academyPerformanceHubMockData.ts` (temporário até schema Supabase); **`academyPortalWorkflow.ts`**, **`academyPortalPostagemFiles.ts`**, **`academyPortalJogosMesa.ts`**, **`academyPortalAutorMeta.ts`**, **`academyPortalCiencia.ts`**, **`academyPortalAplicavel.ts`**, **`academyPortalManualCodigo.ts`**, **`academyPortalUi.ts`**; **`academyCronogramaTypes.ts`**, **`academyCronogramaConstants.ts`**, **`academyCronogramaDb.ts`**, **`academyCronogramaUi.ts`**.
+
+---
+
+## Cronograma (`academy_cronograma`)
+
+Catálogo próprio do onboarding — **sem** vínculo com Portal da Academy, Performance Hub, `mesas_spin` ou financeiro. Gestão de Turmas e Meu Onboarding consomem este catálogo depois.
+
+### Personas e permissões
+
+| Perfil | Escopo |
+|--------|--------|
+| **Admin** | Irrestrito |
+| **Demais** | Migração `20260923190000_academy_cronograma.sql` — Ver/Criar/Editar/Excluir = **Não**. Criar = CTAs; Editar = gravar, reordenar, arquivar. |
+
+### Abas
+
+| Aba | Função |
+|-----|--------|
+| Cronogramas | Seletor do currículo + ordem das trilhas (sem datas) + KPIs (trilhas, provas, duração) |
+| Trilhas | Catálogo de módulos (Institucional / Jogo / Operação / Prática). Jogo: lista estática Blackjack, Roleta, Baccarat, Futebol Brasileiro |
+| Materiais | Arquivo da aula (PDF/vídeo/apresentação) — lido na turma, não no Portal |
+| Provas | Múltipla escolha; nota mínima; gabarito. A nota **não** libera Live |
+
+Filtro **Status** nas abas de catálogo: Publicado (default) \| Arquivado. Busca com `textoContemBuscaEmAlgum`. Tabelas paginam 20 (`TabelaPaginacaoBar`). Ações **Ver** / **Editar** = `BtnIconeAcaoLinha` + `tooltipAcao`. Sem filtro de operadora.
+
+### Dados
+
+Tabelas `academy_cronograma`, `academy_cronograma_trilha`, `academy_cronograma_item`, `academy_cronograma_material`, `academy_cronograma_trilha_material`, `academy_cronograma_prova`, `academy_cronograma_trilha_prova`, `academy_cronograma_historico`. Bucket `academy-cronograma-materiais`. RLS via `_academy_cronograma_perm`. Carga: `fetchAllPages` + `order` estável; falha → alerta + **Tentar novamente**. Sem seed fictício.
+
+**Proibido:** puxar jogos de `mesas_spin_cadastro`; misturar anexos com `academy-portal-assets`; criar turma a partir de cronograma sem trilha (regra da página Turmas).
 
 ---
 

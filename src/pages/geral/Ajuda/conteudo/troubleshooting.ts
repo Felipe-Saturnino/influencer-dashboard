@@ -898,6 +898,36 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       },
     ],
   },
+  academy_cronograma: {
+    titulo: "Cronograma",
+    blocos: [
+      {
+        subtitulo: "Não vejo Cronograma no menu?",
+        texto:
+          "Verifique em **Gestão de Usuários → Permissões** se o perfil tem permissão de **Ver** diferente de **Não**. Administradores veem a página automaticamente; demais perfis começam bloqueados até a liberação.",
+      },
+      {
+        subtitulo: "Não foi possível carregar o catálogo?",
+        texto:
+          "Atualize a página e clique em **Tentar novamente**. Se a mensagem continuar, a migração do Cronograma pode ainda não ter sido aplicada neste ambiente — o suporte precisa aplicar `academy_cronograma` no Supabase.",
+      },
+      {
+        subtitulo: "Não aparece o botão Novo Cronograma, Nova Trilha, Novo Material ou Nova Prova?",
+        texto:
+          "Esses botões exigem permissão de **Criar**. Editar ordem, gravar alterações e arquivar exigem **Editar**. Com apenas Ver, você consulta o catálogo e abre os modais de leitura.",
+      },
+      {
+        subtitulo: "A lista de trilhas, materiais ou provas parece vazia?",
+        texto:
+          "O filtro **Status** começa em **Publicado**. Itens arquivados só aparecem quando você troca o filtro para **Arquivado**. A busca também restringe a lista — limpe o campo se não encontrar o nome.",
+      },
+      {
+        subtitulo: "Não consigo adicionar trilha ao cronograma?",
+        texto:
+          "Só entram trilhas **publicadas** que ainda não estão naquele currículo. Cadastre a trilha na aba **Trilhas** e publique antes de usar **Adicionar trilha**.",
+      },
+    ],
+  },
   playbook_influencers: {
     titulo: "Playbook Influencers",
     blocos: [
