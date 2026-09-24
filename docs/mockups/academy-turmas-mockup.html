@@ -154,12 +154,14 @@
       text-transform: uppercase; letter-spacing: 0.04em; vertical-align: middle;
     }
     .btn-icon {
-      width: 28px; height: 28px; border-radius: 8px;
+      width: 30px; height: 30px; border-radius: 8px;
       border: 1px solid var(--card-border); background: var(--input-bg);
       display: inline-flex; align-items: center; justify-content: center;
-      cursor: pointer; color: var(--text-muted); margin: 0 2px;
+      cursor: pointer; color: var(--text-muted); margin: 0 2px; flex-shrink: 0;
     }
     .btn-icon:hover { color: var(--brand-primary); border-color: color-mix(in srgb, var(--brand-primary) 30%, transparent); }
+    td .btn-icon { vertical-align: middle; }
+    .acoes-linha { display: inline-flex; align-items: center; gap: 4px; }
     .cta {
       display: inline-flex; align-items: center; gap: 6px;
       padding: 10px 20px; border-radius: 10px; border: none;
@@ -252,7 +254,7 @@
     }
     .field { margin-bottom: 14px; }
     .field label { display: block; font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; }
-    .field select, .field input[type="text"], .field input[type="time"], .field textarea {
+    .field select, .field input[type="text"], .field input[type="time"], .field input[type="date"], .field textarea {
       width: 100%; font-family: var(--font); font-size: 13px; padding: 10px 12px;
       border-radius: 10px; border: 1px solid var(--card-border); background: var(--input-bg); color: var(--text);
     }
@@ -300,6 +302,79 @@
       display: flex; justify-content: flex-end; align-items: center;
       gap: 8px; margin-top: 12px; font-size: 12px; color: var(--text-muted);
     }
+    .filter-row + .filter-row { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--card-border); }
+    .linha-filtro {
+      display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px; width: 100%;
+    }
+    .linha-filtro .filtro-centro { justify-self: center; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 10px; }
+    .linha-filtro .filtro-direita { justify-self: end; display: inline-flex; align-items: center; gap: 8px; }
+    .ajuda-grupo { display: inline-flex; align-items: center; gap: 8px; }
+    .ajuda-acao {
+      width: 32px; height: 32px; border-radius: 9px; display: inline-flex; align-items: center; justify-content: center;
+      cursor: pointer; flex-shrink: 0; text-decoration: none;
+    }
+    .ajuda-acao.conheca { background: color-mix(in srgb, #1e36f8 12%, transparent); border: 1px solid color-mix(in srgb, #1e36f8 30%, transparent); color: #1631c4; }
+    .ajuda-acao.trouble { background: color-mix(in srgb, #f59e0b 12%, transparent); border: 1px solid color-mix(in srgb, #f59e0b 30%, transparent); color: #a16207; }
+    .carousel-btn {
+      width: 32px; height: 32px; border-radius: 50%;
+      border: 1px solid var(--card-border); background: transparent;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; color: var(--text); flex-shrink: 0;
+    }
+    .carousel-btn:disabled { opacity: .35; cursor: not-allowed; }
+    .carousel-label { font-size: 18px; font-weight: 800; min-width: 180px; text-align: center; }
+    .pill svg { flex-shrink: 0; }
+    .filtro-select {
+      font-family: var(--font); font-size: 13px; font-weight: 500;
+      padding: 6px 32px 6px 34px; border-radius: var(--radius-pill);
+      border: 1px solid var(--card-border); background: var(--input-bg); color: var(--text);
+      cursor: pointer; appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 12px center;
+    }
+    .filtro-select.active, .filtro-select:focus {
+      border-color: color-mix(in srgb, var(--brand-primary) 35%, transparent);
+      background-color: color-mix(in srgb, var(--brand-primary) 15%, transparent);
+      color: var(--brand-primary); font-weight: 600; outline: none;
+    }
+    .filtro-select-wrap { position: relative; display: inline-flex; align-items: center; }
+    .filtro-select-wrap .filtro-icon {
+      position: absolute; left: 12px; pointer-events: none; color: inherit; opacity: 0.85;
+    }
+    .chip-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 10px; border-radius: 999px; border: 1px solid var(--card-border);
+      background: var(--input-bg); font-size: 12px;
+    }
+    .chip button { border: none; background: none; cursor: pointer; color: var(--text-muted); font-size: 12px; }
+    .sugestoes {
+      list-style: none; margin: 6px 0 0; padding: 0; border: 1px solid var(--card-border);
+      border-radius: 10px; background: var(--card-bg); overflow: hidden;
+    }
+    .sugestoes button {
+      width: 100%; text-align: left; padding: 8px 12px; border: none; background: transparent;
+      font-family: var(--font); font-size: 13px; cursor: pointer; color: var(--text);
+    }
+    .sugestoes button:hover { background: var(--input-bg); }
+    .hist-card {
+      padding: 10px 12px; border-radius: 10px; border: 1px solid var(--card-border);
+      background: var(--input-bg); margin-bottom: 10px;
+    }
+    .hist-card strong { display: block; font-size: 13px; }
+    .hist-card span { font-size: 12px; color: var(--text-muted); }
+    .check-row { display: flex; flex-wrap: wrap; gap: 10px; }
+    .check-row button {
+      display: inline-flex; align-items: center; gap: 6px; border: none; background: none;
+      font-family: var(--font); font-size: 13px; cursor: pointer; color: var(--text);
+    }
+    .box {
+      width: 16px; height: 16px; border-radius: 4px; border: 2px solid var(--card-border);
+      display: inline-flex; align-items: center; justify-content: center; font-size: 10px; color: #fff;
+    }
+    .box.on { background: var(--brand-primary); border-color: var(--brand-primary); }
+    tbody tr.clickable { cursor: pointer; }
+    .field[aria-readonly="true"] input, .field[aria-readonly="true"] select { opacity: .85; }
   </style>
 </head>
 <body>
@@ -307,7 +382,7 @@
 <div class="mockup-bar">
   <strong>MOCKUP Onboarding · 2/3</strong> Academy → Gestão de Turmas
   <span style="opacity:0.4">|</span>
-  <span>PageKey sugerido: <code>academy_gestao_turmas</code> · operação da turma (check-in, progresso, avaliação). Currículo mora em Cronograma. Cursos Livres fica fora desta feature.</span>
+  <span>PageKey sugerido: <code>academy_gestao_turmas</code> · mockup para aprovação (ainda sem código de produto). Currículo mora em Cronograma. Bloco de detalhe abaixo da tabela fica para o próximo ajuste.</span>
 </div>
 
 <div class="page-shell">
@@ -321,67 +396,84 @@
     <p class="subtitle">Acompanhe presença, progresso e avaliação de cada turma, do agendamento até a liberação para a mesa.</p>
   </header>
 
-  <div class="hint-box">
-    Turma é a <strong>instância real</strong> de um Cronograma: data de início, treinador e a lista de prestadores matriculados.
-    O prestador faz check-in e check-out em Meu Onboarding; o treinador aprova ou ajusta aqui (mesmo espírito do Controle de Turno).
-    Um prestador não pode estar em duas turmas ao mesmo tempo. Liberar para a mesa grava só o campo <strong>Fim de Treinamento</strong> no cadastro RH — a prova aprovada não libera sozinha.
-  </div>
-
-  <div class="kpi-grid-3">
-    <div class="kpi-card">
-      <div class="bar" style="background:#22c55e"></div>
-      <div class="body">
-        <div class="kpi-label">Turmas em andamento</div>
-        <div class="kpi-value">2</div>
-        <div class="kpi-vs">27 prestadores em formação</div>
-      </div>
-    </div>
-    <div class="kpi-card">
-      <div class="bar" style="background:#1e36f8"></div>
-      <div class="body">
-        <div class="kpi-label">Próxima turma</div>
-        <div class="kpi-value">06/10</div>
-        <div class="kpi-vs">Onboarding Shuffler · Turma SH-08</div>
-      </div>
-    </div>
-    <div class="kpi-card">
-      <div class="bar" style="background:#7c3aed"></div>
-      <div class="body">
-        <div class="kpi-label">Check-in aprovado hoje</div>
-        <div class="kpi-value">8/9</div>
-        <div class="kpi-vs">1 pendente de ajuste do treinador</div>
-      </div>
-    </div>
-  </div>
-
   <div class="filter-box">
-    <div class="filter-row" id="filtroTurmasPills">
-      <button type="button" class="pill active" id="ttStatusTodas" onclick="setTurmaStatusFiltro('todas')">Todos Status</button>
-      <button type="button" class="btn-modal" title="Ajuda contextual — tutorial da página" style="margin-left:auto">Ajuda</button>
-      <button type="button" class="pill" id="ttStatusAgendadas" onclick="setTurmaStatusFiltro('agendada')">Agendadas</button>
-      <button type="button" class="pill" id="ttStatusAndamento" onclick="setTurmaStatusFiltro('andamento')">Em Andamento</button>
-      <button type="button" class="pill" id="ttStatusConcluidas" onclick="setTurmaStatusFiltro('concluida')">Concluídas</button>
+    <div class="filter-row linha-filtro">
+      <span aria-hidden="true"></span>
+      <div class="filtro-centro">
+        <button type="button" class="carousel-btn" id="btnMesAnt" aria-label="Mês anterior" onclick="navegarMes(-1)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+        </button>
+        <span class="carousel-label" id="labelMes">Setembro de 2026</span>
+        <button type="button" class="carousel-btn" id="btnMesProx" aria-label="Próximo mês" onclick="navegarMes(1)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
+        <button type="button" class="pill" id="btnHistorico" aria-pressed="false" aria-label="Ativar modo histórico — ver todo o período" onclick="toggleHistorico()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect width="18" height="18" x="3" y="4" rx="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+          Histórico
+        </button>
+      </div>
+      <div class="filtro-direita">
+        <div class="ajuda-grupo" role="group" aria-label="Ajuda contextual">
+          <a class="ajuda-acao conheca" href="#" title="Conheça esta página" aria-label="Conheça esta página" onclick="return false">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+          </a>
+          <a class="ajuda-acao trouble" href="#" title="Troubleshooting desta página" aria-label="Troubleshooting desta página" onclick="return false">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+          </a>
+        </div>
+      </div>
+    </div>
+    <div class="filter-row linha-filtro">
+      <span aria-hidden="true"></span>
+      <div class="filtro-centro">
+        <div class="filtro-select-wrap">
+          <svg class="filtro-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+          <select id="filtroStatus" class="filtro-select" aria-label="Status" onchange="aplicarFiltros()">
+            <option value="todos" selected>Todos Status</option>
+            <option value="agendada">Agendada</option>
+            <option value="andamento">Em andamento</option>
+            <option value="concluida">Concluída</option>
+          </select>
+        </div>
+        <div class="filtro-select-wrap">
+          <svg class="filtro-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect width="20" height="14" x="2" y="5" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M16 10h2"/><path d="M16 14h2"/><path d="M6.17 15a3 3 0 0 1 5.66 0"/></svg>
+          <select id="filtroTreinador" class="filtro-select" aria-label="Treinador" onchange="aplicarFiltros()">
+            <option value="" selected>Todos</option>
+            <option value="Juliana Mendes">Juliana Mendes</option>
+            <option value="Ricardo Nunes">Ricardo Nunes</option>
+          </select>
+        </div>
+        <div class="filtro-select-wrap">
+          <svg class="filtro-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4"/><path d="M3 10h18"/><path d="M8 2v4"/><path d="M17 14h-6"/><path d="M13 18H7"/><path d="M7 14h.01"/><path d="M17 18h.01"/></svg>
+          <select id="filtroCronograma" class="filtro-select" aria-label="Cronograma" onchange="aplicarFiltros()">
+            <option value="" selected>Todos</option>
+            <option>Onboarding de Game Presenter</option>
+            <option>Onboarding de Shuffler</option>
+            <option>Atualização Shuffler → Game Presenter</option>
+          </select>
+        </div>
+      </div>
+      <div class="filtro-direita">
+        <button type="button" class="cta" onclick="abrirModalNovaTurma()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+          Nova turma
+        </button>
+      </div>
     </div>
   </div>
 
   <div class="content-box">
-    <div class="section-head">
-      <h2 class="section-title">Turmas <span class="sub">cada turma roda um Cronograma, com treinador e datas reais</span></h2>
-      <button type="button" class="cta" onclick="abrirModalNovaTurma()">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
-        Nova turma
-      </button>
-    </div>
+    <h2 class="section-title">Turmas</h2>
     <div class="table-wrap">
       <table>
         <caption>Turmas de formação interna</caption>
         <thead>
           <tr>
-            <th scope="col">Turma</th>
             <th scope="col">Cronograma</th>
             <th scope="col">Treinador</th>
-            <th scope="col">Início</th>
             <th scope="col">Prestadores</th>
+            <th scope="col">Início</th>
+            <th scope="col">Fim</th>
             <th scope="col">Progresso</th>
             <th scope="col">Status</th>
             <th scope="col">Ações</th>
@@ -390,7 +482,7 @@
         <tbody id="tbodyTurmas"></tbody>
       </table>
     </div>
-    <div class="paginacao">1–4 de 4</div>
+    <div class="paginacao" id="paginacaoTurmas">1–4 de 4</div>
   </div>
 
   <!-- Detalhe da turma selecionada -->
@@ -451,69 +543,160 @@
 </div>
 
 <!-- Modal: nova turma -->
-<div id="modalNovaTurma" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalNovaTurmaTitulo" onclick="if(event.target===this)fecharModais()">
+<div id="modalNovaTurma" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalTurmaFormTitulo" onclick="if(event.target===this)fecharModais()">
   <div class="modal-panel wide">
     <div class="modal-header">
       <button type="button" class="modal-close" onclick="fecharModais()" aria-label="Fechar">✕</button>
-      <h2 id="modalNovaTurmaTitulo">Nova turma</h2>
-      <p class="modal-sub">Cria a instância real de um cronograma — com treinador (Gestor de Academy ou Performance Coach), data e prestadores matriculados. Só cronogramas com pelo menos uma trilha aparecem aqui. Prestador já matriculado em outra turma não entra na busca.</p>
+      <h2 id="modalTurmaFormTitulo">Nova turma</h2>
     </div>
     <div class="modal-body">
-      <div class="field-grid-2">
-        <div class="field">
-          <label for="turmaNome">Nome da turma <span class="campo-obrigatorio">*</span></label>
-          <input id="turmaNome" type="text" placeholder="Ex.: Onboarding GP — Novembro" />
-        </div>
-        <div class="field">
-          <label for="turmaCronograma">Cronograma <span class="campo-obrigatorio">*</span></label>
-          <select id="turmaCronograma" onchange="gerarCodigoTurma()">
-            <option value="GP">Onboarding de Game Presenter</option>
-            <option value="SH">Onboarding de Shuffler</option>
-            <option value="AT">Atualização Shuffler → Game Presenter</option>
-          </select>
-        </div>
+      <div class="field">
+        <label for="turmaCronograma">Cronograma <span class="campo-obrigatorio">*</span></label>
+        <select id="turmaCronograma">
+          <option value="">Selecione o cronograma</option>
+          <option value="Onboarding de Game Presenter">Onboarding de Game Presenter</option>
+          <option value="Onboarding de Shuffler">Onboarding de Shuffler</option>
+          <option value="Atualização Shuffler → Game Presenter">Atualização Shuffler → Game Presenter</option>
+        </select>
       </div>
       <div class="field-grid-2">
         <div class="field" aria-readonly="true">
-          <label for="turmaCodigo">Código <span style="font-weight:400;color:var(--text-muted)">(gerado automaticamente)</span></label>
-          <input id="turmaCodigo" type="text" readonly />
+          <label for="turmaCodigo">Código</label>
+          <input id="turmaCodigo" type="text" readonly value="TUR-000005" />
         </div>
         <div class="field">
           <label for="turmaInstrutor">Treinador <span class="campo-obrigatorio">*</span></label>
           <select id="turmaInstrutor">
-            <option>Juliana Mendes — Gestor de Academy</option>
-            <option>Ricardo Nunes — Performance Coach</option>
+            <option value="">Selecione o treinador</option>
+            <option>Juliana Mendes</option>
+            <option>Ricardo Nunes</option>
           </select>
         </div>
       </div>
       <div class="field-grid-2">
         <div class="field">
           <label for="turmaInicio">Data de início <span class="campo-obrigatorio">*</span></label>
-          <input id="turmaInicio" type="text" placeholder="dd/mm/aaaa" />
+          <input id="turmaInicio" type="date" />
         </div>
         <div class="field">
-          <label>Horário da turma <span class="campo-obrigatorio">*</span></label>
-          <div style="display:flex;align-items:center;gap:8px">
-            <input id="turmaHorarioInicio" type="time" value="08:00" style="flex:1" aria-label="Horário de início da aula" />
-            <span style="font-size:12px;color:var(--text-muted)">até</span>
-            <input id="turmaHorarioFim" type="time" value="12:00" style="flex:1" aria-label="Horário de término da aula" />
-          </div>
+          <label for="turmaHorario">Horário da turma <span class="campo-obrigatorio">*</span></label>
+          <input id="turmaHorario" type="time" value="08:00" />
         </div>
       </div>
       <div class="field">
-        <label for="turmaPrestadores">Prestadores a matricular</label>
-        <input id="turmaPrestadores" type="text" placeholder="Buscar em Gestão de Prestadores (skill Treinamento)…" />
-        <div class="publico-chips" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">
-          <span class="badge badge-info">Pedro Alves ✕</span>
-          <span class="badge badge-info">Larissa Souza ✕</span>
-          <span class="badge badge-muted" title="Já matriculada em GP-14">Bianca Rocha — em outra turma</span>
-        </div>
-        <p style="font-size:12px;color:var(--text-muted);margin-top:8px">Lista vem de Gestão de Prestadores. Quem já está numa turma ativa ou agendada não pode ser matriculado de novo.</p>
+        <label for="turmaPrevisaoFim">Previsão de fim <span class="campo-obrigatorio">*</span></label>
+        <input id="turmaPrevisaoFim" type="date" />
+      </div>
+      <div class="field">
+        <label for="turmaPrestadores">Prestadores</label>
+        <input id="turmaPrestadores" type="text" placeholder="Buscar prestadores..." oninput="buscarPrestadores(this.value)" autocomplete="off" />
+        <ul class="sugestoes" id="turmaPrestadoresSugestoes" hidden></ul>
+        <div class="chip-list" id="turmaPrestadoresChips"></div>
       </div>
     </div>
     <div class="modal-footer">
       <button type="button" class="btn-modal" onclick="fecharModais()">Cancelar</button>
-      <button type="button" class="btn-modal primary" onclick="fecharModais()">Criar turma</button>
+      <button type="button" class="btn-modal primary" id="btnSalvarTurmaForm" onclick="fecharModais()">Criar turma</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: alerta (conflito / trilhas abertas) -->
+<div id="modalAlerta" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalAlertaTitulo">
+  <div class="modal-panel" style="width:min(440px,100%)">
+    <div class="modal-header">
+      <button type="button" class="modal-close" onclick="fecharModais()" aria-label="Fechar">✕</button>
+      <h2 id="modalAlertaTitulo">Atenção</h2>
+    </div>
+    <div class="modal-body">
+      <p id="modalAlertaMsg" style="font-size:13px;margin:0"></p>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn-modal primary" onclick="fecharModais()">Entendi</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Ver turma -->
+<div id="modalVerTurma" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalVerTurmaTitulo">
+  <div class="modal-panel">
+    <div class="modal-header">
+      <button type="button" class="modal-close" onclick="fecharModais()" aria-label="Fechar">✕</button>
+      <h2 id="modalVerTurmaTitulo">Ver turma</h2>
+    </div>
+    <div class="modal-body">
+      <div class="filter-row" role="tablist" aria-label="Abas do ver turma" style="margin-bottom:14px;justify-content:flex-start">
+        <button type="button" class="vt-tab-btn active" id="verTabDados" onclick="setVerAba('dados')">Dados da turma</button>
+        <button type="button" class="vt-tab-btn" id="verTabHist" onclick="setVerAba('historico')">Histórico</button>
+      </div>
+      <div id="verPanelDados">
+        <div class="field" aria-readonly="true"><label>Cronograma</label><input id="verCronograma" type="text" readonly /></div>
+        <div class="field-grid-2">
+          <div class="field" aria-readonly="true"><label>Código</label><input id="verCodigo" type="text" readonly /></div>
+          <div class="field" aria-readonly="true"><label>Treinador</label><input id="verTreinador" type="text" readonly /></div>
+        </div>
+        <div class="field-grid-2">
+          <div class="field" aria-readonly="true"><label>Data de início</label><input id="verInicio" type="text" readonly /></div>
+          <div class="field" aria-readonly="true"><label>Horário da turma</label><input id="verHorario" type="text" readonly /></div>
+        </div>
+        <div class="field" aria-readonly="true"><label>Previsão de fim</label><input id="verFim" type="text" readonly /></div>
+        <div class="field" aria-readonly="true">
+          <label>Prestadores</label>
+          <div class="chip-list" id="verPrestadores"></div>
+        </div>
+      </div>
+      <div id="verPanelHist" hidden>
+        <div id="verHistoricoLista"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn-modal" onclick="fecharModais()">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Iniciar turma -->
+<div id="modalIniciarTurma" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalIniciarTitulo">
+  <div class="modal-panel" style="width:min(440px,100%)">
+    <div class="modal-header">
+      <button type="button" class="modal-close" onclick="fecharModais()" aria-label="Fechar">✕</button>
+      <h2 id="modalIniciarTitulo">Iniciar turma</h2>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label for="iniciarInicio">Data de início <span class="campo-obrigatorio">*</span></label>
+        <input id="iniciarInicio" type="date" />
+      </div>
+      <div class="field">
+        <label for="iniciarHorario">Horário da turma <span class="campo-obrigatorio">*</span></label>
+        <input id="iniciarHorario" type="time" />
+      </div>
+      <div class="field">
+        <label for="iniciarFim">Previsão de fim <span class="campo-obrigatorio">*</span></label>
+        <input id="iniciarFim" type="date" />
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn-modal" onclick="fecharModais()">Cancelar</button>
+      <button type="button" class="btn-modal primary" onclick="fecharModais()">Iniciar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Concluir turma -->
+<div id="modalConcluirTurma" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalConcluirTitulo">
+  <div class="modal-panel wide">
+    <div class="modal-header">
+      <button type="button" class="modal-close" onclick="fecharModais()" aria-label="Fechar">✕</button>
+      <h2 id="modalConcluirTitulo">Concluir turma</h2>
+    </div>
+    <div class="modal-body">
+      <div class="filter-row" role="tablist" id="concluirTabs" aria-label="Prestadores da turma" style="margin-bottom:14px;justify-content:flex-start"></div>
+      <div id="concluirPainel"></div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn-modal" onclick="fecharModais()">Cancelar</button>
+      <button type="button" class="btn-modal primary" onclick="fecharModais()">Concluir</button>
     </div>
   </div>
 </div>
@@ -648,10 +831,15 @@
 
   const TURMAS = [
     {
-      key: "gp14", titulo: "Onboarding GP — Outubro", codigo: "GP-14",
+      key: "gp14", titulo: "Onboarding GP — Outubro", codigo: "TUR-000001",
       cronograma: "Onboarding de Game Presenter", instrutor: "Juliana Mendes",
-      inicio: "18/09/2026", prestadoresCount: 9, progressoTexto: "Dia 6 de 15",
-      status: "andamento", statusBadge: { text: "Em andamento", cls: "badge-ok" },
+      inicio: "18/09/2026", fim: "02/10/2026", horario: "08:00",
+      prestadoresCount: 9, progressoPct: 50,
+      status: "andamento", statusBadge: { text: "Em andamento", cls: "badge-info" },
+      historico: [
+        { acao: "Turma criada", quando: "10/09/2026 14:22", quem: "Juliana Mendes" },
+        { acao: "Turma iniciada", quando: "18/09/2026 08:01", quem: "Juliana Mendes" },
+      ],
       trilhas: [
         { nome: "Onboarding Spin", tipo: "Institucional", dias: "Dia 1", status: "concluida", temProva: false },
         { nome: "Imagem e postura", tipo: "Institucional", dias: "Dia 1", status: "concluida", temProva: false },
@@ -681,10 +869,15 @@
       ],
     },
     {
-      key: "at05", titulo: "Atualização — Blackjack/Roleta", codigo: "AT-05",
+      key: "at05", titulo: "Atualização — Blackjack/Roleta", codigo: "TUR-000002",
       cronograma: "Atualização Shuffler → Game Presenter", instrutor: "Ricardo Nunes",
-      inicio: "15/09/2026", prestadoresCount: 4, progressoTexto: "Dia 4 de 7",
-      status: "andamento", statusBadge: { text: "Em andamento", cls: "badge-ok" },
+      inicio: "15/09/2026", fim: "21/09/2026", horario: "14:00",
+      prestadoresCount: 4, progressoPct: 43,
+      status: "andamento", statusBadge: { text: "Em andamento", cls: "badge-info" },
+      historico: [
+        { acao: "Turma criada", quando: "08/09/2026 11:04", quem: "Ricardo Nunes" },
+        { acao: "Turma iniciada", quando: "15/09/2026 14:00", quem: "Ricardo Nunes" },
+      ],
       trilhas: [
         { nome: "Imagem e postura", tipo: "Institucional", dias: "Dia 1", status: "concluida", temProva: false },
         { nome: "Blackjack", tipo: "Jogo", dias: "Dias 1 a 4", status: "concluida", temProva: true, provaResumo: "4/4 aprovados" },
@@ -706,10 +899,14 @@
       ],
     },
     {
-      key: "sh08", titulo: "Onboarding Shuffler — Outubro", codigo: "SH-08",
+      key: "sh08", titulo: "Onboarding Shuffler — Outubro", codigo: "TUR-000003",
       cronograma: "Onboarding de Shuffler", instrutor: "Juliana Mendes",
-      inicio: "06/10/2026", prestadoresCount: 6, progressoTexto: "Não iniciada",
-      status: "agendada", statusBadge: { text: "Agendada", cls: "badge-info" },
+      inicio: "06/10/2026", fim: "10/10/2026", horario: "08:00",
+      prestadoresCount: 6, progressoPct: 0,
+      status: "agendada", statusBadge: { text: "Agendada", cls: "badge-warn" },
+      historico: [
+        { acao: "Turma criada", quando: "20/09/2026 09:18", quem: "Juliana Mendes" },
+      ],
       trilhas: [
         { nome: "Onboarding Spin", tipo: "Institucional", dias: "Dia 1", status: "bloqueada", temProva: false },
         { nome: "Imagem e postura", tipo: "Institucional", dias: "Dia 1", status: "bloqueada", temProva: false },
@@ -723,10 +920,16 @@
       ],
     },
     {
-      key: "gp13", titulo: "Onboarding GP — Agosto", codigo: "GP-13",
+      key: "gp13", titulo: "Onboarding GP — Agosto", codigo: "TUR-000004",
       cronograma: "Onboarding de Game Presenter", instrutor: "Ricardo Nunes",
-      inicio: "10/08/2026", prestadoresCount: 8, progressoTexto: "Concluída · 15 de 15",
-      status: "concluida", statusBadge: { text: "Concluída", cls: "badge-muted" }, dataConclusao: "24/08/2026",
+      inicio: "10/08/2026", fim: "24/08/2026", horario: "08:00",
+      prestadoresCount: 8, progressoPct: 100,
+      status: "concluida", statusBadge: { text: "Concluída", cls: "badge-ok" }, dataConclusao: "24/08/2026",
+      historico: [
+        { acao: "Turma criada", quando: "01/08/2026 10:00", quem: "Ricardo Nunes" },
+        { acao: "Turma iniciada", quando: "10/08/2026 08:02", quem: "Ricardo Nunes" },
+        { acao: "Turma concluída", quando: "24/08/2026 16:40", quem: "Ricardo Nunes" },
+      ],
       trilhas: [
         { nome: "Onboarding Spin", tipo: "Institucional", dias: "Dia 1", status: "concluida", temProva: false },
         { nome: "Imagem e postura", tipo: "Institucional", dias: "Dia 1", status: "concluida", temProva: false },
@@ -738,15 +941,15 @@
         { nome: "Prática e rotação", tipo: "Prática", dias: "Dias 7, 10, 13 a 15", status: "concluida", temProva: false },
       ],
       roster: [
-        { id: "pedro2", nome: "Pedro Alves", situacao: { text: "Formação concluída", cls: "badge-muted" }, liberado: true,
+        { id: "pedro2", nome: "Pedro Alves", resultado: "aprovado", situacao: { text: "Formação concluída", cls: "badge-muted" }, liberado: true,
           avaliacao: { postura: 0, regras: 0, agilidade: 1, atendimento: 0, relatorio: [
             { data: "24/08/2026", texto: "Turma concluída — liberado para a mesa após avaliação final. Ótimo domínio geral, pequenos ajustes de agilidade resolvidos na prática." },
           ] } },
-        { id: "larissa2", nome: "Larissa Souza", situacao: { text: "Formação concluída", cls: "badge-muted" }, liberado: true,
+        { id: "larissa2", nome: "Larissa Souza", resultado: "aprovado", situacao: { text: "Formação concluída", cls: "badge-muted" }, liberado: true,
           avaliacao: { postura: 1, regras: 0, agilidade: 0, atendimento: 0, relatorio: [
             { data: "24/08/2026", texto: "Turma concluída — liberada para a mesa. Recuperou bem depois da prova refeita de Blackjack." },
           ] } },
-        { id: "thiago2", nome: "Thiago Ramos", situacao: { text: "Desligado durante o processo", cls: "badge-negativo" }, liberado: false,
+        { id: "thiago2", nome: "Thiago Ramos", resultado: "reprovado", situacao: { text: "Desligado durante o processo", cls: "badge-negativo" }, liberado: false,
           avaliacao: { postura: 2, regras: 2, agilidade: 2, atendimento: 2, relatorio: [
             { data: "20/08/2026", texto: "Frequência abaixo do esperado ao longo da turma — desligado do processo antes da conclusão do cronograma." },
           ] } },
@@ -761,25 +964,46 @@
     return TURMAS.find((t) => t.key === turmaSelecionada) || TURMAS[0];
   }
 
+  var ICON_EYE = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>';
+  var ICON_PENCIL = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>';
+  var ICON_PLAY = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"/></svg>';
+  var ICON_CHECK = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>';
+
+  function btnAcaoLinha(titulo, onclick, svg) {
+    return '<button type="button" class="btn-icon" title="' + titulo + '" aria-label="' + titulo + '" onclick="event.stopPropagation();' + onclick + '">' + svg + "</button>";
+  }
+
   function renderTabelaTurmas() {
-    document.getElementById("tbodyTurmas").innerHTML = TURMAS.map(function (t) {
-      let acoes = '<button class="btn-icon" title="Abrir turma" aria-label="Abrir ' + t.titulo + '" onclick="abrirTurma(\'' + t.key + '\')">Abrir</button>';
-      if (t.status === "agendada") {
-        acoes += '<button class="btn-icon" title="Editar turma" aria-label="Editar ' + t.titulo + '">Editar</button>';
+    const visiveis = turmasFiltradas();
+    document.getElementById("tbodyTurmas").innerHTML = visiveis.map(function (t) {
+      var acoes = '<span class="acoes-linha">';
+      if (t.status === "andamento") {
+        acoes += btnAcaoLinha("Ver", "abrirModalVer('" + t.key + "')", ICON_EYE);
+        acoes += btnAcaoLinha("Concluir", "abrirModalConcluir('" + t.key + "')", ICON_CHECK);
+      } else if (t.status === "agendada") {
+        acoes += btnAcaoLinha("Editar", "abrirModalEditar('" + t.key + "')", ICON_PENCIL);
+        acoes += btnAcaoLinha("Iniciar", "abrirModalIniciar('" + t.key + "')", ICON_PLAY);
+      } else {
+        acoes += btnAcaoLinha("Ver", "abrirModalVer('" + t.key + "')", ICON_EYE);
       }
+      acoes += "</span>";
+      const nomes = t.roster.map(function (p) { return p.nome; }).join(", ");
       return (
-        '<tr data-status="' + t.status + '" data-key="' + t.key + '">' +
-        '<td><div class="turma-nome-wrap"><span>' + t.titulo + '</span><span class="cod">' + t.codigo + "</span></div></td>" +
-        "<td>" + t.cronograma + "</td>" +
+        '<tr class="clickable" data-status="' + t.status + '" data-key="' + t.key + '" onclick="abrirTurma(\'' + t.key + '\')">' +
+        '<td><div class="turma-nome-wrap"><span>' + t.cronograma + '</span><span class="cod">' + t.codigo + "</span></div></td>" +
         "<td>" + t.instrutor + "</td>" +
+        "<td>" + nomes + "</td>" +
         "<td>" + t.inicio + "</td>" +
-        "<td>" + t.prestadoresCount + "</td>" +
-        "<td>" + t.progressoTexto + "</td>" +
+        "<td>" + t.fim + "</td>" +
+        "<td>" + t.progressoPct + "%</td>" +
         '<td><span class="badge ' + t.statusBadge.cls + '">' + t.statusBadge.text + "</span></td>" +
-        "<td>" + acoes + "</td>" +
+        "<td onclick=\"event.stopPropagation()\">" + acoes + "</td>" +
         "</tr>"
       );
     }).join("");
+    document.getElementById("paginacaoTurmas").textContent = visiveis.length
+      ? "1–" + visiveis.length + " de " + visiveis.length
+      : "0 de 0";
     marcarLinhaSelecionada();
   }
 
@@ -789,13 +1013,78 @@
     });
   }
 
-  function setTurmaStatusFiltro(key) {
-    document.querySelectorAll("#filtroTurmasPills .pill").forEach((p) => p.classList.remove("active"));
-    const pillMap = { todas: "ttStatusTodas", agendada: "ttStatusAgendadas", andamento: "ttStatusAndamento", concluida: "ttStatusConcluidas" };
-    document.getElementById(pillMap[key]).classList.add("active");
-    document.querySelectorAll("#tbodyTurmas tr").forEach((row) => {
-      row.style.display = key === "todas" || row.dataset.status === key ? "" : "none";
+  const MESES = [
+    { ano: 2026, mes: 7, label: "Agosto de 2026" },
+    { ano: 2026, mes: 8, label: "Setembro de 2026" },
+    { ano: 2026, mes: 9, label: "Outubro de 2026" },
+  ];
+  let idxMes = 1;
+  let modoHistorico = false;
+  const prestadoresForm = [];
+
+  const CATALOGO_PRESTADORES = [
+    { id: "pedro", nome: "Pedro Alves", turma: "TUR-000001" },
+    { id: "larissa", nome: "Larissa Souza", turma: "TUR-000001" },
+    { id: "thiago", nome: "Thiago Ramos", turma: "TUR-000001" },
+    { id: "marcos", nome: "Marcos Vidal", turma: "TUR-000002" },
+    { id: "renata", nome: "Renata Gomes", turma: "TUR-000002" },
+    { id: "bianca", nome: "Bianca Rocha", turma: "TUR-000003" },
+    { id: "diego", nome: "Diego Faria", turma: "TUR-000003" },
+    { id: "camila", nome: "Camila Prado", turma: null },
+    { id: "andre", nome: "André Lima", turma: null },
+  ];
+
+  function parseBr(data) {
+    const p = (data || "").split("/");
+    return p.length === 3 ? new Date(Number(p[2]), Number(p[1]) - 1, Number(p[0])) : null;
+  }
+
+  function turmaNoMes(t, mes) {
+    if (t.status === "andamento") return true;
+    const ref = t.status === "concluida" ? parseBr(t.dataConclusao || t.fim) : parseBr(t.inicio);
+    return ref && ref.getFullYear() === mes.ano && ref.getMonth() === mes.mes;
+  }
+
+  function turmasFiltradas() {
+    const status = document.getElementById("filtroStatus").value;
+    const treinador = document.getElementById("filtroTreinador").value;
+    const cronograma = document.getElementById("filtroCronograma").value;
+    const mes = MESES[idxMes];
+    return TURMAS.filter(function (t) {
+      if (!modoHistorico && !turmaNoMes(t, mes)) return false;
+      if (status !== "todos" && t.status !== status) return false;
+      if (treinador && t.instrutor !== treinador) return false;
+      if (cronograma && t.cronograma !== cronograma) return false;
+      return true;
     });
+  }
+
+  function atualizarCarrossel() {
+    document.getElementById("labelMes").textContent = modoHistorico ? "Todo o período" : MESES[idxMes].label;
+    document.getElementById("btnMesAnt").disabled = modoHistorico || idxMes <= 0;
+    document.getElementById("btnMesProx").disabled = modoHistorico || idxMes >= MESES.length - 1;
+    document.getElementById("btnHistorico").classList.toggle("active", modoHistorico);
+    document.getElementById("btnHistorico").setAttribute("aria-pressed", modoHistorico ? "true" : "false");
+  }
+
+  function navegarMes(dir) {
+    if (modoHistorico) return;
+    idxMes = Math.max(0, Math.min(MESES.length - 1, idxMes + dir));
+    atualizarCarrossel();
+    aplicarFiltros();
+  }
+
+  function toggleHistorico() {
+    modoHistorico = !modoHistorico;
+    atualizarCarrossel();
+    aplicarFiltros();
+  }
+
+  function aplicarFiltros() {
+    document.getElementById("filtroStatus").classList.toggle("active", document.getElementById("filtroStatus").value !== "todos");
+    document.getElementById("filtroTreinador").classList.toggle("active", !!document.getElementById("filtroTreinador").value);
+    document.getElementById("filtroCronograma").classList.toggle("active", !!document.getElementById("filtroCronograma").value);
+    renderTabelaTurmas();
   }
 
   function abrirTurma(key) {
@@ -823,7 +1112,7 @@
   function renderDetalheTurma(key) {
     const t = TURMAS.find((x) => x.key === key);
     if (!t) return;
-    const infoExtra = t.status === "concluida" ? "concluída em " + t.dataConclusao : t.progressoTexto;
+    const infoExtra = t.status === "concluida" ? "concluída em " + t.dataConclusao : t.progressoPct + "% das trilhas";
     document.getElementById("detalheTurmaTitulo").innerHTML =
       t.titulo + ' <span class="sub">' + t.codigo + " · Treinador " + t.instrutor + " · início " + t.inicio + " · " + infoExtra + "</span>";
     const badge = document.getElementById("detalheTurmaStatusBadge");
@@ -1056,23 +1345,190 @@
     campo.value = "";
   }
 
-  const PROXIMO_CODIGO_TURMA = { GP: 15, SH: 9, AT: 6 };
+  function toIso(br) {
+    const d = parseBr(br);
+    if (!d) return "";
+    return d.toISOString().slice(0, 10);
+  }
 
-  function gerarCodigoTurma() {
-    const prefixo = document.getElementById("turmaCronograma").value;
-    const numero = PROXIMO_CODIGO_TURMA[prefixo] || 1;
-    document.getElementById("turmaCodigo").value = prefixo + "-" + String(numero).padStart(2, "0");
+  function preencherFormTurma(t) {
+    document.getElementById("turmaCronograma").value = t ? t.cronograma : "";
+    document.getElementById("turmaCodigo").value = t ? t.codigo : "TUR-000005";
+    document.getElementById("turmaInstrutor").value = t ? t.instrutor : "";
+    document.getElementById("turmaInicio").value = t ? toIso(t.inicio) : "";
+    document.getElementById("turmaHorario").value = t ? t.horario : "08:00";
+    document.getElementById("turmaPrevisaoFim").value = t ? toIso(t.fim) : "";
+    prestadoresForm.length = 0;
+    if (t) t.roster.forEach(function (p) { prestadoresForm.push({ id: p.id, nome: p.nome }); });
+    renderChipsPrestadores();
+    document.getElementById("turmaPrestadores").value = "";
+    document.getElementById("turmaPrestadoresSugestoes").hidden = true;
   }
 
   function abrirModalNovaTurma() {
-    document.getElementById("turmaNome").value = "";
-    document.getElementById("turmaCronograma").value = "GP";
-    document.getElementById("turmaInstrutor").selectedIndex = 0;
-    document.getElementById("turmaInicio").value = "";
-    document.getElementById("turmaHorarioInicio").value = "08:00";
-    document.getElementById("turmaHorarioFim").value = "12:00";
-    gerarCodigoTurma();
+    document.getElementById("modalTurmaFormTitulo").textContent = "Nova turma";
+    document.getElementById("btnSalvarTurmaForm").textContent = "Criar turma";
+    document.querySelectorAll("#modalNovaTurma input, #modalNovaTurma select").forEach(function (el) {
+      el.disabled = false;
+    });
+    document.getElementById("turmaCodigo").readOnly = true;
+    preencherFormTurma(null);
     document.getElementById("modalNovaTurma").classList.add("open");
+  }
+
+  function abrirModalEditar(key) {
+    const t = TURMAS.find(function (x) { return x.key === key; });
+    if (!t) return;
+    document.getElementById("modalTurmaFormTitulo").textContent = "Editar turma";
+    document.getElementById("btnSalvarTurmaForm").textContent = "Salvar";
+    document.querySelectorAll("#modalNovaTurma input, #modalNovaTurma select").forEach(function (el) {
+      el.disabled = false;
+    });
+    document.getElementById("turmaCodigo").readOnly = true;
+    preencherFormTurma(t);
+    document.getElementById("modalNovaTurma").classList.add("open");
+  }
+
+  function renderChipsPrestadores() {
+    document.getElementById("turmaPrestadoresChips").innerHTML = prestadoresForm.map(function (p) {
+      return '<span class="chip">' + p.nome + '<button type="button" aria-label="Remover ' + p.nome + '" onclick="removerPrestador(\'' + p.id + '\')">✕</button></span>';
+    }).join("");
+  }
+
+  function buscarPrestadores(q) {
+    const lista = document.getElementById("turmaPrestadoresSugestoes");
+    const query = (q || "").trim().toLowerCase();
+    if (!query) {
+      lista.hidden = true;
+      lista.innerHTML = "";
+      return;
+    }
+    const ja = prestadoresForm.map(function (p) { return p.id; });
+    const hits = CATALOGO_PRESTADORES.filter(function (p) {
+      return ja.indexOf(p.id) === -1 && p.nome.toLowerCase().indexOf(query) !== -1;
+    }).slice(0, 8);
+    lista.hidden = hits.length === 0;
+    lista.innerHTML = hits.map(function (p) {
+      return '<li><button type="button" onclick="selecionarPrestador(\'' + p.id + '\')">' + p.nome + "</button></li>";
+    }).join("");
+  }
+
+  function selecionarPrestador(id) {
+    const p = CATALOGO_PRESTADORES.find(function (x) { return x.id === id; });
+    document.getElementById("turmaPrestadores").value = "";
+    document.getElementById("turmaPrestadoresSugestoes").hidden = true;
+    if (!p) return;
+    if (p.turma) {
+      abrirAlerta("Prestador já matriculado", "O prestador não pode ser adicionado pois já está matriculado na turma " + p.turma + ".");
+      return;
+    }
+    prestadoresForm.push({ id: p.id, nome: p.nome });
+    renderChipsPrestadores();
+  }
+
+  function removerPrestador(id) {
+    const i = prestadoresForm.findIndex(function (p) { return p.id === id; });
+    if (i >= 0) prestadoresForm.splice(i, 1);
+    renderChipsPrestadores();
+  }
+
+  function abrirAlerta(titulo, msg) {
+    document.getElementById("modalAlertaTitulo").textContent = titulo;
+    document.getElementById("modalAlertaMsg").textContent = msg;
+    document.getElementById("modalAlerta").classList.add("open");
+  }
+
+  function setVerAba(aba) {
+    document.getElementById("verTabDados").classList.toggle("active", aba === "dados");
+    document.getElementById("verTabHist").classList.toggle("active", aba === "historico");
+    document.getElementById("verPanelDados").hidden = aba !== "dados";
+    document.getElementById("verPanelHist").hidden = aba !== "historico";
+  }
+
+  function abrirModalVer(key) {
+    const t = TURMAS.find(function (x) { return x.key === key; });
+    if (!t) return;
+    document.getElementById("verCronograma").value = t.cronograma;
+    document.getElementById("verCodigo").value = t.codigo;
+    document.getElementById("verTreinador").value = t.instrutor;
+    document.getElementById("verInicio").value = t.inicio;
+    document.getElementById("verHorario").value = t.horario;
+    document.getElementById("verFim").value = t.fim;
+    document.getElementById("verPrestadores").innerHTML = t.roster.map(function (p) {
+      let extra = "";
+      if (t.status === "concluida" && p.resultado === "aprovado") extra = ' <span class="badge badge-ok">Aprovado</span>';
+      if (t.status === "concluida" && p.resultado === "reprovado") extra = ' <span class="badge badge-negativo">Reprovado</span>';
+      return '<span class="chip">' + p.nome + extra + "</span>";
+    }).join("");
+    document.getElementById("verHistoricoLista").innerHTML = (t.historico || []).map(function (h) {
+      return '<div class="hist-card"><strong>' + h.acao + "</strong><span>" + h.quando + " · " + h.quem + "</span></div>";
+    }).join("") || '<p style="font-size:13px;color:var(--text-muted)">Nenhuma alteração registrada.</p>';
+    setVerAba("dados");
+    document.getElementById("modalVerTurma").classList.add("open");
+  }
+
+  function abrirModalIniciar(key) {
+    const t = TURMAS.find(function (x) { return x.key === key; });
+    if (!t) return;
+    document.getElementById("iniciarInicio").value = toIso(t.inicio);
+    document.getElementById("iniciarHorario").value = t.horario;
+    document.getElementById("iniciarFim").value = toIso(t.fim);
+    document.getElementById("modalIniciarTurma").classList.add("open");
+  }
+
+  function abrirModalConcluir(key) {
+    const t = TURMAS.find(function (x) { return x.key === key; });
+    if (!t) return;
+    const abertas = t.trilhas.filter(function (tr) { return tr.status !== "concluida"; });
+    if (abertas.length) {
+      abrirAlerta("Trilhas em aberto", "Ainda faltam trilhas abertas nesta turma. Conclua todas as trilhas do cronograma antes de encerrar.");
+      return;
+    }
+    const tabs = document.getElementById("concluirTabs");
+    tabs.innerHTML = t.roster.map(function (p, i) {
+      return '<button type="button" class="vt-tab-btn' + (i === 0 ? " active" : "") + '" onclick="setConcluirAba(\'' + p.id + '\')">' + p.nome + "</button>";
+    }).join("");
+    window._concluirRoster = t.roster;
+    setConcluirAba(t.roster[0].id);
+    document.getElementById("modalConcluirTurma").classList.add("open");
+  }
+
+  function setConcluirAba(id) {
+    const roster = window._concluirRoster || [];
+    document.querySelectorAll("#concluirTabs .vt-tab-btn").forEach(function (b, i) {
+      b.classList.toggle("active", roster[i] && roster[i].id === id);
+    });
+    const p = roster.find(function (x) { return x.id === id; });
+    if (!p) return;
+    document.getElementById("concluirPainel").innerHTML =
+      '<div class="field"><label>Resultado <span class="campo-obrigatorio">*</span></label>' +
+      '<div class="check-row">' +
+      '<button type="button" onclick="toggleConcluirResultado(\'aprovado\')"><span class="box on" id="resAprovado">✓</span> Aprovado</button>' +
+      '<button type="button" onclick="toggleConcluirResultado(\'reprovado\')"><span class="box" id="resReprovado"></span> Reprovado</button>' +
+      "</div></div>" +
+      '<div id="concluirAprovado">' +
+      '<div class="field"><label>Pontos fortes <span class="campo-obrigatorio">*</span></label><textarea></textarea></div>' +
+      '<div class="field"><label>Pontos a desenvolver <span class="campo-obrigatorio">*</span></label><textarea></textarea></div>' +
+      '<div class="field"><label>Nickname</label><input type="text" /></div>' +
+      '<div class="field"><label>ID operacional</label><input type="text" /></div>' +
+      '<div class="field"><label>Barcode</label><input type="text" /></div>' +
+      '<div class="field"><label>Jogos</label><div class="check-row">' +
+      '<button type="button"><span class="box on">✓</span> Nenhum</button>' +
+      '<button type="button"><span class="box"></span> Blackjack</button>' +
+      '<button type="button"><span class="box"></span> Roleta</button>' +
+      '<button type="button"><span class="box"></span> Baccarat</button>' +
+      '<button type="button"><span class="box"></span> Futebol Brasileiro</button>' +
+      "</div></div></div>" +
+      '<div id="concluirReprovado" hidden><div class="field"><label>Motivo <span class="campo-obrigatorio">*</span></label><textarea></textarea></div></div>';
+  }
+
+  function toggleConcluirResultado(val) {
+    document.getElementById("resAprovado").classList.toggle("on", val === "aprovado");
+    document.getElementById("resAprovado").textContent = val === "aprovado" ? "✓" : "";
+    document.getElementById("resReprovado").classList.toggle("on", val === "reprovado");
+    document.getElementById("resReprovado").textContent = val === "reprovado" ? "✓" : "";
+    document.getElementById("concluirAprovado").hidden = val !== "aprovado";
+    document.getElementById("concluirReprovado").hidden = val !== "reprovado";
   }
 
 
@@ -1080,6 +1536,7 @@
     if (e.key === "Escape") fecharModais();
   });
 
+  atualizarCarrossel();
   renderTabelaTurmas();
   abrirTurmaInicial();
 

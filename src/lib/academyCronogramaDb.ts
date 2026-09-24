@@ -8,7 +8,6 @@ import type {
   AcademyCronogramaItem,
   AcademyMaterial,
   AcademyMaterialTipo,
-  AcademyProva,
   AcademyProvaQuestao,
   AcademyTrilha,
   AcademyTrilhaTipo,

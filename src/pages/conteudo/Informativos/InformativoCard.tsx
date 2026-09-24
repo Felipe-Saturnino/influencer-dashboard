@@ -1,11 +1,9 @@
 import { useApp } from "../../../context/AppContext";
 import { FONT } from "../../../constants/theme";
 import { CorpoHtmlInformativo } from "../../../components/conteudo/CorpoHtmlInformativo";
-import { truncPreviewHtml, fmtDataColunaGerenciamento } from "../../../lib/informativosWorkflow";
+import { fmtDataColunaGerenciamento } from "../../../lib/informativosWorkflow";
 import { labelPerfisInformativo } from "../../../lib/informativosRoles";
 import type { ReactNode } from "react";
-
-const PREVIEW_LEN = 280;
 
 export function InformativoCard({
   assunto,
@@ -38,7 +36,7 @@ export function InformativoCard({
     >
       <h2 style={{ margin: 0, fontSize: 15, fontWeight: 800, color: t.text, fontFamily: FONT.body }}>{assunto}</h2>
       <div style={{ marginTop: 10 }}>
-        <CorpoHtmlInformativo html={truncPreviewHtml(descricao, PREVIEW_LEN)} color={t.textMuted} />
+        <CorpoHtmlInformativo html={descricao} color={t.textMuted} />
       </div>
       <p style={{ fontSize: 12, color: t.textMuted, margin: "12px 0 0", fontFamily: FONT.body }}>
         {autorNome ? `${autorNome} · ` : ""}
