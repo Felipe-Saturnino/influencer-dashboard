@@ -4,6 +4,7 @@ import { useApp } from "../../../context/AppContext";
 import { usePermission } from "../../../hooks/usePermission";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { FONT } from "../../../constants/theme";
+import { AlertaCargaComRetry } from "../../../components/AlertaCargaComRetry";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
@@ -32,6 +33,8 @@ import {
 } from "./gestaoMesasFetch";
 
 const MSG_SEM_PERMISSAO = "Você não tem permissão para visualizar esta página.";
+const ERRO_CARREGAR =
+  "Não foi possível carregar estúdios e mesas. Se o problema persistir, entre em contato com o suporte.";
 
 type AbaGestaoEstudios = "estudios" | "mesas";
 
@@ -46,10 +49,12 @@ export default function GestaoMesas() {
   const [estudios, setEstudios] = useState<EstudioSpinRow[]>([]);
   const [estudiosJunction, setEstudiosJunction] = useState<EstudioSpinRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [erroCarga, setErroCarga] = useState<string | null>(null);
   const [filtroOperadora, setFiltroOperadora] = useState<string>(OPERADORA_FILTRO_TODAS_VALUE);
 
   const carregar = useCallback(async () => {
     setLoading(true);
+    setErroCarga(null);
     try {
       const [mesas, estudiosAtivos, estudiosTodos] = await Promise.all([
         fetchMesasSpinCadastroRows(),
@@ -60,8 +65,8 @@ export default function GestaoMesas() {
       setEstudios(estudiosAtivos);
       setEstudiosJunction(estudiosTodos.length > 0 ? estudiosTodos : estudiosAtivos);
     } catch (e) {
-      console.error(e);
-      setRows([]);
+      console.error("Gestão de Estúdios: falha ao carregar", e);
+      setErroCarga(ERRO_CARREGAR);
     } finally {
       setLoading(false);
     }
@@ -225,7 +230,9 @@ export default function GestaoMesas() {
         </div>
       </div>
 
-      {aba === "estudios" ? (
+      {erroCarga ? (
+        <AlertaCargaComRetry mensagem={erroCarga} onRetry={() => void carregar()} />
+      ) : aba === "estudios" ? (
         <div id="panel-gestao-estudios-estudios" role="tabpanel" aria-labelledby="tab-gestao-estudios-estudios">
           <AbaEstudios
             filtroOperadora={filtroOperadora}

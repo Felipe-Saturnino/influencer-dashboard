@@ -43,7 +43,7 @@ import {
   type EstoqueItemRow,
   type EstoqueJogoLoteRow,
 } from "../../../lib/techOpsEstoque";
-import { AlertaCargaComRetry } from "../AlertaCargaComRetry";
+import { AlertaCargaComRetry } from "../../../components/AlertaCargaComRetry";
 import { AbaItens } from "./AbaItens";
 import { AbaEquipamentos } from "./AbaEquipamentos";
 import { AbaJogo } from "./AbaJogo";

@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import { FONT } from "../../constants/theme";
+import { FONT } from "../constants/theme";
 
 const caixa: CSSProperties = {
   margin: "16px 0",

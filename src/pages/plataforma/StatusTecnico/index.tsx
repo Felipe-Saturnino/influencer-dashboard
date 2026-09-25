@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo, type Dispatch, type SetStateAction } from "react";
 import { supabase, supabaseUrl, supabaseAnonKey } from "../../../lib/supabase";
+import { fetchAllPages } from "../../../lib/supabasePaginate";
 import { useApp } from "../../../context/AppContext";
 import { usePermission } from "../../../hooks/usePermission";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -15,6 +16,7 @@ import {
   RefreshCw,
   XCircle,
 } from "lucide-react";
+import { AlertaCargaComRetry } from "../../../components/AlertaCargaComRetry";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
@@ -104,6 +106,8 @@ import type { CSSProperties } from "react";
 
 /** Upload OCR PLS removido do produto — ocultar mesmo se a linha ainda existir em `integrations`. */
 const SLUG_INTEGRACAO_PLS_UPLOAD_RETIRADA = "upload_pls_daily_commercial";
+const ERRO_CARREGAR_STATUS =
+  "Não foi possível carregar o status técnico. Se o problema persistir, entre em contato com o suporte.";
 
 // ─── TIPOS ────────────────────────────────────────────────────────────────────
 interface SyncLog {
@@ -190,6 +194,7 @@ export default function StatusTecnico() {
   const dashBrand = useDashboardBrand();
   const perm = usePermission("status_tecnico");
   const [loading, setLoading] = useState(true);
+  const [erroCarga, setErroCarga] = useState<string | null>(null);
   const [syncExecutando, setSyncExecutando] = useState(false);
   const [syncMensagem, setSyncMensagem] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
   const [syncAfiliadosExecutando, setSyncAfiliadosExecutando] = useState(false);
@@ -267,12 +272,19 @@ export default function StatusTecnico() {
 
   const carregar = useCallback(async () => {
     setLoading(true);
+    setErroCarga(null);
+    try {
     const hoje = hojeIsoBrasil();
     const dataInicioStr = subDiasIso(hoje, 14);
     const syncDesdeUtc = inicioDiaBrasilUtcIso(dataInicioStr);
 
     // Integrações (sem upload PLS — descontinuado; pode sobrar linha no DB até migração)
-    const { data: intData } = await supabase.from("integrations").select("*").eq("ativo", true);
+    const { data: intData, error: intErr } = await supabase
+      .from("integrations")
+      .select("slug, nome, descricao, ativo")
+      .eq("ativo", true)
+      .order("slug", { ascending: true });
+    if (intErr) throw intErr;
     setIntegrations(
       (intData ?? []).filter((i) => i.slug !== SLUG_INTEGRACAO_PLS_UPLOAD_RETIRADA),
     );
@@ -315,6 +327,10 @@ export default function StatusTecnico() {
         .order("executado_em", { ascending: false })
         .limit(400),
     ]);
+    for (const r of syncBatch) {
+      if (r.error) throw r.error;
+    }
+    if (lobbyExecRes.error) throw lobbyExecRes.error;
     const [{ data: syncDataRaw }, ...slugSyncRes] = syncBatch;
     setSyncLogs(
       mesclarSyncLogsPorExecucao(
@@ -327,30 +343,35 @@ export default function StatusTecnico() {
     // Tech logs — sempre buscar 96h (maior faixa da UI); exibir conforme logFiltro
     const desde = new Date();
     desde.setHours(desde.getHours() - 96);
-    const { data: techData } = await supabase
-      .from("tech_logs")
-      .select("*")
-      .gte("created_at", desde.toISOString())
-      .order("created_at", { ascending: false })
-      .limit(200);
-    setTechLogs(techData ?? []);
+    const techData = await fetchAllPages<TechLog>(async (from, to) =>
+      supabase
+        .from("tech_logs")
+        .select("id, integracao_slug, tipo, descricao, created_at")
+        .gte("created_at", desde.toISOString())
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: false })
+        .range(from, to),
+    );
+    setTechLogs(techData);
 
     // Pipeline runs (Social Media) — últimos 7 dias
     const dataPipelineInicio = new Date();
     dataPipelineInicio.setDate(dataPipelineInicio.getDate() - 7);
-    const { data: pipelineData } = await supabase
+    const { data: pipelineData, error: pipelineErr } = await supabase
       .from("pipeline_runs")
       .select("id, run_date, channel, status, error_msg, created_at")
       .gte("run_date", dataPipelineInicio.toISOString().split("T")[0])
       .order("created_at", { ascending: false })
       .limit(100);
+    if (pipelineErr) throw pipelineErr;
     setPipelineRuns((pipelineData ?? []) as PipelineRun[]);
 
     // Registros hoje (influencer_metricas)
-    const { count } = await supabase
+    const { count, error: countErr } = await supabase
       .from("influencer_metricas")
       .select("*", { count: "exact", head: true })
       .eq("data", hoje);
+    if (countErr) throw countErr;
     setRegistrosHoje(count ?? 0);
 
     // Fluxo de dados (últimos 14 dias) — CDA, Social Media, E-mails (datas civis em SP)
@@ -467,6 +488,26 @@ export default function StatusTecnico() {
         .order("executado_em", { ascending: false })
         .limit(500),
     ]);
+    for (const r of [
+      resCda,
+      resSocial,
+      resEmails,
+      resSpinSync,
+      resLobbyBlazeSync,
+      resLobbyCdaSync,
+      resLobbyEsportivaSync,
+      resLobbyJonbetSync,
+      resLobbyBateuSync,
+      resLobbyRicoSync,
+      resLobbyBrxSync,
+      resLobbyDonaldSync,
+      resLobbyBetpontoSync,
+      resLobbyGoldebetSync,
+      resComercialCnpjSync,
+      resRevenueSentinelSync,
+    ]) {
+      if (r.error) throw r.error;
+    }
 
     const agregarSyncPorData = (
       rows: { executado_em: string; registros_inseridos: number | null; registros_atualizados?: number | null; status?: string }[],
@@ -680,10 +721,14 @@ export default function StatusTecnico() {
       .from("prestador_ponto_cidr_allowlist")
       .select("id, cidr, rotulo, created_at")
       .order("created_at", { ascending: true });
-    if (cidrErr) setCidrRows([]);
-    else setCidrRows((cidrData ?? []) as PrestadorPontoCidrRow[]);
-
-    setLoading(false);
+    if (cidrErr) throw cidrErr;
+    setCidrRows((cidrData ?? []) as PrestadorPontoCidrRow[]);
+    } catch (e) {
+      console.error("Status Técnico: falha ao carregar", e);
+      setErroCarga(ERRO_CARREGAR_STATUS);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -3163,6 +3208,10 @@ export default function StatusTecnico() {
         actions={<AjudaContextualAcoes pageKey="status_tecnico" />}
       />
 
+      {erroCarga ? (
+        <AlertaCargaComRetry mensagem={erroCarga} onRetry={() => void carregar()} />
+      ) : (
+      <>
       <div className="app-grid-kpi-4" style={{ ...getPageKpiSectionGapStyle(), width: "100%", gap: 14 }}>
         {kpisConsolidados.map((k) => (
           <div
@@ -4030,6 +4079,8 @@ export default function StatusTecnico() {
           error={cidrErroExcluir}
           zIndex={2100}
         />
+      )}
+      </>
       )}
     </div>
   );

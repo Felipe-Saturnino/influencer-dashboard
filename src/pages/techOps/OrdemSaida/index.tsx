@@ -37,7 +37,7 @@ import {
   type OrdemSaidaStatus,
   type OsItemDisponivel,
 } from "../../../lib/techOpsOrdemSaida";
-import { AlertaCargaComRetry } from "../AlertaCargaComRetry";
+import { AlertaCargaComRetry } from "../../../components/AlertaCargaComRetry";
 import { KpiOsCard } from "./ordemSaidaUi";
 import { AbaInterna } from "./AbaInterna";
 import { AbaExterna } from "./AbaExterna";

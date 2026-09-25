@@ -1,4 +1,5 @@
 import { supabase } from "../../../lib/supabase";
+import { fetchAllPages } from "../../../lib/supabasePaginate";
 import type { EstudioSpinRow, MesaSpinCadastroRow } from "./gestaoMesasUi";
 
 /** FK direta operadora_slug — obrigatório após mesas_spin_operadora_identificacao (PGRST201 / HTTP 300). */
@@ -39,68 +40,76 @@ function normalizarEstudioRow(row: Record<string, unknown>): EstudioSpinRow {
   };
 }
 
+async function fetchMesasPagina(select: string): Promise<Record<string, unknown>[]> {
+  return fetchAllPages<Record<string, unknown>>(async (from, to) => {
+    const res = await supabase
+      .from("mesas_spin_cadastro")
+      .select(select)
+      .order("nome_mesa", { ascending: true })
+      .order("id", { ascending: true })
+      .range(from, to);
+    return { data: (res.data ?? null) as Record<string, unknown>[] | null, error: res.error };
+  });
+}
+
 /** Evita falha total quando colunas novas ainda não existem no PostgREST. */
 export async function fetchMesasSpinCadastroRows(): Promise<MesaSpinCadastroRow[]> {
   const attempts = [MESAS_SELECT_COM_ESTUDIO, MESAS_SELECT_LEGADO, MESAS_SELECT_SEM_EMBED, MESAS_SELECT_LEGADO_SEM_EMBED];
 
-  let lastMessage = "Não foi possível carregar as mesas.";
   for (let i = 0; i < attempts.length; i++) {
-    const select = attempts[i]!;
-    const res = await supabase.from("mesas_spin_cadastro").select(select).order("nome_mesa", { ascending: true });
-    if (!res.error) {
-      return (res.data ?? []).map((row) => normalizarMesaRow(row as unknown as Record<string, unknown>));
+    try {
+      const data = await fetchMesasPagina(attempts[i]!);
+      return data.map((row) => normalizarMesaRow(row));
+    } catch (e) {
+      console.error(`mesas_spin_cadastro (tentativa ${i + 1}):`, e);
     }
-    lastMessage = res.error.message || lastMessage;
-    console.error(`mesas_spin_cadastro (tentativa ${i + 1}):`, res.error);
   }
 
-  throw new Error(lastMessage);
+  throw new Error("Não foi possível carregar as mesas.");
+}
+
+async function fetchEstudiosPagina(select: string, soAtivos: boolean): Promise<Record<string, unknown>[]> {
+  return fetchAllPages<Record<string, unknown>>(async (from, to) => {
+    let q = supabase.from("estudios_spin").select(select);
+    if (soAtivos) q = q.eq("ativo", true);
+    const res = await q.order("nome", { ascending: true }).order("id", { ascending: true }).range(from, to);
+    return { data: (res.data ?? null) as Record<string, unknown>[] | null, error: res.error };
+  });
 }
 
 export async function fetchEstudiosSpinRows(): Promise<EstudioSpinRow[]> {
-  const full = await supabase
-    .from("estudios_spin")
-    .select(ESTUDIOS_SELECT_COM_TURNOS)
-    .eq("ativo", true)
-    .order("nome", { ascending: true });
-
-  const res = full.error
-    ? await supabase
-        .from("estudios_spin")
-        .select(ESTUDIOS_SELECT_BASE)
-        .eq("ativo", true)
-        .order("nome", { ascending: true })
-    : full;
-
-  if (full.error) {
-    console.error("estudios_spin (com turnos):", full.error);
+  try {
+    const data = await fetchEstudiosPagina(ESTUDIOS_SELECT_COM_TURNOS, true);
+    return data.map((row) => normalizarEstudioRow(row));
+  } catch (e) {
+    console.error("estudios_spin (com turnos):", e);
   }
-  if (res.error) {
-    console.error("estudios_spin (base):", res.error);
-    return [];
+  try {
+    const data = await fetchEstudiosPagina(ESTUDIOS_SELECT_BASE, true);
+    return data.map((row) => normalizarEstudioRow(row));
+  } catch (e) {
+    console.error("estudios_spin (base):", e);
+    throw new Error("Não foi possível carregar os estúdios.");
   }
-
-  return (res.data ?? []).map((row) => normalizarEstudioRow(row as Record<string, unknown>));
 }
 
 /** Estúdios inativos — só para resolver filtro de operadora em mesas legadas. */
 export async function fetchEstudiosSpinJunctionRows(): Promise<EstudioSpinRow[]> {
-  const res = await supabase
-    .from("estudios_spin")
-    .select("id, slug, nome, tipo, ativo, created_at, updated_at, estudios_spin_operadoras(operadora_slug, operadoras(nome))")
-    .order("nome", { ascending: true });
-
-  if (res.error) {
-    console.error("estudios_spin (junction):", res.error);
-    return [];
+  try {
+    const data = await fetchEstudiosPagina(
+      "id, slug, nome, tipo, ativo, created_at, updated_at, estudios_spin_operadoras(operadora_slug, operadoras(nome))",
+      false,
+    );
+    return data.map((row) =>
+      normalizarEstudioRow({
+        ...row,
+        turno_manha_inicio: null,
+        turno_tarde_inicio: null,
+        turno_noite_inicio: null,
+      }),
+    );
+  } catch (e) {
+    console.error("estudios_spin (junction):", e);
+    throw new Error("Não foi possível carregar os estúdios.");
   }
-
-  return (res.data ?? []).map((row) =>
-    normalizarEstudioRow({
-      ...(row as Record<string, unknown>),
-      turno_manha_inicio: null,
-      turno_tarde_inicio: null,
-      turno_noite_inicio: null,
-    }),
-  );
 }

@@ -36,7 +36,7 @@ import {
   type ManutencaoRegRow,
   type MesaItensAlocadosOption,
 } from "../../../lib/techOpsItensAlocados";
-import { AlertaCargaComRetry } from "../AlertaCargaComRetry";
+import { AlertaCargaComRetry } from "../../../components/AlertaCargaComRetry";
 import { AbaSet } from "./AbaSet";
 import { AbaManutencaoPainel } from "./AbaManutencao";
 
