@@ -37,6 +37,7 @@ import {
   type OrdemSaidaStatus,
   type OsItemDisponivel,
 } from "../../../lib/techOpsOrdemSaida";
+import { AlertaCargaComRetry } from "../AlertaCargaComRetry";
 import { KpiOsCard } from "./ordemSaidaUi";
 import { AbaInterna } from "./AbaInterna";
 import { AbaExterna } from "./AbaExterna";
@@ -89,6 +90,7 @@ export default function TechOpsOrdemSaida() {
   const competenciaPreview = mesAtual?.competencia ?? `${mesKey}-01`;
 
   const carregar = useCallback(async () => {
+    setLoading(true);
     setErro(null);
     try {
       const [os, itens, itensMan, forn, est] = await Promise.all([
@@ -102,15 +104,12 @@ export default function TechOpsOrdemSaida() {
           .eq("ativo", true)
           .order("nome", { ascending: true }),
       ]);
+      if (est.error) throw est.error;
       setRows(os);
       setItensDisponiveis(itens);
       setItensManutencao(itensMan);
       setFornecedores(forn);
-      if (est.error) {
-        console.error("Ordem de Saída: falha ao carregar estúdios", est.error);
-      } else {
-        setEstudios((est.data ?? []).map((e: { slug: string; nome: string }) => ({ slug: e.slug, nome: e.nome })));
-      }
+      setEstudios((est.data ?? []).map((e: { slug: string; nome: string }) => ({ slug: e.slug, nome: e.nome })));
     } catch (e) {
       console.error("Ordem de Saída: falha ao carregar dados", e);
       setErro(ERRO_CARREGAR);
@@ -277,15 +276,7 @@ export default function TechOpsOrdemSaida() {
         </div>
       </div>
 
-      {erro ? (
-        <div
-          role="alert"
-          aria-live="polite"
-          style={{ color: "#e84025", fontSize: 13, fontFamily: FONT.body, padding: "20px 0", textAlign: "center" }}
-        >
-          {erro}
-        </div>
-      ) : (
+      {erro ? <AlertaCargaComRetry mensagem={erro} onRetry={() => void carregar()} /> : (
         <>
           <div style={pageBox}>
             <SectionTitle sub="clique em um card para filtrar por status">KPIs Consolidados</SectionTitle>

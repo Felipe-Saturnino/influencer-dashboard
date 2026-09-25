@@ -36,6 +36,7 @@ import {
   type ManutencaoRegRow,
   type MesaItensAlocadosOption,
 } from "../../../lib/techOpsItensAlocados";
+import { AlertaCargaComRetry } from "../AlertaCargaComRetry";
 import { AbaSet } from "./AbaSet";
 import { AbaManutencaoPainel } from "./AbaManutencao";
 
@@ -106,24 +107,24 @@ export default function TechOpsItensAlocados() {
     setLoading(true);
     setErro(null);
     try {
-      const [setRows, limp, manut] = await Promise.all([
+      const [setRows, limp, manut, mesasLocal] = await Promise.all([
         fetchItensSetNoLocal(localChave),
         fetchLimpezasItensAlocados({ localChave, mesKey, mesaId: null }),
         fetchManutencoesItensAlocados({ localChave, mesKey, mesaId: null }),
+        estudioSlug ? fetchMesasItensAlocados(estudioSlug) : Promise.resolve([] as MesaItensAlocadosOption[]),
       ]);
       setItens(setRows);
       setLimpezas(limp);
       setManutencoes(manut);
+      setMesas(mesasLocal);
+      if (!estudioSlug) setMesaId(MESA_TODAS);
     } catch (e) {
       console.error("Itens Alocados: falha ao carregar", e);
       setErro(ERRO_CARREGAR);
-      setItens([]);
-      setLimpezas([]);
-      setManutencoes([]);
     } finally {
       setLoading(false);
     }
-  }, [localChave, mesKey]);
+  }, [localChave, mesKey, estudioSlug]);
 
   useEffect(() => {
     if (perm.loading || !podeVer) return;
@@ -133,36 +134,33 @@ export default function TechOpsItensAlocados() {
       } catch (e) {
         console.error("Itens Alocados: falha ao carregar estúdios", e);
         setErro(ERRO_CARREGAR);
+        setLoading(false);
       }
     })();
   }, [perm.loading, podeVer, carregarCatalogo]);
 
   useEffect(() => {
-    if (!estudioSlug) {
-      setMesas([]);
-      setMesaId(MESA_TODAS);
-      return;
-    }
-    let cancel = false;
-    void (async () => {
-      try {
-        const m = await fetchMesasItensAlocados(estudioSlug);
-        if (cancel) return;
-        setMesas(m);
-        setMesaId(MESA_TODAS);
-      } catch (e) {
-        console.error("Itens Alocados: falha ao carregar mesas", e);
-      }
-    })();
-    return () => {
-      cancel = true;
-    };
+    setMesaId(MESA_TODAS);
   }, [estudioSlug]);
 
   useEffect(() => {
     if (perm.loading || !podeVer || !localChave) return;
     void carregarDados();
   }, [perm.loading, podeVer, localChave, carregarDados]);
+
+  const tentarDeNovo = useCallback(() => {
+    setErro(null);
+    setLoading(true);
+    if (!localChave) {
+      void carregarCatalogo().catch((e) => {
+        console.error("Itens Alocados: falha ao carregar estúdios", e);
+        setErro(ERRO_CARREGAR);
+        setLoading(false);
+      });
+      return;
+    }
+    void carregarDados();
+  }, [localChave, carregarCatalogo, carregarDados]);
 
   if (perm.loading) {
     return (
@@ -292,13 +290,9 @@ export default function TechOpsItensAlocados() {
         </div>
       </div>
 
-      {erro ? (
-        <div role="alert" aria-live="polite" style={{ color: "#e84025", fontSize: 13, fontFamily: FONT.body, marginBottom: 14 }}>
-          {erro}
-        </div>
-      ) : null}
+      {erro ? <AlertaCargaComRetry mensagem={erro} onRetry={tentarDeNovo} /> : null}
 
-      {aba === "set" ? (
+      {erro ? null : aba === "set" ? (
         <div id="panel-ia-set" role="tabpanel" aria-labelledby="tab-ia-set">
           <AbaSet
             itens={itens}

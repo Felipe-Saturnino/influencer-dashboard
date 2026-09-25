@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { fetchAllPages } from "./supabasePaginate";
 
 /* ─── Tech Ops → Gestão de Estoque — tipos e helpers de domínio ───────────── */
 
@@ -237,34 +238,49 @@ export function labelEstoqueLocalSlug(
 
 /* ─── Fetch ───────────────────────────────────────────────────────────────── */
 
+const ESTOQUE_ITEM_COLS =
+  "id, codigo_num, categoria, nome, marca, modelo, quantidade_total, quantidade_em_uso, quantidade_manutencao, valor_unitario, estudio_slug, ativo, created_at, updated_at";
+
+const ESTOQUE_EQUIP_COLS =
+  "id, codigo_num, categoria, nome, numero_serie, marca, modelo, valor, status, estudio_slug, ativo, created_at, updated_at";
+
+const ESTOQUE_JOGO_COLS =
+  "id, codigo_num, categoria, nome_lote, qtd_inicial, qtd_consumida, qtd_descartada, estudio_slug, ativo, created_at, updated_at";
+
 export async function fetchEstoqueItens(): Promise<EstoqueItemRow[]> {
-  const { data, error } = await supabase
-    .from("tech_ops_estoque_itens")
-    .select("*")
-    .eq("ativo", true)
-    .order("codigo_num", { ascending: true });
-  if (error) throw error;
-  return (data ?? []) as EstoqueItemRow[];
+  return fetchAllPages<EstoqueItemRow>(async (from, to) =>
+    supabase
+      .from("tech_ops_estoque_itens")
+      .select(ESTOQUE_ITEM_COLS)
+      .eq("ativo", true)
+      .order("codigo_num", { ascending: true })
+      .order("id", { ascending: true })
+      .range(from, to),
+  );
 }
 
 export async function fetchEstoqueEquipamentos(): Promise<EstoqueEquipamentoRow[]> {
-  const { data, error } = await supabase
-    .from("tech_ops_estoque_equipamentos")
-    .select("*")
-    .eq("ativo", true)
-    .order("codigo_num", { ascending: true });
-  if (error) throw error;
-  return (data ?? []) as EstoqueEquipamentoRow[];
+  return fetchAllPages<EstoqueEquipamentoRow>(async (from, to) =>
+    supabase
+      .from("tech_ops_estoque_equipamentos")
+      .select(ESTOQUE_EQUIP_COLS)
+      .eq("ativo", true)
+      .order("codigo_num", { ascending: true })
+      .order("id", { ascending: true })
+      .range(from, to),
+  );
 }
 
 export async function fetchEstoqueJogoLotes(): Promise<EstoqueJogoLoteRow[]> {
-  const { data, error } = await supabase
-    .from("tech_ops_estoque_jogo_lotes")
-    .select("*")
-    .eq("ativo", true)
-    .order("codigo_num", { ascending: true });
-  if (error) throw error;
-  return (data ?? []) as EstoqueJogoLoteRow[];
+  return fetchAllPages<EstoqueJogoLoteRow>(async (from, to) =>
+    supabase
+      .from("tech_ops_estoque_jogo_lotes")
+      .select(ESTOQUE_JOGO_COLS)
+      .eq("ativo", true)
+      .order("codigo_num", { ascending: true })
+      .order("id", { ascending: true })
+      .range(from, to),
+  );
 }
 
 type FornecedorFetchRow = Omit<EstoqueFornecedorRow, "contatos"> & {
@@ -279,12 +295,17 @@ function unwrapContatos(
 }
 
 export async function fetchEstoqueFornecedores(): Promise<EstoqueFornecedorRow[]> {
-  const { data, error } = await supabase
-    .from("tech_ops_estoque_fornecedores")
-    .select("*, tech_ops_estoque_fornecedor_contatos(*)")
-    .order("razao_social", { ascending: true });
-  if (error) throw error;
-  return ((data ?? []) as FornecedorFetchRow[]).map((f) => {
+  const data = await fetchAllPages<FornecedorFetchRow>(async (from, to) =>
+    supabase
+      .from("tech_ops_estoque_fornecedores")
+      .select(
+        "id, razao_social, cnpj, tipo, observacao, ativo, created_at, updated_at, tech_ops_estoque_fornecedor_contatos(id, fornecedor_id, nome, telefone, email, created_at)",
+      )
+      .order("razao_social", { ascending: true })
+      .order("id", { ascending: true })
+      .range(from, to),
+  );
+  return data.map((f) => {
     const { tech_ops_estoque_fornecedor_contatos: contatosRaw, ...resto } = f;
     return {
       ...resto,
@@ -297,30 +318,32 @@ export async function fetchEstoqueAnotacoes(
   entidadeTipo: EstoqueEntidadeTipo,
   entidadeId: string,
 ): Promise<EstoqueAnotacaoRow[]> {
-  const { data, error } = await supabase
-    .from("tech_ops_estoque_anotacoes")
-    .select("id, entidade_tipo, entidade_id, texto, anexo_url, autor_nome, created_at")
-    .eq("entidade_tipo", entidadeTipo)
-    .eq("entidade_id", entidadeId)
-    .order("created_at", { ascending: false })
-    .limit(100);
-  if (error) throw error;
-  return (data ?? []) as EstoqueAnotacaoRow[];
+  return fetchAllPages<EstoqueAnotacaoRow>(async (from, to) =>
+    supabase
+      .from("tech_ops_estoque_anotacoes")
+      .select("id, entidade_tipo, entidade_id, texto, anexo_url, autor_nome, created_at")
+      .eq("entidade_tipo", entidadeTipo)
+      .eq("entidade_id", entidadeId)
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
+      .range(from, to),
+  );
 }
 
 export async function fetchEstoqueHistorico(
   entidadeTipo: EstoqueEntidadeTipo,
   entidadeId: string,
 ): Promise<EstoqueHistoricoRow[]> {
-  const { data, error } = await supabase
-    .from("tech_ops_estoque_historico")
-    .select("id, entidade_tipo, entidade_id, acao, detalhe, autor_nome, created_at")
-    .eq("entidade_tipo", entidadeTipo)
-    .eq("entidade_id", entidadeId)
-    .order("created_at", { ascending: false })
-    .limit(200);
-  if (error) throw error;
-  return (data ?? []) as EstoqueHistoricoRow[];
+  return fetchAllPages<EstoqueHistoricoRow>(async (from, to) =>
+    supabase
+      .from("tech_ops_estoque_historico")
+      .select("id, entidade_tipo, entidade_id, acao, detalhe, autor_nome, created_at")
+      .eq("entidade_tipo", entidadeTipo)
+      .eq("entidade_id", entidadeId)
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
+      .range(from, to),
+  );
 }
 
 /* ─── Escrita (histórico, anotações, anexos) ──────────────────────────────── */

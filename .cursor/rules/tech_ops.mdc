@@ -35,6 +35,8 @@ Códigos **ITM/EQP/JOG-####** (4 dígitos). Quantidades Estoque/Qtd Atual deriva
 
 **Catálogo — paginação de vista:** 20 linhas/página (`TabelaPaginacaoBar` + `TABELA_PAGE_SIZE`) nas quatro abas (Itens, Equipamentos, Jogo, Fornecedores). KPIs e filtros usam o conjunto filtrado completo. A barra some quando há uma única página. Busca, filtro, ordenação ou clique em KPI voltam à página 1.
 
+**Carga:** `fetchAllPages` + colunas explícitas + `order` estável (`codigo_num`/`razao_social` + `id`) nas quatro listas. Estúdios do filtro entram na mesma carga. Falha: alerta + **Tentar de novo**; a tabela não aparece enquanto o erro estiver ativo. Empty só sem erro. Anotações e histórico do modal: `fetchAllPages` + `order` `created_at` + `id`.
+
 **Ajuda contextual:** `AjudaContextualAcoes` fica à direita da mesma linha das abas.
 
 ---
@@ -86,7 +88,7 @@ Códigos **ITM/EQP/JOG-####** (4 dígitos). Quantidades Estoque/Qtd Atual deriva
 - **Modais Ver:** campos por `OsModalContexto`; Itens no bloco Dados; Anotações = observação de abertura + tabela + motivo/obs. retorno; Histórico = ações.
 - **Modais Atualizar:** Cancelar → `cancelada` + motivo; Confirmar Retorno → `concluida` + checkboxes por item + obs.; Alterar (solicitada/aberta) → edita dados/itens e volta a `solicitada`; Alterar (concluída sem retorno) → mantém `concluida` (ou vira `aberta` se remover Sem retorno), realoca estoque e registra no histórico os campos alterados.
 - **Datas:** DD/MM/AAAA; retorno > saída; Sem retorno / Sem previsão.
-- **Vazio:** `Nenhuma ordem encontrada.`
+- **Vazio:** `Nenhuma ordem encontrada.` Empty só sem erro. Falha de ordens, catálogo ou estúdios: alerta + **Tentar de novo** (a listagem não aparece com o erro). Histórico e anotações da OS: `fetchAllPages` + `order` `created_at` + `id`. O seletor de itens também pagina o catálogo (`fetchAllPages`).
 - **Paginação de vista:** 20 linhas/página (`TabelaComPaginacao` + `TABELA_PAGE_SIZE`) na Listagem (Interna), nas três tabelas da Externa (Futuras / Em Aberto / Encerradas, independentes) e nas duas da Manutenção. KPIs e filtros usam o conjunto completo. A barra some quando há uma única página. Busca, filtro de status, mês ou Histórico voltam à página 1.
 
 ## Fora do escopo v1
@@ -142,7 +144,7 @@ Recados, Tarefas, Horas Extras, Admin/Telemetria, PIN. (Baixa de estoque na apro
 - **Mês (Manutenção):** atual + 2 anteriores, mais novo → mais antigo; default = atual.
 - **Status da página:** Em Uso / Verificar / Manutenção (próprios desta página).
 - **Permissões UI:** Ver → dados + Ver/Histórico; Criar → Checklist, Registrar Limpeza, Registrar Manutenção.
-- **Vazio Set:** `Nenhum item alocado neste local.` · Limpeza/Manutenção: mensagens específicas de local/mês.
+- **Vazio Set:** `Nenhum item alocado neste local.` · Limpeza/Manutenção: mensagens específicas de local/mês. Empty só sem erro. Falha de locais, mesas, Set, limpeza ou manutenção: alerta + **Tentar de novo**; a listagem não renderiza o vazio junto com o erro. Histórico de checklist e de movimentação: `fetchAllPages` + `order` `created_at` + `id`.
 - **Paginação de vista:** 20 linhas/página (`TabelaComPaginacao` + `TABELA_PAGE_SIZE`) na tabela **Itens** (Set) e nas tabelas **Limpeza** / **Manutenção** (independentes). KPIs do Set usam o conjunto completo. A barra some quando há uma única página. Filtro de KPI ou ordenação no Set voltam à página 1.
 
 ## Fora do escopo (próxima etapa)

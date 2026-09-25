@@ -43,6 +43,7 @@ import {
   type EstoqueItemRow,
   type EstoqueJogoLoteRow,
 } from "../../../lib/techOpsEstoque";
+import { AlertaCargaComRetry } from "../AlertaCargaComRetry";
 import { AbaItens } from "./AbaItens";
 import { AbaEquipamentos } from "./AbaEquipamentos";
 import { AbaJogo } from "./AbaJogo";
@@ -88,18 +89,22 @@ export default function TechOpsGestaoEstoque() {
   const podeVer = perm.canView === "sim" || perm.canView === "proprios";
 
   const carregar = useCallback(async () => {
+    setLoading(true);
     setErro(null);
     try {
-      const [it, eq, jl, fo] = await Promise.all([
+      const [it, eq, jl, fo, est] = await Promise.all([
         fetchEstoqueItens(),
         fetchEstoqueEquipamentos(),
         fetchEstoqueJogoLotes(),
         fetchEstoqueFornecedores(),
+        supabase.from("estudios_spin").select("slug, nome").eq("ativo", true).order("nome", { ascending: true }),
       ]);
+      if (est.error) throw est.error;
       setItens(it);
       setEquipamentos(eq);
       setJogoLotes(jl);
       setFornecedores(fo);
+      setEstudios((est.data ?? []).map((e: { slug: string; nome: string }) => ({ slug: e.slug, nome: e.nome })));
     } catch (e) {
       console.error("Gestão de Estoque: falha ao carregar dados", e);
       setErro(ERRO_CARREGAR);
@@ -111,18 +116,6 @@ export default function TechOpsGestaoEstoque() {
   useEffect(() => {
     if (perm.loading || !podeVer) return;
     void carregar();
-    void supabase
-      .from("estudios_spin")
-      .select("slug, nome")
-      .eq("ativo", true)
-      .order("nome", { ascending: true })
-      .then(({ data, error }) => {
-        if (error) {
-          console.error("Gestão de Estoque: falha ao carregar estúdios", error);
-          return;
-        }
-        setEstudios((data ?? []).map((e: { slug: string; nome: string }) => ({ slug: e.slug, nome: e.nome })));
-      });
   }, [perm.loading, podeVer, carregar]);
 
   const estudioNomePorSlug = useMemo(() => buildEstoqueLocalNomeMap(estudios), [estudios]);
@@ -253,15 +246,7 @@ export default function TechOpsGestaoEstoque() {
         </div>
       </div>
 
-      {erro ? (
-        <div
-          role="alert"
-          aria-live="polite"
-          style={{ color: "#e84025", fontSize: 13, fontFamily: FONT.body, padding: "20px 0", textAlign: "center" }}
-        >
-          {erro}
-        </div>
-      ) : (
+      {erro ? <AlertaCargaComRetry mensagem={erro} onRetry={() => void carregar()} /> : (
         <>
           <div role="tabpanel" id="panel-estoque-itens" aria-labelledby="tab-estoque-itens" hidden={aba !== "itens"}>
             <AbaItens
