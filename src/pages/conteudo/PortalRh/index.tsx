@@ -1052,8 +1052,42 @@ export default function PortalRhPage() {
       />
 
       {erro ? (
-        <div role="alert" style={{ marginBottom: 16, padding: 12, borderRadius: 10, background: "rgba(232,64,37,0.12)", color: "#e84025", fontSize: 13 }}>
-          {erro}
+        <div
+          role="alert"
+          style={{
+            marginBottom: 16,
+            padding: "10px 14px",
+            borderRadius: 10,
+            background: "rgba(232,64,37,0.12)",
+            border: "1px solid rgba(232,64,37,0.35)",
+            color: "#e84025",
+            fontSize: 13,
+            fontFamily: FONT.body,
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "center",
+            gap: 12,
+            justifyContent: "space-between",
+          }}
+        >
+          <span>{erro}</span>
+          <button
+            type="button"
+            onClick={() => void carregar()}
+            style={{
+              padding: "8px 14px",
+              borderRadius: 10,
+              border: "1px solid rgba(232,64,37,0.35)",
+              background: "rgba(232,64,37,0.08)",
+              color: "#e84025",
+              fontSize: 12,
+              fontWeight: 700,
+              cursor: "pointer",
+              fontFamily: FONT.body,
+            }}
+          >
+            Tentar de novo
+          </button>
         </div>
       ) : null}
 
@@ -1076,7 +1110,7 @@ export default function PortalRhPage() {
           onMesesCarrosselChange={handleMesesGerChange}
           onRegisterAbrirCriar={handleRegisterAbrirCriar}
         />
-      ) : (
+      ) : erro ? null : (
         <>
           <div
             role="tabpanel"

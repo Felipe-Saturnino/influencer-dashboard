@@ -1057,7 +1057,7 @@ function CardTurno({
         <StatsSec titulo="Shuffler" stats={data.shuffler} t={t} brand={brand} />
 
         <div className="app-grid-2" style={{ gap: 12, marginBottom: 12 }}>
-          <CampoLeitura label="SOSs" valor={data.campos.sos} empty="Não houveram SOS no Turno" t={t} />
+          <CampoLeitura label="SOS" valor={data.campos.sos} empty="Não houveram SOS no Turno" t={t} />
           <CampoLeitura label="Figurino" valor={data.campos.figurino} empty="Não houveram trocas de Figurino no Turno" t={t} />
           <CampoLeitura
             label="Equipamentos"

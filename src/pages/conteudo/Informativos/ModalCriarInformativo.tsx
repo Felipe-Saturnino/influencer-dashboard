@@ -80,7 +80,11 @@ export function ModalCriarInformativo({
   const carregarEdicao = useCallback(async (id: string) => {
     setLoadingData(true);
     setErro(null);
-    const { data, error } = await supabase.from("conteudo_informativo").select("*").eq("id", id).single();
+    const { data, error } = await supabase
+      .from("conteudo_informativo")
+      .select("id, assunto, descricao, perfis, operador_escopo, status")
+      .eq("id", id)
+      .single();
     setLoadingData(false);
     if (error || !data) {
       console.error("[ModalCriarInformativo] carregar:", error);

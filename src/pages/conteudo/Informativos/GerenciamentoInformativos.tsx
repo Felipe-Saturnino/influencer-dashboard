@@ -6,9 +6,9 @@ import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { BtnArquivarLinha } from "../../../components/BtnArquivarLinha";
 import { BtnExcluirLinha } from "../../../components/BtnExcluirLinha";
-import { ModalConfirmArquivarPadrao } from "../../../components/OperacoesModal";
+import { ModalConfirmArquivarPadrao, ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal";
 import { descricaoModalArquivarItem, tooltipArquivar } from "../../../lib/arquivarItemUi";
-import {tooltipExcluir} from "../../../lib/excluirItemUi";
+import { descricaoModalExcluirItem, tooltipExcluir } from "../../../lib/excluirItemUi";
 import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
 import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
 import { TabelaComPaginacao } from "../../../components/TabelaPaginacaoBar";
@@ -34,7 +34,8 @@ import {
   type OperadoraAtivaOption,
 } from "../../../lib/informativosOperadorEscopo";
 import { buildMesesCarrossel, itemNoMesCarrossel, type MesCarrosselEntry } from "../PortalRh/portalRhCarrossel";
-import { isDataNoPeriodoHistoricoCompetencias } from "../../../lib/dashboardHelpers";
+import { getPeriodoHistoricoCompetencias, isDataNoPeriodoHistoricoCompetencias } from "../../../lib/dashboardHelpers";
+import { fetchAllPages } from "../../../lib/supabasePaginate";
 import { ModalCriarInformativo } from "./ModalCriarInformativo";
 import { ModalHistoricoInformativo } from "./ModalHistoricoInformativo";
 
@@ -157,6 +158,8 @@ export function GerenciamentoInformativos({
   const [acaoLoading, setAcaoLoading] = useState<string | null>(null);
   const [alvoArquivar, setAlvoArquivar] = useState<InformativoGerenciamentoRow | null>(null);
   const [erroArquivar, setErroArquivar] = useState<string | null>(null);
+  const [alvoExcluir, setAlvoExcluir] = useState<InformativoGerenciamentoRow | null>(null);
+  const [erroExcluir, setErroExcluir] = useState<string | null>(null);
   const [sortCol, setSortCol] = useState<SortCol>("createdAt");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
 
@@ -183,32 +186,9 @@ export function GerenciamentoInformativos({
   const carregar = useCallback(async () => {
     setLoading(true);
     setErro(null);
-    const [informativosRes, operadorasRes] = await Promise.all([
-      supabase
-        .from("conteudo_informativo")
-        .select(
-          "id, assunto, descricao, perfis, operador_escopo, status, created_at, published_at, approved_at, approved_by, created_by, published_by",
-        )
-        .order("created_at", { ascending: false }),
-      supabase.from("operadoras").select("slug, nome").eq("ativo", true),
-    ]);
-    const { data, error } = informativosRes;
-    const operadorasMap = new Map<string, string>(
-      ((operadorasRes.data ?? []) as OperadoraAtivaOption[]).map((o) => [o.slug, o.nome]),
-    );
-
-    if (error) {
-      console.error("[GerenciamentoInformativos] carregar:", error);
-      setErro(ERRO_CARREGAR);
-      setRows([]);
-      setLoading(false);
-      return;
-    }
-
-    const userIds = new Set<string>();
-    const built: InformativoGerenciamentoRow[] = [];
-    for (const raw of data ?? []) {
-      const row = raw as {
+    const { inicio } = getPeriodoHistoricoCompetencias();
+    try {
+      type InfRow = {
         id: string;
         assunto: string;
         descricao: string;
@@ -222,55 +202,85 @@ export function GerenciamentoInformativos({
         created_by: string | null;
         published_by: string | null;
       };
-      const autorId = row.created_by ?? row.published_by;
-      if (autorId) userIds.add(autorId);
-      if (row.approved_by) userIds.add(row.approved_by);
-      const perfisBase = labelPerfisInformativo(row.perfis ?? []);
-      const escopoOp =
-        perfisIncluemOperador(row.perfis ?? []) && row.operador_escopo
-          ? ` · Op.: ${labelOperadorEscopoInformativo(row.operador_escopo, operadorasMap)}`
-          : "";
-      built.push({
-        id: row.id,
-        assunto: row.assunto,
-        autorNome: "",
-        perfis: row.perfis ?? [],
-        perfisLabel: `${perfisBase}${escopoOp}`,
-        createdBy: row.created_by,
-        createdAt: row.created_at,
-        status: row.status,
-        approvedAt: row.approved_at,
-        aprovadorNome: "",
-        publishedAt: row.published_at,
-        textoBusca: normalizarTextoBusca(`${row.assunto} ${stripHtmlText(row.descricao)} ${(row.perfis ?? []).join(" ")}`),
-      });
-    }
+      const [informativos, operadorasAtivas] = await Promise.all([
+        fetchAllPages<InfRow>(async (from, to) => {
+          const { data, error } = await supabase
+            .from("conteudo_informativo")
+            .select(
+              "id, assunto, descricao, perfis, operador_escopo, status, created_at, published_at, approved_at, approved_by, created_by, published_by",
+            )
+            .gte("created_at", inicio)
+            .order("created_at", { ascending: false })
+            .order("id", { ascending: true })
+            .range(from, to);
+          return { data: (data as InfRow[] | null) ?? null, error };
+        }),
+        fetchAllPages<OperadoraAtivaOption>(async (from, to) => {
+          const { data, error } = await supabase
+            .from("operadoras")
+            .select("slug, nome")
+            .eq("ativo", true)
+            .order("slug", { ascending: true })
+            .range(from, to);
+          return { data: (data as OperadoraAtivaOption[] | null) ?? null, error };
+        }),
+      ]);
+      const operadorasMap = new Map<string, string>(operadorasAtivas.map((o) => [o.slug, o.nome]));
 
-    const nomes: Record<string, string> = {};
-    if (userIds.size > 0) {
-      const { data: profs } = await supabase.from("profiles").select("id, name").in("id", [...userIds]);
-      for (const p of profs ?? []) {
-        const pr = p as { id: string; name: string | null };
-        nomes[pr.id] = pr.name ?? "";
+      const userIds = new Set<string>();
+      const built: InformativoGerenciamentoRow[] = [];
+      for (const row of informativos) {
+        const autorId = row.created_by ?? row.published_by;
+        if (autorId) userIds.add(autorId);
+        if (row.approved_by) userIds.add(row.approved_by);
+        const perfisBase = labelPerfisInformativo(row.perfis ?? []);
+        const escopoOp =
+          perfisIncluemOperador(row.perfis ?? []) && row.operador_escopo
+            ? ` · Op.: ${labelOperadorEscopoInformativo(row.operador_escopo, operadorasMap)}`
+            : "";
+        built.push({
+          id: row.id,
+          assunto: row.assunto,
+          autorNome: "",
+          perfis: row.perfis ?? [],
+          perfisLabel: `${perfisBase}${escopoOp}`,
+          createdBy: row.created_by,
+          createdAt: row.created_at,
+          status: row.status,
+          approvedAt: row.approved_at,
+          aprovadorNome: "",
+          publishedAt: row.published_at,
+          textoBusca: normalizarTextoBusca(`${row.assunto} ${stripHtmlText(row.descricao)} ${(row.perfis ?? []).join(" ")}`),
+        });
       }
-    }
 
-    setRows(
-      built.map((r) => {
-        const raw = (data ?? []).find((d) => (d as { id: string }).id === r.id) as {
-          created_by?: string | null;
-          published_by?: string | null;
-          approved_by?: string | null;
-        } | undefined;
-        const autorId = raw?.created_by ?? raw?.published_by;
-        return {
-          ...r,
-          autorNome: autorId ? (nomes[autorId] ?? "") : "",
-          aprovadorNome: raw?.approved_by ? (nomes[raw.approved_by] ?? "") : "",
-        };
-      }),
-    );
-    onMesesCarrosselChange(buildMesesCarrossel(built.map((b) => ({ iso: b.publishedAt ?? b.createdAt }))));
+      const nomes: Record<string, string> = {};
+      if (userIds.size > 0) {
+        const { data: profs } = await supabase.from("profiles").select("id, name").in("id", [...userIds]);
+        for (const p of profs ?? []) {
+          const pr = p as { id: string; name: string | null };
+          nomes[pr.id] = pr.name ?? "";
+        }
+      }
+
+      setRows(
+        built.map((r) => {
+          const raw = informativos.find((d) => d.id === r.id);
+          const autorId = raw?.created_by ?? raw?.published_by;
+          return {
+            ...r,
+            autorNome: autorId ? (nomes[autorId] ?? "") : "",
+            aprovadorNome: raw?.approved_by ? (nomes[raw.approved_by] ?? "") : "",
+          };
+        }),
+      );
+      onMesesCarrosselChange(buildMesesCarrossel(built.map((b) => ({ iso: b.publishedAt ?? b.createdAt }))));
+      setErro(null);
+    } catch (e) {
+      console.error("[GerenciamentoInformativos] carregar:", e);
+      setErro(ERRO_CARREGAR);
+      setRows([]);
+    }
     setLoading(false);
   }, [onMesesCarrosselChange]);
 
@@ -386,16 +396,19 @@ export function GerenciamentoInformativos({
     setAcaoLoading(null);
   }
 
-  async function excluir(row: InformativoGerenciamentoRow) {
-    if (!user?.id || perm.canExcluirOk !== true) return;
-    setAcaoLoading(row.id);
+  async function confirmarExcluir() {
+    if (!user?.id || !alvoExcluir || perm.canExcluirOk !== true) return;
+    setErroExcluir(null);
+    setAcaoLoading(alvoExcluir.id);
+    const row = alvoExcluir;
     const { error } = await supabase.from("conteudo_informativo").delete().eq("id", row.id);
     if (!error) {
+      setAlvoExcluir(null);
       await carregar();
       onDadosAlterados();
     } else {
       console.error("[GerenciamentoInformativos] excluir:", error);
-      setErro(ERRO_EXCLUIR);
+      setErroExcluir(ERRO_EXCLUIR);
     }
     setAcaoLoading(null);
   }
@@ -403,8 +416,42 @@ export function GerenciamentoInformativos({
   return (
     <div role="tabpanel" id="panel-informativos-gerenciamento" aria-labelledby="tab-informativos-gerenciamento" tabIndex={0}>
       {erro ? (
-        <div role="alert" style={{ marginBottom: 12, padding: 12, borderRadius: 10, background: "rgba(232,64,37,0.12)", color: "#e84025", fontSize: 13 }}>
-          {erro}
+        <div
+          role="alert"
+          style={{
+            marginBottom: 12,
+            padding: "10px 14px",
+            borderRadius: 10,
+            background: "rgba(232,64,37,0.12)",
+            border: "1px solid rgba(232,64,37,0.35)",
+            color: "#e84025",
+            fontSize: 13,
+            fontFamily: FONT.body,
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "center",
+            gap: 12,
+            justifyContent: "space-between",
+          }}
+        >
+          <span>{erro}</span>
+          <button
+            type="button"
+            onClick={() => void carregar()}
+            style={{
+              padding: "8px 14px",
+              borderRadius: 10,
+              border: "1px solid rgba(232,64,37,0.35)",
+              background: "rgba(232,64,37,0.08)",
+              color: "#e84025",
+              fontSize: 12,
+              fontWeight: 700,
+              cursor: "pointer",
+              fontFamily: FONT.body,
+            }}
+          >
+            Tentar de novo
+          </button>
         </div>
       ) : null}
 
@@ -413,7 +460,7 @@ export function GerenciamentoInformativos({
           <Loader2 className="app-lucide-spin" size={22} color="var(--brand-primary, #7c3aed)" aria-hidden style={{ verticalAlign: "middle", marginRight: 8 }} />
           Carregando…
         </div>
-      ) : rowsOrdenadas.length === 0 ? (
+      ) : erro ? null : rowsOrdenadas.length === 0 ? (
         <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
           Sem dados para o período selecionado.
         </div>
@@ -546,7 +593,10 @@ export function GerenciamentoInformativos({
                           <BtnExcluirLinha
                             labelAcao={tooltipExcluir("informativo")}
                             disabled={busy}
-                            onClick={() => void excluir(row)}
+                            onClick={() => {
+                              setErroExcluir(null);
+                              setAlvoExcluir(row);
+                            }}
                           />
                         ) : null}
                       </div>
@@ -594,6 +644,21 @@ export function GerenciamentoInformativos({
           onConfirm={() => void confirmarArquivar()}
           loading={acaoLoading === alvoArquivar.id}
           error={erroArquivar}
+        />
+      ) : null}
+
+      {alvoExcluir ? (
+        <ModalConfirmExcluirPadrao
+          descricaoItem={descricaoModalExcluirItem("o informativo", alvoExcluir.assunto)}
+          onCancel={() => {
+            if (acaoLoading !== alvoExcluir.id) {
+              setErroExcluir(null);
+              setAlvoExcluir(null);
+            }
+          }}
+          onConfirm={() => void confirmarExcluir()}
+          loading={acaoLoading === alvoExcluir.id}
+          error={erroExcluir}
         />
       ) : null}
     </div>

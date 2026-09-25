@@ -131,6 +131,24 @@
       border-bottom: 1px solid var(--card-border); white-space: nowrap;
     }
     thead th:first-child, tbody td:first-child { text-align: left; }
+    thead th[colspan] { text-align: center; }
+    thead th[rowspan] { text-align: left; vertical-align: middle; }
+    thead tr + tr th { font-size: 11px; letter-spacing: 0.05em; text-align: center; }
+    .toolbar-tabela { display: flex; justify-content: flex-end; margin-bottom: 10px; }
+    .dia-carousel {
+      display: flex; align-items: center; justify-content: center;
+      gap: 10px; margin-bottom: 14px; flex-wrap: wrap;
+    }
+    .timeline-card .trilha-desc {
+      font-size: 13px; color: var(--text-muted); margin: 8px 0 0; line-height: 1.45;
+    }
+    .timeline-card .trilha-acoes { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .hist-item {
+      border: 1px solid var(--card-border); border-radius: 10px;
+      padding: 12px; font-size: 13px; margin-bottom: 8px;
+    }
+    .hist-item strong { display: block; margin-bottom: 4px; }
+    .hist-item span { color: var(--text-muted); font-size: 12px; }
     tbody td {
       padding: 10px 12px; text-align: center;
       border-bottom: 1px solid var(--card-border);
@@ -505,26 +523,47 @@
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
         Presença do dia
       </button>
+      <button type="button" class="vt-tab-btn" id="turmaTabRelatorio" role="tab" aria-selected="false" onclick="setTurmaDetalheTab('relatorio')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>
+        Relatório do Treinamento
+      </button>
     </div>
 
-    <!-- ABA PROGRESSO -->
     <div id="turmaPanelProgresso" class="vt-panel active">
       <p class="hint-box" id="turmaProgressoHint"></p>
       <div class="timeline" id="turmaTimeline"></div>
     </div>
 
-    <!-- ABA AVALIAÇÃO -->
     <div id="turmaPanelAvaliacao" class="vt-panel">
-      <p class="section-title" style="margin-bottom:10px">Prestadores matriculados <span class="sub" id="turmaRosterContagem"></span></p>
-      <div id="turmaRoster"></div>
-      <p class="hint-box" id="turmaAvaliacaoHint" style="margin-top:14px;margin-bottom:0"></p>
+      <div class="table-wrap">
+        <table>
+          <caption>Avaliação da turma selecionada</caption>
+          <thead>
+            <tr>
+              <th scope="col" rowspan="2">Prestador</th>
+              <th scope="colgroup" colspan="3">Provas</th>
+              <th scope="colgroup" colspan="3">Presença</th>
+              <th scope="col" rowspan="2">Ações</th>
+            </tr>
+            <tr>
+              <th scope="col">Aplicadas</th>
+              <th scope="col">Aprovadas</th>
+              <th scope="col">Reprovadas</th>
+              <th scope="col">Escaladas</th>
+              <th scope="col">Presentes</th>
+              <th scope="col">Faltas</th>
+            </tr>
+          </thead>
+          <tbody id="turmaAvaliacaoBody"></tbody>
+        </table>
+      </div>
     </div>
 
     <div id="turmaPanelPresenca" class="vt-panel">
-      <p class="hint-box" id="turmaPresencaHint">O prestador registra check-in e check-out em Meu Onboarding. O treinador só aprova ou ajusta o horário — não marca presença no lugar dele.</p>
+      <div class="dia-carousel" id="turmaDiaCarousel"></div>
       <div class="table-wrap">
         <table>
-          <caption>Presença de hoje na turma selecionada</caption>
+          <caption>Presença do dia selecionado</caption>
           <thead>
             <tr>
               <th scope="col">Prestador</th>
@@ -536,6 +575,28 @@
             </tr>
           </thead>
           <tbody id="turmaPresencaBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="turmaPanelRelatorio" class="vt-panel">
+      <div class="toolbar-tabela">
+        <button type="button" class="cta" onclick="abrirModalRelatorio('novo')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+          Gerar Relatório
+        </button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <caption>Relatórios do treinamento</caption>
+          <thead>
+            <tr>
+              <th scope="col">Data do Relatório</th>
+              <th scope="col">Treinador</th>
+              <th scope="col">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="turmaRelatorioBody"></tbody>
         </table>
       </div>
     </div>
@@ -552,7 +613,7 @@
     <div class="modal-body">
       <div class="field">
         <label for="turmaCronograma">Cronograma <span class="campo-obrigatorio">*</span></label>
-        <select id="turmaCronograma">
+        <select id="turmaCronograma" onchange="onTurmaCronogramaChange()">
           <option value="">Selecione o cronograma</option>
           <option value="Onboarding de Game Presenter">Onboarding de Game Presenter</option>
           <option value="Onboarding de Shuffler">Onboarding de Shuffler</option>
@@ -576,16 +637,25 @@
       <div class="field-grid-2">
         <div class="field">
           <label for="turmaInicio">Data de início <span class="campo-obrigatorio">*</span></label>
-          <input id="turmaInicio" type="date" />
+          <input id="turmaInicio" type="date" onchange="onTurmaInicioChange()" />
         </div>
         <div class="field">
-          <label for="turmaHorario">Horário da turma <span class="campo-obrigatorio">*</span></label>
-          <input id="turmaHorario" type="time" value="08:00" />
+          <label for="turmaPrevisaoFim">Previsão de fim <span class="campo-obrigatorio">*</span></label>
+          <input id="turmaPrevisaoFim" type="date" onchange="onTurmaFimChange()" />
         </div>
       </div>
       <div class="field">
-        <label for="turmaPrevisaoFim">Previsão de fim <span class="campo-obrigatorio">*</span></label>
-        <input id="turmaPrevisaoFim" type="date" />
+        <label>Horário da turma <span class="campo-obrigatorio">*</span></label>
+        <div class="field-grid-2">
+          <div>
+            <label for="turmaHorarioInicio">Início</label>
+            <input id="turmaHorarioInicio" type="time" value="08:00" />
+          </div>
+          <div>
+            <label for="turmaHorarioFim">Fim</label>
+            <input id="turmaHorarioFim" type="time" value="12:00" />
+          </div>
+        </div>
       </div>
       <div class="field">
         <label for="turmaPrestadores">Prestadores</label>
@@ -637,9 +707,9 @@
         </div>
         <div class="field-grid-2">
           <div class="field" aria-readonly="true"><label>Data de início</label><input id="verInicio" type="text" readonly /></div>
-          <div class="field" aria-readonly="true"><label>Horário da turma</label><input id="verHorario" type="text" readonly /></div>
+          <div class="field" aria-readonly="true"><label>Previsão de fim</label><input id="verFim" type="text" readonly /></div>
         </div>
-        <div class="field" aria-readonly="true"><label>Previsão de fim</label><input id="verFim" type="text" readonly /></div>
+        <div class="field" aria-readonly="true"><label>Horário da turma</label><input id="verHorario" type="text" readonly /></div>
         <div class="field" aria-readonly="true">
           <label>Prestadores</label>
           <div class="chip-list" id="verPrestadores"></div>
@@ -668,8 +738,17 @@
         <input id="iniciarInicio" type="date" />
       </div>
       <div class="field">
-        <label for="iniciarHorario">Horário da turma <span class="campo-obrigatorio">*</span></label>
-        <input id="iniciarHorario" type="time" />
+        <label>Horário da turma <span class="campo-obrigatorio">*</span></label>
+        <div class="field-grid-2">
+          <div>
+            <label for="iniciarHorarioInicio">Início</label>
+            <input id="iniciarHorarioInicio" type="time" />
+          </div>
+          <div>
+            <label for="iniciarHorarioFim">Fim</label>
+            <input id="iniciarHorarioFim" type="time" />
+          </div>
+        </div>
       </div>
       <div class="field">
         <label for="iniciarFim">Previsão de fim <span class="campo-obrigatorio">*</span></label>
@@ -758,41 +837,101 @@
   </div>
 </div>
 
-<!-- Modal: ajustar check-in / check-out -->
-<div id="modalAjustarPresenca" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalAjustarTitulo" onclick="if(event.target===this)fecharModais()">
+<!-- Modal: Registrar presença (mesmo layout da Escala do Turno) -->
+<div id="modalRegistrarPresenca" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalRegistrarTitulo">
   <div class="modal-panel">
     <div class="modal-header">
       <button type="button" class="modal-close" onclick="fecharModais()" aria-label="Fechar">✕</button>
-      <h2 id="modalAjustarTitulo">Ajustar horário</h2>
-      <p class="modal-sub">Mesmo espírito do Controle de Turno: o treinador corrige check-in/check-out ou marca falta com motivo. Não substitui o ponto do prestador.</p>
+      <h2 id="modalRegistrarTitulo">Registrar</h2>
+      <p class="modal-sub" id="modalRegistrarSub">—</p>
     </div>
     <div class="modal-body">
-      <div class="field-grid-2">
-        <div class="field">
-          <label for="ajEntrada">Check-in</label>
-          <input id="ajEntrada" type="time" value="08:04" />
-        </div>
-        <div class="field">
-          <label for="ajSaida">Check-out</label>
-          <input id="ajSaida" type="time" value="" />
-        </div>
-      </div>
       <div class="field">
-        <label for="ajTipo">Tipo</label>
-        <select id="ajTipo">
-          <option>Ajustar horário</option>
-          <option>Falta</option>
-          <option>Saída antecipada</option>
+        <label for="regStatus">Status <span class="campo-obrigatorio">*</span></label>
+        <select id="regStatus" onchange="onRegStatusChange()">
+          <option value="">Selecionar...</option>
+          <option value="falta">Falta</option>
+          <option value="saida_antecipada">Saída Antecipada</option>
+          <option value="hora_adicional">Hora Adicional</option>
+          <option value="registrar_horario">Registrar Horário</option>
         </select>
       </div>
+      <div class="field-grid-2" id="regHorariosWrap">
+        <div class="field">
+          <label for="regEntrada">Entrada realizada <span class="campo-obrigatorio">*</span></label>
+          <input id="regEntrada" type="time" />
+        </div>
+        <div class="field">
+          <label for="regSaida">Saída realizada <span class="campo-obrigatorio">*</span></label>
+          <input id="regSaida" type="time" />
+        </div>
+      </div>
       <div class="field">
-        <label for="ajMotivo">Comentário <span class="campo-obrigatorio">*</span></label>
-        <textarea id="ajMotivo" placeholder="Descreva o ajuste…"></textarea>
+        <label for="regMotivo" id="regMotivoLabel">Comentário <span class="campo-obrigatorio">*</span></label>
+        <textarea id="regMotivo" placeholder="Comentário sobre o horário..."></textarea>
       </div>
     </div>
     <div class="modal-footer">
       <button type="button" class="btn-modal" onclick="fecharModais()">Cancelar</button>
-      <button type="button" class="btn-modal primary" onclick="fecharModais()">Salvar ajuste</button>
+      <button type="button" class="btn-modal primary" onclick="fecharModais()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div id="modalAprovarPresenca" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalAprovarTitulo">
+  <div class="modal-panel">
+    <div class="modal-header">
+      <button type="button" class="modal-close" onclick="fecharModais()" aria-label="Fechar">✕</button>
+      <h2 id="modalAprovarTitulo">Aprovar</h2>
+      <p class="modal-sub" id="modalAprovarSub">—</p>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label>Status</label>
+        <div><span class="badge badge-ok" id="aprovarStatusBadge">Presente</span></div>
+      </div>
+      <div class="field-grid-2">
+        <div class="field" aria-readonly="true"><label>Check-in</label><input id="aprovarEntrada" type="text" readonly /></div>
+        <div class="field" aria-readonly="true"><label>Check-out</label><input id="aprovarSaida" type="text" readonly /></div>
+      </div>
+      <div class="field">
+        <label for="aprovarObs">Observação</label>
+        <textarea id="aprovarObs" placeholder="Observação opcional..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn-modal" onclick="fecharModais()">Cancelar</button>
+      <button type="button" class="btn-modal primary" onclick="fecharModais()">Aprovar</button>
+    </div>
+  </div>
+</div>
+
+<div id="modalHistoricoPresenca" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalHistPresencaTitulo">
+  <div class="modal-panel">
+    <div class="modal-header">
+      <button type="button" class="modal-close" onclick="fecharModais()" aria-label="Fechar">✕</button>
+      <h2 id="modalHistPresencaTitulo">Histórico</h2>
+      <p class="modal-sub" id="modalHistPresencaSub">—</p>
+    </div>
+    <div class="modal-body" id="modalHistPresencaLista"></div>
+    <div class="modal-footer">
+      <button type="button" class="btn-modal" onclick="fecharModais()">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<div id="modalRelatorioTreinamento" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalRelatorioTitulo">
+  <div class="modal-panel">
+    <div class="modal-header">
+      <button type="button" class="modal-close" onclick="fecharModais()" aria-label="Fechar">✕</button>
+      <h2 id="modalRelatorioTitulo">Gerar Relatório</h2>
+      <p class="modal-sub">Trabalhamos neste modal na sequência.</p>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--text-muted);margin:0">O formulário de geração, visualização e edição do relatório entra no próximo ajuste.</p>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn-modal" onclick="fecharModais()">Fechar</button>
     </div>
   </div>
 </div>
@@ -833,7 +972,7 @@
     {
       key: "gp14", titulo: "Onboarding GP — Outubro", codigo: "TUR-000001",
       cronograma: "Onboarding de Game Presenter", instrutor: "Juliana Mendes",
-      inicio: "18/09/2026", fim: "02/10/2026", horario: "08:00",
+      inicio: "18/09/2026", fim: "02/10/2026", horarioInicio: "08:00", horarioFim: "12:00",
       prestadoresCount: 9, progressoPct: 50,
       status: "andamento", statusBadge: { text: "Em andamento", cls: "badge-info" },
       historico: [
@@ -845,33 +984,43 @@
         { nome: "Imagem e postura", tipo: "Institucional", dias: "Dia 1", status: "concluida", temProva: false },
         { nome: "Blackjack", tipo: "Jogo", dias: "Dias 1 a 5", status: "concluida", temProva: true, provaResumo: "8/9 aprovados" },
         { nome: "Procedimentos do Sistema", tipo: "Operação", dias: "Dia 5", status: "concluida", temProva: true, provaResumo: "9/9 aprovados" },
-        { nome: "Roleta", tipo: "Jogo", dias: "Dias 5 a 7", status: "atual", temProva: true, provaLiberada: true, provaResumo: "6/9 já fizeram" },
+        { nome: "Roleta", tipo: "Jogo", dias: "Dias 5 a 7", status: "atual", temProva: true, qtdProvas: 1, provaLiberada: false, provaResumo: "0/9 já fizeram" },
         { nome: "Baccarat", tipo: "Jogo", dias: "Dias 8 e 9", status: "bloqueada", temProva: true },
         { nome: "Futebol Studio", tipo: "Jogo", dias: "Dias 11 e 12", status: "bloqueada", temProva: true },
         { nome: "Prática e rotação", tipo: "Prática", dias: "Dias 7, 10, 13 a 15", status: "bloqueada", temProva: false },
       ],
       roster: [
         { id: "pedro", nome: "Pedro Alves", situacao: { text: "Em dia", cls: "badge-ok" }, liberado: null,
+          provas: { aplicadas: 6, aprovadas: 5, reprovadas: 1 },
+          presenca: { escaladas: 7, presentes: 7, faltas: 0 },
           avaliacao: { postura: 0, regras: 0, agilidade: 2, atendimento: 1, relatorio: [
             { data: "22/09/2026", texto: "Ponto de atenção pra semana que vem: ganhar mais fluidez nas apostas de Roleta antes da prática supervisionada." },
             { data: "20/09/2026", texto: "Em Blackjack, mostrou domínio rápido das regras e das apostas laterais." },
             { data: "18/09/2026", texto: "Primeiro dia de turma — bastante atento à parte institucional e ao código de conduta." },
           ] } },
         { id: "larissa", nome: "Larissa Souza", situacao: { text: "Prova reprovada — aguarda nova liberação", cls: "badge-warn" }, liberado: null,
+          provas: { aplicadas: 6, aprovadas: 4, reprovadas: 2 },
+          presenca: { escaladas: 7, presentes: 6, faltas: 1 },
           avaliacao: { postura: 1, regras: 1, agilidade: 1, atendimento: 0, relatorio: [
             { data: "21/09/2026", texto: "Ainda precisa refazer a prova de Blackjack antes de seguir pra Roleta — já orientada sobre o reagendamento." },
             { data: "18/09/2026", texto: "Boa evolução na parte institucional, participativa nas dinâmicas em sala." },
           ] } },
         { id: "thiago", nome: "Thiago Ramos", situacao: { text: "Sem check-in hoje", cls: "badge-negativo" }, liberado: null,
+          provas: { aplicadas: 5, aprovadas: 4, reprovadas: 1 },
+          presenca: { escaladas: 7, presentes: 5, faltas: 2 },
           avaliacao: { postura: 2, regras: 1, agilidade: 2, atendimento: 1, relatorio: [
             { data: "19/09/2026", texto: "Faltou no Dia 5 — reforçar Procedimentos do Sistema com ele antes de avançar." },
           ] } },
+      ],
+      relatorios: [
+        { id: "gp14-r1", data: "22/09/2026", treinador: "Juliana Mendes" },
+        { id: "gp14-r2", data: "18/09/2026", treinador: "Juliana Mendes" },
       ],
     },
     {
       key: "at05", titulo: "Atualização — Blackjack/Roleta", codigo: "TUR-000002",
       cronograma: "Atualização Shuffler → Game Presenter", instrutor: "Ricardo Nunes",
-      inicio: "15/09/2026", fim: "21/09/2026", horario: "14:00",
+      inicio: "15/09/2026", fim: "21/09/2026", horarioInicio: "14:00", horarioFim: "18:00",
       prestadoresCount: 4, progressoPct: 43,
       status: "andamento", statusBadge: { text: "Em andamento", cls: "badge-info" },
       historico: [
@@ -882,26 +1031,33 @@
         { nome: "Imagem e postura", tipo: "Institucional", dias: "Dia 1", status: "concluida", temProva: false },
         { nome: "Blackjack", tipo: "Jogo", dias: "Dias 1 a 4", status: "concluida", temProva: true, provaResumo: "4/4 aprovados" },
         { nome: "Procedimentos do Sistema", tipo: "Operação", dias: "Dia 4", status: "concluida", temProva: true, provaResumo: "4/4 aprovados" },
-        { nome: "Roleta", tipo: "Jogo", dias: "Dias 4 e 5", status: "atual", temProva: true, provaLiberada: true, provaResumo: "2/4 já fizeram" },
+        { nome: "Roleta", tipo: "Jogo", dias: "Dias 4 e 5", status: "atual", temProva: true, qtdProvas: 1, provaLiberada: false, provaResumo: "0/4 já fizeram" },
         { nome: "Baccarat", tipo: "Jogo", dias: "Dia 6", status: "bloqueada", temProva: true },
         { nome: "Futebol Studio", tipo: "Jogo", dias: "Dias 6 e 7", status: "bloqueada", temProva: true },
         { nome: "Prática e rotação", tipo: "Prática", dias: "Dias 5 e 7", status: "bloqueada", temProva: false },
       ],
       roster: [
         { id: "marcos", nome: "Marcos Vidal", situacao: { text: "Em dia", cls: "badge-ok" }, liberado: null,
+          provas: { aplicadas: 5, aprovadas: 5, reprovadas: 0 },
+          presenca: { escaladas: 5, presentes: 5, faltas: 0 },
           avaliacao: { postura: 0, regras: 1, agilidade: 1, atendimento: 0, relatorio: [
             { data: "19/09/2026", texto: "Retreinamento fluindo bem — já domina as mudanças de procedimento do sistema." },
           ] } },
         { id: "renata", nome: "Renata Gomes", situacao: { text: "Prova pendente — Blackjack", cls: "badge-warn" }, liberado: null,
+          provas: { aplicadas: 5, aprovadas: 3, reprovadas: 2 },
+          presenca: { escaladas: 5, presentes: 4, faltas: 1 },
           avaliacao: { postura: 1, regras: 1, agilidade: 1, atendimento: 1, relatorio: [
             { data: "16/09/2026", texto: "Precisa refazer a prova de Blackjack — algumas regras de apostas laterais mudaram desde o onboarding original." },
           ] } },
+      ],
+      relatorios: [
+        { id: "at05-r1", data: "18/09/2026", treinador: "Ricardo Nunes" },
       ],
     },
     {
       key: "sh08", titulo: "Onboarding Shuffler — Outubro", codigo: "TUR-000003",
       cronograma: "Onboarding de Shuffler", instrutor: "Juliana Mendes",
-      inicio: "06/10/2026", fim: "10/10/2026", horario: "08:00",
+      inicio: "06/10/2026", fim: "10/10/2026", horarioInicio: "08:00", horarioFim: "12:00",
       prestadoresCount: 6, progressoPct: 0,
       status: "agendada", statusBadge: { text: "Agendada", cls: "badge-warn" },
       historico: [
@@ -915,14 +1071,19 @@
         { nome: "Prática e liberação", tipo: "Prática", dias: "Dias 4 e 5", status: "bloqueada", temProva: false },
       ],
       roster: [
-        { id: "bianca", nome: "Bianca Rocha", situacao: { text: "Matriculada — turma não iniciada", cls: "badge-muted" }, liberado: null, avaliacao: { postura: 0, regras: 0, agilidade: 0, atendimento: 0, relatorio: [] } },
-        { id: "diego", nome: "Diego Faria", situacao: { text: "Matriculado — turma não iniciada", cls: "badge-muted" }, liberado: null, avaliacao: { postura: 0, regras: 0, agilidade: 0, atendimento: 0, relatorio: [] } },
+        { id: "bianca", nome: "Bianca Rocha", situacao: { text: "Matriculada — turma não iniciada", cls: "badge-muted" }, liberado: null, avaliacao: { postura: 0, regras: 0, agilidade: 0, atendimento: 0, relatorio: [] },
+          provas: { aplicadas: 0, aprovadas: 0, reprovadas: 0 },
+          presenca: { escaladas: 0, presentes: 0, faltas: 0 } },
+        { id: "diego", nome: "Diego Faria", situacao: { text: "Matriculado — turma não iniciada", cls: "badge-muted" }, liberado: null, avaliacao: { postura: 0, regras: 0, agilidade: 0, atendimento: 0, relatorio: [] },
+          provas: { aplicadas: 0, aprovadas: 0, reprovadas: 0 },
+          presenca: { escaladas: 0, presentes: 0, faltas: 0 } },
       ],
+      relatorios: [],
     },
     {
       key: "gp13", titulo: "Onboarding GP — Agosto", codigo: "TUR-000004",
       cronograma: "Onboarding de Game Presenter", instrutor: "Ricardo Nunes",
-      inicio: "10/08/2026", fim: "24/08/2026", horario: "08:00",
+      inicio: "10/08/2026", fim: "24/08/2026", horarioInicio: "08:00", horarioFim: "12:00",
       prestadoresCount: 8, progressoPct: 100,
       status: "concluida", statusBadge: { text: "Concluída", cls: "badge-ok" }, dataConclusao: "24/08/2026",
       historico: [
@@ -942,23 +1103,35 @@
       ],
       roster: [
         { id: "pedro2", nome: "Pedro Alves", resultado: "aprovado", situacao: { text: "Formação concluída", cls: "badge-muted" }, liberado: true,
+          provas: { aplicadas: 8, aprovadas: 8, reprovadas: 0 },
+          presenca: { escaladas: 15, presentes: 15, faltas: 0 },
           avaliacao: { postura: 0, regras: 0, agilidade: 1, atendimento: 0, relatorio: [
             { data: "24/08/2026", texto: "Turma concluída — liberado para a mesa após avaliação final. Ótimo domínio geral, pequenos ajustes de agilidade resolvidos na prática." },
           ] } },
         { id: "larissa2", nome: "Larissa Souza", resultado: "aprovado", situacao: { text: "Formação concluída", cls: "badge-muted" }, liberado: true,
+          provas: { aplicadas: 8, aprovadas: 7, reprovadas: 1 },
+          presenca: { escaladas: 15, presentes: 14, faltas: 1 },
           avaliacao: { postura: 1, regras: 0, agilidade: 0, atendimento: 0, relatorio: [
             { data: "24/08/2026", texto: "Turma concluída — liberada para a mesa. Recuperou bem depois da prova refeita de Blackjack." },
           ] } },
         { id: "thiago2", nome: "Thiago Ramos", resultado: "reprovado", situacao: { text: "Desligado durante o processo", cls: "badge-negativo" }, liberado: false,
+          provas: { aplicadas: 4, aprovadas: 2, reprovadas: 2 },
+          presenca: { escaladas: 10, presentes: 6, faltas: 4 },
           avaliacao: { postura: 2, regras: 2, agilidade: 2, atendimento: 2, relatorio: [
             { data: "20/08/2026", texto: "Frequência abaixo do esperado ao longo da turma — desligado do processo antes da conclusão do cronograma." },
           ] } },
+      ],
+      relatorios: [
+        { id: "gp13-r1", data: "24/08/2026", treinador: "Ricardo Nunes" },
+        { id: "gp13-r2", data: "17/08/2026", treinador: "Ricardo Nunes" },
+        { id: "gp13-r3", data: "10/08/2026", treinador: "Ricardo Nunes" },
       ],
     },
   ];
 
   let turmaSelecionada = null;
   let modalAvaliarContexto = null;
+  let idxDiaPresenca = 0;
 
   function turmaAtual() {
     return TURMAS.find((t) => t.key === turmaSelecionada) || TURMAS[0];
@@ -967,7 +1140,29 @@
   var ICON_EYE = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>';
   var ICON_PENCIL = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>';
   var ICON_PLAY = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"/></svg>';
-  var ICON_CHECK = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>';
+  var ICON_CHECK = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>';
+  var ICON_CLIPBOARD = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 14h6"/><path d="M12 11v6"/></svg>';
+  var ICON_HISTORY = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>';
+
+  var CRONO_DURACAO = {
+    "Onboarding de Game Presenter": 15,
+    "Onboarding de Shuffler": 6,
+    "Atualização Shuffler → Game Presenter": 7,
+  };
+
+  var TRILHA_INFO = {
+    "Onboarding Spin": { desc: "Código de ética, LGPD, compliance e visão do business Spin.", qtdProvas: 0 },
+    "Imagem e postura": { desc: "Política de imagem, postura em câmera e apresentação pessoal.", qtdProvas: 0 },
+    "Blackjack": { desc: "Regras, apostas laterais, software, sabot e incidentes.", qtdProvas: 4 },
+    "Procedimentos do Sistema": { desc: "Botões do sistema, jogo responsável e operação da mesa.", qtdProvas: 1 },
+    "Roleta": { desc: "Regras, tipos de aposta, mesa, giro, anúncio e pagamento.", qtdProvas: 1 },
+    "Baccarat": { desc: "Regras, mesa e procedimentos de Baccarat.", qtdProvas: 1 },
+    "Futebol Studio": { desc: "Regras e operação do Futebol Studio.", qtdProvas: 1 },
+    "Prática e rotação": { desc: "Prática supervisionada em sala e rotação entre mesas.", qtdProvas: 0 },
+    "Procedimentos de embaralhamento": { desc: "Técnica de shoe, corte e troca de baralho.", qtdProvas: 1 },
+    "Incidentes no shoe": { desc: "Erros de embaralhamento e protocolo de incidente.", qtdProvas: 1 },
+    "Prática e liberação": { desc: "Prática final e critérios de liberação do Shuffler.", qtdProvas: 0 },
+  };
 
   function btnAcaoLinha(titulo, onclick, svg) {
     return '<button type="button" class="btn-icon" title="' + titulo + '" aria-label="' + titulo + '" onclick="event.stopPropagation();' + onclick + '">' + svg + "</button>";
@@ -1097,42 +1292,64 @@
 
   function setTurmaDetalheTab(tab) {
     document.querySelectorAll("#detalheTurma .vt-panel").forEach((p) => p.classList.remove("active"));
-    const panelMap = { progresso: "turmaPanelProgresso", avaliacao: "turmaPanelAvaliacao", presenca: "turmaPanelPresenca" };
+    const panelMap = { progresso: "turmaPanelProgresso", avaliacao: "turmaPanelAvaliacao", presenca: "turmaPanelPresenca", relatorio: "turmaPanelRelatorio" };
     document.getElementById(panelMap[tab] || "turmaPanelProgresso").classList.add("active");
     document.querySelectorAll("#detalheTurma .vt-tab-btn").forEach((b) => {
       b.classList.remove("active");
       b.setAttribute("aria-selected", "false");
     });
-    const btnMap = { progresso: "turmaTabProgresso", avaliacao: "turmaTabAvaliacao", presenca: "turmaTabPresenca" };
+    const btnMap = { progresso: "turmaTabProgresso", avaliacao: "turmaTabAvaliacao", presenca: "turmaTabPresenca", relatorio: "turmaTabRelatorio" };
     const btn = document.getElementById(btnMap[tab] || "turmaTabProgresso");
     btn.classList.add("active");
     btn.setAttribute("aria-selected", "true");
   }
 
+  function horarioTurmaLabel(t) {
+    return (t.horarioInicio || "08:00") + " – " + (t.horarioFim || "12:00");
+  }
+
   function renderDetalheTurma(key) {
     const t = TURMAS.find((x) => x.key === key);
     if (!t) return;
-    const infoExtra = t.status === "concluida" ? "concluída em " + t.dataConclusao : t.progressoPct + "% das trilhas";
     document.getElementById("detalheTurmaTitulo").innerHTML =
-      t.titulo + ' <span class="sub">' + t.codigo + " · Treinador " + t.instrutor + " · início " + t.inicio + " · " + infoExtra + "</span>";
+      t.codigo + " - " + t.cronograma +
+      ' <span class="sub">' + t.instrutor + " - " + t.inicio + " - " + t.fim + "</span>";
     const badge = document.getElementById("detalheTurmaStatusBadge");
     badge.className = "badge " + t.statusBadge.cls;
     badge.textContent = t.statusBadge.text;
+    idxDiaPresenca = diaPresencaInicial(t);
     renderTimelineTurma(t);
-    renderRosterTurma(t);
+    renderAvaliacaoTurma(t);
     renderPresencaTurma(t);
+    renderRelatorioTurma(t);
+  }
+
+  function qtdProvasTrilha(tr) {
+    if (typeof tr.qtdProvas === "number") return tr.qtdProvas;
+    const info = TRILHA_INFO[tr.nome];
+    if (info) return info.qtdProvas;
+    return tr.temProva ? 1 : 0;
+  }
+
+  function labelStatusTrilha(statusEfetivo) {
+    if (statusEfetivo === "concluida") return { text: "Concluída", cls: "badge-ok" };
+    if (statusEfetivo === "atual") return { text: "Em andamento", cls: "badge-info" };
+    return { text: "Aguardando", cls: "badge-muted" };
   }
 
   function renderTimelineTurma(t) {
     const hintEl = document.getElementById("turmaProgressoHint");
+    const todasConcluidas = t.trilhas.every(function (tr) { return tr.status === "concluida"; });
     if (t.status === "agendada") {
       hintEl.innerHTML = "Esta turma ainda não começou — inicia em <strong>" + t.inicio + "</strong>. As trilhas ficam bloqueadas até lá.";
     } else if (t.status === "concluida") {
       hintEl.innerHTML = "Turma <strong>concluída em " + t.dataConclusao + "</strong> — histórico completo, sem ações pendentes.";
+    } else if (todasConcluidas) {
+      hintEl.innerHTML = "Todas as trilhas foram concluídas. Encerrar a turma só acontece pelo botão <strong>Concluir</strong> na tabela de Turmas — não é automático.";
     } else {
       hintEl.innerHTML =
-        'O progresso é da turma inteira — todos avançam juntos pela sala. Marcar uma trilha como concluída libera a próxima na visão ' +
-        'dos prestadores. "Liberar prova" faz a prova aparecer no Meu Onboarding. Quem reprova precisa que o treinador libere de novo — a tentativa não reabre sozinha.';
+        'O progresso é da turma inteira. Quando a trilha tem prova, ela começa bloqueada — <strong>Liberar prova</strong> deixa o item visível no Meu Onboarding. ' +
+        '<strong>Marcar como concluída</strong> avança a turma, mas não encerra o registro.';
     }
 
     const html = t.trilhas.map(function (tr, i) {
@@ -1152,35 +1369,33 @@
         cardClass = " futura";
       }
       const linha = i < t.trilhas.length - 1 ? '<div class="timeline-line"></div>' : "";
+      const info = TRILHA_INFO[tr.nome] || { desc: "", qtdProvas: 0 };
+      const qtd = qtdProvasTrilha(tr);
+      const st = labelStatusTrilha(statusEfetivo);
+      const provaTag = qtd > 0
+        ? '<span class="badge badge-info">' + qtd + (qtd === 1 ? " prova" : " provas") + "</span>"
+        : '<span class="badge badge-muted">sem prova</span>';
 
-      let corpo = "<h3>" + tr.nome + ' <span class="tipo-tag">' + tr.tipo + "</span>";
-      if (statusEfetivo === "atual") corpo += ' <span class="badge badge-info">TRILHA ATUAL</span>';
-      corpo += '</h3><div class="timeline-meta"><span>' + tr.dias + "</span>";
-      if (statusEfetivo === "concluida") corpo += '<span class="badge badge-ok">Concluída</span>';
-      if (!tr.temProva && statusEfetivo !== "bloqueada") corpo += '<span class="badge badge-info">sem prova</span>';
-      corpo += "</div>";
+      let corpo = "<h3>" + tr.nome + ' <span class="tipo-tag">' + tr.tipo + "</span></h3>";
+      corpo += '<div class="timeline-meta"><span class="badge ' + st.cls + '">' + st.text + "</span>" + provaTag + "</div>";
+      corpo += '<p class="trilha-desc">' + (info.desc || "—") + "</p>";
 
-      if (tr.temProva && statusEfetivo === "concluida") {
-        corpo += '<div class="prova-status"><span class="badge badge-ok">Prova liberada · ' + tr.provaResumo + "</span></div>";
-      }
-      if (tr.temProva && statusEfetivo === "atual") {
-        const liberada = tr.provaLiberada;
-        corpo +=
-          '<div class="prova-status">' +
-          (liberada
-            ? '<span class="badge badge-ok">Prova liberada · ' + tr.provaResumo + " · 1 aguarda nova liberação</span>"
-            : '<span class="badge badge-muted">Prova bloqueada — ainda não visível pra turma</span>') +
-          '<button type="button" class="btn-modal" style="padding:6px 12px;font-size:12px" onclick="alternarProvaLiberada()">' +
-          (liberada ? "Bloquear prova novamente" : "Liberar prova") +
-          "</button></div>" +
-          '<div style="margin-top:10px"><button type="button" class="cta" onclick="avancarTrilhaTurma()">Marcar trilha concluída e avançar</button></div>';
-      }
-      if (statusEfetivo === "bloqueada") {
-        let msg;
-        if (t.status === "agendada") msg = "Libera quando a turma começar.";
-        else if (i === 0) msg = "Libera na sequência do cronograma.";
-        else msg = "Libera quando a trilha anterior for concluída.";
-        corpo += '<p class="locked-msg">' + msg + "</p>";
+      if (statusEfetivo === "atual" && t.status === "andamento") {
+        corpo += '<div class="trilha-acoes">';
+        if (qtd > 0) {
+          const liberada = !!tr.provaLiberada;
+          corpo +=
+            '<button type="button" class="btn-modal" style="padding:6px 12px;font-size:12px" onclick="alternarProvaLiberada()">' +
+            (liberada ? "Bloquear prova novamente" : "Liberar prova") +
+            "</button>";
+          if (liberada) {
+            corpo += '<span class="badge badge-ok">Prova liberada no Meu Onboarding' + (tr.provaResumo ? " · " + tr.provaResumo : "") + "</span>";
+          } else {
+            corpo += '<span class="badge badge-muted">Prova bloqueada — ainda não visível no Meu Onboarding</span>';
+          }
+        }
+        corpo += '<button type="button" class="cta" onclick="avancarTrilhaTurma()">Marcar como concluída</button>';
+        corpo += "</div>";
       }
 
       return (
@@ -1191,78 +1406,140 @@
     document.getElementById("turmaTimeline").innerHTML = html;
   }
 
-  function renderRosterTurma(t) {
-    document.getElementById("turmaRosterContagem").textContent = t.prestadoresCount + " prestadores";
-    const container = document.getElementById("turmaRoster");
-
-    if (t.status === "agendada") {
-      container.innerHTML = t.roster.map(function (p) {
-        return '<div class="roster-item"><span class="nome">' + p.nome + '</span><span class="badge ' + p.situacao.cls + '">' + p.situacao.text + "</span><span></span></div>";
-      }).join("");
-      document.getElementById("turmaAvaliacaoHint").innerHTML = "Ainda não há nada pra avaliar — a turma começa em <strong>" + t.inicio + "</strong>.";
+  function renderAvaliacaoTurma(t) {
+    const body = document.getElementById("turmaAvaliacaoBody");
+    if (!t.roster.length) {
+      body.innerHTML = '<tr><td colspan="8">Sem dados para o período selecionado.</td></tr>';
       return;
     }
-
-    container.innerHTML = t.roster.map(function (p) {
-      let acaoHtml;
-      if (t.status === "concluida") {
-        const liberadoBadge = p.liberado
-          ? '<span class="badge badge-ok">Fim de Treinamento</span>'
-          : '<span class="badge badge-negativo">Não liberado</span>';
-        acaoHtml =
-          '<div style="display:flex;gap:6px;align-items:center">' + liberadoBadge +
-          '<button type="button" class="btn-icon" title="Ver avaliação" aria-label="Ver avaliação de ' + p.nome + '" onclick="abrirModalAvaliarPrestador(\'' + t.key + "','" + p.id + '\')">Ver</button>' +
-          (p.liberado ? '<button type="button" class="btn-icon" title="Gerar certificado" onclick="abrirModalCertificado(\'' + p.nome + "','" + t.cronograma + "','" + t.codigo + "','" + t.instrutor + "','" + t.dataConclusao + '\')">Certificado</button>' : "") +
-          "</div>";
-      } else {
-        acaoHtml =
-          '<div style="display:flex;gap:6px">' +
-          '<button type="button" class="btn-icon" title="Avaliar" aria-label="Avaliar ' + p.nome + '" onclick="abrirModalAvaliarPrestador(\'' + t.key + "','" + p.id + '\')">Avaliar</button>' +
-          '<button type="button" class="btn-modal" style="padding:6px 12px;font-size:12px" disabled title="Libera quando concluir o cronograma — grava Fim de Treinamento no RH">Liberar p/ mesa</button>' +
-          "</div>";
-      }
+    body.innerHTML = t.roster.map(function (p) {
+      const pr = p.provas || { aplicadas: 0, aprovadas: 0, reprovadas: 0 };
+      const pe = p.presenca || { escaladas: 0, presentes: 0, faltas: 0 };
+      const acoes = '<span class="acoes-linha">' +
+        btnAcaoLinha("Ver", "abrirModalAvaliarPrestador('" + t.key + "','" + p.id + "')", ICON_EYE) +
+        btnAcaoLinha("Avaliar", "abrirModalAvaliarPrestador('" + t.key + "','" + p.id + "')", ICON_PENCIL) +
+        "</span>";
       return (
-        '<div class="roster-item"><span class="nome">' + p.nome + '</span><span class="badge ' + p.situacao.cls + '">' + p.situacao.text + "</span>" + acaoHtml + "</div>"
+        "<tr><td>" + p.nome + "</td>" +
+        "<td>" + pr.aplicadas + "</td><td>" + pr.aprovadas + "</td><td>" + pr.reprovadas + "</td>" +
+        "<td>" + pe.escaladas + "</td><td>" + pe.presentes + "</td><td>" + pe.faltas + "</td>" +
+        "<td>" + acoes + "</td></tr>"
       );
     }).join("");
+  }
 
-    document.getElementById("turmaAvaliacaoHint").innerHTML =
-      t.status === "concluida"
-        ? 'Fim de Treinamento já gravado no cadastro RH de quem foi liberado. O certificado usa o gerador padrão da Academy.'
-        : '"Liberar p/ mesa" fica disponível prestador a prestador quando o cronograma da turma é concluído e todas as provas exigidas estão aprovadas. Grava só o campo Fim de Treinamento — decisão do treinador, não acontece sozinho.';
+  function diasDaTurma(t) {
+    const ini = parseBr(t.inicio);
+    const fim = parseBr(t.fim);
+    const out = [];
+    if (!ini || !fim) return out;
+    for (var d = new Date(ini.getFullYear(), ini.getMonth(), ini.getDate()); d <= fim; d.setDate(d.getDate() + 1)) {
+      out.push(new Date(d.getFullYear(), d.getMonth(), d.getDate()));
+    }
+    return out;
+  }
+
+  function formatDiaBrDate(d) {
+    return String(d.getDate()).padStart(2, "0") + "/" + String(d.getMonth() + 1).padStart(2, "0") + "/" + d.getFullYear();
+  }
+
+  function diaPresencaInicial(t) {
+    const dias = diasDaTurma(t);
+    if (!dias.length) return 0;
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    for (var i = 0; i < dias.length; i++) {
+      if (dias[i].getTime() === hoje.getTime()) return i;
+    }
+    if (hoje > dias[dias.length - 1]) return dias.length - 1;
+    return 0;
+  }
+
+  function navegarDiaPresenca(dir) {
+    const t = turmaAtual();
+    const dias = diasDaTurma(t);
+    if (!dias.length) return;
+    idxDiaPresenca = Math.max(0, Math.min(dias.length - 1, idxDiaPresenca + dir));
+    renderPresencaTurma(t);
+  }
+
+  function linhasPresencaDia(t, dia) {
+    const weekday = dia.getDay();
+    return t.roster.map(function (p, i) {
+      if (t.status === "agendada") {
+        return { id: p.id, nome: p.nome, entrada: "—", saida: "—", status: "Pendente", statusCls: "badge-muted", registrado: false, podeAprovar: false };
+      }
+      const falta = p.liberado === false || (p.id.indexOf("thiago") === 0 && weekday === 1);
+      if (falta) {
+        return { id: p.id, nome: p.nome, entrada: "—", saida: "—", status: "Falta", statusCls: "badge-negativo", registrado: t.status === "concluida", podeAprovar: t.status === "andamento" };
+      }
+      const entrada = t.horarioInicio || "08:00";
+      const saida = i === 0 && t.status === "andamento" ? "—" : (t.horarioFim || "12:00");
+      const presente = saida !== "—";
+      return {
+        id: p.id,
+        nome: p.nome,
+        entrada: entrada,
+        saida: saida,
+        status: presente ? "Presente" : "Pendente",
+        statusCls: presente ? "badge-ok" : "badge-muted",
+        registrado: t.status === "concluida" || (t.status === "andamento" && i === 1),
+        podeAprovar: t.status === "andamento" && presente,
+      };
+    });
   }
 
   function renderPresencaTurma(t) {
-    const hint = document.getElementById("turmaPresencaHint");
-    const body = document.getElementById("turmaPresencaBody");
-    if (t.status === "agendada") {
-      hint.textContent = "A turma ainda não começou — check-in só no dia do início.";
-      body.innerHTML = '<tr><td colspan="6">Sem dados para o período selecionado.</td></tr>';
+    const dias = diasDaTurma(t);
+    const car = document.getElementById("turmaDiaCarousel");
+    if (!dias.length) {
+      car.innerHTML = "";
+      document.getElementById("turmaPresencaBody").innerHTML = '<tr><td colspan="6">Sem dados para o período selecionado.</td></tr>';
       return;
     }
-    if (t.status === "concluida") {
-      hint.textContent = "Turma concluída — presença do dia fica no histórico, sem ação.";
-    } else {
-      hint.textContent = "O prestador registra check-in e check-out em Meu Onboarding. O treinador aprova ou ajusta — igual ao Controle de Turno.";
-    }
-    const rows = t.status === "andamento"
-      ? [
-          { nome: "Pedro Alves", entrada: "08:04", saida: "—", status: "Presente", statusCls: "badge-ok", aprovado: "Pendente", acao: true },
-          { nome: "Larissa Souza", entrada: "08:00", saida: "—", status: "Presente", statusCls: "badge-ok", aprovado: "Sim", acao: true },
-          { nome: "Thiago Ramos", entrada: "—", saida: "—", status: "Pendente", statusCls: "badge-muted", aprovado: "—", acao: true },
-        ]
-      : t.roster.map(function (p) {
-          return { nome: p.nome, entrada: "08:00", saida: "12:02", status: p.liberado === false ? "Falta" : "Presente", statusCls: p.liberado === false ? "badge-negativo" : "badge-ok", aprovado: "Sim", acao: false };
-        });
-    body.innerHTML = rows.map(function (r) {
-      const acoes = r.acao
-        ? '<button type="button" class="btn-icon" onclick="document.getElementById(\'modalAjustarPresenca\').classList.add(\'open\')">Ajustar</button>' +
-          (r.aprovado === "Pendente" ? '<button type="button" class="btn-icon" onclick="this.textContent=\'Aprovado\';this.disabled=true">Aprovar</button>' : "")
-        : "—";
+    if (idxDiaPresenca > dias.length - 1) idxDiaPresenca = dias.length - 1;
+    const dia = dias[idxDiaPresenca];
+    car.innerHTML =
+      '<button type="button" class="carousel-btn" aria-label="Dia anterior" ' + (idxDiaPresenca <= 0 ? "disabled" : "") + ' onclick="navegarDiaPresenca(-1)">' +
+      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>' +
+      '<span class="carousel-label">' + formatDiaBrDate(dia) + "</span>" +
+      '<button type="button" class="carousel-btn" aria-label="Próximo dia" ' + (idxDiaPresenca >= dias.length - 1 ? "disabled" : "") + ' onclick="navegarDiaPresenca(1)">' +
+      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>';
+
+    const rows = linhasPresencaDia(t, dia);
+    document.getElementById("turmaPresencaBody").innerHTML = rows.map(function (r) {
+      let acoes = '<span class="acoes-linha">';
+      if (t.status === "andamento" && !r.registrado && r.podeAprovar) {
+        acoes += btnAcaoLinha("Aprovar", "abrirModalAprovarPresenca('" + r.id + "')", ICON_CHECK);
+      }
+      if (t.status === "andamento" && !r.registrado) {
+        acoes += btnAcaoLinha("Registrar", "abrirModalRegistrarPresenca('" + r.id + "')", ICON_CLIPBOARD);
+      }
+      acoes += btnAcaoLinha("Histórico", "abrirModalHistoricoPresenca('" + r.id + "')", ICON_HISTORY);
+      acoes += "</span>";
+      const aprovado = r.registrado
+        ? '<span class="badge badge-ok">Sim</span>'
+        : '<span class="badge badge-negativo">Não</span>';
       return (
         "<tr><td>" + r.nome + "</td><td>" + r.entrada + "</td><td>" + r.saida + "</td>" +
-        '<td><span class="badge ' + r.statusCls + '">' + r.status + "</span></td><td>" + r.aprovado + "</td><td>" + acoes + "</td></tr>"
+        '<td><span class="badge ' + r.statusCls + '">' + r.status + "</span></td><td>" + aprovado + "</td><td>" + acoes + "</td></tr>"
       );
+    }).join("");
+  }
+
+  function renderRelatorioTurma(t) {
+    const body = document.getElementById("turmaRelatorioBody");
+    const lista = t.relatorios || [];
+    if (!lista.length) {
+      body.innerHTML = '<tr><td colspan="3">Sem dados para o período selecionado.</td></tr>';
+      return;
+    }
+    body.innerHTML = lista.map(function (r) {
+      const acoes = '<span class="acoes-linha">' +
+        btnAcaoLinha("Ver", "abrirModalRelatorio('ver')", ICON_EYE) +
+        btnAcaoLinha("Editar", "abrirModalRelatorio('editar')", ICON_PENCIL) +
+        "</span>";
+      return "<tr><td>" + r.data + "</td><td>" + r.treinador + "</td><td>" + acoes + "</td></tr>";
     }).join("");
   }
 
@@ -1271,6 +1548,76 @@
     document.getElementById("certCurso").textContent = curso;
     document.getElementById("certMeta").textContent = "Turma " + codigo + " · Treinador " + treinador + " · Fim de Treinamento " + data;
     document.getElementById("modalCertificado").classList.add("open");
+  }
+
+  var REG_MOTIVO = {
+    falta: { label: "Motivo da Falta", ph: "Descreva o motivo da falta..." },
+    saida_antecipada: { label: "Motivo da Saída Antecipada", ph: "Descreva o motivo da saída antecipada..." },
+    hora_adicional: { label: "Motivo da Hora Adicional", ph: "Descreva o motivo da hora adicional..." },
+    registrar_horario: { label: "Comentário", ph: "Comentário sobre o horário..." },
+  };
+
+  function presencaRowAtual(prestadorId) {
+    const t = turmaAtual();
+    const dias = diasDaTurma(t);
+    const dia = dias[idxDiaPresenca] || dias[0];
+    return linhasPresencaDia(t, dia).find(function (r) { return r.id === prestadorId; });
+  }
+
+  function onRegStatusChange() {
+    const tipo = document.getElementById("regStatus").value;
+    const wrap = document.getElementById("regHorariosWrap");
+    wrap.style.display = !tipo || tipo === "falta" ? "none" : "";
+    const meta = REG_MOTIVO[tipo];
+    document.getElementById("regMotivoLabel").innerHTML = (meta ? meta.label : "Comentário") + ' <span class="campo-obrigatorio">*</span>';
+    document.getElementById("regMotivo").placeholder = meta ? meta.ph : "Comentário sobre o horário...";
+  }
+
+  function abrirModalRegistrarPresenca(prestadorId) {
+    const t = turmaAtual();
+    const r = presencaRowAtual(prestadorId);
+    if (!r) return;
+    const dias = diasDaTurma(t);
+    const dia = dias[idxDiaPresenca];
+    document.getElementById("modalRegistrarSub").textContent = r.nome + " · " + formatDiaBrDate(dia);
+    document.getElementById("regStatus").value = "";
+    document.getElementById("regEntrada").value = r.entrada !== "—" ? r.entrada : (t.horarioInicio || "08:00");
+    document.getElementById("regSaida").value = r.saida !== "—" ? r.saida : (t.horarioFim || "12:00");
+    document.getElementById("regMotivo").value = "";
+    onRegStatusChange();
+    document.getElementById("modalRegistrarPresenca").classList.add("open");
+  }
+
+  function abrirModalAprovarPresenca(prestadorId) {
+    const t = turmaAtual();
+    const r = presencaRowAtual(prestadorId);
+    if (!r) return;
+    const dias = diasDaTurma(t);
+    document.getElementById("modalAprovarSub").textContent = r.nome + " · " + formatDiaBrDate(dias[idxDiaPresenca]);
+    const badge = document.getElementById("aprovarStatusBadge");
+    badge.className = "badge " + r.statusCls;
+    badge.textContent = r.status;
+    document.getElementById("aprovarEntrada").value = r.entrada;
+    document.getElementById("aprovarSaida").value = r.saida;
+    document.getElementById("aprovarObs").value = "";
+    document.getElementById("modalAprovarPresenca").classList.add("open");
+  }
+
+  function abrirModalHistoricoPresenca(prestadorId) {
+    const t = turmaAtual();
+    const p = t.roster.find(function (x) { return x.id === prestadorId; });
+    if (!p) return;
+    document.getElementById("modalHistPresencaSub").textContent = p.nome;
+    document.getElementById("modalHistPresencaLista").innerHTML =
+      '<div class="hist-item"><strong>Check-in registrado</strong><span>' + t.inicio + " " + (t.horarioInicio || "08:00") + " · " + t.instrutor + "</span></div>" +
+      '<div class="hist-item"><strong>Aprovação de presença</strong><span>' + t.inicio + " · " + t.instrutor + "</span></div>";
+    document.getElementById("modalHistoricoPresenca").classList.add("open");
+  }
+
+  function abrirModalRelatorio(modo) {
+    document.getElementById("modalRelatorioTitulo").textContent =
+      modo === "ver" ? "Ver Relatório" : modo === "editar" ? "Editar Relatório" : "Gerar Relatório";
+    document.getElementById("modalRelatorioTreinamento").classList.add("open");
   }
 
   function alternarProvaLiberada() {
@@ -1288,12 +1635,15 @@
     t.trilhas[idx].status = "concluida";
     if (idx + 1 < t.trilhas.length) {
       t.trilhas[idx + 1].status = "atual";
-      if (t.trilhas[idx + 1].temProva) {
+      if (qtdProvasTrilha(t.trilhas[idx + 1]) > 0) {
         t.trilhas[idx + 1].provaLiberada = false;
         t.trilhas[idx + 1].provaResumo = "0/" + t.prestadoresCount + " já fizeram";
       }
     }
+    const feitas = t.trilhas.filter(function (tr) { return tr.status === "concluida"; }).length;
+    t.progressoPct = Math.round((feitas / t.trilhas.length) * 100);
     renderTimelineTurma(t);
+    renderTabelaTurmas();
   }
 
   function abrirModalAvaliarPrestador(turmaKey, prestadorId) {
@@ -1345,10 +1695,61 @@
     campo.value = "";
   }
 
+  function toIsoFromDate(d) {
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  }
+
   function toIso(br) {
     const d = parseBr(br);
-    if (!d) return "";
-    return d.toISOString().slice(0, 10);
+    return d ? toIsoFromDate(d) : "";
+  }
+
+  function amanhaIso() {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() + 1);
+    return toIsoFromDate(d);
+  }
+
+  function addDiasIso(iso, dias) {
+    const p = (iso || "").split("-");
+    if (p.length !== 3) return "";
+    const d = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
+    d.setDate(d.getDate() + dias);
+    return toIsoFromDate(d);
+  }
+
+  function aplicarMinDatasTurma(modoEdicao, inicioAtual) {
+    const minInicio = amanhaIso();
+    const inicioEl = document.getElementById("turmaInicio");
+    inicioEl.min = modoEdicao && inicioAtual && inicioAtual < minInicio ? inicioAtual : minInicio;
+    const ini = inicioEl.value;
+    document.getElementById("turmaPrevisaoFim").min = ini || minInicio;
+  }
+
+  function preencherPrevisaoFim() {
+    const crono = document.getElementById("turmaCronograma").value;
+    const ini = document.getElementById("turmaInicio").value;
+    const dur = CRONO_DURACAO[crono];
+    if (!ini || !dur) return;
+    document.getElementById("turmaPrevisaoFim").value = addDiasIso(ini, dur - 1);
+    document.getElementById("turmaPrevisaoFim").min = ini;
+  }
+
+  function onTurmaCronogramaChange() {
+    preencherPrevisaoFim();
+  }
+
+  function onTurmaInicioChange() {
+    const ini = document.getElementById("turmaInicio").value;
+    if (ini) document.getElementById("turmaPrevisaoFim").min = ini;
+    preencherPrevisaoFim();
+  }
+
+  function onTurmaFimChange() {
+    const ini = document.getElementById("turmaInicio").value;
+    const fim = document.getElementById("turmaPrevisaoFim").value;
+    if (ini && fim && fim < ini) document.getElementById("turmaPrevisaoFim").value = ini;
   }
 
   function preencherFormTurma(t) {
@@ -1356,8 +1757,11 @@
     document.getElementById("turmaCodigo").value = t ? t.codigo : "TUR-000005";
     document.getElementById("turmaInstrutor").value = t ? t.instrutor : "";
     document.getElementById("turmaInicio").value = t ? toIso(t.inicio) : "";
-    document.getElementById("turmaHorario").value = t ? t.horario : "08:00";
+    document.getElementById("turmaHorarioInicio").value = t ? (t.horarioInicio || "08:00") : "08:00";
+    document.getElementById("turmaHorarioFim").value = t ? (t.horarioFim || "12:00") : "12:00";
     document.getElementById("turmaPrevisaoFim").value = t ? toIso(t.fim) : "";
+    aplicarMinDatasTurma(!!t, t ? toIso(t.inicio) : "");
+    if (t) document.getElementById("turmaPrevisaoFim").min = toIso(t.inicio);
     prestadoresForm.length = 0;
     if (t) t.roster.forEach(function (p) { prestadoresForm.push({ id: p.id, nome: p.nome }); });
     renderChipsPrestadores();
@@ -1452,7 +1856,7 @@
     document.getElementById("verCodigo").value = t.codigo;
     document.getElementById("verTreinador").value = t.instrutor;
     document.getElementById("verInicio").value = t.inicio;
-    document.getElementById("verHorario").value = t.horario;
+    document.getElementById("verHorario").value = horarioTurmaLabel(t);
     document.getElementById("verFim").value = t.fim;
     document.getElementById("verPrestadores").innerHTML = t.roster.map(function (p) {
       let extra = "";
@@ -1471,7 +1875,8 @@
     const t = TURMAS.find(function (x) { return x.key === key; });
     if (!t) return;
     document.getElementById("iniciarInicio").value = toIso(t.inicio);
-    document.getElementById("iniciarHorario").value = t.horario;
+    document.getElementById("iniciarHorarioInicio").value = t.horarioInicio || "08:00";
+    document.getElementById("iniciarHorarioFim").value = t.horarioFim || "12:00";
     document.getElementById("iniciarFim").value = toIso(t.fim);
     document.getElementById("modalIniciarTurma").classList.add("open");
   }

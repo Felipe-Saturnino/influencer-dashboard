@@ -242,7 +242,9 @@ export function ModalCriarPostagem({
     if (ref.contentType === "comunicado") {
       const { data, error } = await supabase
         .from("rh_portal_comunicado")
-        .select("*, categoria:rh_portal_categoria(slug)")
+        .select(
+          "titulo, corpo, status, imagem_storage_path, anexo_storage_path, anexo_nome, categoria:rh_portal_categoria(slug)",
+        )
         .eq("id", ref.id)
         .single();
       setLoadingData(false);
@@ -251,14 +253,14 @@ export function ModalCriarPostagem({
         setErro(ERRO_CARREGAR_EDICAO);
         return;
       }
-      const row = data as {
+      const row = data as unknown as {
         titulo: string;
         corpo: string;
         status: RhPostagemStatus;
         imagem_storage_path: string | null;
         anexo_storage_path: string | null;
         anexo_nome: string | null;
-        categoria?: { slug: string } | null;
+        categoria?: { slug: string } | { slug: string }[] | null;
       };
       setAssunto(row.titulo);
       setDescricao(row.corpo);
@@ -266,7 +268,9 @@ export function ModalCriarPostagem({
       setImagemPath(row.imagem_storage_path);
       setAnexoPath(row.anexo_storage_path);
       setAnexoNome(row.anexo_nome);
-      const tipoCom = labelComunicadoFromSlug(row.categoria?.slug ?? "");
+      const tipoCom = labelComunicadoFromSlug(
+        (Array.isArray(row.categoria) ? row.categoria[0]?.slug : row.categoria?.slug) ?? "",
+      );
       setTipoComunicado(tipoCom);
       aplicarSnapshotAposCarga("comunicado", {
         tipoComunicado: tipoCom,
@@ -283,7 +287,9 @@ export function ModalCriarPostagem({
     } else if (ref.contentType === "documento") {
       const { data, error } = await supabase
         .from("rh_portal_documento")
-        .select("*, categoria:rh_portal_categoria(slug)")
+        .select(
+          "titulo, corpo, introducao, resumo, status, requer_aprovacao, requires_acknowledgment, imagem_storage_path, anexo_storage_path, anexo_nome, codigo, versao, tipo_documento, area_responsavel, classificacao, aplicavel_a, data_emissao, elaborado_por, revisado_por, aprovado_por_doc, categoria:rh_portal_categoria(slug)",
+        )
         .eq("id", ref.id)
         .single();
       if (error || !data) {
@@ -292,7 +298,7 @@ export function ModalCriarPostagem({
         setErro(ERRO_CARREGAR_EDICAO);
         return;
       }
-      const row = data as {
+      const row = data as unknown as {
         titulo: string;
         corpo: string | null;
         introducao: string | null;
@@ -313,7 +319,7 @@ export function ModalCriarPostagem({
         elaborado_por: string | null;
         revisado_por: string | null;
         aprovado_por_doc: string | null;
-        categoria?: { slug: string } | null;
+        categoria?: { slug: string } | { slug: string }[] | null;
       };
       const usaNormativo = documentoUsaModeloNormativo(row);
       setLegadoPolitica(!usaNormativo);
@@ -371,7 +377,9 @@ export function ModalCriarPostagem({
         setIntroducao(row.introducao ?? "");
         const reqApr = requerAprovacaoLabelFromDb(row.requer_aprovacao);
         setRequerAprovacao(reqApr);
-        const tipoPol = labelPoliticaFromSlug(row.categoria?.slug ?? "");
+        const tipoPol = labelPoliticaFromSlug(
+          (Array.isArray(row.categoria) ? row.categoria[0]?.slug : row.categoria?.slug) ?? "",
+        );
         setTipoPolitica(tipoPol);
         aplicarSnapshotAposCarga("politica", {
           tipoComunicado: "",
@@ -388,7 +396,13 @@ export function ModalCriarPostagem({
       }
       setLoadingData(false);
     } else {
-      const { data, error } = await supabase.from("rh_portal_rh_talk").select("*").eq("id", ref.id).single();
+      const { data, error } = await supabase
+        .from("rh_portal_rh_talk")
+        .select(
+          "titulo, corpo, introducao, resumo, status, imagem_storage_path, anexo_storage_path, anexo_nome, aplicavel_a",
+        )
+        .eq("id", ref.id)
+        .single();
       setLoadingData(false);
       if (error || !data) {
         console.error("[ModalCriarPostagem] carregar rh_talk:", error);
