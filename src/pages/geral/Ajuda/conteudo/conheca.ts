@@ -1488,17 +1488,17 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "O **Overview Comercial** (menu **Dashboards**, abaixo de Overview Influencer) consolida a visão de **Operadoras** (Pipeline B2B), **Agregadoras** e **Integrações** em abas no topo. É **somente leitura** — a edição permanece nas páginas de pipeline e Integração na seção Comercial.",
+          "O **Overview Comercial** (menu **Dashboards**, abaixo de Overview Influencer) consolida a visão de **Operadoras** (Pipeline B2B), **Crypto** (Pipeline Crypto), **Agregadoras** e **Integrações** em abas no topo. É **somente leitura** — a edição permanece nas páginas de pipeline e Integração na seção Comercial.",
       },
       {
         subtitulo: "Abas e filtros",
         texto:
-          "No topo do bloco de filtros escolha **Operadoras**, **Agregadoras** ou **Integrações**.\n\n— **Operadoras:** filtro **Comercial** abaixo das abas (visão consolidada do funil completo).\n— **Agregadoras:** só o filtro **Comercial**.\n— **Integrações:** filtro **Prioridade** (**Todas Prioridades**, Baixo, Médio ou Alta).",
+          "No topo do bloco de filtros escolha **Operadoras**, **Crypto**, **Agregadoras** ou **Integrações**.\n\n— **Operadoras:** filtro **Comercial** abaixo das abas (visão consolidada do funil completo).\n— **Crypto:** o mesmo filtro **Comercial**, com a carteira do Pipeline Crypto (independente do B2B).\n— **Agregadoras:** só o filtro **Comercial**.\n— **Integrações:** filtro **Prioridade** (**Todas Prioridades**, Baixo, Médio ou Alta).",
       },
       {
         subtitulo: "Conteúdo por aba",
         texto:
-          "**Operadoras** mantém KPIs, funil, produto Dedicada/Network, mapa, carteira, novas marcas e movimentação.\n\n**Agregadoras** mostra KPIs do funil (sem legenda nos cards), funil em largura total, carteira por comercial e **Movimentação recente** lado a lado em grade 2×2 (→ Conexão, → Negociação, → Fechado, Alterações totais).\n\n**Integrações** mostra totais por status (sem legenda nos cards), **SLA por etapa** (tempo médio: criação → Em andamento; Em andamento → Concluído; criação → Concluído), volume por Tipo (Dedicada/Network), por Caminho e por Agregador.",
+          "**Operadoras** mantém KPIs, funil, produto Dedicada/Network, mapa, carteira, novas marcas e movimentação.\n\n**Crypto** repete esses blocos com os dados do Pipeline Crypto. O bloco **Interesse** mostra só o status da coluna **Retorno** (incluindo **Sem Status**). Os KPIs abrem o Pipeline Crypto. O mapa usa a UF da empresa da Lista SPA.\n\n**Agregadoras** mostra KPIs do funil (sem legenda nos cards), funil em largura total, carteira por comercial e **Movimentação recente** lado a lado em grade 2×2 (→ Conexão, → Negociação, → Fechado, Alterações totais).\n\n**Integrações** mostra totais por status (sem legenda nos cards), **SLA por etapa** (tempo médio: criação → Em andamento; Em andamento → Concluído; criação → Concluído), volume por Tipo (Dedicada/Network), por Caminho e por Agregador.",
       },
       {
         subtitulo: "Mapa e movimentação",
@@ -1547,6 +1547,25 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "Comunicar",
         texto:
           "O botão **Comunicar** na toolbar da tabela será usado para registrar comunicações com a marca (e-mail/mensagem) — fluxo em implementação posterior.",
+      },
+    ],
+  },
+  comercial_pipeline_crypto: {
+    titulo: "Pipeline Crypto",
+    blocos: [
+      {
+        texto:
+          "A página **Pipeline Crypto** (menu Comercial, abaixo de Pipeline B2B) organiza empresas, marcas e oportunidades no mercado crypto. O funil, o comercial e as datas são independentes do Pipeline B2B: a mesma marca pode ter um comercial no B2B e outro no Crypto. O acesso depende da permissão de Ver; **Nova Marca** exige Criar; edição da tabela exige Editar.",
+      },
+      {
+        subtitulo: "Empresas e marcas",
+        texto:
+          "As empresas da Lista SPA são as mesmas do Pipeline B2B. As marcas dessa lista entram no Crypto só com nome, domínio e vínculo da empresa — Status, Possui Crypto, Retorno, Comercial e Última Comunicação começam em branco e não são sobrescritos pela sincronização. **Nova Marca** grava só no Crypto. Se o CNPJ informado já existir na Lista SPA, a marca vincula essa empresa. Marca, domínio, nome e telefone do contato são obrigatórios; razão social, CNPJ e e-mail são opcionais.",
+      },
+      {
+        subtitulo: "Tabela e status",
+        texto:
+          "As abas são **Todos**, **Disponíveis**, **Conexão**, **Negociação** e **Fechado**. Colunas: Razão Social, Marca, Contato, Comercial, Status, Possui Crypto, Retorno, Última Comunicação e Ação.\n\n**Possui Crypto** aceita Sim, Não ou em branco e não muda o Status. **Retorno** usa os mesmos status de Network. Só a alteração de Retorno recalcula o Status, nesta ordem: (1) Contrato Assinado ou Ativo → **Fechado**; (2) Contrato enviado → **Negociação**; (3) Em negociação → **Conexão**. **Última Comunicação** é uma data editável com permissão de Editar.\n\nO comercial do Crypto não herda a carteira do B2B. Os nomes atribuíveis são os mesmos: Marcus Morin, Fred Ring, Nathan Yoles e Simcha Neumark.",
       },
     ],
   },

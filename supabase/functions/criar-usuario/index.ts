@@ -2,7 +2,9 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { enviarEmailBoasVindasConta } from './enviarBoasVindas.ts'
 import { DEFAULT_LOGIN_URL } from './transacionalShell.ts'
-import { accessGrantedByPayload, registrarHistoricoPerfil } from './common.ts'
+import { accessGrantedByPayload, exigirPermissaoCriar, registrarHistoricoPerfil } from './common.ts'
+
+const ERRO_CRIAR = 'Não foi possível criar o usuário. Se o problema persistir, entre em contato com o suporte.'
 
 // Edge Function: criar-usuario — senha padrão + e-mail de boas-vindas + troca obrigatória no primeiro login
 
@@ -232,15 +234,21 @@ serve(async (req) => {
   }
 
   if (!senhaPadrao || senhaPadrao.length < 8) {
-    return new Response(JSON.stringify({
-      error: 'SENHA_PADRAO deve ter no mínimo 8 caracteres. Configure no Supabase → Settings → Edge Functions → Secrets.',
-    }), {
+    return new Response(JSON.stringify({ error: 'Configuração do servidor incompleta' }), {
       status: 500,
       headers: { ...cors, 'Content-Type': 'application/json' },
     })
   }
 
+  const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
   const supabase = createClient(supabaseUrl, serviceRoleKey, supabaseServiceOptions)
+  const gate = await exigirPermissaoCriar(req, supabaseUrl, anonKey, supabase, 'gestao_usuarios')
+  if (gate) {
+    return new Response(JSON.stringify({ error: gate.error }), {
+      status: gate.status,
+      headers: { ...cors, 'Content-Type': 'application/json' },
+    })
+  }
 
   let body: CriarUsuarioRequest
   try {
@@ -335,7 +343,8 @@ serve(async (req) => {
       role.trim(),
     )
     if ('error' in created) {
-      return new Response(JSON.stringify({ error: created.error }), {
+      console.error('[criar-usuario] Auth:', created.error)
+      return new Response(JSON.stringify({ error: ERRO_CRIAR }), {
         status: 400,
         headers: { ...cors, 'Content-Type': 'application/json' },
       })
@@ -366,7 +375,8 @@ serve(async (req) => {
     if (profileErr) {
       // Rollback: excluir usuário do Auth se profile falhou
       await goTrueAdminDeleteUser(supabaseUrl, serviceRoleKey, uid)
-      return new Response(JSON.stringify({ error: profileErr.message }), {
+      console.error('[criar-usuario] profile:', profileErr.message)
+      return new Response(JSON.stringify({ error: ERRO_CRIAR }), {
         status: 500,
         headers: { ...cors, 'Content-Type': 'application/json' },
       })
@@ -392,11 +402,12 @@ serve(async (req) => {
         scope_ref,
       }))
       const { error: scopeErr } = await supabase.from('user_scopes').insert(novasAreas)
-      if (scopeErr) {
+        if (scopeErr) {
+          console.error('[criar-usuario] escopos prestador:', scopeErr.message)
         await goTrueAdminDeleteUser(supabaseUrl, serviceRoleKey, uid)
         return new Response(
           JSON.stringify({
-            error: `Erro ao salvar áreas de prestador: ${scopeErr.message}. Verifique user_scopes (scope_type prestador_tipo).`,
+            error: ERRO_CRIAR,
           }),
           { status: 500, headers: { ...cors, 'Content-Type': 'application/json' } },
         )
@@ -420,9 +431,10 @@ serve(async (req) => {
       if (novasLinhas.length > 0) {
         const { error: scopeInsertErr } = await supabase.from('user_scopes').insert(novasLinhas)
         if (scopeInsertErr) {
+          console.error('[criar-usuario] escopos:', scopeInsertErr.message)
           await goTrueAdminDeleteUser(supabaseUrl, serviceRoleKey, uid)
           return new Response(
-            JSON.stringify({ error: `Erro ao salvar escopos: ${scopeInsertErr.message}` }),
+            JSON.stringify({ error: ERRO_CRIAR }),
             { status: 500, headers: { ...cors, 'Content-Type': 'application/json' } },
           )
         }
@@ -484,9 +496,7 @@ serve(async (req) => {
     })
   } catch (e) {
     console.error('[criar-usuario] Erro:', e)
-    return new Response(JSON.stringify({
-      error: e instanceof Error ? e.message : 'Erro interno ao criar usuário',
-    }), {
+    return new Response(JSON.stringify({ error: ERRO_CRIAR }), {
       status: 500,
       headers: { ...cors, 'Content-Type': 'application/json' },
     })

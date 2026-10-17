@@ -1339,7 +1339,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "KPIs zerados mas há marcas no Pipeline?",
         texto:
-          "Na aba **Operadoras**, verifique o filtro **Comercial** (**Todos Comerciais**). Na aba **Integrações**, confira **Prioridade** (**Todas Prioridades**). Os KPIs e gráficos da aba ativa respeitam só esses filtros — não há mais filtros de status do funil nem filtro de Estados no Overview.",
+          "Nas abas **Operadoras**, **Crypto** e **Agregadoras**, verifique o filtro **Comercial** (**Todos Comerciais**). Na aba **Integrações**, confira **Prioridade** (**Todas Prioridades**). Os KPIs e gráficos da aba ativa respeitam só esses filtros — não há mais filtros de status do funil nem filtro de Estados no Overview. O comercial da aba Crypto é o do Pipeline Crypto, separado do B2B.",
       },
     ],
   },
@@ -1390,6 +1390,31 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "Sync da Lista SPA falhou com erro de planilha ou HTTP 404?",
         texto:
           "A lista oficial junta a tabela **Empresas Autorizadas** (portaria SPA/MF) e a página **Autorizadas por Determinação Judicial** no portal do Ministério da Fazenda. O sync lê as duas páginas HTML; links antigos de planilha sob Transparência Ativa podem estar quebrados e são ignorados. Em Status Técnico, use **Sync** na linha **Lista SPA** (pode ser necessário **force** após incluir a fonte judicial, se o hash anterior ainda for o da lista só por portaria). Se o erro persistir após o deploy da Edge Function, entre em contato com o suporte.",
+      },
+    ],
+  },
+  comercial_pipeline_crypto: {
+    titulo: "Pipeline Crypto",
+    blocos: [
+      {
+        subtitulo: "Não vejo a página Pipeline Crypto no menu?",
+        texto:
+          "Confirme em Gestão de Usuários se seu perfil tem permissão de Ver para Pipeline Crypto. A página nasce com Ver, Criar e Editar em **Não** para todos os perfis, exceto Administrador. Se for Operador, a página também precisa estar liberada na aba Escopos → Operadora.",
+      },
+      {
+        subtitulo: "Criei uma marca e ela apareceu no Pipeline B2B?",
+        texto:
+          "Marcas criadas em **Nova Marca** ficam só no Pipeline Crypto. Se o CNPJ coincidir com uma empresa da Lista SPA, a razão social vem dessa empresa, mas a marca nova não é gravada no B2B.",
+      },
+      {
+        subtitulo: "Alterei Possui Crypto e o Status não mudou?",
+        texto:
+          "A automação de Status roda apenas na coluna **Retorno**. Possui Crypto (Sim, Não ou em branco) não altera o funil.",
+      },
+      {
+        subtitulo: "Não consigo editar Comercial, Status, Retorno ou a data?",
+        texto:
+          "A edição inline exige permissão de Editar na página Pipeline Crypto. Sem essa permissão, os modais de contato e Ver funcionam em modo consulta.",
       },
     ],
   },

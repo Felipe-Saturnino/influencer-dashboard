@@ -31,6 +31,7 @@ export function ModalContato({
   onClose,
   onSaved,
   canEditar,
+  contatosTable = "comercial_marca_contatos",
 }: {
   mode: "edit" | "add";
   marca: PipelineMarcaRow;
@@ -38,6 +39,7 @@ export function ModalContato({
   onClose: () => void;
   onSaved: () => void;
   canEditar: boolean;
+  contatosTable?: string;
 }) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
@@ -101,7 +103,7 @@ export function ModalContato({
 
     if (mode === "add") {
       const ordem = marca.contatos.length;
-      const { error } = await supabase.from("comercial_marca_contatos").insert({
+      const { error } = await supabase.from(contatosTable).insert({
         marca_id: marca.id,
         ordem,
         ...payload,
@@ -113,7 +115,7 @@ export function ModalContato({
         return;
       }
     } else if (contato) {
-      const { error } = await supabase.from("comercial_marca_contatos").update(payload).eq("id", contato.id);
+      const { error } = await supabase.from(contatosTable).update(payload).eq("id", contato.id);
       setSalvando(false);
       if (error) {
         console.error(error);
@@ -128,7 +130,7 @@ export function ModalContato({
   async function confirmarExclusao() {
     if (!contato || readonly) return;
     setSalvando(true);
-    const { error } = await supabase.from("comercial_marca_contatos").delete().eq("id", contato.id);
+    const { error } = await supabase.from(contatosTable).delete().eq("id", contato.id);
     setSalvando(false);
     setAlvoExcluir(false);
     if (error) {

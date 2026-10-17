@@ -848,6 +848,24 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         referencia: "Pipeline B2B",
       },
       {
+        termo: "Pipeline Crypto",
+        definicao:
+          "Funil comercial de marcas no mercado crypto, independente do Pipeline B2B. Usa as empresas da Lista SPA e colunas Possui Crypto e Retorno. Marcas criadas manualmente não entram no B2B.",
+        referencia: "Pipeline Crypto",
+      },
+      {
+        termo: "Possui Crypto",
+        definicao:
+          "Coluna do Pipeline Crypto com Sim, Não ou em branco. Não dispara a automação de Status.",
+        referencia: "Pipeline Crypto",
+      },
+      {
+        termo: "Retorno",
+        definicao:
+          "Coluna do Pipeline Crypto com os mesmos status de proposta de Network. Só esta coluna recalcula o Status do funil crypto.",
+        referencia: "Pipeline Crypto",
+      },
+      {
         termo: "Mesa Dedicada",
         definicao:
           "Produto de Live Cassino exclusivo para a marca/operadora, negociado no Pipeline B2B. Status de proposta aparece na coluna Dedicada.",
@@ -1568,7 +1586,7 @@ export const GLOSSARIO_CATEGORIA_PAGE_KEYS: Record<string, PageKey[]> = {
   financeiro_operacional: ["financeiro", "banca_jogo"],
   estudio: ["gestao_dealers", "central_notificacoes", "rh_figurinos", "roteiro_mesa", "incidentes", "escala_controle_turno"],
   marketing_digital: ["campanhas", "gestao_links", "galeria_fotos"],
-  comercial: ["comercial_overview", "comercial_integracao", "comercial_pipeline_b2b", "comercial_pipeline_agregadoras"],
+  comercial: ["comercial_overview", "comercial_integracao", "comercial_pipeline_b2b", "comercial_pipeline_crypto", "comercial_pipeline_agregadoras"],
   customer_success: ["cs_atendimento"],
   rh_portal: ["rh_portal", "spin_na_rede", "informativos", "academy_portal"],
   escala: [

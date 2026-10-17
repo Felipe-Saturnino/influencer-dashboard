@@ -54,6 +54,7 @@ import {
   type HistoricoOverviewRow,
   type OverviewMarcaRow,
 } from "./helpers";
+import { CRYPTO_MARCA_SELECT, mapCryptoMarcaFromDb } from "../PipelineCrypto/mapRow";
 import {
   filterOverviewAgregadoras,
   type OverviewAgregadoraHistorico,
@@ -140,6 +141,8 @@ export default function OverviewComercial() {
   const [rows, setRows] = useState<OverviewMarcaRow[]>([]);
   const [comerciais, setComerciais] = useState<ComercialOpcao[]>([]);
   const [historico, setHistorico] = useState<HistoricoOverviewRow[]>([]);
+  const [cryptoRows, setCryptoRows] = useState<OverviewMarcaRow[]>([]);
+  const [cryptoHist, setCryptoHist] = useState<HistoricoOverviewRow[]>([]);
   const [agregadoras, setAgregadoras] = useState<OverviewAgregadoraRow[]>([]);
   const [agregadoraHist, setAgregadoraHist] = useState<OverviewAgregadoraHistorico[]>([]);
   const [integracoes, setIntegracoes] = useState<OverviewIntegracaoRow[]>([]);
@@ -162,7 +165,7 @@ export default function OverviewComercial() {
       try {
         const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
-        const [marcasRows, gestoresRes, histRows, aggRows, aggHistRows, intRows, intHistRows] =
+        const [marcasRows, gestoresRes, histRows, cryptoMarcasRows, cryptoHistRows, aggRows, aggHistRows, intRows, intHistRows] =
           await Promise.all([
             fetchAllPages(async (from, to) =>
               supabase
@@ -180,6 +183,22 @@ export default function OverviewComercial() {
               supabase
                 .from("comercial_marca_historico")
                 .select("campo, valor_novo, marca_id, marca:comercial_marcas(nome)")
+                .gte("created_at", cutoff)
+                .order("created_at", { ascending: false })
+                .range(from, to),
+            ),
+            fetchAllPages(async (from, to) =>
+              supabase
+                .from("comercial_crypto_marcas")
+                .select(CRYPTO_MARCA_SELECT)
+                .order("nome")
+                .order("id")
+                .range(from, to),
+            ),
+            fetchAllPages(async (from, to) =>
+              supabase
+                .from("comercial_crypto_historico")
+                .select("campo, valor_novo, marca_id, marca:comercial_crypto_marcas(nome)")
                 .gte("created_at", cutoff)
                 .order("created_at", { ascending: false })
                 .range(from, to),
@@ -229,18 +248,27 @@ export default function OverviewComercial() {
 
         setComerciais(comercialList);
         setRows(marcasRows.map((r) => mapOverviewRow(r as Record<string, unknown>, names)));
-        setHistorico(
-          histRows.map((h) => {
-            const raw = h as Record<string, unknown>;
-            const marcaRaw = raw.marca as { nome?: string } | null;
+        setCryptoRows(
+          cryptoMarcasRows.map((r) => {
+            const raw = r as Record<string, unknown>;
             return {
-              marca_id: String(raw.marca_id ?? ""),
-              marca_nome: String(marcaRaw?.nome ?? "—"),
-              campo: String(raw.campo ?? ""),
-              valor_novo: raw.valor_novo != null ? String(raw.valor_novo) : null,
+              ...mapCryptoMarcaFromDb(raw, names),
+              created_at: raw.created_at ? String(raw.created_at) : null,
             };
           }),
         );
+        const mapHist = (h: unknown): HistoricoOverviewRow => {
+          const raw = h as Record<string, unknown>;
+          const marcaRaw = raw.marca as { nome?: string } | null;
+          return {
+            marca_id: String(raw.marca_id ?? ""),
+            marca_nome: String(marcaRaw?.nome ?? "—"),
+            campo: String(raw.campo ?? ""),
+            valor_novo: raw.valor_novo != null ? String(raw.valor_novo) : null,
+          };
+        };
+        setHistorico(histRows.map(mapHist));
+        setCryptoHist(cryptoHistRows.map(mapHist));
         setAgregadoras(
           aggRows.map((r) => {
             const raw = r as Record<string, unknown>;
@@ -308,6 +336,8 @@ export default function OverviewComercial() {
           setRows([]);
           setComerciais([]);
           setHistorico([]);
+          setCryptoRows([]);
+          setCryptoHist([]);
           setAgregadoras([]);
           setAgregadoraHist([]);
           setIntegracoes([]);
@@ -330,6 +360,11 @@ export default function OverviewComercial() {
   const filteredOperadoras = useMemo(
     () => filterOverviewRows(rows, comercialFiltro, comerciais),
     [rows, comercialFiltro, comerciais],
+  );
+
+  const filteredCrypto = useMemo(
+    () => filterOverviewRows(cryptoRows, comercialFiltro, comerciais),
+    [cryptoRows, comercialFiltro, comerciais],
   );
 
   const filteredAgregadoras = useMemo(
@@ -399,7 +434,7 @@ export default function OverviewComercial() {
           </div>
         </div>
 
-        {aba === "operadoras" || aba === "agregadoras" ? (
+        {aba === "operadoras" || aba === "crypto" || aba === "agregadoras" ? (
           <div
             style={{
               display: "flex",
@@ -524,6 +559,23 @@ export default function OverviewComercial() {
                 pageBox={pageBox}
                 t={t}
                 onGoPipeline={(slug) => navigateTo("comercial_pipeline_b2b", slug ?? "Todos")}
+              />
+            ) : null}
+          </div>
+          <div
+            role="tabpanel"
+            id="panel-overview-comercial-crypto"
+            hidden={aba !== "crypto"}
+          >
+            {aba === "crypto" ? (
+              <OverviewOperadorasPanel
+                modo="crypto"
+                filtered={filteredCrypto}
+                comerciais={comerciais}
+                historico={cryptoHist}
+                pageBox={pageBox}
+                t={t}
+                onGoPipeline={(slug) => navigateTo("comercial_pipeline_crypto", slug ?? "Todos")}
               />
             ) : null}
           </div>

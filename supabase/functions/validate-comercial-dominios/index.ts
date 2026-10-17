@@ -295,6 +295,16 @@ serve(async (req) => {
     if (novoStatus === "ok") ativas += 1;
     else inativas += 1;
 
+    if (!dryRun && marca.dominio) {
+      const { error: cryptoErr } = await supabase
+        .from("comercial_crypto_marcas")
+        .update({ status_dominio: novoStatus })
+        .eq("origem", "spa")
+        .eq("dominio", marca.dominio)
+        .neq("status_dominio", novoStatus);
+      if (cryptoErr) erros.push(`crypto ${marca.dominio}: ${cryptoErr.message}`);
+    }
+
     const anterior = marca.status_dominio === "ok" ? "ok" : "inativo";
     if (anterior === novoStatus) continue;
 

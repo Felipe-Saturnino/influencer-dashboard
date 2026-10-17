@@ -25,6 +25,24 @@ function corsHeaders(req: Request) {
   }
 }
 
+const resetPorEmail = new Map<string, number[]>()
+const RESET_JANELA_MS = 15 * 60 * 1000
+const RESET_MAX = 5
+
+function resetLimitado(email: string): boolean {
+  const agora = Date.now()
+  const prev = (resetPorEmail.get(email) ?? []).filter((t) => agora - t < RESET_JANELA_MS)
+  if (prev.length >= RESET_MAX) {
+    resetPorEmail.set(email, prev)
+    return true
+  }
+  prev.push(agora)
+  resetPorEmail.set(email, prev)
+  return false
+}
+
+const RESPOSTA_OK = JSON.stringify({ status: 'success' satisfies Status })
+
 serve(async (req) => {
   const cors = corsHeaders(req)
   if (req.method === 'OPTIONS') {
@@ -74,6 +92,13 @@ serve(async (req) => {
     })
   }
 
+  if (resetLimitado(email)) {
+    return new Response(RESPOSTA_OK, {
+      status: 200,
+      headers: { ...cors, 'Content-Type': 'application/json' },
+    })
+  }
+
   const loginUrl = (body.loginUrl ?? '').trim() || DEFAULT_LOGIN_URL
 
   const supabase = createClient(supabaseUrl, serviceRoleKey, supabaseServiceOptions)
@@ -92,15 +117,8 @@ serve(async (req) => {
     })
   }
 
-  if (!profile) {
-    return new Response(JSON.stringify({ status: 'not_found' satisfies Status }), {
-      status: 200,
-      headers: { ...cors, 'Content-Type': 'application/json' },
-    })
-  }
-
-  if (profile.ativo === false) {
-    return new Response(JSON.stringify({ status: 'inactive' satisfies Status }), {
+  if (!profile || profile.ativo === false) {
+    return new Response(RESPOSTA_OK, {
       status: 200,
       headers: { ...cors, 'Content-Type': 'application/json' },
     })
@@ -108,6 +126,23 @@ serve(async (req) => {
 
   const userId = profile.id as string
   const nome = (profile.name as string | null)?.trim() || email
+
+  const mail = await enviarEmailRecuperacaoSenhaConta({
+    supabaseUrl,
+    supabase,
+    to: email,
+    nome,
+    senhaTemporaria: senhaPadrao,
+    loginUrl,
+  })
+
+  if (!mail.ok) {
+    console.error('[recuperar-senha] Falha Resend:', mail.error)
+    return new Response(JSON.stringify({ status: 'email_error' satisfies Status }), {
+      status: 200,
+      headers: { ...cors, 'Content-Type': 'application/json' },
+    })
+  }
 
   const { error: authErr } = await supabase.auth.admin.updateUserById(userId, {
     password: senhaPadrao,
@@ -126,10 +161,6 @@ serve(async (req) => {
     .eq('id', userId)
   if (profileUpdErr) {
     console.error('[recuperar-senha] Erro ao marcar must_change_password:', profileUpdErr.message)
-    return new Response(JSON.stringify({ status: 'config_error' satisfies Status }), {
-      status: 500,
-      headers: { ...cors, 'Content-Type': 'application/json' },
-    })
   }
 
   await registrarHistoricoPerfil(supabase, {
@@ -139,23 +170,6 @@ serve(async (req) => {
     realizadoPor: null,
     resumo: 'Reset de senha solicitado na página de Login',
   })
-
-  const mail = await enviarEmailRecuperacaoSenhaConta({
-    supabaseUrl,
-    supabase,
-    to: email,
-    nome,
-    senhaTemporaria: senhaPadrao,
-    loginUrl,
-  })
-
-  if (!mail.ok) {
-    console.error('[recuperar-senha] Falha Resend:', mail.error)
-    return new Response(JSON.stringify({ status: 'email_error' satisfies Status }), {
-      status: 200,
-      headers: { ...cors, 'Content-Type': 'application/json' },
-    })
-  }
 
   return new Response(JSON.stringify({ status: 'success' satisfies Status }), {
     status: 200,

@@ -5,7 +5,8 @@ import { usePermission, type Permissoes } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE, BRAND } from "../../../lib/dashboardConstants";
 import { PLATAFORMAS, PLAT_COLOR, type Plataforma } from "../../../constants/platforms";
-import { supabase, supabaseAnonKey } from "../../../lib/supabase";
+import { supabase } from "../../../lib/supabase";
+import { headersChamadaEdgeComSessao } from "../../../lib/supabaseEdgeFetch";
 import { fmtBRL } from "../../../lib/dashboardHelpers";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { PlatLogo } from "../../../components/PlatLogo";
@@ -109,7 +110,7 @@ async function vincularOperadoraInfluencerViaApi(userId: string, operadoraSlug: 
   if (!slug || !userId.trim()) return;
   const res = await fetch("/api/criar-usuario-scout", {
     method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${supabaseAnonKey}`, Apikey: supabaseAnonKey },
+    headers: await headersChamadaEdgeComSessao(),
     body: JSON.stringify({
       vincular_operadora: { user_id: userId.trim(), operadora_slug: slug },
       ...(scoutId ? { scout_id: scoutId } : {}),
@@ -408,7 +409,7 @@ export default function Scout() {
         const cacheNeg = toCacheNumber(effective.cache_negociado);
         const res = await fetch("/api/criar-usuario-scout", {
           method: "POST",
-          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${supabaseAnonKey}`, "Apikey": supabaseAnonKey },
+          headers: await headersChamadaEdgeComSessao(),
           body: JSON.stringify({
             email: (effective.email ?? "").trim(),
             nome_artistico: (effective.nome_artistico ?? "").trim(),
@@ -1215,11 +1216,7 @@ function ModalEditar({ scout, operadorasList, perm, onClose, onSaved, isDark }: 
 
     const res = await fetch("/api/criar-usuario-scout", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${supabaseAnonKey}`,
-        "Apikey": supabaseAnonKey,
-      },
+      headers: await headersChamadaEdgeComSessao(),
       body: JSON.stringify({
         email: em,
         nome_artistico: nome,

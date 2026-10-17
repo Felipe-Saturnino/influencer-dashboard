@@ -297,4 +297,6 @@ export const HISTORICO_CAMPO_LABEL: Record<string, string> = {
   ultimo_contato: "Último Contato",
   ultima_comunicacao: "Envio de Material",
   status_folha: "Detalhe",
+  possui_crypto: "Possui Crypto",
+  retorno: "Retorno",
 };

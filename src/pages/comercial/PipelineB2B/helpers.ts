@@ -515,9 +515,14 @@ export function historicoDisplayValor(campo: string, valor: string | null): stri
     const v = valor as StatusFolha;
     return STATUS_FOLHA_LABEL[v] ?? valor;
   }
-  if (campo === "mesa_dedicada" || campo === "mesa_network") {
+  if (campo === "mesa_dedicada" || campo === "mesa_network" || campo === "retorno") {
     const v = valor as StatusProduto;
     return STATUS_PRODUTO_LABEL[v] ?? valor;
+  }
+  if (campo === "possui_crypto") {
+    if (valor === "sim") return "Sim";
+    if (valor === "nao") return "Não";
+    return valor;
   }
   if (campo === "ultimo_contato" || campo === "ultima_comunicacao") {
     return fmtDataNascimento(valor) !== "—" ? fmtDataNascimento(valor) : fmtDataPipeline(valor);

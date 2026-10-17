@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mockup — Overview Comercial · aba Crypto</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #f4f4f8; --text: #1a1a2e; --muted: #6b7280; --card: #fff; --border: #e5e7eb; --input: #f9fafb;
+      --primary: #7c3aed; --accent: #1e36f8;
+      --shadow: 0 2px 8px rgba(0,0,0,.07);
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Inter, sans-serif; background: var(--bg); color: var(--text); }
+    .banner { background: #1a1a2e; color: #fff; padding: 10px 24px; font-size: 12px; }
+    .banner strong { color: #c4b5fd; }
+    .shell { max-width: 1280px; margin: 0 auto; padding: 24px 20px 64px; }
+    h1 { margin: 0; font-family: "Barlow Condensed", sans-serif; font-size: 18px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--primary); }
+    .sub { margin: 5px 0 0 40px; font-size: 13px; color: var(--muted); }
+    .head { display: flex; align-items: center; gap: 8px; margin-bottom: 18px; }
+    .icon { width: 32px; height: 32px; border-radius: 9px; display: flex; align-items: center; justify-content: center; background: color-mix(in srgb, var(--primary) 12%, transparent); border: 1px solid color-mix(in srgb, var(--primary) 25%, transparent); color: var(--primary); }
+    .box { background: var(--card); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow); margin-bottom: 14px; padding: 20px; }
+    .filter { padding: 12px 20px; }
+    .tabs, .filters { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+    .filters { margin-top: 10px; }
+    .tab, .pill { display: inline-flex; align-items: center; gap: 8px; border-radius: 10px; border: 1px solid var(--border); background: var(--input); color: var(--muted); font: inherit; font-size: 13px; font-weight: 500; cursor: pointer; }
+    .tab { padding: 10px 18px; min-height: 44px; }
+    .tab.active { color: var(--accent); border-color: var(--accent); font-weight: 700; background: color-mix(in srgb, var(--primary) 15%, transparent); }
+    .pill { border-radius: 999px; padding: 6px 14px; color: var(--text); }
+    .stitle { margin: 0; font-family: "Barlow Condensed", sans-serif; font-size: 14px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--primary); }
+    .ssub { font-size: 11px; color: var(--muted); margin-left: 6px; }
+    .kpis { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-top: 16px; }
+    .kpi { border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; background: var(--card); }
+    .kpi .l { font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--muted); }
+    .kpi .v { font-family: "Barlow Condensed", sans-serif; font-size: 28px; font-weight: 800; margin-top: 4px; }
+    .kpi .h { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .split { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .funil { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+    .funil-row { color: #fff; text-align: center; padding: 10px 8px; font-weight: 700; border-radius: 8px; margin: 0 auto; }
+    .funil-row small { display: block; font-size: 10px; letter-spacing: .08em; font-weight: 600; }
+    .bar { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+    .bar span:first-child { width: 150px; font-size: 11px; color: var(--muted); }
+    .track { flex: 1; height: 10px; background: var(--input); border-radius: 999px; overflow: hidden; }
+    .fill { height: 100%; border-radius: 999px; opacity: .85; }
+    .bar b { width: 28px; text-align: right; font-size: 11px; }
+    .panel { display: none; }
+    .panel.active { display: block; }
+    .note { margin-top: 8px; padding: 14px; border: 1px dashed var(--border); border-radius: 10px; font-size: 12px; color: var(--muted); line-height: 1.5; }
+    .placeholder { font-size: 13px; color: var(--muted); margin-top: 12px; }
+    @media (max-width: 900px) { .kpis, .split { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="banner"><strong>MOCKUP</strong> — Overview Comercial · aba Crypto depois de Operadoras · bloco Interesse = coluna Retorno do Pipeline Crypto</div>
+  <div class="shell">
+    <header>
+      <div class="head">
+        <div class="icon" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 16l4-8 4 5 5-9"/></svg>
+        </div>
+        <h1>Overview Comercial</h1>
+      </div>
+      <p class="sub">Visão consolidada do funil B2B, produtos Live Cassino e carteira da equipe comercial.</p>
+    </header>
+
+    <div class="box filter">
+      <div class="tabs" role="tablist" aria-label="Abas do Overview Comercial">
+        <button type="button" class="tab" data-tab="operadoras" role="tab">Operadoras</button>
+        <button type="button" class="tab active" data-tab="crypto" role="tab">Crypto</button>
+        <button type="button" class="tab" data-tab="agregadoras" role="tab">Agregadoras</button>
+        <button type="button" class="tab" data-tab="integracoes" role="tab">Integrações</button>
+      </div>
+      <div class="filters">
+        <span class="pill">Todos Comerciais</span>
+      </div>
+    </div>
+
+    <div id="panel-crypto" class="panel active">
+      <div class="box">
+        <h2 class="stitle">KPIs consolidados <span class="ssub">— Clique para abrir o Pipeline Crypto detalhado</span></h2>
+        <div class="kpis">
+          <div class="kpi"><div class="l">Empresas</div><div class="v" style="color:var(--primary)">142</div><div class="h">CNPJs licenciados</div></div>
+          <div class="kpi"><div class="l">Marcas</div><div class="v" style="color:var(--accent)">88</div><div class="h">No pipeline</div></div>
+          <div class="kpi"><div class="l">Site ativo</div><div class="v" style="color:#22c55e">61</div><div class="h">Domínio OK</div></div>
+          <div class="kpi"><div class="l">Negociação</div><div class="v" style="color:#f59e0b">19</div><div class="h">Em proposta</div></div>
+          <div class="kpi"><div class="l">Fechado</div><div class="v" style="color:#22c55e">16</div><div class="h">Assinado / Ativo</div></div>
+        </div>
+      </div>
+      <div class="split">
+        <div class="box">
+          <h2 class="stitle">Funil do pipeline <span class="ssub">— Marcas reguladas</span></h2>
+          <div class="funil">
+            <div class="funil-row" style="width:100%;background:#6b7280"><small>DISPONÍVEIS</small>34</div>
+            <div class="funil-row" style="width:78%;background:#1e36f8"><small>CONEXÃO</small>19</div>
+            <div class="funil-row" style="width:62%;background:#f59e0b"><small>NEGOCIAÇÃO</small>19</div>
+            <div class="funil-row" style="width:46%;background:#22c55e"><small>FECHADO</small>16</div>
+          </div>
+        </div>
+        <div class="box">
+          <h2 class="stitle">Interesse <span class="ssub">— Status da coluna Retorno</span></h2>
+          <div id="interesse"></div>
+        </div>
+      </div>
+      <div class="box">
+        <h2 class="stitle">Distribuição geográfica <span class="ssub">— Clique no estado para ver as marcas com sede na região</span></h2>
+        <p class="placeholder">Mesmo mapa da aba Operadoras. A sede continua a da empresa da lista SPA. Entram só as marcas do Pipeline Crypto.</p>
+      </div>
+      <div class="split">
+        <div class="box">
+          <h2 class="stitle">Carteira por comercial <span class="ssub">— Comercial atribuído no Pipeline Crypto</span></h2>
+          <p class="placeholder">Marcus Morin · 28 marcas · Fred Ring · 21 marcas. A carteira do B2B não entra aqui.</p>
+        </div>
+        <div class="box">
+          <h2 class="stitle">Novas marcas <span class="ssub">— Marcas cadastradas nos últimos 30 dias</span></h2>
+          <p class="placeholder">Só marcas criadas ou copiadas no Pipeline Crypto.</p>
+        </div>
+      </div>
+      <div class="box">
+        <h2 class="stitle">Movimentação recente <span class="ssub">— Alterações dos últimos 30 dias</span></h2>
+        <p class="placeholder">→ Negociação · → Fechado · Sem interesse · Alterações totais. Histórico do Crypto, separado do B2B.</p>
+      </div>
+    </div>
+
+    <div id="panel-operadoras" class="panel">
+      <div class="box">
+        <h2 class="stitle">Produto <span class="ssub">— Status de Dedicada x Network</span></h2>
+        <p class="placeholder">Aba atual, sem mudança. Duas colunas: Dedicada e Network, com os status de produto do Pipeline B2B.</p>
+      </div>
+    </div>
+    <div id="panel-agregadoras" class="panel"><div class="box"><p class="placeholder">Aba Agregadoras permanece como está.</p></div></div>
+    <div id="panel-integracoes" class="panel"><div class="box"><p class="placeholder">Aba Integrações permanece como está.</p></div></div>
+
+    <div class="note">
+      A aba <strong>Crypto</strong> copia Operadoras e lê o Pipeline Crypto. O bloco deixa de se chamar Produto e passa a se chamar <strong>Interesse</strong>: uma única série, na ordem do Retorno (Sem interesse → Ativo), mais Sem Status quando o Retorno está em branco. Possui Crypto não entra neste bloco. O filtro Comercial usa a atribuição do Crypto.
+    </div>
+  </div>
+  <script>
+    var RETORNO = [
+      ["Sem interesse", 6, "#e84025"],
+      ["Desinteresse Comercial", 3, "#b91c1c"],
+      ["Sem proposta", 18, "#6b7280"],
+      ["Em negociação", 14, "#f59e0b"],
+      ["Contrato enviado", 9, "#1e36f8"],
+      ["Contrato Assinado", 5, "#a78bfa"],
+      ["Ativo", 11, "#22c55e"],
+      ["Sem Status", 22, "#6b7280"]
+    ];
+    var max = 22;
+    document.getElementById("interesse").innerHTML = RETORNO.map(function(r) {
+      var w = Math.round((r[1] / max) * 100);
+      return '<div class="bar"><span>' + r[0] + '</span><div class="track"><div class="fill" style="width:' + w + '%;background:' + r[2] + '"></div></div><b>' + r[1] + '</b></div>';
+    }).join("");
+    document.querySelectorAll(".tab").forEach(function(btn) {
+      btn.addEventListener("click", function() {
+        document.querySelectorAll(".tab").forEach(function(b) { b.classList.toggle("active", b === btn); });
+        document.querySelectorAll(".panel").forEach(function(p) { p.classList.toggle("active", p.id === "panel-" + btn.dataset.tab); });
+      });
+    });
+  </script>
+</body>
+</html>

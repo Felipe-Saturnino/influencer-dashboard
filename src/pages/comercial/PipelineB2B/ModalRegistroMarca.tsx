@@ -23,12 +23,18 @@ export function ModalRegistroMarca({
   canEditar,
   userId,
   userName,
+  anotacoesTable = "comercial_marca_anotacoes",
+  historicoTable = "comercial_marca_historico",
+  campoLabels,
 }: {
   marca: PipelineMarcaRow;
   onClose: () => void;
   canEditar: boolean;
   userId: string | undefined;
   userName: string | undefined;
+  anotacoesTable?: string;
+  historicoTable?: string;
+  campoLabels?: Record<string, string>;
 }) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
@@ -44,13 +50,13 @@ export function ModalRegistroMarca({
     setLoading(true);
     const [anotRes, histRes] = await Promise.all([
       supabase
-        .from("comercial_marca_anotacoes")
+        .from(anotacoesTable)
         .select("id, marca_id, texto, created_at, usuario_id")
         .eq("marca_id", marca.id)
         .order("created_at", { ascending: false })
         .limit(100),
       supabase
-        .from("comercial_marca_historico")
+        .from(historicoTable)
         .select("id, marca_id, campo, valor_anterior, valor_novo, created_at, usuario_id")
         .eq("marca_id", marca.id)
         .order("created_at", { ascending: false })
@@ -79,7 +85,7 @@ export function ModalRegistroMarca({
       })),
     );
     setLoading(false);
-  }, [marca.id]);
+  }, [anotacoesTable, historicoTable, marca.id]);
 
   useEffect(() => {
     void load();
@@ -94,7 +100,7 @@ export function ModalRegistroMarca({
     if (!canEditar) return;
     setSalvando(true);
     setErr(null);
-    const { error } = await supabase.from("comercial_marca_anotacoes").insert({
+    const { error } = await supabase.from(anotacoesTable).insert({
       marca_id: marca.id,
       texto: trimmed,
       usuario_id: userId ?? null,
@@ -267,7 +273,7 @@ export function ModalRegistroMarca({
                     color: t.text,
                   }}
                 >
-                  <strong>{HISTORICO_CAMPO_LABEL[h.campo] ?? h.campo}</strong>
+                  <strong>{campoLabels?.[h.campo] ?? HISTORICO_CAMPO_LABEL[h.campo] ?? h.campo}</strong>
                   {" — "}
                   {historicoDisplayValor(h.campo, h.valor_anterior)} → {historicoDisplayValor(h.campo, h.valor_novo)}
                   <div style={{ fontSize: 11, color: t.textMuted, marginTop: 6 }}>

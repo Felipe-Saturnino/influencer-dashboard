@@ -242,6 +242,23 @@ async function callDirectToSupabase<T>(
  * Ordem: 1) Supabase direto no browser 2) /api/* (Cloudflare) só se a direta falhar por rede/timeout.
  * O caminho Worker → Supabase costuma estourar tempo (504) em alguns projetos; o browser → Supabase costuma responder.
  */
+/** Authorization da sessão (não a chave anônima) para /api que cria conta. */
+export async function headersChamadaEdgeComSessao(): Promise<Record<string, string>> {
+  if (!supabaseAnonKey?.trim()) {
+    throw new Error("Sessão expirada ou ausente. Faça login novamente.");
+  }
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const token = session?.access_token?.trim();
+  if (!token) throw new Error("Sessão expirada ou ausente. Faça login novamente.");
+  return {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`,
+    Apikey: supabaseAnonKey,
+  };
+}
+
 export async function callSupabaseEdgeFunction<T = unknown>(
   functionName: string,
   body: object,

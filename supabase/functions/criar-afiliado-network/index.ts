@@ -2,7 +2,9 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { enviarEmailBoasVindasConta } from './enviarBoasVindas.ts'
 import { DEFAULT_LOGIN_URL } from './transacionalShell.ts'
-import { accessGrantedByPayload, registrarHistoricoPerfil } from './common.ts'
+import { accessGrantedByPayload, exigirPermissaoCriar, registrarHistoricoPerfil } from './common.ts'
+
+const ERRO_CRIAR = 'Não foi possível criar o usuário. Se o problema persistir, entre em contato com o suporte.'
 
 /** Cria utilizador Afiliado + influencer_perfil + vínculos a partir de um card em afiliados_network. */
 
@@ -111,7 +113,14 @@ serve(async (req) => {
     return new Response(JSON.stringify({ error: 'Configuração do servidor incompleta' }), { status: 500, headers: { ...cors, 'Content-Type': 'application/json' } })
   }
   if (!senhaPadrao || senhaPadrao.length < 8) {
-    return new Response(JSON.stringify({ error: 'SENHA_PADRAO inválida no servidor.' }), { status: 500, headers: { ...cors, 'Content-Type': 'application/json' } })
+    return new Response(JSON.stringify({ error: 'Configuração do servidor incompleta' }), { status: 500, headers: { ...cors, 'Content-Type': 'application/json' } })
+  }
+
+  const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+  const supabase = createClient(supabaseUrl, serviceRoleKey, supabaseServiceOptions)
+  const gate = await exigirPermissaoCriar(req, supabaseUrl, anonKey, supabase, 'afiliados_network')
+  if (gate) {
+    return new Response(JSON.stringify({ error: gate.error }), { status: gate.status, headers: { ...cors, 'Content-Type': 'application/json' } })
   }
 
   let body: { network_id?: string; loginUrl?: string }
@@ -128,8 +137,6 @@ serve(async (req) => {
     return new Response(JSON.stringify({ error: 'network_id é obrigatório.' }), { status: 400, headers: { ...cors, 'Content-Type': 'application/json' } })
   }
 
-  const supabase = createClient(supabaseUrl, serviceRoleKey, supabaseServiceOptions)
-
   const { data: row, error: fetchErr } = await supabase
     .from('afiliados_network')
     .select('id, nome, email, telefone, operacao, operadora_slug, afiliado_user_id')
@@ -137,7 +144,8 @@ serve(async (req) => {
     .maybeSingle()
 
   if (fetchErr || !row) {
-    return new Response(JSON.stringify({ error: fetchErr?.message ?? 'Card não encontrado.' }), { status: 404, headers: { ...cors, 'Content-Type': 'application/json' } })
+    console.error('[criar-afiliado-network] card:', fetchErr?.message)
+    return new Response(JSON.stringify({ error: 'Card não encontrado.' }), { status: 404, headers: { ...cors, 'Content-Type': 'application/json' } })
   }
 
   const r = row as {
@@ -193,7 +201,8 @@ serve(async (req) => {
   try {
     const created = await goTrueAdminCreateUser(supabaseUrl, serviceRoleKey, email, senhaPadrao, nome, 'afiliado')
     if ('error' in created) {
-      return new Response(JSON.stringify({ error: created.error }), { status: 400, headers: { ...cors, 'Content-Type': 'application/json' } })
+      console.error('[criar-afiliado-network] Auth:', created.error)
+      return new Response(JSON.stringify({ error: ERRO_CRIAR }), { status: 400, headers: { ...cors, 'Content-Type': 'application/json' } })
     }
     const uid = created.uid
 
@@ -215,7 +224,8 @@ serve(async (req) => {
 
     if (profileErr) {
       await goTrueAdminDeleteUser(supabaseUrl, serviceRoleKey, uid)
-      return new Response(JSON.stringify({ error: profileErr.message }), { status: 500, headers: { ...cors, 'Content-Type': 'application/json' } })
+      console.error('[criar-afiliado-network] profile:', profileErr.message)
+      return new Response(JSON.stringify({ error: ERRO_CRIAR }), { status: 500, headers: { ...cors, 'Content-Type': 'application/json' } })
     }
 
     await registrarHistoricoPerfil(supabase, {
@@ -235,7 +245,8 @@ serve(async (req) => {
     if (scopeErr) {
       await supabase.from('profiles').delete().eq('id', uid)
       await goTrueAdminDeleteUser(supabaseUrl, serviceRoleKey, uid)
-      return new Response(JSON.stringify({ error: scopeErr.message }), { status: 500, headers: { ...cors, 'Content-Type': 'application/json' } })
+      console.error('[criar-afiliado-network] escopo:', scopeErr.message)
+      return new Response(JSON.stringify({ error: ERRO_CRIAR }), { status: 500, headers: { ...cors, 'Content-Type': 'application/json' } })
     }
 
     const agora = new Date().toISOString()
@@ -259,7 +270,8 @@ serve(async (req) => {
       await supabase.from('user_scopes').delete().eq('user_id', uid)
       await supabase.from('profiles').delete().eq('id', uid)
       await goTrueAdminDeleteUser(supabaseUrl, serviceRoleKey, uid)
-      return new Response(JSON.stringify({ error: perfilErr.message }), { status: 500, headers: { ...cors, 'Content-Type': 'application/json' } })
+      console.error('[criar-afiliado-network] perfil:', perfilErr.message)
+      return new Response(JSON.stringify({ error: ERRO_CRIAR }), { status: 500, headers: { ...cors, 'Content-Type': 'application/json' } })
     }
 
     const { error: ioErr } = await supabase.from('influencer_operadoras').upsert(
@@ -271,7 +283,8 @@ serve(async (req) => {
       await supabase.from('user_scopes').delete().eq('user_id', uid)
       await supabase.from('profiles').delete().eq('id', uid)
       await goTrueAdminDeleteUser(supabaseUrl, serviceRoleKey, uid)
-      return new Response(JSON.stringify({ error: ioErr.message }), { status: 500, headers: { ...cors, 'Content-Type': 'application/json' } })
+      console.error('[criar-afiliado-network] operadora:', ioErr.message)
+      return new Response(JSON.stringify({ error: ERRO_CRIAR }), { status: 500, headers: { ...cors, 'Content-Type': 'application/json' } })
     }
 
     const { error: linkErr } = await supabase
@@ -306,7 +319,7 @@ serve(async (req) => {
     })
   } catch (e) {
     console.error('[criar-afiliado-network]', e)
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : 'Erro interno' }), {
+    return new Response(JSON.stringify({ error: ERRO_CRIAR }), {
       status: 500,
       headers: { ...cors, 'Content-Type': 'application/json' },
     })

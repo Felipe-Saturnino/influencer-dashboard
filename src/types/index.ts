@@ -68,6 +68,7 @@ export type PageKey =
   | "comercial_overview"
   | "comercial_integracao"
   | "comercial_pipeline_b2b"
+  | "comercial_pipeline_crypto"
   | "comercial_pipeline_agregadoras"
   | "cs_atendimento"
   | "gestao_usuarios"

@@ -132,17 +132,56 @@
     }
     thead th:first-child, tbody td:first-child { text-align: left; }
     thead th[colspan] { text-align: center; }
-    thead th[rowspan] { text-align: left; vertical-align: middle; }
+    thead th[rowspan] { vertical-align: middle; }
+    thead th.th-acoes { text-align: center; min-width: 88px; }
+    .th-sort { cursor: pointer; user-select: none; }
+    .th-sort:hover { color: var(--text); }
+    .th-sort .th-sort-inner {
+      display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+    }
+    .th-sort .sort-icon {
+      display: inline-flex; flex-direction: column; line-height: 0.65;
+      font-size: 8px; opacity: 0.35; color: var(--text-muted);
+    }
+    .th-sort.active { color: var(--brand-primary); }
+    .th-sort.active .sort-icon { opacity: 1; color: var(--brand-primary); }
     thead tr + tr th { font-size: 11px; letter-spacing: 0.05em; text-align: center; }
+    .table-grupos { min-width: 920px; }
+    .table-grupos thead th:first-child { text-align: center; }
+    .table-grupos thead th[colspan] {
+      border-bottom: 1px solid color-mix(in srgb, var(--brand-primary) 22%, var(--card-border));
+    }
+    .table-grupos .grupo-inicio {
+      border-left: 2px solid color-mix(in srgb, var(--brand-primary) 28%, var(--card-border));
+      padding-left: 16px;
+    }
+    .table-grupos .grupo-fim {
+      padding-right: 16px;
+    }
+    .table-grupos th.th-acoes,
+    .table-grupos td.td-acoes {
+      text-align: center;
+      min-width: 88px;
+      border-left: 2px solid color-mix(in srgb, var(--brand-primary) 28%, var(--card-border));
+    }
     .toolbar-tabela { display: flex; justify-content: flex-end; margin-bottom: 10px; }
     .dia-carousel {
       display: flex; align-items: center; justify-content: center;
       gap: 10px; margin-bottom: 14px; flex-wrap: wrap;
     }
+    .timeline-card .trilha-datas {
+      font-size: 12px; color: var(--text-muted); margin: 6px 0 8px;
+    }
     .timeline-card .trilha-desc {
       font-size: 13px; color: var(--text-muted); margin: 8px 0 0; line-height: 1.45;
     }
-    .timeline-card .trilha-acoes { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .timeline-card .trilha-acoes {
+      display: flex; flex-direction: column; align-items: flex-start; gap: 10px; margin-top: 12px;
+    }
+    .timeline-card .trilha-prova-linha,
+    .timeline-card .trilha-concluir-linha {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+    }
     .hist-item {
       border: 1px solid var(--card-border); border-radius: 10px;
       padding: 12px; font-size: 13px; margin-bottom: 8px;
@@ -240,6 +279,23 @@
     }
     .relatorio-log-item .data { display: block; font-size: 11px; font-weight: 700; color: var(--text-muted); margin-bottom: 4px; }
     .relatorio-nova { display: flex; flex-direction: column; gap: 8px; }
+    .bloco-provas { margin-top: 6px; }
+    .bloco-provas .section-title { font-size: 12px; margin-bottom: 10px; }
+    .table-wrap.compact { border-radius: 10px; }
+    .table-wrap.compact table { min-width: 0; font-size: 12px; }
+    .table-wrap.compact thead th,
+    .table-wrap.compact tbody td { padding: 8px 10px; }
+    .anotacao-card {
+      background: var(--input-bg); border: 1px solid var(--card-border);
+      border-left: 3px solid var(--brand-primary);
+      border-radius: 0 10px 10px 0; padding: 12px 14px; margin-bottom: 8px;
+    }
+    .anotacao-card:last-child { margin-bottom: 0; }
+    .anotacao-card .anotacao-meta {
+      display: block; font-size: 11px; font-weight: 700; color: var(--text-muted); margin-bottom: 6px;
+    }
+    .anotacao-card p { font-size: 13px; color: var(--text); margin: 0; line-height: 1.45; }
+    .field input[readonly] { opacity: .85; }
 
     .modal-overlay {
       display: none; position: fixed; inset: 0; z-index: 1000;
@@ -247,6 +303,7 @@
       align-items: center; justify-content: center;
     }
     .modal-overlay.open { display: flex; }
+    #modalAlerta { z-index: 1100; }
     .modal-panel {
       width: min(640px, 100%); max-height: 90dvh;
       background: var(--card-bg); border: 1px solid var(--card-border);
@@ -391,6 +448,11 @@
       display: inline-flex; align-items: center; justify-content: center; font-size: 10px; color: #fff;
     }
     .box.on { background: var(--brand-primary); border-color: var(--brand-primary); }
+    .field.campo-invalido input,
+    .field.campo-invalido textarea {
+      border-color: #e84025;
+      box-shadow: 0 0 0 3px #e840251a;
+    }
     tbody tr.clickable { cursor: pointer; }
     .field[aria-readonly="true"] input, .field[aria-readonly="true"] select { opacity: .85; }
   </style>
@@ -457,8 +519,6 @@
           <svg class="filtro-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect width="20" height="14" x="2" y="5" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M16 10h2"/><path d="M16 14h2"/><path d="M6.17 15a3 3 0 0 1 5.66 0"/></svg>
           <select id="filtroTreinador" class="filtro-select" aria-label="Treinador" onchange="aplicarFiltros()">
             <option value="" selected>Todos</option>
-            <option value="Juliana Mendes">Juliana Mendes</option>
-            <option value="Ricardo Nunes">Ricardo Nunes</option>
           </select>
         </div>
         <div class="filtro-select-wrap">
@@ -536,24 +596,9 @@
 
     <div id="turmaPanelAvaliacao" class="vt-panel">
       <div class="table-wrap">
-        <table>
+        <table class="table-grupos">
           <caption>Avaliação da turma selecionada</caption>
-          <thead>
-            <tr>
-              <th scope="col" rowspan="2">Prestador</th>
-              <th scope="colgroup" colspan="3">Provas</th>
-              <th scope="colgroup" colspan="3">Presença</th>
-              <th scope="col" rowspan="2">Ações</th>
-            </tr>
-            <tr>
-              <th scope="col">Aplicadas</th>
-              <th scope="col">Aprovadas</th>
-              <th scope="col">Reprovadas</th>
-              <th scope="col">Escaladas</th>
-              <th scope="col">Presentes</th>
-              <th scope="col">Faltas</th>
-            </tr>
-          </thead>
+          <thead id="turmaAvaliacaoHead"></thead>
           <tbody id="turmaAvaliacaoBody"></tbody>
         </table>
       </div>
@@ -593,6 +638,8 @@
             <tr>
               <th scope="col">Data do Relatório</th>
               <th scope="col">Treinador</th>
+              <th scope="col">Prestador</th>
+              <th scope="col">Tipo</th>
               <th scope="col">Ações</th>
             </tr>
           </thead>
@@ -629,8 +676,6 @@
           <label for="turmaInstrutor">Treinador <span class="campo-obrigatorio">*</span></label>
           <select id="turmaInstrutor">
             <option value="">Selecione o treinador</option>
-            <option>Juliana Mendes</option>
-            <option>Ricardo Nunes</option>
           </select>
         </div>
       </div>
@@ -675,14 +720,14 @@
 <div id="modalAlerta" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalAlertaTitulo">
   <div class="modal-panel" style="width:min(440px,100%)">
     <div class="modal-header">
-      <button type="button" class="modal-close" onclick="fecharModais()" aria-label="Fechar">✕</button>
+      <button type="button" class="modal-close" onclick="fecharAlerta()" aria-label="Fechar">✕</button>
       <h2 id="modalAlertaTitulo">Atenção</h2>
     </div>
     <div class="modal-body">
       <p id="modalAlertaMsg" style="font-size:13px;margin:0"></p>
     </div>
     <div class="modal-footer">
-      <button type="button" class="btn-modal primary" onclick="fecharModais()">Entendi</button>
+      <button type="button" class="btn-modal primary" onclick="fecharAlerta()">Entendi</button>
     </div>
   </div>
 </div>
@@ -775,7 +820,7 @@
     </div>
     <div class="modal-footer">
       <button type="button" class="btn-modal" onclick="fecharModais()">Cancelar</button>
-      <button type="button" class="btn-modal primary" onclick="fecharModais()">Concluir</button>
+      <button type="button" class="btn-modal primary" onclick="tentarConcluirTurma()">Concluir</button>
     </div>
   </div>
 </div>
@@ -821,18 +866,56 @@
           <option>A desenvolver</option>
         </select>
       </div>
-      <div class="field">
-        <label>Relatório de acompanhamento <span style="font-weight:400;color:var(--text-muted)">(observações registradas ao longo da turma, tipo um diário)</span></label>
-        <div id="avRelatorioLista" class="relatorio-log"></div>
-        <div class="relatorio-nova" id="avNovaObservacaoWrap">
-          <textarea id="avNovaObservacao" placeholder="Escreva a observação de hoje…"></textarea>
-          <button type="button" class="btn-add-inline" onclick="adicionarObservacao()">+ Adicionar observação de hoje</button>
+      <div class="field" id="avNovaObservacaoWrap">
+        <label for="avNovaObservacao">Nova observação</label>
+        <div class="relatorio-nova">
+          <textarea id="avNovaObservacao" placeholder="Escreva a observação…"></textarea>
+          <button type="button" class="btn-add-inline" onclick="adicionarObservacao()">+ Adicionar observação</button>
         </div>
       </div>
     </div>
     <div class="modal-footer">
       <button type="button" class="btn-modal" id="modalAvaliarFechar" onclick="fecharModais()">Cancelar</button>
       <button type="button" class="btn-modal primary" id="modalAvaliarSalvar" onclick="fecharModais()">Salvar avaliação</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Ver avaliação do prestador (somente leitura) -->
+<div id="modalVerAvaliacaoPrestador" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalVerAvaliacaoTitulo" onclick="if(event.target===this)fecharModais()">
+  <div class="modal-panel">
+    <div class="modal-header">
+      <button type="button" class="modal-close" onclick="fecharModais()" aria-label="Fechar">✕</button>
+      <h2 id="modalVerAvaliacaoTitulo">Avaliação — Pedro Alves</h2>
+      <p class="modal-sub">Consulta da avaliação e das anotações deste prestador.</p>
+    </div>
+    <div class="modal-body">
+      <div class="filter-row" role="tablist" aria-label="Abas da avaliação" style="margin-bottom:14px;justify-content:flex-start">
+        <button type="button" class="vt-tab-btn active" id="verAvTabAvaliacao" role="tab" aria-selected="true" aria-controls="verAvPanelAvaliacao" onclick="setVerAvaliacaoAba('avaliacao')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg>
+          Avaliação
+        </button>
+        <button type="button" class="vt-tab-btn" id="verAvTabAnotacoes" role="tab" aria-selected="false" aria-controls="verAvPanelAnotacoes" onclick="setVerAvaliacaoAba('anotacoes')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M16 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8Z"/><path d="M15 3v4a2 2 0 0 0 2 2h4"/></svg>
+          Anotações
+        </button>
+      </div>
+      <div id="verAvPanelAvaliacao" role="tabpanel" aria-labelledby="verAvTabAvaliacao">
+        <div class="field" aria-readonly="true"><label>Postura e imagem</label><input id="verAvPostura" type="text" readonly /></div>
+        <div class="field" aria-readonly="true"><label>Domínio das regras do jogo</label><input id="verAvRegras" type="text" readonly /></div>
+        <div class="field" aria-readonly="true"><label>Agilidade e postura na mesa</label><input id="verAvAgilidade" type="text" readonly /></div>
+        <div class="field" aria-readonly="true"><label>Atendimento e comunicação</label><input id="verAvAtendimento" type="text" readonly /></div>
+        <div class="bloco-provas">
+          <h3 class="section-title">Provas</h3>
+          <div id="verAvProvasLista"></div>
+        </div>
+      </div>
+      <div id="verAvPanelAnotacoes" role="tabpanel" aria-labelledby="verAvTabAnotacoes" hidden>
+        <div id="verAvAnotacoesLista"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn-modal" onclick="fecharModais()">Fechar</button>
     </div>
   </div>
 </div>
@@ -873,7 +956,7 @@
     </div>
     <div class="modal-footer">
       <button type="button" class="btn-modal" onclick="fecharModais()">Cancelar</button>
-      <button type="button" class="btn-modal primary" onclick="fecharModais()">Salvar</button>
+      <button type="button" class="btn-modal primary" onclick="salvarRegistroPresenca()">Salvar</button>
     </div>
   </div>
 </div>
@@ -901,7 +984,7 @@
     </div>
     <div class="modal-footer">
       <button type="button" class="btn-modal" onclick="fecharModais()">Cancelar</button>
-      <button type="button" class="btn-modal primary" onclick="fecharModais()">Aprovar</button>
+      <button type="button" class="btn-modal primary" onclick="salvarAprovarPresenca()">Aprovar</button>
     </div>
   </div>
 </div>
@@ -968,6 +1051,18 @@
     document.querySelectorAll(".modal-overlay").forEach((m) => m.classList.remove("open"));
   }
 
+  function fecharAlerta() {
+    document.getElementById("modalAlerta").classList.remove("open");
+  }
+
+  function escapeHtml(s) {
+    return String(s || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
   const TURMAS = [
     {
       key: "gp14", titulo: "Onboarding GP — Outubro", codigo: "TUR-000001",
@@ -992,29 +1087,40 @@
       roster: [
         { id: "pedro", nome: "Pedro Alves", situacao: { text: "Em dia", cls: "badge-ok" }, liberado: null,
           provas: { aplicadas: 6, aprovadas: 5, reprovadas: 1 },
+          provasRealizadas: [
+            { trilha: "Blackjack", nota: 8.5, tentativas: 2, ultima: "21/09/2026" },
+            { trilha: "Procedimentos do Sistema", nota: 9.0, tentativas: 1, ultima: "22/09/2026" },
+          ],
           presenca: { escaladas: 7, presentes: 7, faltas: 0 },
           avaliacao: { postura: 0, regras: 0, agilidade: 2, atendimento: 1, relatorio: [
-            { data: "22/09/2026", texto: "Ponto de atenção pra semana que vem: ganhar mais fluidez nas apostas de Roleta antes da prática supervisionada." },
-            { data: "20/09/2026", texto: "Em Blackjack, mostrou domínio rápido das regras e das apostas laterais." },
-            { data: "18/09/2026", texto: "Primeiro dia de turma — bastante atento à parte institucional e ao código de conduta." },
+            { data: "22/09/2026", hora: "16:20", quem: "Juliana Mendes", texto: "Ponto de atenção pra semana que vem: ganhar mais fluidez nas apostas de Roleta antes da prática supervisionada." },
+            { data: "20/09/2026", hora: "11:05", quem: "Juliana Mendes", texto: "Em Blackjack, mostrou domínio rápido das regras e das apostas laterais." },
+            { data: "18/09/2026", hora: "12:10", quem: "Juliana Mendes", texto: "Primeiro dia de turma — bastante atento à parte institucional e ao código de conduta." },
           ] } },
         { id: "larissa", nome: "Larissa Souza", situacao: { text: "Prova reprovada — aguarda nova liberação", cls: "badge-warn" }, liberado: null,
           provas: { aplicadas: 6, aprovadas: 4, reprovadas: 2 },
+          provasRealizadas: [
+            { trilha: "Blackjack", nota: 4.0, tentativas: 2, ultima: "21/09/2026" },
+            { trilha: "Procedimentos do Sistema", nota: 8.0, tentativas: 1, ultima: "22/09/2026" },
+          ],
           presenca: { escaladas: 7, presentes: 6, faltas: 1 },
           avaliacao: { postura: 1, regras: 1, agilidade: 1, atendimento: 0, relatorio: [
-            { data: "21/09/2026", texto: "Ainda precisa refazer a prova de Blackjack antes de seguir pra Roleta — já orientada sobre o reagendamento." },
-            { data: "18/09/2026", texto: "Boa evolução na parte institucional, participativa nas dinâmicas em sala." },
+            { data: "21/09/2026", hora: "15:40", quem: "Juliana Mendes", texto: "Ainda precisa refazer a prova de Blackjack antes de seguir pra Roleta — já orientada sobre o reagendamento." },
+            { data: "18/09/2026", hora: "12:15", quem: "Juliana Mendes", texto: "Boa evolução na parte institucional, participativa nas dinâmicas em sala." },
           ] } },
         { id: "thiago", nome: "Thiago Ramos", situacao: { text: "Sem check-in hoje", cls: "badge-negativo" }, liberado: null,
           provas: { aplicadas: 5, aprovadas: 4, reprovadas: 1 },
+          provasRealizadas: [
+            { trilha: "Blackjack", nota: 7.0, tentativas: 2, ultima: "20/09/2026" },
+          ],
           presenca: { escaladas: 7, presentes: 5, faltas: 2 },
           avaliacao: { postura: 2, regras: 1, agilidade: 2, atendimento: 1, relatorio: [
-            { data: "19/09/2026", texto: "Faltou no Dia 5 — reforçar Procedimentos do Sistema com ele antes de avançar." },
+            { data: "19/09/2026", hora: "09:30", quem: "Juliana Mendes", texto: "Faltou no Dia 5 — reforçar Procedimentos do Sistema com ele antes de avançar." },
           ] } },
       ],
       relatorios: [
-        { id: "gp14-r1", data: "22/09/2026", treinador: "Juliana Mendes" },
-        { id: "gp14-r2", data: "18/09/2026", treinador: "Juliana Mendes" },
+        { id: "gp14-r1", data: "22/09/2026", treinador: "Juliana Mendes", prestador: "Pedro Alves", tipo: "Relatório de Treinamento" },
+        { id: "gp14-r2", data: "18/09/2026", treinador: "Juliana Mendes", prestador: "Larissa Souza", tipo: "Controle de Presença" },
       ],
     },
     {
@@ -1039,19 +1145,27 @@
       roster: [
         { id: "marcos", nome: "Marcos Vidal", situacao: { text: "Em dia", cls: "badge-ok" }, liberado: null,
           provas: { aplicadas: 5, aprovadas: 5, reprovadas: 0 },
+          provasRealizadas: [
+            { trilha: "Blackjack", nota: 9.0, tentativas: 1, ultima: "18/09/2026" },
+            { trilha: "Procedimentos do Sistema", nota: 8.5, tentativas: 1, ultima: "18/09/2026" },
+          ],
           presenca: { escaladas: 5, presentes: 5, faltas: 0 },
           avaliacao: { postura: 0, regras: 1, agilidade: 1, atendimento: 0, relatorio: [
-            { data: "19/09/2026", texto: "Retreinamento fluindo bem — já domina as mudanças de procedimento do sistema." },
+            { data: "19/09/2026", hora: "17:10", quem: "Ricardo Nunes", texto: "Retreinamento fluindo bem — já domina as mudanças de procedimento do sistema." },
           ] } },
         { id: "renata", nome: "Renata Gomes", situacao: { text: "Prova pendente — Blackjack", cls: "badge-warn" }, liberado: null,
           provas: { aplicadas: 5, aprovadas: 3, reprovadas: 2 },
+          provasRealizadas: [
+            { trilha: "Blackjack", nota: 5.0, tentativas: 2, ultima: "16/09/2026" },
+            { trilha: "Procedimentos do Sistema", nota: 7.5, tentativas: 1, ultima: "18/09/2026" },
+          ],
           presenca: { escaladas: 5, presentes: 4, faltas: 1 },
           avaliacao: { postura: 1, regras: 1, agilidade: 1, atendimento: 1, relatorio: [
-            { data: "16/09/2026", texto: "Precisa refazer a prova de Blackjack — algumas regras de apostas laterais mudaram desde o onboarding original." },
+            { data: "16/09/2026", hora: "16:45", quem: "Ricardo Nunes", texto: "Precisa refazer a prova de Blackjack — algumas regras de apostas laterais mudaram desde o onboarding original." },
           ] } },
       ],
       relatorios: [
-        { id: "at05-r1", data: "18/09/2026", treinador: "Ricardo Nunes" },
+        { id: "at05-r1", data: "18/09/2026", treinador: "Ricardo Nunes", prestador: "Marcos Vidal", tipo: "Relatório de Treinamento" },
       ],
     },
     {
@@ -1104,27 +1218,45 @@
       roster: [
         { id: "pedro2", nome: "Pedro Alves", resultado: "aprovado", situacao: { text: "Formação concluída", cls: "badge-muted" }, liberado: true,
           provas: { aplicadas: 8, aprovadas: 8, reprovadas: 0 },
+          provasRealizadas: [
+            { trilha: "Blackjack", nota: 9.0, tentativas: 1, ultima: "14/08/2026" },
+            { trilha: "Procedimentos do Sistema", nota: 8.5, tentativas: 1, ultima: "14/08/2026" },
+            { trilha: "Roleta", nota: 8.0, tentativas: 1, ultima: "16/08/2026" },
+            { trilha: "Baccarat", nota: 9.0, tentativas: 1, ultima: "18/08/2026" },
+            { trilha: "Futebol Studio", nota: 8.5, tentativas: 1, ultima: "21/08/2026" },
+          ],
           presenca: { escaladas: 15, presentes: 15, faltas: 0 },
           avaliacao: { postura: 0, regras: 0, agilidade: 1, atendimento: 0, relatorio: [
-            { data: "24/08/2026", texto: "Turma concluída — liberado para a mesa após avaliação final. Ótimo domínio geral, pequenos ajustes de agilidade resolvidos na prática." },
+            { data: "24/08/2026", hora: "16:40", quem: "Ricardo Nunes", texto: "Turma concluída — liberado para a mesa após avaliação final. Ótimo domínio geral, pequenos ajustes de agilidade resolvidos na prática." },
           ] } },
         { id: "larissa2", nome: "Larissa Souza", resultado: "aprovado", situacao: { text: "Formação concluída", cls: "badge-muted" }, liberado: true,
           provas: { aplicadas: 8, aprovadas: 7, reprovadas: 1 },
+          provasRealizadas: [
+            { trilha: "Blackjack", nota: 7.5, tentativas: 2, ultima: "14/08/2026" },
+            { trilha: "Procedimentos do Sistema", nota: 8.0, tentativas: 1, ultima: "14/08/2026" },
+            { trilha: "Roleta", nota: 8.5, tentativas: 1, ultima: "16/08/2026" },
+            { trilha: "Baccarat", nota: 9.0, tentativas: 1, ultima: "18/08/2026" },
+            { trilha: "Futebol Studio", nota: 8.0, tentativas: 1, ultima: "21/08/2026" },
+          ],
           presenca: { escaladas: 15, presentes: 14, faltas: 1 },
           avaliacao: { postura: 1, regras: 0, agilidade: 0, atendimento: 0, relatorio: [
-            { data: "24/08/2026", texto: "Turma concluída — liberada para a mesa. Recuperou bem depois da prova refeita de Blackjack." },
+            { data: "24/08/2026", hora: "16:42", quem: "Ricardo Nunes", texto: "Turma concluída — liberada para a mesa. Recuperou bem depois da prova refeita de Blackjack." },
           ] } },
         { id: "thiago2", nome: "Thiago Ramos", resultado: "reprovado", situacao: { text: "Desligado durante o processo", cls: "badge-negativo" }, liberado: false,
           provas: { aplicadas: 4, aprovadas: 2, reprovadas: 2 },
+          provasRealizadas: [
+            { trilha: "Blackjack", nota: 4.0, tentativas: 2, ultima: "14/08/2026" },
+            { trilha: "Procedimentos do Sistema", nota: 5.0, tentativas: 1, ultima: "14/08/2026" },
+          ],
           presenca: { escaladas: 10, presentes: 6, faltas: 4 },
           avaliacao: { postura: 2, regras: 2, agilidade: 2, atendimento: 2, relatorio: [
-            { data: "20/08/2026", texto: "Frequência abaixo do esperado ao longo da turma — desligado do processo antes da conclusão do cronograma." },
+            { data: "20/08/2026", hora: "10:15", quem: "Ricardo Nunes", texto: "Frequência abaixo do esperado ao longo da turma — desligado do processo antes da conclusão do cronograma." },
           ] } },
       ],
       relatorios: [
-        { id: "gp13-r1", data: "24/08/2026", treinador: "Ricardo Nunes" },
-        { id: "gp13-r2", data: "17/08/2026", treinador: "Ricardo Nunes" },
-        { id: "gp13-r3", data: "10/08/2026", treinador: "Ricardo Nunes" },
+        { id: "gp13-r1", data: "24/08/2026", treinador: "Ricardo Nunes", prestador: "Pedro Alves", tipo: "Relatório de Treinamento" },
+        { id: "gp13-r2", data: "17/08/2026", treinador: "Ricardo Nunes", prestador: "Larissa Souza", tipo: "Controle de Presença" },
+        { id: "gp13-r3", data: "10/08/2026", treinador: "Ricardo Nunes", prestador: "Thiago Ramos", tipo: "Controle de Presença" },
       ],
     },
   ];
@@ -1143,6 +1275,27 @@
   var ICON_CHECK = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>';
   var ICON_CLIPBOARD = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 14h6"/><path d="M12 11v6"/></svg>';
   var ICON_HISTORY = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>';
+
+  var TREINADORES = [
+    { nome: "Juliana Mendes", perfil: "Gestor de Academy" },
+    { nome: "Ricardo Nunes", perfil: "Performance Coach" },
+    { nome: "Fernanda Oliveira", perfil: "Gestor de Operações" },
+    { nome: "Camila Duarte", perfil: "Gestor de RH" },
+    { nome: "Ana Ribeiro", perfil: "RH" },
+  ];
+
+  function renderOpcoesTreinador() {
+    const filtro = document.getElementById("filtroTreinador");
+    const form = document.getElementById("turmaInstrutor");
+    const optsFiltro = TREINADORES.map(function (u) {
+      return '<option value="' + u.nome + '">' + u.nome + "</option>";
+    }).join("");
+    const optsForm = TREINADORES.map(function (u) {
+      return '<option value="' + u.nome + '">' + u.nome + " · " + u.perfil + "</option>";
+    }).join("");
+    filtro.innerHTML = '<option value="" selected>Todos</option>' + optsFiltro;
+    form.innerHTML = '<option value="">Selecione o treinador</option>' + optsForm;
+  }
 
   var CRONO_DURACAO = {
     "Onboarding de Game Presenter": 15,
@@ -1331,6 +1484,42 @@
     return tr.temProva ? 1 : 0;
   }
 
+  function primeiroDiaCronograma(dias) {
+    const m = String(dias || "").match(/(\d+)/);
+    return m ? Number(m[1]) : 1;
+  }
+
+  function ultimoDiaCronograma(dias) {
+    const nums = String(dias || "").match(/\d+/g);
+    return nums ? Number(nums[nums.length - 1]) : primeiroDiaCronograma(dias);
+  }
+
+  function dataPorDiaTurma(t, diaN) {
+    const ini = parseBr(t.inicio);
+    if (!ini) return "";
+    ini.setDate(ini.getDate() + Math.max(0, diaN - 1));
+    return formatDiaBrDate(ini);
+  }
+
+  function dataInicioTrilha(t, tr) {
+    if (tr.dataInicio) return tr.dataInicio;
+    return dataPorDiaTurma(t, primeiroDiaCronograma(tr.dias));
+  }
+
+  function dataConclusaoTrilha(t, tr, statusEfetivo) {
+    if (statusEfetivo !== "concluida") return "";
+    if (tr.dataConclusao) return tr.dataConclusao;
+    return dataPorDiaTurma(t, ultimoDiaCronograma(tr.dias));
+  }
+
+  function labelDatasTrilha(t, tr, statusEfetivo) {
+    const ini = dataInicioTrilha(t, tr);
+    const fim = dataConclusaoTrilha(t, tr, statusEfetivo);
+    var txt = "Início " + (ini || "—");
+    if (fim) txt += " · Concluída em " + fim;
+    return txt;
+  }
+
   function labelStatusTrilha(statusEfetivo) {
     if (statusEfetivo === "concluida") return { text: "Concluída", cls: "badge-ok" };
     if (statusEfetivo === "atual") return { text: "Em andamento", cls: "badge-info" };
@@ -1377,6 +1566,7 @@
         : '<span class="badge badge-muted">sem prova</span>';
 
       let corpo = "<h3>" + tr.nome + ' <span class="tipo-tag">' + tr.tipo + "</span></h3>";
+      corpo += '<p class="trilha-datas">' + labelDatasTrilha(t, tr, statusEfetivo) + "</p>";
       corpo += '<div class="timeline-meta"><span class="badge ' + st.cls + '">' + st.text + "</span>" + provaTag + "</div>";
       corpo += '<p class="trilha-desc">' + (info.desc || "—") + "</p>";
 
@@ -1384,17 +1574,19 @@
         corpo += '<div class="trilha-acoes">';
         if (qtd > 0) {
           const liberada = !!tr.provaLiberada;
+          corpo += '<div class="trilha-prova-linha">';
           corpo +=
             '<button type="button" class="btn-modal" style="padding:6px 12px;font-size:12px" onclick="alternarProvaLiberada()">' +
             (liberada ? "Bloquear prova novamente" : "Liberar prova") +
             "</button>";
           if (liberada) {
-            corpo += '<span class="badge badge-ok">Prova liberada no Meu Onboarding' + (tr.provaResumo ? " · " + tr.provaResumo : "") + "</span>";
+            corpo += '<span class="badge badge-ok">Prova liberada' + (tr.provaResumo ? " · " + tr.provaResumo : "") + "</span>";
           } else {
-            corpo += '<span class="badge badge-muted">Prova bloqueada — ainda não visível no Meu Onboarding</span>';
+            corpo += '<span class="badge badge-muted">Prova bloqueada</span>';
           }
+          corpo += "</div>";
         }
-        corpo += '<button type="button" class="cta" onclick="avancarTrilhaTurma()">Marcar como concluída</button>';
+        corpo += '<div class="trilha-concluir-linha"><button type="button" class="cta" onclick="avancarTrilhaTurma()">Marcar como concluída</button></div>';
         corpo += "</div>";
       }
 
@@ -1406,24 +1598,85 @@
     document.getElementById("turmaTimeline").innerHTML = html;
   }
 
+  var avaliacaoSort = { col: "prestador", dir: "asc" };
+
+  function thSortAvaliacao(col, label, extraClass, rowspan) {
+    const ativo = avaliacaoSort.col === col;
+    const aria = ativo ? (avaliacaoSort.dir === "asc" ? "ascending" : "descending") : "none";
+    return (
+      '<th scope="col"' + (rowspan ? ' rowspan="' + rowspan + '"' : "") +
+      ' class="th-sort' + (ativo ? " active" : "") + (extraClass ? " " + extraClass : "") + '"' +
+      ' data-sort-col="' + col + '" aria-sort="' + aria + '" onclick="ordenarAvaliacao(\'' + col + '\')">' +
+      '<span class="th-sort-inner">' + label +
+      '<span class="sort-icon" aria-hidden="true"><span>▴</span><span>▾</span></span></span></th>'
+    );
+  }
+
+  function valorSortAvaliacao(p, col, t) {
+    const pr = p.provas || { aplicadas: 0, aprovadas: 0, reprovadas: 0 };
+    const pe = statsPresencaAvaliacao(t, p.id);
+    if (col === "prestador") return p.nome;
+    if (col === "aplicadas") return pr.aplicadas;
+    if (col === "aprovadas") return pr.aprovadas;
+    if (col === "reprovadas") return pr.reprovadas;
+    if (col === "escaladas") return pe.escaladas;
+    if (col === "presentes") return pe.presentes;
+    if (col === "faltas") return pe.faltas;
+    return "";
+  }
+
+  function ordenarAvaliacao(col) {
+    if (avaliacaoSort.col === col) {
+      avaliacaoSort.dir = avaliacaoSort.dir === "asc" ? "desc" : "asc";
+    } else {
+      avaliacaoSort.col = col;
+      avaliacaoSort.dir = col === "prestador" ? "asc" : "desc";
+    }
+    renderAvaliacaoTurma(turmaAtual());
+  }
+
   function renderAvaliacaoTurma(t) {
+    const head = document.getElementById("turmaAvaliacaoHead");
     const body = document.getElementById("turmaAvaliacaoBody");
+    head.innerHTML =
+      "<tr>" +
+      thSortAvaliacao("prestador", "Prestador", "grupo-fim", 2) +
+      '<th scope="colgroup" colspan="3" class="grupo-inicio">Provas</th>' +
+      '<th scope="colgroup" colspan="3" class="grupo-inicio">Presença</th>' +
+      '<th scope="col" rowspan="2" class="th-acoes">Ações</th>' +
+      "</tr><tr>" +
+      thSortAvaliacao("aplicadas", "Liberadas", "grupo-inicio") +
+      thSortAvaliacao("aprovadas", "Aprovadas") +
+      thSortAvaliacao("reprovadas", "Reprovadas", "grupo-fim") +
+      thSortAvaliacao("escaladas", "Escalados", "grupo-inicio") +
+      thSortAvaliacao("presentes", "Presentes") +
+      thSortAvaliacao("faltas", "Faltas", "grupo-fim") +
+      "</tr>";
+
     if (!t.roster.length) {
       body.innerHTML = '<tr><td colspan="8">Sem dados para o período selecionado.</td></tr>';
       return;
     }
-    body.innerHTML = t.roster.map(function (p) {
+    const rows = t.roster.slice().sort(function (a, b) {
+      const va = valorSortAvaliacao(a, avaliacaoSort.col, t);
+      const vb = valorSortAvaliacao(b, avaliacaoSort.col, t);
+      const cmp = typeof va === "number"
+        ? va - vb
+        : String(va).localeCompare(String(vb), "pt-BR");
+      return avaliacaoSort.dir === "asc" ? cmp : -cmp;
+    });
+    body.innerHTML = rows.map(function (p) {
       const pr = p.provas || { aplicadas: 0, aprovadas: 0, reprovadas: 0 };
-      const pe = p.presenca || { escaladas: 0, presentes: 0, faltas: 0 };
+      const pe = statsPresencaAvaliacao(t, p.id);
       const acoes = '<span class="acoes-linha">' +
-        btnAcaoLinha("Ver", "abrirModalAvaliarPrestador('" + t.key + "','" + p.id + "')", ICON_EYE) +
+        btnAcaoLinha("Ver", "abrirModalVerAvaliacaoPrestador('" + t.key + "','" + p.id + "')", ICON_EYE) +
         btnAcaoLinha("Avaliar", "abrirModalAvaliarPrestador('" + t.key + "','" + p.id + "')", ICON_PENCIL) +
         "</span>";
       return (
         "<tr><td>" + p.nome + "</td>" +
-        "<td>" + pr.aplicadas + "</td><td>" + pr.aprovadas + "</td><td>" + pr.reprovadas + "</td>" +
-        "<td>" + pe.escaladas + "</td><td>" + pe.presentes + "</td><td>" + pe.faltas + "</td>" +
-        "<td>" + acoes + "</td></tr>"
+        "<td class=\"grupo-inicio\">" + pr.aplicadas + "</td><td>" + pr.aprovadas + "</td><td class=\"grupo-fim\">" + pr.reprovadas + "</td>" +
+        "<td class=\"grupo-inicio\">" + pe.escaladas + "</td><td>" + pe.presentes + "</td><td class=\"grupo-fim\">" + pe.faltas + "</td>" +
+        "<td class=\"td-acoes\">" + acoes + "</td></tr>"
       );
     }).join("");
   }
@@ -1463,28 +1716,102 @@
     renderPresencaTurma(t);
   }
 
+  function ehDiaUtil(d) {
+    const w = d.getDay();
+    return w !== 0 && w !== 6;
+  }
+
+  function clsStatusPresenca(status) {
+    if (status === "Presente" || status === "Hora adicional") return "badge-ok";
+    if (status === "Falta") return "badge-negativo";
+    if (status === "Saída antecipada" || status === "Atraso") return "badge-warn";
+    return "badge-muted";
+  }
+
+  function recPresenca(t, dia, prestadorId) {
+    const key = formatDiaBrDate(dia);
+    return t.presencaDias && t.presencaDias[key] ? t.presencaDias[key][prestadorId] : null;
+  }
+
+  function gravarPresenca(t, dia, prestadorId, rec) {
+    const key = formatDiaBrDate(dia);
+    if (!t.presencaDias) t.presencaDias = {};
+    if (!t.presencaDias[key]) t.presencaDias[key] = {};
+    t.presencaDias[key][prestadorId] = rec;
+  }
+
+  function countDiasUteisTurma(t) {
+    return diasDaTurma(t).filter(ehDiaUtil).length;
+  }
+
+  function statsPresencaAvaliacao(t, prestadorId) {
+    const escalados = countDiasUteisTurma(t);
+    var presentes = 0;
+    var faltas = 0;
+    diasDaTurma(t).forEach(function (d) {
+      const rec = recPresenca(t, d, prestadorId);
+      if (!rec || !rec.aprovado) return;
+      if (rec.status === "Falta") faltas += 1;
+      else if (rec.status === "Presente" || rec.status === "Atraso" || rec.status === "Saída antecipada" || rec.status === "Hora adicional") {
+        presentes += 1;
+      }
+    });
+    return { escaladas: escalados, presentes: presentes, faltas: faltas };
+  }
+
+  function seedPresencaTurmas() {
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    TURMAS.forEach(function (t) {
+      if (t.presencaDias) return;
+      t.presencaDias = {};
+      if (t.status === "agendada") return;
+      diasDaTurma(t).forEach(function (d) {
+        if (!ehDiaUtil(d)) return;
+        if (t.status === "andamento" && d.getTime() >= hoje.getTime()) return;
+        const key = formatDiaBrDate(d);
+        t.presencaDias[key] = {};
+        t.roster.forEach(function (p) {
+          const falta = (p.id.indexOf("thiago") === 0 && d.getDay() === 1) || p.liberado === false;
+          t.presencaDias[key][p.id] = {
+            status: falta ? "Falta" : "Presente",
+            aprovado: true,
+            entrada: falta ? "—" : (t.horarioInicio || "08:00"),
+            saida: falta ? "—" : (t.horarioFim || "12:00"),
+          };
+        });
+      });
+    });
+  }
+
   function linhasPresencaDia(t, dia) {
-    const weekday = dia.getDay();
-    return t.roster.map(function (p, i) {
-      if (t.status === "agendada") {
+    return t.roster.map(function (p) {
+      const rec = recPresenca(t, dia, p.id);
+      if (t.status === "agendada" && !rec) {
         return { id: p.id, nome: p.nome, entrada: "—", saida: "—", status: "Pendente", statusCls: "badge-muted", registrado: false, podeAprovar: false };
       }
-      const falta = p.liberado === false || (p.id.indexOf("thiago") === 0 && weekday === 1);
-      if (falta) {
-        return { id: p.id, nome: p.nome, entrada: "—", saida: "—", status: "Falta", statusCls: "badge-negativo", registrado: t.status === "concluida", podeAprovar: t.status === "andamento" };
+      if (rec) {
+        const temHorario = rec.entrada && rec.entrada !== "—" && rec.saida && rec.saida !== "—";
+        return {
+          id: p.id,
+          nome: p.nome,
+          entrada: rec.entrada || "—",
+          saida: rec.saida || "—",
+          status: rec.status,
+          statusCls: clsStatusPresenca(rec.status),
+          registrado: !!rec.aprovado,
+          podeAprovar: t.status === "andamento" && !rec.aprovado && (rec.status === "Falta" || temHorario),
+        };
       }
-      const entrada = t.horarioInicio || "08:00";
-      const saida = i === 0 && t.status === "andamento" ? "—" : (t.horarioFim || "12:00");
-      const presente = saida !== "—";
       return {
         id: p.id,
         nome: p.nome,
-        entrada: entrada,
-        saida: saida,
-        status: presente ? "Presente" : "Pendente",
-        statusCls: presente ? "badge-ok" : "badge-muted",
-        registrado: t.status === "concluida" || (t.status === "andamento" && i === 1),
-        podeAprovar: t.status === "andamento" && presente,
+        entrada: "—",
+        saida: "—",
+        status: "Pendente",
+        statusCls: "badge-muted",
+        registrado: false,
+        podeAprovar: false,
       };
     });
   }
@@ -1531,7 +1858,7 @@
     const body = document.getElementById("turmaRelatorioBody");
     const lista = t.relatorios || [];
     if (!lista.length) {
-      body.innerHTML = '<tr><td colspan="3">Sem dados para o período selecionado.</td></tr>';
+      body.innerHTML = '<tr><td colspan="5">Sem dados para o período selecionado.</td></tr>';
       return;
     }
     body.innerHTML = lista.map(function (r) {
@@ -1539,7 +1866,7 @@
         btnAcaoLinha("Ver", "abrirModalRelatorio('ver')", ICON_EYE) +
         btnAcaoLinha("Editar", "abrirModalRelatorio('editar')", ICON_PENCIL) +
         "</span>";
-      return "<tr><td>" + r.data + "</td><td>" + r.treinador + "</td><td>" + acoes + "</td></tr>";
+      return "<tr><td>" + r.data + "</td><td>" + r.treinador + "</td><td>" + (r.prestador || "—") + "</td><td>" + (r.tipo || "—") + "</td><td>" + acoes + "</td></tr>";
     }).join("");
   }
 
@@ -1584,8 +1911,51 @@
     document.getElementById("regEntrada").value = r.entrada !== "—" ? r.entrada : (t.horarioInicio || "08:00");
     document.getElementById("regSaida").value = r.saida !== "—" ? r.saida : (t.horarioFim || "12:00");
     document.getElementById("regMotivo").value = "";
+    window._regPrestadorId = prestadorId;
     onRegStatusChange();
     document.getElementById("modalRegistrarPresenca").classList.add("open");
+  }
+
+  function statusDeRegistro(tipo) {
+    if (tipo === "falta") return "Falta";
+    if (tipo === "saida_antecipada") return "Saída antecipada";
+    if (tipo === "hora_adicional") return "Hora adicional";
+    return "Presente";
+  }
+
+  function hojeBr() {
+    return formatDiaBrDate(new Date());
+  }
+
+  function salvarRegistroPresenca() {
+    const tipo = document.getElementById("regStatus").value;
+    if (!tipo) return;
+    const t = turmaAtual();
+    const prestadorId = window._regPrestadorId;
+    const p = t.roster.find(function (x) { return x.id === prestadorId; });
+    const dias = diasDaTurma(t);
+    const dia = dias[idxDiaPresenca];
+    if (!p || !dia) return;
+    const status = statusDeRegistro(tipo);
+    const falta = status === "Falta";
+    gravarPresenca(t, dia, prestadorId, {
+      status: status,
+      aprovado: false,
+      entrada: falta ? "—" : (document.getElementById("regEntrada").value || t.horarioInicio || "08:00"),
+      saida: falta ? "—" : (document.getElementById("regSaida").value || t.horarioFim || "12:00"),
+    });
+    if (!t.relatorios) t.relatorios = [];
+    t.relatorios.unshift({
+      id: "reg-" + Date.now(),
+      data: hojeBr(),
+      treinador: t.instrutor,
+      prestador: p.nome,
+      tipo: "Controle de Presença",
+    });
+    fecharModais();
+    renderPresencaTurma(t);
+    renderRelatorioTurma(t);
+    renderAvaliacaoTurma(t);
   }
 
   function abrirModalAprovarPresenca(prestadorId) {
@@ -1600,7 +1970,29 @@
     document.getElementById("aprovarEntrada").value = r.entrada;
     document.getElementById("aprovarSaida").value = r.saida;
     document.getElementById("aprovarObs").value = "";
+    window._aprovPrestadorId = prestadorId;
     document.getElementById("modalAprovarPresenca").classList.add("open");
+  }
+
+  function salvarAprovarPresenca() {
+    const t = turmaAtual();
+    const prestadorId = window._aprovPrestadorId;
+    const dias = diasDaTurma(t);
+    const dia = dias[idxDiaPresenca];
+    const atual = recPresenca(t, dia, prestadorId) || {
+      status: "Presente",
+      entrada: t.horarioInicio || "08:00",
+      saida: t.horarioFim || "12:00",
+    };
+    gravarPresenca(t, dia, prestadorId, {
+      status: atual.status,
+      aprovado: true,
+      entrada: atual.entrada,
+      saida: atual.saida,
+    });
+    fecharModais();
+    renderPresencaTurma(t);
+    renderAvaliacaoTurma(t);
   }
 
   function abrirModalHistoricoPresenca(prestadorId) {
@@ -1633,8 +2025,11 @@
     const idx = t.trilhas.findIndex((tr) => tr.status === "atual");
     if (idx === -1) return;
     t.trilhas[idx].status = "concluida";
+    t.trilhas[idx].dataConclusao = hojeBr();
+    if (!t.trilhas[idx].dataInicio) t.trilhas[idx].dataInicio = dataInicioTrilha(t, t.trilhas[idx]);
     if (idx + 1 < t.trilhas.length) {
       t.trilhas[idx + 1].status = "atual";
+      t.trilhas[idx + 1].dataInicio = hojeBr();
       if (qtdProvasTrilha(t.trilhas[idx + 1]) > 0) {
         t.trilhas[idx + 1].provaLiberada = false;
         t.trilhas[idx + 1].provaResumo = "0/" + t.prestadoresCount + " já fizeram";
@@ -1644,6 +2039,76 @@
     t.progressoPct = Math.round((feitas / t.trilhas.length) * 100);
     renderTimelineTurma(t);
     renderTabelaTurmas();
+  }
+
+  var AV_CRITERIOS = ["Ótimo", "Bom", "A desenvolver"];
+
+  function labelCriterioAvaliacao(idx) {
+    return AV_CRITERIOS[idx] || AV_CRITERIOS[0];
+  }
+
+  function formatNotaProva(nota) {
+    return Number(nota).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  }
+
+  function metaAnotacao(e, t) {
+    const quando = e.data + (e.hora ? " " + e.hora : "");
+    const quem = e.quem || (t && t.instrutor) || "Treinador";
+    return quando + " · " + quem;
+  }
+
+  function setVerAvaliacaoAba(aba) {
+    const av = aba === "avaliacao";
+    document.getElementById("verAvTabAvaliacao").classList.toggle("active", av);
+    document.getElementById("verAvTabAnotacoes").classList.toggle("active", !av);
+    document.getElementById("verAvTabAvaliacao").setAttribute("aria-selected", av ? "true" : "false");
+    document.getElementById("verAvTabAnotacoes").setAttribute("aria-selected", av ? "false" : "true");
+    document.getElementById("verAvPanelAvaliacao").hidden = !av;
+    document.getElementById("verAvPanelAnotacoes").hidden = av;
+  }
+
+  function renderVerProvasPrestador(p) {
+    const container = document.getElementById("verAvProvasLista");
+    const lista = (p.provasRealizadas || []).filter(function (pr) { return pr && pr.trilha; });
+    if (!lista.length) {
+      container.innerHTML = '<p style="font-size:13px;color:var(--text-muted);margin:0">Nenhuma prova realizada ainda.</p>';
+      return;
+    }
+    container.innerHTML =
+      '<div class="table-wrap compact"><table><caption>Provas realizadas</caption><thead><tr>' +
+      '<th scope="col">Trilha</th><th scope="col">Nota</th><th scope="col">Tentativas</th><th scope="col">Última realização</th>' +
+      "</tr></thead><tbody>" +
+      lista.map(function (pr) {
+        return "<tr><td>" + pr.trilha + "</td><td>" + formatNotaProva(pr.nota) + "</td><td>" + pr.tentativas + "</td><td>" + pr.ultima + "</td></tr>";
+      }).join("") +
+      "</tbody></table></div>";
+  }
+
+  function renderVerAnotacoesPrestador(p, t) {
+    const container = document.getElementById("verAvAnotacoesLista");
+    const entradas = (p.avaliacao && p.avaliacao.relatorio) || [];
+    if (!entradas.length) {
+      container.innerHTML = '<p style="font-size:13px;color:var(--text-muted);margin:0">Nenhuma anotação registrada.</p>';
+      return;
+    }
+    container.innerHTML = entradas.map(function (e) {
+      return '<article class="anotacao-card"><span class="anotacao-meta">' + metaAnotacao(e, t) + "</span><p>" + e.texto + "</p></article>";
+    }).join("");
+  }
+
+  function abrirModalVerAvaliacaoPrestador(turmaKey, prestadorId) {
+    const t = TURMAS.find((x) => x.key === turmaKey);
+    const p = t && t.roster.find((r) => r.id === prestadorId);
+    if (!t || !p) return;
+    document.getElementById("modalVerAvaliacaoTitulo").textContent = "Avaliação — " + p.nome;
+    document.getElementById("verAvPostura").value = labelCriterioAvaliacao(p.avaliacao.postura);
+    document.getElementById("verAvRegras").value = labelCriterioAvaliacao(p.avaliacao.regras);
+    document.getElementById("verAvAgilidade").value = labelCriterioAvaliacao(p.avaliacao.agilidade);
+    document.getElementById("verAvAtendimento").value = labelCriterioAvaliacao(p.avaliacao.atendimento);
+    renderVerProvasPrestador(p);
+    renderVerAnotacoesPrestador(p, t);
+    setVerAvaliacaoAba("avaliacao");
+    document.getElementById("modalVerAvaliacaoPrestador").classList.add("open");
   }
 
   function abrirModalAvaliarPrestador(turmaKey, prestadorId) {
@@ -1658,29 +2123,16 @@
     document.getElementById("avRegras").selectedIndex = p.avaliacao.regras;
     document.getElementById("avAgilidade").selectedIndex = p.avaliacao.agilidade;
     document.getElementById("avAtendimento").selectedIndex = p.avaliacao.atendimento;
-    renderRelatorioLog(p.avaliacao.relatorio);
 
     ["avPostura", "avRegras", "avAgilidade", "avAtendimento"].forEach(function (id) {
       document.getElementById(id).disabled = somenteLeitura;
     });
     document.getElementById("avNovaObservacaoWrap").style.display = somenteLeitura ? "none" : "";
+    document.getElementById("avNovaObservacao").value = "";
     document.getElementById("modalAvaliarSalvar").style.display = somenteLeitura ? "none" : "";
     document.getElementById("modalAvaliarFechar").textContent = somenteLeitura ? "Fechar" : "Cancelar";
 
     document.getElementById("modalAvaliarPrestador").classList.add("open");
-  }
-
-  function renderRelatorioLog(entradas) {
-    const container = document.getElementById("avRelatorioLista");
-    if (!entradas.length) {
-      container.innerHTML = '<p style="font-size:12px;color:var(--text-muted);margin:0">Nenhuma observação registrada ainda.</p>';
-      return;
-    }
-    container.innerHTML = entradas
-      .map(function (e) {
-        return '<div class="relatorio-log-item"><span class="data">' + e.data + " · " + turmaAtual().instrutor + ", treinador</span>" + e.texto + "</div>";
-      })
-      .join("");
   }
 
   function adicionarObservacao() {
@@ -1689,9 +2141,10 @@
     if (!texto || !modalAvaliarContexto) return;
     const t = TURMAS.find((x) => x.key === modalAvaliarContexto.turmaKey);
     const p = t.roster.find((r) => r.id === modalAvaliarContexto.prestadorId);
-    const hoje = new Date().toLocaleDateString("pt-BR");
-    p.avaliacao.relatorio.unshift({ data: hoje, texto: texto });
-    renderRelatorioLog(p.avaliacao.relatorio);
+    const agora = new Date();
+    const data = agora.toLocaleDateString("pt-BR");
+    const hora = agora.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    p.avaliacao.relatorio.unshift({ data: data, hora: hora, quem: t.instrutor, texto: texto });
     campo.value = "";
   }
 
@@ -1881,6 +2334,58 @@
     document.getElementById("modalIniciarTurma").classList.add("open");
   }
 
+  var CONCLUIR_JOGOS = [
+    { key: "blackjack", label: "Blackjack" },
+    { key: "roleta", label: "Roleta" },
+    { key: "baccarat", label: "Baccarat" },
+    { key: "futebol_brasileiro", label: "Futebol Brasileiro" },
+  ];
+  var concluirState = {};
+  var concluirAbaAtual = null;
+
+  function estadoConcluirPadrao(p) {
+    return {
+      resultado: p.resultado === "reprovado" ? "reprovado" : "aprovado",
+      pontosFortes: "",
+      pontosDesenvolver: "",
+      nickname: p.nickname || "",
+      idOperacional: p.idOperacional || "",
+      barcode: p.barcode || "",
+      jogos: Array.isArray(p.jogos) ? p.jogos.slice() : [],
+      motivo: "",
+    };
+  }
+
+  function valorCampoConcluir(id) {
+    const el = document.getElementById(id);
+    return el ? el.value.trim() : "";
+  }
+
+  function salvarPainelConcluir() {
+    if (!concluirAbaAtual || !concluirState[concluirAbaAtual]) return;
+    const st = concluirState[concluirAbaAtual];
+    st.pontosFortes = valorCampoConcluir("concluirPontosFortes");
+    st.pontosDesenvolver = valorCampoConcluir("concluirPontosDesenvolver");
+    st.nickname = valorCampoConcluir("concluirNickname");
+    st.idOperacional = valorCampoConcluir("concluirIdOperacional");
+    st.barcode = valorCampoConcluir("concluirBarcode");
+    st.motivo = valorCampoConcluir("concluirMotivo");
+  }
+
+  function boxConcluir(on) {
+    return '<span class="box' + (on ? " on" : "") + '">' + (on ? "✓" : "") + "</span>";
+  }
+
+  function htmlJogosConcluir(jogos) {
+    const nenhum = !jogos.length;
+    var html = '<button type="button" onclick="toggleConcluirJogo(\'nenhum\')">' + boxConcluir(nenhum) + " Nenhum</button>";
+    CONCLUIR_JOGOS.forEach(function (j) {
+      html += '<button type="button" onclick="toggleConcluirJogo(\'' + j.key + '\')">' +
+        boxConcluir(jogos.indexOf(j.key) !== -1) + " " + j.label + "</button>";
+    });
+    return html;
+  }
+
   function abrirModalConcluir(key) {
     const t = TURMAS.find(function (x) { return x.key === key; });
     if (!t) return;
@@ -1889,51 +2394,122 @@
       abrirAlerta("Trilhas em aberto", "Ainda faltam trilhas abertas nesta turma. Conclua todas as trilhas do cronograma antes de encerrar.");
       return;
     }
+    window._concluirTurmaKey = key;
+    window._concluirRoster = t.roster;
+    concluirState = {};
+    t.roster.forEach(function (p) { concluirState[p.id] = estadoConcluirPadrao(p); });
+    concluirAbaAtual = null;
     const tabs = document.getElementById("concluirTabs");
     tabs.innerHTML = t.roster.map(function (p, i) {
-      return '<button type="button" class="vt-tab-btn' + (i === 0 ? " active" : "") + '" onclick="setConcluirAba(\'' + p.id + '\')">' + p.nome + "</button>";
+      return '<button type="button" class="vt-tab-btn' + (i === 0 ? " active" : "") + '" role="tab" onclick="setConcluirAba(\'' + p.id + '\')">' + p.nome + "</button>";
     }).join("");
-    window._concluirRoster = t.roster;
     setConcluirAba(t.roster[0].id);
     document.getElementById("modalConcluirTurma").classList.add("open");
   }
 
   function setConcluirAba(id) {
+    salvarPainelConcluir();
     const roster = window._concluirRoster || [];
     document.querySelectorAll("#concluirTabs .vt-tab-btn").forEach(function (b, i) {
-      b.classList.toggle("active", roster[i] && roster[i].id === id);
+      const ativo = roster[i] && roster[i].id === id;
+      b.classList.toggle("active", ativo);
+      b.setAttribute("aria-selected", ativo ? "true" : "false");
     });
     const p = roster.find(function (x) { return x.id === id; });
     if (!p) return;
+    concluirAbaAtual = id;
+    const st = concluirState[id] || estadoConcluirPadrao(p);
+    concluirState[id] = st;
+    const aprovado = st.resultado !== "reprovado";
     document.getElementById("concluirPainel").innerHTML =
       '<div class="field"><label>Resultado <span class="campo-obrigatorio">*</span></label>' +
       '<div class="check-row">' +
-      '<button type="button" onclick="toggleConcluirResultado(\'aprovado\')"><span class="box on" id="resAprovado">✓</span> Aprovado</button>' +
-      '<button type="button" onclick="toggleConcluirResultado(\'reprovado\')"><span class="box" id="resReprovado"></span> Reprovado</button>' +
+      '<button type="button" onclick="toggleConcluirResultado(\'aprovado\')">' + boxConcluir(aprovado) + " Aprovado</button>" +
+      '<button type="button" onclick="toggleConcluirResultado(\'reprovado\')">' + boxConcluir(!aprovado) + " Reprovado</button>" +
       "</div></div>" +
-      '<div id="concluirAprovado">' +
-      '<div class="field"><label>Pontos fortes <span class="campo-obrigatorio">*</span></label><textarea></textarea></div>' +
-      '<div class="field"><label>Pontos a desenvolver <span class="campo-obrigatorio">*</span></label><textarea></textarea></div>' +
-      '<div class="field"><label>Nickname</label><input type="text" /></div>' +
-      '<div class="field"><label>ID operacional</label><input type="text" /></div>' +
-      '<div class="field"><label>Barcode</label><input type="text" /></div>' +
-      '<div class="field"><label>Jogos</label><div class="check-row">' +
-      '<button type="button"><span class="box on">✓</span> Nenhum</button>' +
-      '<button type="button"><span class="box"></span> Blackjack</button>' +
-      '<button type="button"><span class="box"></span> Roleta</button>' +
-      '<button type="button"><span class="box"></span> Baccarat</button>' +
-      '<button type="button"><span class="box"></span> Futebol Brasileiro</button>' +
-      "</div></div></div>" +
-      '<div id="concluirReprovado" hidden><div class="field"><label>Motivo <span class="campo-obrigatorio">*</span></label><textarea></textarea></div></div>';
+      '<div id="concluirAprovado"' + (aprovado ? "" : " hidden") + ">" +
+      '<div class="field"><label for="concluirPontosFortes">Pontos fortes <span class="campo-obrigatorio">*</span></label><textarea id="concluirPontosFortes">' + escapeHtml(st.pontosFortes) + "</textarea></div>" +
+      '<div class="field"><label for="concluirPontosDesenvolver">Pontos a desenvolver <span class="campo-obrigatorio">*</span></label><textarea id="concluirPontosDesenvolver">' + escapeHtml(st.pontosDesenvolver) + "</textarea></div>" +
+      '<div class="field"><label for="concluirNickname">Nickname <span class="campo-obrigatorio">*</span></label><input id="concluirNickname" type="text" value="' + escapeHtml(st.nickname) + '" /></div>' +
+      '<div class="field"><label for="concluirIdOperacional">ID Operacional <span class="campo-obrigatorio">*</span></label><input id="concluirIdOperacional" type="text" value="' + escapeHtml(st.idOperacional) + '" /></div>' +
+      '<div class="field"><label for="concluirBarcode">Barcode <span class="campo-obrigatorio">*</span></label><input id="concluirBarcode" type="text" value="' + escapeHtml(st.barcode) + '" /></div>' +
+      '<div class="field"><label>Jogos</label><div class="check-row" id="concluirJogosRow">' + htmlJogosConcluir(st.jogos) + "</div></div></div>" +
+      '<div id="concluirReprovado"' + (aprovado ? " hidden" : "") + '><div class="field"><label for="concluirMotivo">Motivo <span class="campo-obrigatorio">*</span></label><textarea id="concluirMotivo">' + escapeHtml(st.motivo) + "</textarea></div></div>";
   }
 
   function toggleConcluirResultado(val) {
-    document.getElementById("resAprovado").classList.toggle("on", val === "aprovado");
-    document.getElementById("resAprovado").textContent = val === "aprovado" ? "✓" : "";
-    document.getElementById("resReprovado").classList.toggle("on", val === "reprovado");
-    document.getElementById("resReprovado").textContent = val === "reprovado" ? "✓" : "";
-    document.getElementById("concluirAprovado").hidden = val !== "aprovado";
-    document.getElementById("concluirReprovado").hidden = val !== "reprovado";
+    salvarPainelConcluir();
+    if (!concluirAbaAtual || !concluirState[concluirAbaAtual]) return;
+    concluirState[concluirAbaAtual].resultado = val;
+    setConcluirAba(concluirAbaAtual);
+  }
+
+  function toggleConcluirJogo(key) {
+    salvarPainelConcluir();
+    const st = concluirAbaAtual && concluirState[concluirAbaAtual];
+    if (!st) return;
+    if (key === "nenhum") {
+      st.jogos = [];
+    } else {
+      const i = st.jogos.indexOf(key);
+      if (i >= 0) st.jogos.splice(i, 1);
+      else st.jogos.push(key);
+    }
+    const row = document.getElementById("concluirJogosRow");
+    if (row) row.innerHTML = htmlJogosConcluir(st.jogos);
+  }
+
+  function pendenciasConcluirPrestador(p, st) {
+    const faltas = [];
+    if (st.resultado === "reprovado") {
+      if (!st.motivo) faltas.push("Motivo");
+      return faltas;
+    }
+    if (!st.pontosFortes) faltas.push("Pontos fortes");
+    if (!st.pontosDesenvolver) faltas.push("Pontos a desenvolver");
+    if (!st.nickname) faltas.push("Nickname");
+    if (!st.idOperacional) faltas.push("ID Operacional");
+    if (!st.barcode) faltas.push("Barcode");
+    return faltas;
+  }
+
+  function marcarCamposConcluirInvalidos(st) {
+    const mapa = {
+      "Pontos fortes": "concluirPontosFortes",
+      "Pontos a desenvolver": "concluirPontosDesenvolver",
+      Nickname: "concluirNickname",
+      "ID Operacional": "concluirIdOperacional",
+      Barcode: "concluirBarcode",
+      Motivo: "concluirMotivo",
+    };
+    const faltas = pendenciasConcluirPrestador({ id: concluirAbaAtual }, st);
+    Object.keys(mapa).forEach(function (label) {
+      const el = document.getElementById(mapa[label]);
+      if (!el || !el.closest) return;
+      el.closest(".field").classList.toggle("campo-invalido", faltas.indexOf(label) !== -1);
+    });
+  }
+
+  function tentarConcluirTurma() {
+    salvarPainelConcluir();
+    const roster = window._concluirRoster || [];
+    const linhas = [];
+    roster.forEach(function (p) {
+      const st = concluirState[p.id];
+      if (!st) return;
+      const faltas = pendenciasConcluirPrestador(p, st);
+      if (faltas.length) linhas.push(p.nome + ": " + faltas.join(", ") + ".");
+    });
+    if (linhas.length) {
+      const atual = concluirState[concluirAbaAtual];
+      if (atual) marcarCamposConcluirInvalidos(atual);
+      abrirAlerta(
+        "Campos obrigatórios",
+        "Para concluir como Aprovado, Nickname, ID Operacional e Barcode são obrigatórios. " + linhas.join(" ")
+      );
+      return;
+    }
+    fecharModais();
   }
 
 
@@ -1941,6 +2517,8 @@
     if (e.key === "Escape") fecharModais();
   });
 
+  renderOpcoesTreinador();
+  seedPresencaTurmas();
   atualizarCarrossel();
   renderTabelaTurmas();
   abrirTurmaInicial();

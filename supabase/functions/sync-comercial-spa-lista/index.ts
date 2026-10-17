@@ -837,6 +837,55 @@ function retificacoesIguais(a: string[], b: string[]): boolean {
   return a.every((v, i) => v === b[i]);
 }
 
+/** Identidade SPA no Pipeline Crypto. Não altera funil, comercial, Possui Crypto, Retorno nem data. */
+async function ensureCryptoMarcaSpa(
+  supabase: SupabaseAdmin,
+  args: {
+    spaMarcaId: string;
+    empresaId: string;
+    nome: string;
+    dominio: string | null;
+    statusDominio: string;
+  },
+): Promise<string | null> {
+  const { data: existing, error } = await supabase
+    .from("comercial_crypto_marcas")
+    .select("id, origem, nome, dominio")
+    .eq("spa_marca_id", args.spaMarcaId)
+    .maybeSingle();
+  if (error) return error.message;
+
+  if (!existing) {
+    const { error: insErr } = await supabase.from("comercial_crypto_marcas").insert({
+      empresa_id: args.empresaId,
+      spa_marca_id: args.spaMarcaId,
+      nome: args.nome,
+      dominio: args.dominio,
+      status_dominio: args.statusDominio === "ok" ? "ok" : "inativo",
+      origem: "spa",
+      status_pipeline: "disponiveis",
+      status_folha: "sem_contato",
+    });
+    return insErr?.message ?? null;
+  }
+
+  if (existing.origem !== "spa") return null;
+
+  const patch: Record<string, unknown> = {};
+  if (existing.nome !== args.nome) patch.nome = args.nome;
+  if ((existing.dominio ?? null) !== (args.dominio ?? null)) {
+    patch.dominio = args.dominio;
+    patch.status_dominio = "inativo";
+  }
+  if (Object.keys(patch).length === 0) return null;
+
+  const { error: updErr } = await supabase
+    .from("comercial_crypto_marcas")
+    .update(patch)
+    .eq("id", existing.id);
+  return updErr?.message ?? null;
+}
+
 async function insertHistoricoSync(
   supabase: SupabaseAdmin,
   marcaId: string,
@@ -942,18 +991,30 @@ async function upsertBlocos(
       const key = normalizeNomeKey(marca.nome);
       const prev = byNome.get(key);
       if (!prev) {
-        const { error: insMarcaErr } = await supabase.from("comercial_marcas").insert({
-          empresa_id: empresaId,
-          nome: marca.nome,
-          dominio: marca.dominio,
-          status_dominio: "inativo",
-          status_pipeline: "disponiveis",
-          status_folha: "sem_contato",
-        });
-        if (insMarcaErr) {
-          erros.push(`Insert marca ${marca.nome} (${bloco.cnpj}): ${insMarcaErr.message}`);
+        const { data: inserted, error: insMarcaErr } = await supabase
+          .from("comercial_marcas")
+          .insert({
+            empresa_id: empresaId,
+            nome: marca.nome,
+            dominio: marca.dominio,
+            status_dominio: "inativo",
+            status_pipeline: "disponiveis",
+            status_folha: "sem_contato",
+          })
+          .select("id")
+          .single();
+        if (insMarcaErr || !inserted?.id) {
+          erros.push(`Insert marca ${marca.nome} (${bloco.cnpj}): ${insMarcaErr?.message ?? "sem id"}`);
         } else {
           marcas_inseridas++;
+          const cryptoErr = await ensureCryptoMarcaSpa(supabase, {
+            spaMarcaId: inserted.id,
+            empresaId,
+            nome: marca.nome,
+            dominio: marca.dominio,
+            statusDominio: "inativo",
+          });
+          if (cryptoErr) erros.push(`Crypto ${marca.nome}: ${cryptoErr}`);
         }
         continue;
       }
@@ -965,7 +1026,17 @@ async function upsertBlocos(
         patchMarca.status_dominio = "inativo";
       }
 
-      if (Object.keys(patchMarca).length === 0) continue;
+      if (Object.keys(patchMarca).length === 0) {
+        const cryptoErr = await ensureCryptoMarcaSpa(supabase, {
+          spaMarcaId: prev.id,
+          empresaId,
+          nome: marca.nome,
+          dominio: marca.dominio,
+          statusDominio: String(prev.status_dominio ?? "inativo"),
+        });
+        if (cryptoErr) erros.push(`Crypto ${marca.nome}: ${cryptoErr}`);
+        continue;
+      }
 
       const { error: updMarcaErr } = await supabase
         .from("comercial_marcas")
@@ -999,6 +1070,16 @@ async function upsertBlocos(
       if (patchMarca.nome !== undefined) {
         await insertHistoricoSync(supabase, prev.id, "nome", prev.nome, marca.nome);
       }
+
+      const cryptoErr = await ensureCryptoMarcaSpa(supabase, {
+        spaMarcaId: prev.id,
+        empresaId,
+        nome: marca.nome,
+        dominio: marca.dominio,
+        statusDominio:
+          patchMarca.status_dominio === "inativo" ? "inativo" : String(prev.status_dominio ?? "inativo"),
+      });
+      if (cryptoErr) erros.push(`Crypto ${marca.nome}: ${cryptoErr}`);
     }
   }
 

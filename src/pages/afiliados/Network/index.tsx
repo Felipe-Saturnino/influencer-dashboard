@@ -4,7 +4,8 @@ import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission, type Permissoes } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE, BRAND } from "../../../lib/dashboardConstants";
-import { supabase, supabaseAnonKey } from "../../../lib/supabase";
+import { supabase } from "../../../lib/supabase";
+import { headersChamadaEdgeComSessao } from "../../../lib/supabaseEdgeFetch";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { DashboardPageHeader, FiltroBarTabButton, FILTRO_BAR_TAB_ICON_PROPS, onFiltroBarTabsKeyDown } from "../../../components/dashboard";
 import { FunilProspeccaoKpiGrid } from "../../../components/FunilProspeccaoKpiGrid";
@@ -146,11 +147,7 @@ export interface AfiliadoNetworkRow {
 async function criarAfiliadoDesdeNetwork(networkId: string): Promise<void> {
   const res = await fetch("/api/criar-afiliado-network", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${supabaseAnonKey}`,
-      Apikey: supabaseAnonKey,
-    },
+    headers: await headersChamadaEdgeComSessao(),
     body: JSON.stringify({
       network_id: networkId,
       ...(typeof window !== "undefined" ? { loginUrl: window.location.origin } : {}),
