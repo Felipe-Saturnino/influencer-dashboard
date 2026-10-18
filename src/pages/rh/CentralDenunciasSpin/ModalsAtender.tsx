@@ -67,42 +67,62 @@ export function ModalAtenderDenuncia({
       anexos: AnexoRow[];
     }[]
   >([]);
+  const [loadingNotas, setLoadingNotas] = useState(false);
+  const [erroNotas, setErroNotas] = useState<string | null>(null);
   const finalStatuses: DenunciaStatusDb[] = ["procedente", "nao_procedente"];
   const showResolucao = finalStatuses.includes(statusDraft);
 
   const loadNotas = useCallback(async () => {
     if (!row?.id) return;
-    const { data: notes } = await supabase
-      .from("canal_denuncia_anotacoes")
-      .select("id, texto, created_at, created_by, autor_origem, visivel_externo")
-      .eq("denuncia_id", row.id)
-      .order("created_at", { ascending: true });
-    const { data: ax } = await supabase.from("canal_denuncia_anexos").select("*").eq("denuncia_id", row.id).not("anotacao_id", "is", null);
-    const nlist = notes ?? [];
-    const uids = [...new Set(nlist.map((n) => n.created_by).filter(Boolean))] as string[];
-    const nm: Record<string, string> = {};
-    if (uids.length) {
-      const { data: profs } = await supabase.from("profiles").select("id, name").in("id", uids);
-      (profs ?? []).forEach((p) => {
-        nm[p.id] = p.name ?? "—";
-      });
+    setLoadingNotas(true);
+    setErroNotas(null);
+    try {
+      const { data: notes, error: notesErr } = await supabase
+        .from("canal_denuncia_anotacoes")
+        .select("id, texto, created_at, created_by, autor_origem, visivel_externo")
+        .eq("denuncia_id", row.id)
+        .order("created_at", { ascending: true });
+      if (notesErr) throw notesErr;
+      const { data: ax, error: axErr } = await supabase
+        .from("canal_denuncia_anexos")
+        .select("id, denuncia_id, anotacao_id, storage_path, file_name, content_type, file_size")
+        .eq("denuncia_id", row.id)
+        .not("anotacao_id", "is", null);
+      if (axErr) throw axErr;
+      const nlist = notes ?? [];
+      const uids = [...new Set(nlist.map((n) => n.created_by).filter(Boolean))] as string[];
+      const nm: Record<string, string> = {};
+      if (uids.length) {
+        const { data: profs, error: profErr } = await supabase.from("profiles").select("id, name").in("id", uids);
+        if (profErr) throw profErr;
+        (profs ?? []).forEach((p) => {
+          nm[p.id] = p.name ?? "—";
+        });
+      }
+      const axList = (ax ?? []) as AnexoRow[];
+      setNotas(
+        nlist.map((n) => {
+          const origem = (n.autor_origem === "relator" ? "relator" : "rh") as "rh" | "relator";
+          return {
+            id: n.id,
+            texto: n.texto,
+            created_at: n.created_at,
+            created_by: n.created_by,
+            autor_origem: origem,
+            visivel_externo: n.visivel_externo !== false,
+            autor: labelAutorMensagemRh(origem, n.created_by ? nm[n.created_by] : null),
+            anexos: axList.filter((a) => a.anotacao_id === n.id),
+          };
+        }),
+      );
+    } catch (e) {
+      console.error("[ModalAtenderDenuncia] notas", e);
+      setErroNotas(
+        "Não foi possível carregar as anotações. Se o problema persistir, entre em contato com o suporte.",
+      );
+      setNotas([]);
     }
-    const axList = (ax ?? []) as AnexoRow[];
-    setNotas(
-      nlist.map((n) => {
-        const origem = (n.autor_origem === "relator" ? "relator" : "rh") as "rh" | "relator";
-        return {
-          id: n.id,
-          texto: n.texto,
-          created_at: n.created_at,
-          created_by: n.created_by,
-          autor_origem: origem,
-          visivel_externo: n.visivel_externo !== false,
-          autor: labelAutorMensagemRh(origem, n.created_by ? nm[n.created_by] : null),
-          anexos: axList.filter((a) => a.anotacao_id === n.id),
-        };
-      }),
-    );
+    setLoadingNotas(false);
   }, [row?.id]);
 
   useEffect(() => {
@@ -135,7 +155,7 @@ export function ModalAtenderDenuncia({
     const { error } = await supabase.from("canal_denuncias_spin").update(payload).eq("id", row.id);
     setSaving(false);
     if (error) {
-      setErr("Não foi possível salvar. Tente novamente.");
+      setErr("Não foi possível salvar o atendimento. Se o problema persistir, entre em contato com o suporte.");
       return;
     }
     onSaved();
@@ -456,12 +476,61 @@ export function ModalAtenderDenuncia({
                   Histórico de comunicação
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                  {notas.length === 0 ? (
+                  {loadingNotas ? (
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "center",
+                        alignItems: "center",
+                        gap: 8,
+                        padding: "16px 0",
+                        color: t.textMuted,
+                        fontSize: 13,
+                        fontFamily: FONT.body,
+                      }}
+                    >
+                      <Loader2 className="app-lucide-spin" size={18} color="var(--brand-primary, #7c3aed)" aria-hidden />
+                      Carregando…
+                    </div>
+                  ) : erroNotas ? (
+                    <div
+                      role="alert"
+                      style={{
+                        fontSize: 13,
+                        color: "#e84025",
+                        fontFamily: FONT.body,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      <span>{erroNotas}</span>
+                      <button
+                        type="button"
+                        onClick={() => void loadNotas()}
+                        style={{
+                          fontFamily: FONT.body,
+                          fontSize: 12,
+                          fontWeight: 700,
+                          padding: "6px 12px",
+                          borderRadius: 8,
+                          border: "1px solid rgba(232,64,37,0.35)",
+                          background: "transparent",
+                          color: "#e84025",
+                          cursor: "pointer",
+                        }}
+                      >
+                        Tentar de novo
+                      </button>
+                    </div>
+                  ) : notas.length === 0 ? (
                     <div style={{ fontSize: 13, color: t.textMuted, textAlign: "center", padding: "12px 0" }}>
                       Nenhuma mensagem registrada.
                     </div>
                   ) : null}
-                  {notas.map((n) => (
+                  {!loadingNotas && !erroNotas
+                    ? notas.map((n) => (
                     <div
                       key={n.id}
                       style={{
@@ -554,7 +623,8 @@ export function ModalAtenderDenuncia({
                         </ul>
                       )}
                     </div>
-                  ))}
+                  ))
+                    : null}
                 </div>
               </div>
             </div>

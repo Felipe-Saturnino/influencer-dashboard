@@ -50,14 +50,16 @@ function celulaContagem(n: number | undefined): XlsxCelula {
 export function buildAbaConsolidadoEscalaExcel(
   dias: EscalaExcelDia[],
   blocos: EscalaExcelBlocoTurno[],
+  opts?: { rotuloPrimeiraColuna?: string },
 ): XlsxAba {
+  const rotuloPrimeira = opts?.rotuloPrimeiraColuna ?? "Estúdio";
   const cabecalhoDias = dias.map((d) => ({ v: labelColunaDiaExcel(d), bold: true }));
   const linhas: XlsxCelula[][] = [];
 
   blocos.forEach((bloco, idx) => {
     if (idx > 0) linhas.push([]);
     linhas.push([{ v: bloco.titulo, bold: true }]);
-    linhas.push([{ v: "Estúdio", bold: true }, ...cabecalhoDias]);
+    linhas.push([{ v: rotuloPrimeira, bold: true }, ...cabecalhoDias]);
     for (const linha of bloco.linhas) {
       linhas.push([linha.label, ...dias.map((_, i) => celulaContagem(linha.counts[i]))]);
     }
@@ -78,23 +80,24 @@ export function buildAbaConsolidadoEscalaExcel(
 export function buildAbaDetalhadoEscalaExcel(
   dias: EscalaExcelDia[],
   linhasDetalhe: EscalaExcelLinhaDetalhe[],
+  opts?: { incluirEstudio?: boolean },
 ): XlsxAba {
-  const linhas: XlsxCelula[][] = [
-    [
-      { v: "Nome", bold: true },
-      { v: "Nickname", bold: true },
-      { v: "Turno", bold: true },
-      { v: "Estúdio", bold: true },
-      ...dias.map((d) => ({ v: labelColunaDiaExcel(d), bold: true })),
-    ],
+  const incluirEstudio = opts?.incluirEstudio !== false;
+  const cabecalho: XlsxCelula[] = [
+    { v: "Nome", bold: true },
+    { v: "Nickname", bold: true },
+    { v: "Turno", bold: true },
+    ...(incluirEstudio ? ([{ v: "Estúdio", bold: true }] as XlsxCelula[]) : []),
+    ...dias.map((d) => ({ v: labelColunaDiaExcel(d), bold: true })),
   ];
+  const linhas: XlsxCelula[][] = [cabecalho];
 
   for (const row of linhasDetalhe) {
     linhas.push([
       row.nome,
       row.nickname,
       row.turno,
-      row.estudio,
+      ...(incluirEstudio ? [row.estudio] : []),
       ...dias.map((_, i) => row.valoresPorDia[i] ?? ""),
     ]);
   }
@@ -102,8 +105,14 @@ export function buildAbaDetalhadoEscalaExcel(
   return {
     nome: ABA_EXCEL_DETALHADO,
     linhas,
-    largurasColunas: [30, 20, 12, 24, ...dias.map(() => 10)],
-    congelar: { linhas: 1, colunas: 4 },
+    largurasColunas: [
+      30,
+      20,
+      12,
+      ...(incluirEstudio ? [24] : []),
+      ...dias.map(() => 10),
+    ],
+    congelar: { linhas: 1, colunas: incluirEstudio ? 4 : 3 },
   };
 }
 

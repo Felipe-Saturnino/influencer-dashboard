@@ -9,7 +9,7 @@ import {
 } from "../../../lib/loginAccessContact";
 import { solicitarRecuperarSenha } from "../../../lib/recuperarSenha";
 
-type ModalPhase = "form" | "not_found" | "inactive" | "success" | "email_error" | "config_error";
+type ModalPhase = "form" | "success" | "email_error" | "config_error";
 
 interface Props {
   open: boolean;
@@ -80,13 +80,9 @@ export function LoginEsqueciSenhaModal({ open, onClose, initialEmail }: Props) {
 
     switch (result.status) {
       case "success":
-        setPhase("success");
-        break;
       case "not_found":
-        setPhase("not_found");
-        break;
       case "inactive":
-        setPhase("inactive");
+        setPhase("success");
         break;
       case "email_error":
         setPhase("email_error");
@@ -205,39 +201,17 @@ export function LoginEsqueciSenhaModal({ open, onClose, initialEmail }: Props) {
         </>
       )}
 
-      {phase === "not_found" && (
-        <div role="status" style={{ fontFamily: FONT.body }}>
-          <p style={{ margin: "0 0 12px", fontSize: 13, color: bodyText, lineHeight: 1.55 }}>
-            Este e-mail não pertence a um usuário cadastrado na plataforma.
-          </p>
-          <p style={{ margin: 0, fontSize: 13, color: bodyMuted, lineHeight: 1.55 }}>
-            Caso precise de acesso, <LoginEntreEmContatoLink />.
-          </p>
-        </div>
-      )}
-
-      {phase === "inactive" && (
-        <div role="status" style={{ fontFamily: FONT.body }}>
-          <p style={{ margin: "0 0 12px", fontSize: 13, color: bodyText, lineHeight: 1.55 }}>
-            Este e-mail está vinculado a uma conta desativada.
-          </p>
-          <p style={{ margin: 0, fontSize: 13, color: bodyMuted, lineHeight: 1.55 }}>
-            Para solicitar a reativação ou um novo acesso, <LoginEntreEmContatoLink />.
-          </p>
-        </div>
-      )}
-
       {phase === "success" && (
         <div role="status" style={{ fontFamily: FONT.body }}>
           <div style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 12 }}>
             <CheckCircle2 size={20} color="#22c55e" strokeWidth={2} aria-hidden style={{ flexShrink: 0 }} />
             <p style={{ margin: 0, fontSize: 13, color: bodyText, lineHeight: 1.55 }}>
-              Senha redefinida. Enviamos um e-mail para <strong>{modalEmail.trim().toLowerCase()}</strong> com a
-              senha temporária e o passo a passo para entrar na plataforma.
+              Se este e-mail estiver cadastrado em uma conta ativa, enviamos a senha temporária e o passo a passo
+              para entrar na plataforma.
             </p>
           </div>
           <p style={{ margin: 0, fontSize: 12, color: bodyMuted, lineHeight: 1.5 }}>
-            Confira também a caixa de spam. No primeiro acesso, será necessário criar uma nova senha pessoal.
+            Confira também a caixa de spam. No próximo login, será necessário criar uma nova senha pessoal.
           </p>
         </div>
       )}
@@ -245,7 +219,7 @@ export function LoginEsqueciSenhaModal({ open, onClose, initialEmail }: Props) {
       {phase === "email_error" && (
         <div role="alert" aria-live="polite" style={{ fontFamily: FONT.body }}>
           <p style={{ margin: "0 0 12px", fontSize: 13, color: bodyText, lineHeight: 1.55 }}>
-            A senha foi redefinida, mas não foi possível enviar o e-mail com as instruções.
+            Não foi possível enviar o e-mail. Sua senha atual continua valendo.
           </p>
           <p style={{ margin: 0, fontSize: 13, color: bodyMuted, lineHeight: 1.55 }}>
             <LoginEntreEmContatoLink /> com o suporte para receber os dados de acesso.

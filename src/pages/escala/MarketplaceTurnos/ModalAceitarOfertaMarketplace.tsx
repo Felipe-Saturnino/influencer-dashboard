@@ -47,12 +47,14 @@ export function ModalAceitarOfertaMarketplace({
 
   const [diaTrocaIso, setDiaTrocaIso] = useState("");
   const [erro, setErro] = useState<string | null>(null);
+  const [erroRetentavel, setErroRetentavel] = useState(false);
   const [gravando, setGravando] = useState(false);
   const [ofertaExpirada, setOfertaExpirada] = useState(false);
 
   useEffect(() => {
     setDiaTrocaIso("");
     setErro(null);
+    setErroRetentavel(false);
     setGravando(false);
     setOfertaExpirada(false);
   }, [oferta?.id]);
@@ -153,10 +155,12 @@ export function ModalAceitarOfertaMarketplace({
     const v = validar();
     if (v) {
       setErro(v);
+      setErroRetentavel(false);
       return;
     }
     setGravando(true);
     setErro(null);
+    setErroRetentavel(false);
 
     const diaTroca = ehTroca ? diaTrocaIso : null;
     const valorTroca = ehTroca
@@ -167,6 +171,7 @@ export function ModalAceitarOfertaMarketplace({
     setGravando(false);
     if (!res.ok) {
       setErro(mensagemErroOfertaMarketplace(res.error));
+      setErroRetentavel(res.error !== "oferta_expirada");
       if (res.error === "oferta_expirada") {
         setOfertaExpirada(true);
         onAceita();
@@ -252,9 +257,41 @@ export function ModalAceitarOfertaMarketplace({
         )}
 
         {erro ? (
-          <p style={{ margin: "0 0 12px", fontSize: 13, color: "#e84025" }} role="alert" aria-live="polite">
-            {erro}
-          </p>
+          <div
+            role="alert"
+            aria-live="polite"
+            style={{
+              margin: "0 0 12px",
+              fontSize: 13,
+              color: "#e84025",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
+              flexWrap: "wrap",
+            }}
+          >
+            <span>{erro}</span>
+            {erroRetentavel ? (
+              <button
+                type="button"
+                disabled={gravando || ofertaExpirada}
+                onClick={() => void confirmar()}
+                style={{
+                  padding: "8px 14px",
+                  borderRadius: 10,
+                  border: "1px solid rgba(232,64,37,0.35)",
+                  background: "transparent",
+                  color: "#e84025",
+                  fontWeight: 700,
+                  fontFamily: FONT.body,
+                  cursor: gravando || ofertaExpirada ? "not-allowed" : "pointer",
+                }}
+              >
+                Tentar de novo
+              </button>
+            ) : null}
+          </div>
         ) : null}
 
         <div

@@ -69,6 +69,8 @@ import {
   urlAssinadaFotoPrestador,
   urlAssinadasFotosPrestador,
   urlPublicaFotoGeral,
+  MARKETING_FOTO_ASSINADA_TTL_SEC,
+  MARKETING_FOTO_ASSINADA_RENOVAR_ANTES_MS,
   buscarMeuColaboradorGaleria,
   excluirMarketingEventoGaleria,
   buildRotulosFotoGaleria,
@@ -109,6 +111,10 @@ const ABAS_COM_UPLOAD: Aba[] = ["galeria", "upload"];
 
 const MSG_ERRO_CARREGAR =
   "Não foi possível carregar as fotos. Se o problema persistir, entre em contato com o suporte.";
+const MSG_ERRO_BUSCA =
+  "Não foi possível buscar as fotos. Se o problema persistir, entre em contato com o suporte.";
+const MSG_ERRO_GRUPO =
+  "Não foi possível carregar as fotos deste grupo. Se o problema persistir, entre em contato com o suporte.";
 const MSG_ERRO_SALVAR =
   "Não foi possível salvar. Se o problema persistir, entre em contato com o suporte.";
 const MSG_ERRO_UPLOAD =
@@ -117,6 +123,28 @@ const MSG_ERRO_EXCLUIR =
   "Não foi possível excluir a foto. Se o problema persistir, entre em contato com o suporte.";
 const MSG_ERRO_EXCLUIR_EVENTO =
   "Não foi possível excluir o evento. Se o problema persistir, entre em contato com o suporte.";
+const MSG_UPLOAD_SEM_EVENTOS =
+  "Cadastre um evento antes de enviar fotos gerais.";
+
+type UrlAssinadaMeta = { url: string; expiraEm: number };
+
+function urlAssinadaAindaValida(meta: UrlAssinadaMeta | undefined, agora = Date.now()): boolean {
+  if (!meta?.url) return false;
+  return meta.expiraEm - MARKETING_FOTO_ASSINADA_RENOVAR_ANTES_MS > agora;
+}
+
+function mergeUrlsAssinadas(
+  prev: Record<string, UrlAssinadaMeta>,
+  urls: Record<string, string>,
+): Record<string, UrlAssinadaMeta> {
+  if (!Object.keys(urls).length) return prev;
+  const expiraEm = Date.now() + MARKETING_FOTO_ASSINADA_TTL_SEC * 1000;
+  const next = { ...prev };
+  for (const [id, url] of Object.entries(urls)) {
+    next[id] = { url, expiraEm };
+  }
+  return next;
+}
 
 interface PrestadorOpcao {
   id: string;
@@ -177,8 +205,11 @@ export default function GaleriaFotos() {
   const [resumoPrestadores, setResumoPrestadores] = useState<GaleriaPrestadorResumo[]>([]);
   const [fotosCache, setFotosCache] = useState<Record<string, MarketingFotoComEvento[]>>({});
   const [fotosCacheLoading, setFotosCacheLoading] = useState<Set<string>>(() => new Set());
+  const [fotosCacheErro, setFotosCacheErro] = useState<Set<string>>(() => new Set());
   const [fotosBusca, setFotosBusca] = useState<MarketingFotoComEvento[] | null>(null);
   const [buscaFotosLoading, setBuscaFotosLoading] = useState(false);
+  const [buscaFotosErro, setBuscaFotosErro] = useState<string | null>(null);
+  const [buscaRetryToken, setBuscaRetryToken] = useState(0);
   const [buscaDeb, setBuscaDeb] = useState("");
   const [prestadores, setPrestadores] = useState<PrestadorOpcao[]>([]);
   const [loading, setLoading] = useState(true);
@@ -223,9 +254,10 @@ export default function GaleriaFotos() {
 
   const [lightbox, setLightbox] = useState<MarketingFotoComEvento | null>(null);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
-  const [urlsPrestador, setUrlsPrestador] = useState<Record<string, string>>({});
+  const [urlsPrestador, setUrlsPrestador] = useState<Record<string, UrlAssinadaMeta>>({});
   const urlsPrestadorRef = useRef(urlsPrestador);
   urlsPrestadorRef.current = urlsPrestador;
+  const renovandoUrlsRef = useRef(false);
   const [fotoExcluir, setFotoExcluir] = useState<MarketingFotoComEvento | null>(null);
   const [excluindo, setExcluindo] = useState(false);
   const [eventosExpandidos, setEventosExpandidos] = useState<Set<string>>(() => new Set());
@@ -332,9 +364,23 @@ export default function GaleriaFotos() {
     });
   }, []);
 
-  const carregarGrupoFotos = useCallback(async (kind: "evento" | "prestador", id: string) => {
+  const carregarGrupoFotos = useCallback(async (
+    kind: "evento" | "prestador",
+    id: string,
+    opts?: { forcar?: boolean },
+  ) => {
     const key = chaveCacheGrupoGaleria(kind, id);
-    if (fotosCache[key]?.length || fotosCacheLoading.has(key)) return;
+    if (!opts?.forcar) {
+      if (fotosCache[key] !== undefined || fotosCacheLoading.has(key) || fotosCacheErro.has(key)) {
+        return;
+      }
+    }
+    setFotosCacheErro((prev) => {
+      if (!prev.has(key)) return prev;
+      const next = new Set(prev);
+      next.delete(key);
+      return next;
+    });
     setFotosCacheLoading((prev) => {
       if (prev.has(key)) return prev;
       const next = new Set(prev);
@@ -346,13 +392,20 @@ export default function GaleriaFotos() {
         kind === "evento"
           ? await listarMarketingFotosPorEvento(id)
           : await listarMarketingFotosPorPrestador(id);
-      setFotosCache((prev) => (prev[key] ? prev : { ...prev, [key]: list }));
+      setFotosCache((prev) => ({ ...prev, [key]: list }));
       if (kind === "prestador" && list.length > 0) {
         const urls = await urlAssinadasFotosPrestador(list);
         if (Object.keys(urls).length) {
-          setUrlsPrestador((prev) => ({ ...prev, ...urls }));
+          setUrlsPrestador((prev) => mergeUrlsAssinadas(prev, urls));
         }
       }
+    } catch (e: unknown) {
+      console.error("[Galeria] carregar grupo:", e);
+      setFotosCacheErro((prev) => {
+        const next = new Set(prev);
+        next.add(key);
+        return next;
+      });
     } finally {
       setFotosCacheLoading((prev) => {
         const next = new Set(prev);
@@ -360,7 +413,7 @@ export default function GaleriaFotos() {
         return next;
       });
     }
-  }, [fotosCache, fotosCacheLoading]);
+  }, [fotosCache, fotosCacheLoading, fotosCacheErro]);
 
   const carregarPrestadores = useCallback(async () => {
     const { data, error } = await supabase
@@ -395,10 +448,13 @@ export default function GaleriaFotos() {
         return [...byId.values()].sort((a, b) => compareLocaleTexto(a.nome, b.nome, "asc"));
       });
       setFotosCache({});
+      setFotosCacheErro(new Set());
       setFotosBusca(null);
+      setBuscaFotosErro(null);
       setUrlsPrestador({});
-      await carregarEventosAtivos();
-      if (podeUpload || podeFiltrarPrestador) await carregarPrestadores();
+      const posResumo: Promise<void>[] = [carregarEventosAtivos()];
+      if (podeUpload || podeFiltrarPrestador) posResumo.push(carregarPrestadores());
+      await Promise.all(posResumo);
     } catch {
       setErro(MSG_ERRO_CARREGAR);
     } finally {
@@ -442,11 +498,13 @@ export default function GaleriaFotos() {
     if (perm.canView === "nao") return;
     if (buscaDeb.length < 2) {
       setFotosBusca(null);
+      setBuscaFotosErro(null);
       setBuscaFotosLoading(false);
       return;
     }
     let cancel = false;
     setBuscaFotosLoading(true);
+    setBuscaFotosErro(null);
     void buscarMarketingFotosGaleria(buscaDeb)
       .then((rows) => {
         if (cancel) return;
@@ -475,7 +533,10 @@ export default function GaleriaFotos() {
         setFotosBusca(filtradas);
       })
       .catch(() => {
-        if (!cancel) setFotosBusca([]);
+        if (!cancel) {
+          setFotosBusca(null);
+          setBuscaFotosErro(MSG_ERRO_BUSCA);
+        }
       })
       .finally(() => {
         if (!cancel) setBuscaFotosLoading(false);
@@ -483,7 +544,65 @@ export default function GaleriaFotos() {
     return () => {
       cancel = true;
     };
-  }, [buscaDeb, perm.canView, metadadosGaleria, galeriaSubAba, podeFiltrarPrestador, meuRhFuncionarioId]);
+  }, [buscaDeb, buscaRetryToken, perm.canView, metadadosGaleria, galeriaSubAba, podeFiltrarPrestador, meuRhFuncionarioId]);
+
+  useEffect(() => {
+    const prestadorFotos = fotosVisiveis.filter((f) => {
+      if (f.tipo !== "prestador") return false;
+      return !urlAssinadaAindaValida(urlsPrestadorRef.current[f.id]);
+    });
+    if (!prestadorFotos.length) return;
+
+    let cancel = false;
+    void (async () => {
+      const urls = await urlAssinadasFotosPrestador(prestadorFotos);
+      if (!cancel && Object.keys(urls).length) {
+        setUrlsPrestador((prev) => mergeUrlsAssinadas(prev, urls));
+      }
+    })();
+    return () => {
+      cancel = true;
+    };
+  }, [fotosVisiveis]);
+
+  /** Renova URLs assinadas próximas do TTL enquanto a grade está aberta. */
+  useEffect(() => {
+    const tick = () => {
+      if (renovandoUrlsRef.current) return;
+      const agora = Date.now();
+      const pendentes = fotosVisiveis.filter(
+        (f) => f.tipo === "prestador" && !urlAssinadaAindaValida(urlsPrestadorRef.current[f.id], agora),
+      );
+      if (!pendentes.length) return;
+      renovandoUrlsRef.current = true;
+      void urlAssinadasFotosPrestador(pendentes)
+        .then((urls) => {
+          if (Object.keys(urls).length) {
+            setUrlsPrestador((prev) => mergeUrlsAssinadas(prev, urls));
+          }
+        })
+        .finally(() => {
+          renovandoUrlsRef.current = false;
+        });
+    };
+    const id = window.setInterval(tick, 60_000);
+    return () => window.clearInterval(id);
+  }, [fotosVisiveis]);
+
+  const renovarUrlAssinadaFoto = useCallback(async (f: MarketingFotoComEvento) => {
+    if (f.tipo !== "prestador" || !f.storage_path) return;
+    setUrlsPrestador((prev) => {
+      if (!(f.id in prev)) return prev;
+      const next = { ...prev };
+      delete next[f.id];
+      return next;
+    });
+    const url = await urlAssinadaFotoPrestador(f.storage_path);
+    if (!url) return;
+    setUrlsPrestador((prev) =>
+      mergeUrlsAssinadas(prev, { [f.id]: url }),
+    );
+  }, []);
 
   useEffect(() => {
     if (galeriaSubAba !== "gerais" || fotosBusca) return;
@@ -535,24 +654,6 @@ export default function GaleriaFotos() {
     prestadoresExpandidos,
     carregarGrupoFotos,
   ]);
-
-  useEffect(() => {
-    const prestadorFotos = fotosVisiveis.filter(
-      (f) => f.tipo === "prestador" && !urlsPrestadorRef.current[f.id],
-    );
-    if (!prestadorFotos.length) return;
-
-    let cancel = false;
-    void (async () => {
-      const urls = await urlAssinadasFotosPrestador(prestadorFotos);
-      if (!cancel && Object.keys(urls).length) {
-        setUrlsPrestador((prev) => ({ ...prev, ...urls }));
-      }
-    })();
-    return () => {
-      cancel = true;
-    };
-  }, [fotosVisiveis]);
 
   useEffect(() => {
     if (!lightbox) {
@@ -707,7 +808,7 @@ export default function GaleriaFotos() {
 
   const urlThumbnail = (f: MarketingFotoComEvento): string | null => {
     if (f.tipo === "geral") return urlPublicaFotoGeral(f.storage_path);
-    return urlsPrestador[f.id] ?? null;
+    return urlsPrestador[f.id]?.url ?? null;
   };
 
   const abrirModalEvento = () => {
@@ -1018,6 +1119,42 @@ export default function GaleriaFotos() {
       );
     }
 
+    if (cacheKey && fotosCacheErro.has(cacheKey)) {
+      const kind: "evento" | "prestador" = cacheKey.startsWith("geral:") ? "evento" : "prestador";
+      const id = cacheKey.slice(cacheKey.indexOf(":") + 1);
+      return (
+        <div
+          role="alert"
+          aria-live="polite"
+          style={{
+            padding: "24px 0",
+            textAlign: "center",
+            fontFamily: FONT.body,
+            fontSize: 13,
+          }}
+        >
+          <p style={{ color: "#e84025", marginBottom: 12 }}>{MSG_ERRO_GRUPO}</p>
+          <button
+            type="button"
+            onClick={() => void carregarGrupoFotos(kind, id, { forcar: true })}
+            style={{
+              padding: "8px 16px",
+              borderRadius: 10,
+              border: `1px solid ${t.cardBorder}`,
+              background: t.inputBg,
+              color: t.text,
+              fontSize: 12,
+              fontWeight: 700,
+              fontFamily: FONT.body,
+              cursor: "pointer",
+            }}
+          >
+            Tentar novamente
+          </button>
+        </div>
+      );
+    }
+
     if (!lista.length) {
       return (
         <div
@@ -1070,6 +1207,9 @@ export default function GaleriaFotos() {
                   loading="lazy"
                   decoding="async"
                   style={estiloThumbGaleria(f.tipo)}
+                  onError={() => {
+                    if (f.tipo === "prestador") void renovarUrlAssinadaFoto(f);
+                  }}
                 />
               ) : (
                 <div
@@ -1205,11 +1345,29 @@ export default function GaleriaFotos() {
             marginBottom: 14,
             display: "flex",
             alignItems: "center",
+            flexWrap: "wrap",
             gap: 8,
           }}
         >
           <AlertCircle size={14} aria-hidden />
-          {erro}
+          <span style={{ flex: "1 1 200px" }}>{erro}</span>
+          <button
+            type="button"
+            onClick={() => void recarregar()}
+            style={{
+              padding: "8px 14px",
+              borderRadius: 10,
+              border: `1px solid ${t.cardBorder}`,
+              background: t.inputBg,
+              color: t.text,
+              fontSize: 12,
+              fontWeight: 700,
+              fontFamily: FONT.body,
+              cursor: "pointer",
+            }}
+          >
+            Tentar novamente
+          </button>
         </div>
       ) : null}
 
@@ -1341,6 +1499,36 @@ export default function GaleriaFotos() {
                 style={{ marginBottom: 12 }}
               />
               <div style={{ fontSize: 13 }}>Carregando…</div>
+            </div>
+          ) : buscaFotosErro ? (
+            <div
+              role="alert"
+              aria-live="polite"
+              style={pageBox}
+            >
+              <div style={{ padding: "40px 0", textAlign: "center", fontFamily: FONT.body, fontSize: 13 }}>
+                <p style={{ color: "#e84025", marginBottom: 12 }}>{buscaFotosErro}</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBuscaFotosErro(null);
+                    setBuscaRetryToken((n) => n + 1);
+                  }}
+                  style={{
+                    padding: "10px 20px",
+                    borderRadius: 10,
+                    border: `1px solid ${t.cardBorder}`,
+                    background: t.inputBg,
+                    color: t.text,
+                    fontSize: 13,
+                    fontWeight: 700,
+                    fontFamily: FONT.body,
+                    cursor: "pointer",
+                  }}
+                >
+                  Tentar novamente
+                </button>
+              </div>
             </div>
           ) : galeriaBlocos.length === 0 ? (
             <div style={pageBox}>
@@ -1567,6 +1755,33 @@ export default function GaleriaFotos() {
 
             {uploadTipo === "geral" ? (
               <div style={{ display: "flex", flexWrap: "wrap", gap: 14, marginTop: 16, alignItems: "flex-end" }}>
+                {eventos.length === 0 ? (
+                  <div
+                    role="status"
+                    style={{
+                      width: "100%",
+                      padding: "16px 18px",
+                      borderRadius: 12,
+                      border: `1px solid ${t.cardBorder}`,
+                      background: t.inputBg,
+                      fontFamily: FONT.body,
+                      fontSize: 13,
+                      color: t.textMuted,
+                      display: "flex",
+                      flexWrap: "wrap",
+                      alignItems: "center",
+                      gap: 12,
+                    }}
+                  >
+                    <span style={{ flex: "1 1 220px" }}>{MSG_UPLOAD_SEM_EVENTOS}</span>
+                    {perm.canCriarOk ? (
+                      <CtaCriarButton onClick={abrirModalEvento} style={{ flexShrink: 0 }}>
+                        Novo Evento
+                      </CtaCriarButton>
+                    ) : null}
+                  </div>
+                ) : (
+                  <>
                 <div style={{ flex: "1 1 220px", minWidth: 200 }}>
                   <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: t.text, marginBottom: 6, fontFamily: FONT.body }}>
                     Evento
@@ -1618,6 +1833,8 @@ export default function GaleriaFotos() {
                     Editar Eventos
                   </button>
                 ) : null}
+                  </>
+                )}
               </div>
             ) : (
               <div style={{ marginTop: 16, maxWidth: 360 }}>

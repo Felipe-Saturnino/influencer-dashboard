@@ -45,6 +45,10 @@ export type AfiliadosFiltrosContextValue = {
   toggleHistorico: () => void;
   isLoading: boolean;
   setIsLoading: (v: boolean) => void;
+  /** MoM do período anterior pronto (fase 2). */
+  momPronto: boolean;
+  erroCarga: string | null;
+  recarregar: () => void;
   totais: AfiliadoTotais;
   totaisAnt: AfiliadoTotais;
   ranking: AfiliadoRankingRow[];
@@ -140,6 +144,9 @@ export function AfiliadosFiltrosProvider({ children }: { children: ReactNode }) 
       toggleHistorico,
       isLoading: isLoadingManual || data.loading || data.catalogPending,
       setIsLoading,
+      momPronto: data.momPronto,
+      erroCarga: data.erroCarga,
+      recarregar: data.recarregar,
       totais: data.totais,
       totaisAnt: data.totaisAnt,
       ranking: data.ranking,
@@ -161,6 +168,9 @@ export function AfiliadosFiltrosProvider({ children }: { children: ReactNode }) 
       data.metricasPorAfiliado,
       data.loading,
       data.catalogPending,
+      data.momPronto,
+      data.erroCarga,
+      data.recarregar,
       idxInicial,
       mesSelecionado,
       isPrimeiro,

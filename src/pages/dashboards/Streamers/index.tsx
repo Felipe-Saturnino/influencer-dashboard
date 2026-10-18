@@ -1,5 +1,5 @@
 import { Suspense, lazy } from "react";
-import { BarChart2, ChevronLeft, ChevronRight, Clock, GitCompare, Loader2, Wallet } from "lucide-react";
+import { BarChart2, ChevronLeft, ChevronRight, Clock, GitCompare, Loader2, Users, Wallet } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
@@ -24,19 +24,22 @@ import { StreamersFiltrosProvider, useStreamersFiltros } from "./StreamersFiltro
 
 const DashboardOverview = lazy(() => import("./DashboardOverview"));
 const DashboardConversao = lazy(() => import("./DashboardConversao"));
+const DashboardJogadores = lazy(() => import("./DashboardJogadores"));
 const DashboardFinanceiro = lazy(() => import("./DashboardFinanceiro"));
 
-type StreamersTab = "overview" | "conversao" | "financeiro";
+type StreamersTab = "overview" | "conversao" | "jogadores" | "financeiro";
 
 const TAB_LABELS: Record<StreamersTab, string> = {
   overview: "Overview",
   conversao: "Conversão",
+  jogadores: "Jogadores",
   financeiro: "Financeiro",
 };
 
 const TAB_ICONS: Record<StreamersTab, typeof BarChart2> = {
   overview: BarChart2,
   conversao: GitCompare,
+  jogadores: Users,
   financeiro: Wallet,
 };
 
@@ -52,7 +55,7 @@ function StreamersFiltrosEUAbas({
   const { showFiltroInfluencer, showFiltroOperadora, podeVerOperadora } = useDashboardFiltros();
   const sf = useStreamersFiltros();
 
-  const tabIds: StreamersTab[] = ["overview", "conversao", "financeiro"];
+  const tabIds: StreamersTab[] = ["overview", "conversao", "jogadores", "financeiro"];
 
   return (
     <div style={getPageFilterBoxStyle(brand, t)}>
@@ -113,7 +116,7 @@ function StreamersFiltrosEUAbas({
               podeVerOperadora={podeVerOperadora}
             />
           )}
-          {sf.isLoading && (
+          {(sf.isLoading || (!sf.historico && !sf.momPronto)) && (
             <span
               style={{
                 fontSize: 12,
@@ -162,7 +165,7 @@ function StreamersFiltrosEUAbas({
 function StreamersAutorizado() {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
-  const [aba, setAba] = useRouteTab("streamers", "overview", ["overview", "conversao", "financeiro"] as const);
+  const [aba, setAba] = useRouteTab("streamers", "overview", ["overview", "conversao", "jogadores", "financeiro"] as const);
 
   return (
     <StreamersFiltrosProvider>
@@ -206,6 +209,7 @@ function StreamersAutorizado() {
           >
             {aba === "overview" && <DashboardOverview />}
             {aba === "conversao" && <DashboardConversao />}
+            {aba === "jogadores" && <DashboardJogadores />}
             {aba === "financeiro" && <DashboardFinanceiro />}
           </Suspense>
         </div>
@@ -227,8 +231,12 @@ export default function Streamers() {
           minHeight: "100vh",
           fontFamily: FONT.body,
           display: "flex",
+          flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
+          gap: 12,
+          color: t.textMuted,
+          fontSize: 13,
         }}
       >
         <Loader2
@@ -237,6 +245,7 @@ export default function Streamers() {
           color="var(--brand-action, #7c3aed)"
           aria-hidden="true"
         />
+        Carregando…
       </div>
     );
   }

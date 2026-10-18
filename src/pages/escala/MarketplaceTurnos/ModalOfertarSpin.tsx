@@ -83,7 +83,10 @@ export function ModalOfertarSpin({ open, onClose, onCriada }: Props) {
   const [quantidade, setQuantidade] = useState(1);
   const [observacao, setObservacao] = useState("");
   const [erro, setErro] = useState<string | null>(null);
+  const [erroCatalogo, setErroCatalogo] = useState<string | null>(null);
+  const [erroRetentavel, setErroRetentavel] = useState(false);
   const [gravando, setGravando] = useState(false);
+  const [catRefreshTick, setCatRefreshTick] = useState(0);
 
   const estudioObrigatorio = !grupoTimeForcaTodosEstudios(grupoTime);
 
@@ -97,6 +100,7 @@ export function ModalOfertarSpin({ open, onClose, onCriada }: Props) {
     setQuantidade(1);
     setObservacao("");
     setErro(null);
+    setErroRetentavel(false);
     setGravando(false);
   }, [open]);
 
@@ -113,14 +117,23 @@ export function ModalOfertarSpin({ open, onClose, onCriada }: Props) {
     if (!open) return;
     let cancelled = false;
     setCarregandoCat(true);
+    setErroCatalogo(null);
     void Promise.all([
       supabase.from("rh_org_times").select("id, nome").eq("status", "ativo").order("nome"),
       supabase.from("estudios_spin").select("slug, nome").eq("ativo", true).order("nome"),
     ])
       .then(([timesRes, estRes]) => {
         if (cancelled) return;
-        if (timesRes.error) console.error("[ModalOfertarSpin] times", timesRes.error);
-        if (estRes.error) console.error("[ModalOfertarSpin] estudios", estRes.error);
+        if (timesRes.error || estRes.error) {
+          if (timesRes.error) console.error("[ModalOfertarSpin] times", timesRes.error);
+          if (estRes.error) console.error("[ModalOfertarSpin] estudios", estRes.error);
+          setTimes([]);
+          setEstudios([]);
+          setErroCatalogo(
+            "Não foi possível carregar times e estúdios. Se o problema persistir, entre em contato com o suporte.",
+          );
+          return;
+        }
 
         const porGrupo = new Map<TimeSpinOpcao["grupo"], TimeSpinOpcao>();
         for (const row of timesRes.data ?? []) {
@@ -148,7 +161,7 @@ export function ModalOfertarSpin({ open, onClose, onCriada }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [open]);
+  }, [open, catRefreshTick]);
 
   const orgTimeId = useMemo(
     () => times.find((x) => x.grupo === grupoTime)?.id ?? "",
@@ -184,6 +197,7 @@ export function ModalOfertarSpin({ open, onClose, onCriada }: Props) {
 
   async function salvar() {
     setErro(null);
+    setErroRetentavel(false);
     if (!orgTimeId) {
       setErro("Não encontramos o time selecionado. Atualize a página e tente novamente.");
       return;
@@ -217,6 +231,7 @@ export function ModalOfertarSpin({ open, onClose, onCriada }: Props) {
     setGravando(false);
     if (!res.ok) {
       setErro(mensagemErroOfertaMarketplace(res.error));
+      setErroRetentavel(true);
       return;
     }
     onCriada();
@@ -456,13 +471,77 @@ export function ModalOfertarSpin({ open, onClose, onCriada }: Props) {
               />
             </div>
 
+            {erroCatalogo ? (
+              <div
+                role="alert"
+                aria-live="polite"
+                style={{
+                  color: "#e84025",
+                  fontSize: 12,
+                  marginBottom: 12,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 12,
+                  flexWrap: "wrap",
+                }}
+              >
+                <span>{erroCatalogo}</span>
+                <button
+                  type="button"
+                  disabled={carregandoCat}
+                  onClick={() => setCatRefreshTick((n) => n + 1)}
+                  style={{
+                    padding: "8px 14px",
+                    borderRadius: 10,
+                    border: "1px solid rgba(232,64,37,0.35)",
+                    background: "transparent",
+                    color: "#e84025",
+                    fontWeight: 700,
+                    fontFamily: FONT.body,
+                    cursor: carregandoCat ? "not-allowed" : "pointer",
+                  }}
+                >
+                  Tentar de novo
+                </button>
+              </div>
+            ) : null}
+
             {erro ? (
               <div
                 role="alert"
                 aria-live="polite"
-                style={{ color: "#e84025", fontSize: 12, marginBottom: 12 }}
+                style={{
+                  color: "#e84025",
+                  fontSize: 12,
+                  marginBottom: 12,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 12,
+                  flexWrap: "wrap",
+                }}
               >
-                {erro}
+                <span>{erro}</span>
+                {erroRetentavel ? (
+                  <button
+                    type="button"
+                    disabled={gravando}
+                    onClick={() => void salvar()}
+                    style={{
+                      padding: "8px 14px",
+                      borderRadius: 10,
+                      border: "1px solid rgba(232,64,37,0.35)",
+                      background: "transparent",
+                      color: "#e84025",
+                      fontWeight: 700,
+                      fontFamily: FONT.body,
+                      cursor: gravando ? "not-allowed" : "pointer",
+                    }}
+                  >
+                    Tentar de novo
+                  </button>
+                ) : null}
               </div>
             ) : null}
 

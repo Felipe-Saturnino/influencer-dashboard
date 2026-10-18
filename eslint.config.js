@@ -11,6 +11,8 @@ export default tseslint.config(
       'dist',
       'coverage',
       'node_modules',
+      // Rascunhos locais de depuração (gitignored) — sem isto o lint local diverge do CI.
+      'tmp',
       'docs/mockups/**',
       'scripts/split-*.mjs',
       'scripts/fix-*.mjs',

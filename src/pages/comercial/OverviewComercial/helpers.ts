@@ -281,7 +281,7 @@ export function buildMovimentacaoDetalhe(
     if (h.campo === "status_pipeline" && h.valor_novo === "negociacao") neg.push(h.marca_nome);
     if (h.campo === "status_pipeline" && h.valor_novo === "fechado") fech.push(h.marca_nome);
     if (
-      h.campo === "status_produto" &&
+      (h.campo === "status_produto" || h.campo === "retorno") &&
       STATUS_PRODUTO_LINHA_SEM_INTERESSE.includes(h.valor_novo as StatusProduto)
     ) {
       sem.push(h.marca_nome);

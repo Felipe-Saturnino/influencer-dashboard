@@ -1,0 +1,1420 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Academy — Cursos Livres (Mockup)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --brand-primary: #7c3aed;
+      --brand-secondary: #1e36f8;
+      --brand-success: #22c55e;
+      --brand-danger: #e84025;
+      --brand-warning: #f59e0b;
+      --bg: #f4f4f8;
+      --card-bg: #ffffff;
+      --card-border: #e2e2ee;
+      --text: #1a1a2e;
+      --text-muted: #6b7280;
+      --input-bg: #f8f8fc;
+      --radius-box: 14px;
+      --radius-tab: 10px;
+      --radius-pill: 999px;
+      --shadow: 0 2px 8px rgba(0,0,0,0.07);
+      --font: "Inter", "Helvetica Neue", Arial, sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 24px;
+      line-height: 1.4;
+    }
+    .mockup-bar {
+      position: sticky; top: 0; z-index: 100;
+      background: #1a1a2e; color: #fff;
+      padding: 10px 16px; border-radius: 10px; margin-bottom: 20px;
+      display: flex; flex-wrap: wrap; align-items: center; gap: 12px; font-size: 12px;
+    }
+    .mockup-bar strong { color: #a78bfa; }
+    .mockup-bar button {
+      font-family: var(--font); font-size: 12px; padding: 5px 10px;
+      border-radius: 6px; border: 1px solid #3a3a5c; background: #2a2a40; color: #fff; cursor: pointer;
+    }
+    .mockup-bar button.active { background: var(--brand-primary); border-color: var(--brand-primary); }
+    .page-shell { max-width: 1280px; margin: 0 auto; }
+    .page-header { margin-bottom: 18px; }
+    .page-header-row { display: flex; align-items: center; gap: 10px; }
+    .page-icon {
+      width: 32px; height: 32px; border-radius: 9px;
+      background: color-mix(in srgb, var(--brand-primary) 12%, transparent);
+      border: 1px solid color-mix(in srgb, var(--brand-primary) 30%, transparent);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--brand-primary); flex-shrink: 0;
+    }
+    .page-header h1 {
+      font-size: 18px; font-weight: 800; text-transform: uppercase;
+      letter-spacing: 0.04em; color: var(--brand-primary);
+    }
+    .page-header .subtitle {
+      font-size: 13px; color: var(--text-muted); margin-top: 5px; padding-left: 42px;
+    }
+    .filter-box {
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: var(--radius-box); box-shadow: var(--shadow);
+      padding: 12px 20px; margin-bottom: 14px;
+    }
+    .filter-row {
+      display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 10px; width: 100%;
+    }
+    .filter-row + .filter-row { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--card-border); }
+    .pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 14px; border-radius: var(--radius-pill);
+      border: 1px solid var(--card-border); background: var(--input-bg);
+      font-size: 13px; font-weight: 500; color: var(--text); cursor: pointer;
+    }
+    .pill.active {
+      border-color: color-mix(in srgb, var(--brand-primary) 35%, transparent);
+      background: color-mix(in srgb, var(--brand-primary) 15%, transparent);
+      color: var(--brand-primary); font-weight: 600;
+    }
+    .tab-btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 18px; min-height: 44px; border-radius: var(--radius-tab);
+      border: 1px solid var(--card-border); background: var(--input-bg);
+      font-size: 13px; font-weight: 500; color: var(--text-muted); cursor: pointer;
+    }
+    .tab-btn.active {
+      border-color: color-mix(in srgb, var(--brand-secondary) 35%, transparent);
+      background: color-mix(in srgb, var(--brand-secondary) 15%, transparent);
+      color: var(--brand-secondary); font-weight: 700;
+    }
+    .content-box {
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: var(--radius-box); box-shadow: var(--shadow);
+      padding: 20px; margin-bottom: 14px;
+    }
+    .section-title {
+      font-size: 14px; font-weight: 800; text-transform: uppercase;
+      letter-spacing: 0.06em; color: var(--brand-primary); margin-bottom: 14px;
+    }
+    .section-title .sub {
+      font-size: 11px; font-weight: 400; color: var(--text-muted);
+      text-transform: none; letter-spacing: 0;
+    }
+    .section-title .sub::before { content: " — "; font-size: 12px; }
+    .section-head {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      gap: 12px; flex-wrap: wrap; margin-bottom: 14px;
+    }
+    .section-head .section-title { margin-bottom: 0; }
+    .hint-box {
+      background: color-mix(in srgb, var(--brand-primary) 8%, var(--card-bg));
+      border: 1px dashed color-mix(in srgb, var(--brand-primary) 30%, transparent);
+      border-radius: 10px; padding: 12px 16px; font-size: 12px;
+      color: var(--text-muted); margin-bottom: 14px;
+    }
+    .hint-box strong { color: var(--brand-primary); }
+    .kpi-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 14px; }
+    .kpi-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 14px; }
+    @media (max-width: 900px) { .kpi-grid-3, .kpi-grid-4 { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 560px) { .kpi-grid-3, .kpi-grid-4 { grid-template-columns: 1fr; } }
+    .kpi-card {
+      border-radius: var(--radius-box); border: 1px solid var(--card-border);
+      background: var(--card-bg); overflow: hidden;
+    }
+    .kpi-card .bar { height: 3px; }
+    .kpi-card .body { padding: 14px 16px; }
+    .kpi-label {
+      font-size: 10px; font-weight: 600; letter-spacing: 0.07em;
+      text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px;
+    }
+    .kpi-value { font-size: 22px; font-weight: 800; line-height: 1.1; }
+    .kpi-vs { font-size: 11px; color: var(--text-muted); margin-top: 6px; }
+    .table-wrap {
+      overflow-x: auto; border-radius: var(--radius-box); border: 1px solid var(--card-border);
+    }
+    table { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 760px; font-size: 13px; }
+    caption { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
+    thead th {
+      background: color-mix(in srgb, var(--card-bg) 86%, var(--brand-primary) 14%);
+      font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+      padding: 10px 12px; text-align: center; color: var(--text-muted);
+      border-bottom: 1px solid var(--card-border); white-space: nowrap;
+    }
+    thead th:first-child, tbody td:first-child { text-align: left; }
+    tbody td {
+      padding: 10px 12px; text-align: center;
+      border-bottom: 1px solid var(--card-border);
+    }
+    tbody tr:nth-child(even) { background: var(--input-bg); }
+    tbody tr:hover { background: color-mix(in srgb, var(--brand-primary) 5%, var(--input-bg)); }
+    .badge {
+      display: inline-flex; align-items: center; font-size: 10px; font-weight: 700;
+      padding: 3px 9px; border-radius: 20px; white-space: nowrap;
+    }
+    .badge-ok { background: #22c55e22; color: #22c55e; border: 1px solid #22c55e44; }
+    .badge-warn { background: #f59e0b22; color: #f59e0b; border: 1px solid #f59e0b44; }
+    .badge-muted { background: #6b728022; color: #6b7280; border: 1px solid #6b728044; }
+    .badge-info { background: #1e36f822; color: #1e36f8; border: 1px solid #1e36f844; }
+    .badge-rascunho { background: #f59e0b22; color: #d97706; border: 1px solid #f59e0b44; }
+    .badge-arquivado { background: #6b728022; color: #6b7280; border: 1px solid #6b728044; }
+    .badge-negativo { background: #e840251a; color: #e84025; border: 1px solid #e8402544; }
+    .badge-beneficio { background: #7c3aed1a; color: #7c3aed; border: 1px solid #7c3aed44; }
+    .tipo-tag {
+      display: inline-flex; align-items: center;
+      font-size: 10px; font-weight: 700; padding: 3px 9px; border-radius: 20px;
+      background: #6b728018; color: #6b7280; border: 1px solid #6b728033;
+      text-transform: uppercase; letter-spacing: 0.04em; vertical-align: middle;
+    }
+    .btn-icon {
+      width: 28px; height: 28px; border-radius: 8px;
+      border: 1px solid var(--card-border); background: var(--input-bg);
+      display: inline-flex; align-items: center; justify-content: center;
+      cursor: pointer; color: var(--text-muted); margin: 0 2px;
+    }
+    .btn-icon:hover { color: var(--brand-primary); border-color: color-mix(in srgb, var(--brand-primary) 30%, transparent); }
+    .btn-icon.danger { color: #f87171; border-color: #fecaca; background: #fff5f5; }
+    .btn-icon.danger:hover { color: #ef4444; border-color: #f87171; background: #fee2e2; }
+    .cta {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 10px 20px; border-radius: 10px; border: none;
+      background: linear-gradient(135deg, #4a2082, #1e36f8);
+      color: #fff; font-size: 13px; font-weight: 700; font-family: var(--font); cursor: pointer;
+    }
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    .barra-pesquisa { position: relative; width: 100%; max-width: 320px; }
+    .barra-pesquisa .search-icon {
+      position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+      color: var(--text-muted); pointer-events: none;
+    }
+    .barra-pesquisa input {
+      width: 100%; padding: 10px 14px 10px 38px; border-radius: 12px;
+      border: 1px solid var(--card-border); background: var(--input-bg);
+      font-family: var(--font); font-size: 13px; color: var(--text); outline: none;
+    }
+    .toolbar-row {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; flex-wrap: wrap; margin-bottom: 14px;
+    }
+
+    .modal-overlay {
+      display: none; position: fixed; inset: 0; z-index: 1000;
+      background: rgba(15, 15, 26, 0.65); padding: 24px 16px;
+      align-items: center; justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-panel {
+      width: min(860px, 100%); max-height: 90dvh;
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: 14px; box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+      display: flex; flex-direction: column; overflow: hidden;
+    }
+    .modal-panel.wide { width: min(960px, 100%); }
+    .modal-header { padding: 18px 20px 12px; border-bottom: 1px solid var(--card-border); position: relative; }
+    .modal-header h2 {
+      font-size: 16px; font-weight: 800; color: var(--brand-primary);
+      text-transform: uppercase; letter-spacing: 0.04em; padding-right: 36px;
+    }
+    .modal-header .modal-sub { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+    .modal-close {
+      position: absolute; top: 16px; right: 16px; width: 32px; height: 32px;
+      border-radius: 8px; border: 1px solid var(--card-border); background: var(--input-bg);
+      cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text-muted);
+    }
+    .modal-body { padding: 16px 20px; overflow-y: auto; flex: 1; }
+    .modal-footer {
+      padding: 14px 20px; border-top: 1px solid var(--card-border);
+      display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap;
+    }
+    .field { margin-bottom: 14px; }
+    .field label { display: block; font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; }
+    .field select, .field input[type="text"], .field input[type="number"], .field input[type="date"], .field textarea {
+      width: 100%; font-family: var(--font); font-size: 13px; padding: 10px 12px;
+      border-radius: 10px; border: 1px solid var(--card-border); background: var(--input-bg); color: var(--text);
+    }
+    .field textarea { min-height: 72px; resize: vertical; }
+    .field-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 640px) { .field-grid-2 { grid-template-columns: 1fr; } }
+    .campo-obrigatorio { color: #e84025; font-weight: 700; margin-left: 2px; }
+    .btn-modal {
+      padding: 10px 18px; border-radius: 10px; font-size: 13px; font-weight: 700;
+      font-family: var(--font); cursor: pointer; border: 1px solid var(--card-border);
+      background: var(--input-bg); color: var(--text);
+    }
+    .btn-modal.primary { background: linear-gradient(135deg, #4a2082, #1e36f8); color: #fff; border: none; }
+    .btn-modal.danger { background: #fff5f5; color: #ef4444; border-color: #fecaca; }
+    .modal-panel.narrow { width: min(480px, 100%); }
+    .modal-footer.split { justify-content: space-between; }
+    .modal-footer-msg { font-size: 12px; color: #e84025; font-weight: 600; flex: 1; min-height: 18px; }
+    .modal-footer-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+    .field[aria-readonly] input, .field[aria-readonly] select, .field[aria-readonly] textarea, .leitura { pointer-events: none; opacity: 0.92; }
+    .publico-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+    .publico-chips .pill { cursor: pointer; }
+    .beneficio-row { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+    .roster-item {
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      padding: 10px 0; border-bottom: 1px solid var(--card-border); font-size: 13px;
+    }
+    .roster-item:last-child { border-bottom: none; }
+    .roster-item .nome { font-weight: 600; }
+    .paginacao { display: flex; justify-content: flex-end; align-items: center; gap: 8px; margin-top: 12px; font-size: 12px; color: var(--text-muted); }
+    .empty { text-align: center; padding: 28px 12px; color: var(--text-muted); font-size: 13px; }
+
+    /* Módulos & Aulas (curso builder) */
+    .modulo-card { border: 1px solid var(--card-border); border-radius: 12px; margin-bottom: 12px; overflow: hidden; }
+    .modulo-head {
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      padding: 12px 14px; background: var(--input-bg); cursor: pointer;
+    }
+    .modulo-head .titulo { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; }
+    .modulo-head .chevron { transition: transform .15s ease; color: var(--text-muted); }
+    .modulo-card.aberto .chevron { transform: rotate(90deg); }
+    .modulo-body { padding: 10px 14px; display: none; }
+    .modulo-card.aberto .modulo-body { display: block; }
+    .aula-item {
+      display: flex; align-items: center; gap: 10px; padding: 9px 0;
+      border-bottom: 1px solid var(--card-border); font-size: 13px;
+    }
+    .aula-item:last-child { border-bottom: none; }
+    .aula-tipo-icon {
+      width: 26px; height: 26px; border-radius: 7px; flex-shrink: 0;
+      background: color-mix(in srgb, var(--brand-secondary) 12%, transparent);
+      color: var(--brand-secondary);
+      display: flex; align-items: center; justify-content: center; font-size: 13px;
+    }
+    .aula-item .titulo-aula { flex: 1; }
+    .aula-item .duracao { font-size: 11px; color: var(--text-muted); white-space: nowrap; }
+    .aula-actions { display: flex; align-items: center; flex-shrink: 0; }
+    .btn-add-inline {
+      display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700;
+      color: var(--brand-secondary); background: none; font-family: var(--font); cursor: pointer;
+      border: 1px dashed color-mix(in srgb, var(--brand-secondary) 40%, transparent);
+      border-radius: 8px; padding: 8px 12px; margin-top: 6px;
+    }
+    .progress-track { width: 100%; height: 8px; border-radius: 999px; background: var(--input-bg); border: 1px solid var(--card-border); overflow: hidden; }
+    .progress-fill { height: 100%; background: linear-gradient(90deg, #4a2082, #1e36f8); border-radius: 999px; }
+    .progress-wrap { display: flex; align-items: center; gap: 8px; min-width: 140px; }
+    .progress-wrap .pct { font-size: 12px; font-weight: 700; white-space: nowrap; }
+    .questao { border: 1px solid var(--card-border); border-radius: 12px; padding: 14px; margin-bottom: 12px; background: var(--input-bg); }
+    .questao-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 10px; }
+    .questao-head strong { font-size: 13px; }
+    .questao-enunciado { margin-bottom: 10px; }
+    .questao-enunciado input[type="text"] {
+      width: 100%; font-family: var(--font); font-size: 13px; padding: 10px 12px;
+      border-radius: 10px; border: 1px solid var(--card-border); background: #fff; color: var(--text);
+    }
+    .opcao { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 13px; }
+    .opcao input[type="radio"] { accent-color: var(--brand-primary); flex-shrink: 0; }
+    .opcao input[type="text"] {
+      flex: 1; font-family: var(--font); font-size: 13px; padding: 8px 10px;
+      border-radius: 8px; border: 1px solid var(--card-border); background: #fff; color: var(--text);
+    }
+    .opcao.correta input[type="text"] { color: #16a34a; font-weight: 600; border-color: #86efac; }
+    .upload-fake {
+      border: 1px dashed var(--card-border); border-radius: 10px; padding: 16px;
+      text-align: center; font-size: 13px; color: var(--text-muted); background: var(--input-bg);
+    }
+    .upload-fake button {
+      margin-top: 8px; font-family: var(--font); font-size: 12px; font-weight: 700;
+      padding: 8px 14px; border-radius: 8px; border: 1px solid var(--card-border);
+      background: #fff; cursor: pointer;
+    }
+    .aula-form { border: 1px solid color-mix(in srgb, var(--brand-secondary) 30%, var(--card-border)); border-radius: 12px; padding: 14px; margin-bottom: 10px; background: #fff; }
+    .aula-form-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 10px; }
+    .aula-form-actions button {
+      padding: 8px 14px; border-radius: 8px; font-size: 12px; font-weight: 700;
+      font-family: var(--font); cursor: pointer; border: 1px solid var(--card-border); background: var(--input-bg);
+    }
+    .aula-form-actions button.primary { background: linear-gradient(135deg, #4a2082, #1e36f8); color: #fff; border: none; }
+  </style>
+</head>
+<body>
+
+<div class="mockup-bar">
+  <strong>MOCKUP</strong> Academy → Cursos Livres (Academy Online)
+  <span style="opacity:0.4">|</span>
+  <span>2 de 4 páginas da Academy · catálogo self-paced estilo Udemy · opcional (benefício) ou obrigatório com prazo</span>
+  <span style="opacity:0.4">|</span>
+  <button class="active" id="btnTabCatalogo" type="button" onclick="setTab('catalogo')">Catálogo</button>
+  <button id="btnTabAdesao" type="button" onclick="setTab('adesao')">Adesão Obrigatória</button>
+</div>
+
+<div class="page-shell">
+  <header class="page-header">
+    <div class="page-icon" aria-hidden="true" style="display:none"></div>
+    <div class="page-header-row">
+      <div class="page-icon" aria-hidden="true">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+      </div>
+      <h1>Cursos Livres</h1>
+    </div>
+    <p class="subtitle">Catálogo de cursos livres da empresa, feitos no próprio ritmo do colaborador — com ou sem obrigatoriedade.</p>
+  </header>
+
+  <div class="filter-box">
+    <div class="filter-row" role="tablist" aria-label="Abas de Cursos Livres">
+      <button type="button" class="tab-btn active" id="tabCatalogo" role="tab" aria-selected="true" onclick="setTab('catalogo')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+        Catálogo
+      </button>
+      <button type="button" class="tab-btn" id="tabAdesao" role="tab" aria-selected="false" onclick="setTab('adesao')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        Adesão Obrigatória
+      </button>
+    </div>
+    <div class="filter-row" id="filtroCatalogoStatus">
+      <button type="button" class="pill active" id="clStatusTodos" onclick="setCursoStatusFiltro('todos')">Todos os status</button>
+      <button type="button" class="pill" id="clStatusPublicada" onclick="setCursoStatusFiltro('publicada')">Publicados</button>
+      <button type="button" class="pill" id="clStatusAprovacao" onclick="setCursoStatusFiltro('aprovacao')">Em aprovação</button>
+      <button type="button" class="pill" id="clStatusRascunho" onclick="setCursoStatusFiltro('rascunho')">Rascunho</button>
+      <button type="button" class="pill" id="clStatusArquivada" onclick="setCursoStatusFiltro('arquivada')">Arquivados</button>
+    </div>
+    <div class="filter-row" id="filtroCatalogoCategorias">
+      <button type="button" class="pill active" onclick="setCursoCategoriaFiltro(this)">Todas categorias</button>
+      <button type="button" class="pill" onclick="setCursoCategoriaFiltro(this)">Compliance</button>
+      <button type="button" class="pill" onclick="setCursoCategoriaFiltro(this)">Liderança</button>
+      <button type="button" class="pill" onclick="setCursoCategoriaFiltro(this)">Produto</button>
+      <button type="button" class="pill" onclick="setCursoCategoriaFiltro(this)">Ferramentas</button>
+      <button type="button" class="pill" onclick="setCursoCategoriaFiltro(this)">Marketing</button>
+      <button type="button" class="pill" onclick="setCursoCategoriaFiltro(this)">Operações</button>
+    </div>
+  </div>
+
+  <!-- ═══ ABA CATÁLOGO ═══ -->
+  <div id="panel-catalogo" class="panel active">
+    <div class="hint-box">
+      Curso livre é feito sozinho, no próprio ritmo do colaborador, direto na plataforma — como uma Udemy interna.
+      Pode ser <strong>opcional</strong> (vira benefício) ou <strong>obrigatório</strong> (com prazo e público exigido — acompanhe em Adesão Obrigatória).
+      Quando o autor não é Admin, o curso nasce em <strong>Em aprovação</strong> até o Academy-RH revisar.
+    </div>
+    <div class="kpi-grid-4">
+      <div class="kpi-card">
+        <div class="bar" style="background:#22c55e"></div>
+        <div class="body">
+          <div class="kpi-label">Cursos publicados</div>
+          <div class="kpi-value">4</div>
+          <div class="kpi-vs">Ativos no catálogo hoje</div>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="bar" style="background:#1e36f8"></div>
+        <div class="body">
+          <div class="kpi-label">Em aprovação</div>
+          <div class="kpi-value">1</div>
+          <div class="kpi-vs">Aguardando revisão do Academy-RH</div>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="bar" style="background:#f59e0b"></div>
+        <div class="body">
+          <div class="kpi-label">Obrigatórios ativos</div>
+          <div class="kpi-value">2</div>
+          <div class="kpi-vs">Compliance · Prevenção à Lavagem de Dinheiro</div>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="bar" style="background:#7c3aed"></div>
+        <div class="body">
+          <div class="kpi-label">Certificados emitidos</div>
+          <div class="kpi-value">132</div>
+          <div class="kpi-vs">Últimos 30 dias</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-box">
+      <div class="section-head">
+        <h2 class="section-title">Catálogo de cursos <span class="sub">módulos e aulas no estilo Udemy — autoria descentralizada com aprovação</span></h2>
+        <button type="button" class="cta" onclick="abrirModalNovoCurso()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+          Novo curso
+        </button>
+      </div>
+      <div class="toolbar-row">
+        <div class="barra-pesquisa">
+          <svg class="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <input type="search" placeholder="Buscar curso…" aria-label="Buscar curso" />
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <caption>Catálogo de cursos livres</caption>
+          <thead>
+            <tr>
+              <th scope="col">Curso</th>
+              <th scope="col">Categoria</th>
+              <th scope="col">Autor</th>
+              <th scope="col">Obrigatoriedade</th>
+              <th scope="col">Público-alvo</th>
+              <th scope="col">Conteúdo</th>
+              <th scope="col">Benefícios</th>
+              <th scope="col">Status</th>
+              <th scope="col">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyCursos">
+            <tr data-curso="pld" data-status="publicada">
+              <td>Prevenção à Lavagem de Dinheiro</td>
+              <td><span class="tipo-tag">Compliance</span></td>
+              <td>Camila Duarte <span style="color:var(--text-muted)">· Gestora de RH</span></td>
+              <td><span class="badge badge-warn">Obrigatório até 31/12/2026</span></td>
+              <td>Todos os colaboradores</td>
+              <td style="white-space:nowrap">3 módulos · 8 aulas</td>
+              <td><div class="beneficio-row"><span class="badge badge-beneficio">🎓 Certificado</span></div></td>
+              <td class="cel-status"><span class="badge badge-ok">Publicada</span></td>
+              <td>
+                <button class="btn-icon" title="Ver curso" onclick="abrirModalVerCurso('pld')">👁</button>
+                <button class="btn-icon" title="Montar conteúdo" onclick="abrirModalModulosAulas('pld')">📚</button>
+                <button class="btn-icon danger" title="Arquivar curso">▣</button>
+              </td>
+            </tr>
+            <tr data-curso="etica" data-status="publicada">
+              <td>Código de Ética e Compliance</td>
+              <td><span class="tipo-tag">Compliance</span></td>
+              <td>Camila Duarte <span style="color:var(--text-muted)">· Gestora de RH</span></td>
+              <td><span class="badge badge-warn">Obrigatório até 31/12/2026</span></td>
+              <td>Todos os colaboradores</td>
+              <td style="white-space:nowrap">2 módulos · 5 aulas</td>
+              <td><div class="beneficio-row"><span class="badge badge-beneficio">🎓 Certificado</span></div></td>
+              <td class="cel-status"><span class="badge badge-ok">Publicada</span></td>
+              <td>
+                <button class="btn-icon" title="Ver curso" onclick="abrirModalVerCurso('etica')">👁</button>
+                <button class="btn-icon" title="Montar conteúdo" onclick="abrirModalModulosAulas('etica')">📚</button>
+                <button class="btn-icon danger" title="Arquivar curso">▣</button>
+              </td>
+            </tr>
+            <tr data-curso="lideranca" data-status="publicada">
+              <td>Liderança para Novos Gestores</td>
+              <td><span class="tipo-tag">Liderança</span></td>
+              <td>Ana Ribeiro <span style="color:var(--text-muted)">· Gestora de RH</span></td>
+              <td><span class="badge badge-muted">Opcional</span></td>
+              <td>Todos os colaboradores</td>
+              <td style="white-space:nowrap">4 módulos · 12 aulas</td>
+              <td><div class="beneficio-row"><span class="badge badge-beneficio">🎓 Certificado</span><span class="badge badge-beneficio">⭐ 80 pts</span></div></td>
+              <td class="cel-status"><span class="badge badge-ok">Publicada</span></td>
+              <td>
+                <button class="btn-icon" title="Ver curso" onclick="abrirModalVerCurso('lideranca')">👁</button>
+                <button class="btn-icon" title="Montar conteúdo" onclick="abrirModalModulosAulas('lideranca')">📚</button>
+                <button class="btn-icon danger" title="Arquivar curso">▣</button>
+              </td>
+            </tr>
+            <tr data-curso="excel" data-status="aprovacao">
+              <td>Excel Avançado para Financeiro</td>
+              <td><span class="tipo-tag">Ferramentas</span></td>
+              <td>Marcos Lima <span style="color:var(--text-muted)">· Gestor Financeiro</span></td>
+              <td><span class="badge badge-muted">Opcional</span></td>
+              <td>Gestor · Executivo</td>
+              <td style="white-space:nowrap">5 módulos · 14 aulas</td>
+              <td><div class="beneficio-row"><span class="badge badge-beneficio">🎓 Certificado</span></div></td>
+              <td class="cel-status"><span class="badge badge-info">Em aprovação</span></td>
+              <td>
+                <button class="btn-icon" title="Revisar curso" onclick="abrirModalAprovarCurso('excel')">🔍</button>
+              </td>
+            </tr>
+            <tr data-curso="storytelling" data-status="rascunho">
+              <td>Storytelling para Redes Sociais</td>
+              <td><span class="tipo-tag">Marketing</span></td>
+              <td>Bruno Alves <span style="color:var(--text-muted)">· Gestor de Marketing</span></td>
+              <td><span class="badge badge-muted">Opcional</span></td>
+              <td>Influencer · Agência</td>
+              <td style="white-space:nowrap">2 módulos · 6 aulas</td>
+              <td><div class="beneficio-row"><span class="badge badge-beneficio">⭐ 30 pts</span></div></td>
+              <td class="cel-status"><span class="badge badge-rascunho">Rascunho</span></td>
+              <td>
+                <button class="btn-icon" title="Ver curso" onclick="abrirModalVerCurso('storytelling')">👁</button>
+                <button class="btn-icon" title="Editar informações" onclick="abrirModalEditarCurso('storytelling')">✎</button>
+                <button class="btn-icon" title="Montar conteúdo" onclick="abrirModalModulosAulas('storytelling')">📚</button>
+              </td>
+            </tr>
+            <tr data-curso="escala" data-status="arquivada">
+              <td>Fundamentos de Gestão de Escala</td>
+              <td><span class="tipo-tag">Operações</span></td>
+              <td>Camila Duarte <span style="color:var(--text-muted)">· Gestora de RH</span></td>
+              <td><span class="badge badge-muted">Opcional</span></td>
+              <td>Operador (whitelabel)</td>
+              <td style="white-space:nowrap">3 módulos · 7 aulas</td>
+              <td><div class="beneficio-row"><span class="badge badge-beneficio">🎓 Certificado</span></div></td>
+              <td class="cel-status"><span class="badge badge-arquivado">Arquivada</span></td>
+              <td>
+                <button class="btn-icon" title="Ver curso" onclick="abrirModalVerCurso('escala')">👁</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="paginacao">1–6 de 6</div>
+    </div>
+  </div>
+
+  <!-- ═══ ABA ADESÃO OBRIGATÓRIA ═══ -->
+  <div id="panel-adesao" class="panel">
+    <div class="hint-box">
+      Só cursos marcados como <strong>Obrigatório</strong> aparecem aqui. A conclusão é calculada sobre o público exigido de cada curso — não sobre todos os colaboradores.
+    </div>
+    <div class="kpi-grid-3">
+      <div class="kpi-card">
+        <div class="bar" style="background:#f59e0b"></div>
+        <div class="body">
+          <div class="kpi-label">Cursos obrigatórios ativos</div>
+          <div class="kpi-value">2</div>
+          <div class="kpi-vs">Compliance · Prevenção à Lavagem de Dinheiro</div>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="bar" style="background:#22c55e"></div>
+        <div class="body">
+          <div class="kpi-label">Colaboradores em dia</div>
+          <div class="kpi-value">91%</div>
+          <div class="kpi-vs">Média entre os 2 cursos obrigatórios</div>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="bar" style="background:#e84025"></div>
+        <div class="body">
+          <div class="kpi-label">Atrasados (prazo vencido)</div>
+          <div class="kpi-value">7</div>
+          <div class="kpi-vs">Precisam de acompanhamento do RH</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-box">
+      <div class="section-head">
+        <h2 class="section-title">Cursos obrigatórios <span class="sub">conclusão do público exigido, por curso</span></h2>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <caption>Adesão a cursos obrigatórios</caption>
+          <thead>
+            <tr>
+              <th scope="col">Curso</th>
+              <th scope="col">Público exigido</th>
+              <th scope="col">Prazo</th>
+              <th scope="col">Conclusão</th>
+              <th scope="col">Pendentes</th>
+              <th scope="col">Atrasados</th>
+              <th scope="col">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Prevenção à Lavagem de Dinheiro</td>
+              <td>Todos os colaboradores <span style="color:var(--text-muted)">(214)</span></td>
+              <td>31/12/2026</td>
+              <td>
+                <div class="progress-wrap">
+                  <div class="progress-track"><div class="progress-fill" style="width:89%"></div></div>
+                  <span class="pct">89%</span>
+                </div>
+              </td>
+              <td>19</td>
+              <td><span class="badge badge-negativo">4</span></td>
+              <td><button class="btn-icon" title="Ver pendentes" onclick="abrirModalPendentes('pld')">👁</button></td>
+            </tr>
+            <tr>
+              <td>Código de Ética e Compliance</td>
+              <td>Todos os colaboradores <span style="color:var(--text-muted)">(214)</span></td>
+              <td>31/12/2026</td>
+              <td>
+                <div class="progress-wrap">
+                  <div class="progress-track"><div class="progress-fill" style="width:93%"></div></div>
+                  <span class="pct">93%</span>
+                </div>
+              </td>
+              <td>15</td>
+              <td><span class="badge badge-negativo">3</span></td>
+              <td><button class="btn-icon" title="Ver pendentes" onclick="abrirModalPendentes('etica')">👁</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="paginacao">1–2 de 2</div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Novo / Editar curso (informações gerais) -->
+<div id="modalFormCurso" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalFormCursoTitulo" onclick="if(event.target===this)fecharModais()">
+  <div class="modal-panel wide">
+    <div class="modal-header">
+      <button type="button" class="modal-close" onclick="fecharModais()" aria-label="Fechar">✕</button>
+      <h2 id="modalFormCursoTitulo">Novo curso</h2>
+      <p class="modal-sub" id="modalFormCursoSub">Informações gerais — módulos e aulas são montados depois, em "Montar conteúdo".</p>
+    </div>
+    <div class="modal-body">
+      <div class="field-grid-2">
+        <div class="field">
+          <label for="cursoNome">Nome do curso <span class="campo-obrigatorio">*</span></label>
+          <input id="cursoNome" type="text" placeholder="Ex.: Liderança para Novos Gestores" />
+        </div>
+        <div class="field">
+          <label for="cursoCategoria">Categoria <span class="campo-obrigatorio">*</span></label>
+          <input id="cursoCategoria" type="text" list="categoriasCurso" placeholder="Ex.: Liderança, Produto, Ferramentas…" />
+          <datalist id="categoriasCurso">
+            <option value="Compliance"></option>
+            <option value="Liderança"></option>
+            <option value="Produto"></option>
+            <option value="Ferramentas"></option>
+            <option value="Marketing"></option>
+            <option value="Comercial"></option>
+            <option value="Financeiro"></option>
+            <option value="Operações"></option>
+          </datalist>
+        </div>
+      </div>
+      <div class="field">
+        <label for="cursoDesc">Descrição curta <span class="campo-obrigatorio">*</span></label>
+        <textarea id="cursoDesc" placeholder="O que a pessoa aprende neste curso."></textarea>
+      </div>
+      <div class="field-grid-2">
+        <div class="field">
+          <label for="cursoAutor">Autor</label>
+          <select id="cursoAutor">
+            <option>Você (Felipe Saturnino · Admin)</option>
+            <option>Ana Ribeiro · Gestora de RH</option>
+            <option>Camila Duarte · Gestora de RH</option>
+            <option>Marcos Lima · Gestor Financeiro</option>
+            <option>Bruno Alves · Gestor de Marketing</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="cursoCarga">Carga horária estimada</label>
+          <input id="cursoCarga" type="text" placeholder="Ex.: 2h" />
+        </div>
+      </div>
+      <div class="field">
+        <label for="cursoPublicoTipo">Público-alvo <span class="campo-obrigatorio">*</span></label>
+        <select id="cursoPublicoTipo" onchange="atualizarPublicoNovoCurso()">
+          <option value="todos">Todos os colaboradores</option>
+          <option value="perfis">Perfis específicos</option>
+          <option value="operadora">Operadora específica</option>
+        </select>
+      </div>
+      <div class="field" id="campoCursoPublicoPerfis" hidden>
+        <label>Perfis liberados</label>
+        <div class="publico-chips">
+          <button type="button" class="pill" onclick="this.classList.toggle('active')">Admin</button>
+          <button type="button" class="pill" onclick="this.classList.toggle('active')">Gestor</button>
+          <button type="button" class="pill" onclick="this.classList.toggle('active')">Executivo</button>
+          <button type="button" class="pill" onclick="this.classList.toggle('active')">Operador</button>
+          <button type="button" class="pill" onclick="this.classList.toggle('active')">Agência</button>
+          <button type="button" class="pill" onclick="this.classList.toggle('active')">Influencer</button>
+          <button type="button" class="pill" onclick="this.classList.toggle('active')">Prestador</button>
+        </div>
+      </div>
+      <div class="field" id="campoCursoPublicoOperadora" hidden>
+        <label for="cursoOperadora">Operadora</label>
+        <select id="cursoOperadora">
+          <option>—</option>
+          <option>Casa de Apostas</option>
+          <option>BetX (whitelabel)</option>
+        </select>
+      </div>
+
+      <p class="section-title" style="margin-top:4px">Obrigatoriedade</p>
+      <div class="field-grid-2">
+        <div class="field">
+          <label for="cursoObrigatorio">Este curso é</label>
+          <select id="cursoObrigatorio" onchange="atualizarObrigatoriedadeCurso()">
+            <option value="opcional">Opcional — vira um benefício</option>
+            <option value="obrigatorio">Obrigatório — tem prazo e entra em Adesão</option>
+          </select>
+        </div>
+        <div class="field" id="campoCursoPrazo" hidden>
+          <label for="cursoPrazo">Prazo para concluir <span class="campo-obrigatorio">*</span></label>
+          <input id="cursoPrazo" type="date" />
+        </div>
+      </div>
+
+      <p class="section-title" style="margin-top:4px">Benefícios <span class="sub">opcionais e independentes entre si — inclusive em cursos obrigatórios</span></p>
+      <div class="field-grid-2">
+        <div class="field">
+          <label for="cursoCertificado">Certificado ao concluir</label>
+          <select id="cursoCertificado">
+            <option>Sim, gerar certificado em PDF</option>
+            <option>Não</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="cursoPontos">Pontos ao concluir</label>
+          <input id="cursoPontos" type="number" min="0" step="10" placeholder="Ex.: 50" />
+        </div>
+      </div>
+      <p class="hint-box" style="margin-top:4px">
+        Não existe mais selo por curso. O badge do prestador é calculado automaticamente pela soma de pontos de todos os cursos concluídos —
+        as faixas de pontuação de cada badge são configuradas à parte, uma única vez pra Academy inteira.
+      </p>
+    </div>
+    <div class="modal-footer split">
+      <div class="modal-footer-msg" id="cursoFormErro"></div>
+      <div class="modal-footer-actions">
+        <button type="button" class="btn-modal" onclick="salvarRascunhoCurso()">Salvar rascunho</button>
+        <button type="button" class="btn-modal" onclick="enviarCursoParaAprovacao()">Enviar para aprovação</button>
+        <button type="button" class="btn-modal primary" onclick="publicarCursoDireto()">Publicar (Admin)</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Montar conteúdo (módulos e aulas) -->
+<div id="modalModulosAulas" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalModulosAulasTitulo" onclick="if(event.target===this)fecharModais()">
+  <div class="modal-panel wide">
+    <div class="modal-header">
+      <button type="button" class="modal-close" onclick="fecharModais()" aria-label="Fechar">✕</button>
+      <h2 id="modalModulosAulasTitulo">Montar conteúdo</h2>
+      <p class="modal-sub">Organize em módulos e aulas, como num curso online. Arraste com os botões ↑/↓ pra reordenar.</p>
+    </div>
+    <div class="modal-body">
+      <div class="hint-box">
+        Ao criar uma aula, escolha o tipo: <strong>Vídeo</strong> e <strong>PDF</strong> pedem o arquivo (ou um link, no caso de vídeo hospedado fora);
+        <strong>Texto</strong> é escrito direto aqui; <strong>Exercício</strong> é um quiz rápido de prática, sem nota mínima, com a resposta certa marcada por você.
+        Quem realmente aprova o curso e libera o certificado é a <strong>Prova final</strong>, no fim desta tela.
+      </div>
+      <div id="listaModulos">
+        <div class="modulo-card aberto">
+          <div class="modulo-head" onclick="toggleModulo(this.parentElement)">
+            <span class="titulo">
+              <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m9 6 6 6-6 6"/></svg>
+              Módulo 1 — Introdução
+            </span>
+            <span style="display:flex;gap:4px" onclick="event.stopPropagation()">
+              <button class="btn-icon" title="Renomear módulo">✎</button>
+              <button class="btn-icon danger" title="Remover módulo">✕</button>
+            </span>
+          </div>
+          <div class="modulo-body">
+            <div class="aula-item">
+              <span class="aula-tipo-icon" title="Vídeo">🎬</span>
+              <span class="titulo-aula">Boas-vindas e objetivos do curso</span>
+              <span class="duracao">6 min</span>
+              <span class="aula-actions">
+                <button class="btn-icon" title="Subir">↑</button>
+                <button class="btn-icon" title="Descer">↓</button>
+                <button class="btn-icon danger" title="Remover aula">✕</button>
+              </span>
+            </div>
+            <div class="aula-item">
+              <span class="aula-tipo-icon" title="PDF">📄</span>
+              <span class="titulo-aula">Material de apoio (PDF)</span>
+              <span class="duracao">—</span>
+              <span class="aula-actions">
+                <button class="btn-icon" title="Subir">↑</button>
+                <button class="btn-icon" title="Descer">↓</button>
+                <button class="btn-icon danger" title="Remover aula">✕</button>
+              </span>
+            </div>
+            <button type="button" class="btn-add-inline" onclick="iniciarNovaAula(this)">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 5v14M5 12h14"/></svg>
+              Nova aula
+            </button>
+          </div>
+        </div>
+
+        <div class="modulo-card">
+          <div class="modulo-head" onclick="toggleModulo(this.parentElement)">
+            <span class="titulo">
+              <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m9 6 6 6-6 6"/></svg>
+              Módulo 2 — Conteúdo principal
+            </span>
+            <span style="display:flex;gap:4px" onclick="event.stopPropagation()">
+              <button class="btn-icon" title="Renomear módulo">✎</button>
+              <button class="btn-icon danger" title="Remover módulo">✕</button>
+            </span>
+          </div>
+          <div class="modulo-body">
+            <div class="aula-item">
+              <span class="aula-tipo-icon" title="Vídeo">🎬</span>
+              <span class="titulo-aula">Conceitos fundamentais</span>
+              <span class="duracao">14 min</span>
+              <span class="aula-actions">
+                <button class="btn-icon" title="Subir">↑</button>
+                <button class="btn-icon" title="Descer">↓</button>
+                <button class="btn-icon danger" title="Remover aula">✕</button>
+              </span>
+            </div>
+            <div class="aula-item">
+              <span class="aula-tipo-icon" title="Texto">📝</span>
+              <span class="titulo-aula">Estudo de caso</span>
+              <span class="duracao">8 min de leitura</span>
+              <span class="aula-actions">
+                <button class="btn-icon" title="Subir">↑</button>
+                <button class="btn-icon" title="Descer">↓</button>
+                <button class="btn-icon danger" title="Remover aula">✕</button>
+              </span>
+            </div>
+            <div class="aula-item">
+              <span class="aula-tipo-icon" title="Exercício">❓</span>
+              <span class="titulo-aula">Exercício de fixação</span>
+              <span class="duracao">5 questões</span>
+              <span class="aula-actions">
+                <button class="btn-icon" title="Subir">↑</button>
+                <button class="btn-icon" title="Descer">↓</button>
+                <button class="btn-icon danger" title="Remover aula">✕</button>
+              </span>
+            </div>
+            <button type="button" class="btn-add-inline" onclick="iniciarNovaAula(this)">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 5v14M5 12h14"/></svg>
+              Nova aula
+            </button>
+          </div>
+        </div>
+      </div>
+      <button type="button" class="btn-add-inline" onclick="adicionarModulo()">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 5v14M5 12h14"/></svg>
+        Novo módulo
+      </button>
+
+      <p class="section-title" style="margin-top:20px">Prova final <span class="sub">obrigatória pra emitir o certificado, quando o curso tiver certificado</span></p>
+      <div class="field-grid-2">
+        <div class="field">
+          <label for="cursoProvaMin">Nota mínima para aprovação</label>
+          <input id="cursoProvaMin" type="number" min="0" max="100" placeholder="Ex.: 70" />
+        </div>
+        <div class="field">
+          <label for="cursoProvaTentativas">Tentativas permitidas</label>
+          <select id="cursoProvaTentativas">
+            <option>Ilimitadas</option>
+            <option>1 tentativa</option>
+            <option>2 tentativas</option>
+            <option>3 tentativas</option>
+          </select>
+        </div>
+      </div>
+      <div id="questoesProvaFinal">
+        <div class="questao">
+          <div class="questao-head">
+            <strong>Questão 1</strong>
+            <button type="button" class="btn-icon danger" title="Remover questão" onclick="this.closest('.questao').remove()">✕</button>
+          </div>
+          <div class="questao-enunciado"><input type="text" value="Qual é o objetivo principal deste curso?" /></div>
+          <div class="opcao correta">
+            <input type="radio" name="correta_pf1" checked onclick="marcarCorreta(this)" />
+            <input type="text" value="Aprender os conceitos básicos do tema" />
+          </div>
+          <div class="opcao">
+            <input type="radio" name="correta_pf1" onclick="marcarCorreta(this)" />
+            <input type="text" value="Obter o certificado sem precisar estudar" />
+          </div>
+          <div class="opcao">
+            <input type="radio" name="correta_pf1" onclick="marcarCorreta(this)" />
+            <input type="text" value="Substituir o treinamento presencial" />
+          </div>
+          <div class="opcao">
+            <input type="radio" name="correta_pf1" onclick="marcarCorreta(this)" />
+            <input type="text" value="Nenhuma das anteriores" />
+          </div>
+        </div>
+      </div>
+      <button type="button" class="btn-add-inline" onclick="adicionarQuestao('questoesProvaFinal')">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 5v14M5 12h14"/></svg>
+        Nova questão
+      </button>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn-modal" onclick="fecharModais()">Fechar</button>
+      <button type="button" class="btn-modal primary" onclick="fecharModais()">Salvar conteúdo</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Ver curso -->
+<div id="modalVerCurso" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalVerCursoTitulo" onclick="if(event.target===this)fecharModais()">
+  <div class="modal-panel">
+    <div class="modal-header">
+      <button type="button" class="modal-close" onclick="fecharModais()" aria-label="Fechar">✕</button>
+      <h2 id="modalVerCursoTitulo">Curso livre</h2>
+      <p class="modal-sub">Visualização — edição fica em "Editar informações" ou "Montar conteúdo".</p>
+    </div>
+    <div class="modal-body">
+      <div class="field-grid-2">
+        <div class="field leitura">
+          <label>Categoria</label>
+          <input id="verCursoCategoria" type="text" readonly />
+        </div>
+        <div class="field leitura">
+          <label>Autor</label>
+          <input id="verCursoAutor" type="text" readonly />
+        </div>
+      </div>
+      <div class="field leitura">
+        <label>Descrição</label>
+        <textarea id="verCursoDesc" readonly></textarea>
+      </div>
+      <div class="field-grid-2">
+        <div class="field leitura">
+          <label>Público-alvo</label>
+          <input id="verCursoPublico" type="text" readonly />
+        </div>
+        <div class="field leitura">
+          <label>Obrigatoriedade</label>
+          <input id="verCursoObrigatorio" type="text" readonly />
+        </div>
+      </div>
+      <div class="field leitura">
+        <label>Status</label>
+        <input id="verCursoStatus" type="text" readonly />
+      </div>
+      <p class="section-title" style="margin-top:4px">Benefícios</p>
+      <div class="beneficio-row" id="verCursoBeneficios" style="margin-bottom:14px;justify-content:flex-start"></div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn-modal" onclick="fecharModais()">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Aprovar / reprovar curso -->
+<div id="modalAprovarCurso" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalAprovarCursoTitulo" onclick="if(event.target===this)fecharModais()">
+  <div class="modal-panel">
+    <div class="modal-header">
+      <button type="button" class="modal-close" onclick="fecharModais()" aria-label="Fechar">✕</button>
+      <h2 id="modalAprovarCursoTitulo">Revisar curso</h2>
+      <p class="modal-sub" id="modalAprovarCursoSub">Curso enviado por um Gestor de área — aguardando aprovação do Academy-RH.</p>
+    </div>
+    <div class="modal-body">
+      <div class="field-grid-2">
+        <div class="field leitura">
+          <label>Categoria</label>
+          <input id="aprovarCursoCategoria" type="text" readonly />
+        </div>
+        <div class="field leitura">
+          <label>Público-alvo</label>
+          <input id="aprovarCursoPublico" type="text" readonly />
+        </div>
+      </div>
+      <div class="field leitura">
+        <label>Benefícios propostos</label>
+        <input id="aprovarCursoBeneficios" type="text" readonly />
+      </div>
+      <div class="field">
+        <label for="aprovarCursoComentario">Comentário <span style="font-weight:400;color:var(--text-muted)">(obrigatório para reprovar)</span></label>
+        <textarea id="aprovarCursoComentario" placeholder="Ex.: Ajustar carga horária antes de publicar."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer split">
+      <div class="modal-footer-msg" id="aprovarCursoErro"></div>
+      <div class="modal-footer-actions">
+        <button type="button" class="btn-modal danger" onclick="confirmarReprovarCurso()">Reprovar</button>
+        <button type="button" class="btn-modal primary" onclick="confirmarAprovarCurso()">Aprovar e publicar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: pendentes de curso obrigatório -->
+<div id="modalPendentes" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalPendentesTitulo" onclick="if(event.target===this)fecharModais()">
+  <div class="modal-panel">
+    <div class="modal-header">
+      <button type="button" class="modal-close" onclick="fecharModais()" aria-label="Fechar">✕</button>
+      <h2 id="modalPendentesTitulo">Pendentes — Prevenção à Lavagem de Dinheiro</h2>
+      <p class="modal-sub">Prazo 31/12/2026 · 19 pendentes, 4 com prazo vencido</p>
+    </div>
+    <div class="modal-body">
+      <div class="roster-item">
+        <span class="nome">Thiago Ramos</span>
+        <span class="badge badge-negativo">Atrasado — prazo vencido</span>
+      </div>
+      <div class="roster-item">
+        <span class="nome">Larissa Souza</span>
+        <span class="badge badge-warn">Em andamento — 40%</span>
+      </div>
+      <div class="roster-item">
+        <span class="nome">Pedro Alves</span>
+        <span class="badge badge-muted">Não iniciado</span>
+      </div>
+      <div class="roster-item">
+        <span class="nome">Fernanda Costa</span>
+        <span class="badge badge-warn">Em andamento — 75%</span>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn-modal" onclick="fecharModais()">Fechar</button>
+      <button type="button" class="btn-modal primary" onclick="fecharModais()">Notificar pendentes</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  function setTab(tab) {
+    document.querySelectorAll(".panel").forEach((p) => p.classList.remove("active"));
+    document.getElementById("panel-" + tab).classList.add("active");
+    document.querySelectorAll(".tab-btn").forEach((b) => {
+      b.classList.remove("active");
+      b.setAttribute("aria-selected", "false");
+    });
+    document.querySelectorAll(".mockup-bar button").forEach((b) => b.classList.remove("active"));
+    const TAB_BTNS = {
+      catalogo: ["tabCatalogo", "btnTabCatalogo"],
+      adesao: ["tabAdesao", "btnTabAdesao"],
+    };
+    (TAB_BTNS[tab] || []).forEach((id) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.classList.add("active");
+      if (el.getAttribute("role") === "tab") el.setAttribute("aria-selected", "true");
+    });
+    document.getElementById("filtroCatalogoStatus").style.display = tab === "catalogo" ? "flex" : "none";
+    document.getElementById("filtroCatalogoCategorias").style.display = tab === "catalogo" ? "flex" : "none";
+  }
+
+  function fecharModais() {
+    document.querySelectorAll(".modal-overlay").forEach((m) => m.classList.remove("open"));
+  }
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") fecharModais();
+  });
+
+  // ═══ CURSOS ═══
+  const CURSOS = {
+    pld: { nome: "Prevenção à Lavagem de Dinheiro", categoria: "Compliance", autor: "Camila Duarte · Gestora de RH", publico: "Todos os colaboradores", status: "Publicada", obrigatorio: true, prazo: "31/12/2026", cert: true, pontos: 0, desc: "Sinais de alerta, obrigações legais e o que fazer em caso de suspeita." },
+    etica: { nome: "Código de Ética e Compliance", categoria: "Compliance", autor: "Camila Duarte · Gestora de RH", publico: "Todos os colaboradores", status: "Publicada", obrigatorio: true, prazo: "31/12/2026", cert: true, pontos: 0, desc: "Conduta esperada, conflitos de interesse e canal de denúncias." },
+    lideranca: { nome: "Liderança para Novos Gestores", categoria: "Liderança", autor: "Ana Ribeiro · Gestora de RH", publico: "Todos os colaboradores", status: "Publicada", obrigatorio: false, prazo: "", cert: true, pontos: 80, desc: "Fundamentos de gestão de pessoas para quem acabou de assumir um time." },
+    excel: { nome: "Excel Avançado para Financeiro", categoria: "Ferramentas", autor: "Marcos Lima · Gestor Financeiro", publico: "Gestor · Executivo", status: "Em aprovação", obrigatorio: false, prazo: "", cert: true, pontos: 0, desc: "Tabelas dinâmicas, PROCV/PROCX e modelos de fechamento mensal." },
+    storytelling: { nome: "Storytelling para Redes Sociais", categoria: "Marketing", autor: "Bruno Alves · Gestor de Marketing", publico: "Influencer · Agência", status: "Rascunho", obrigatorio: false, prazo: "", cert: false, pontos: 30, desc: "Como estruturar um roteiro de vídeo curto que retém audiência." },
+    escala: { nome: "Fundamentos de Gestão de Escala", categoria: "Operações", autor: "Camila Duarte · Gestora de RH", publico: "Operador (whitelabel)", status: "Arquivada", obrigatorio: false, prazo: "", cert: true, pontos: 0, desc: "Conceitos básicos de cobertura de turno para operadoras parceiras." },
+  };
+
+  function beneficiosHtml(c) {
+    let html = "";
+    if (c.cert) html += '<span class="badge badge-beneficio">🎓 Certificado</span>';
+    if (c.pontos > 0) html += '<span class="badge badge-beneficio">⭐ ' + c.pontos + ' pts</span>';
+    if (!html) html = '<span class="badge badge-muted">Sem benefício definido</span>';
+    return html;
+  }
+
+  function atualizarPublicoNovoCurso() {
+    const tipo = document.getElementById("cursoPublicoTipo").value;
+    document.getElementById("campoCursoPublicoPerfis").hidden = tipo !== "perfis";
+    document.getElementById("campoCursoPublicoOperadora").hidden = tipo !== "operadora";
+  }
+
+  function atualizarObrigatoriedadeCurso() {
+    const obrigatorio = document.getElementById("cursoObrigatorio").value === "obrigatorio";
+    document.getElementById("campoCursoPrazo").hidden = !obrigatorio;
+  }
+
+  function abrirModalNovoCurso() {
+    document.getElementById("modalFormCursoTitulo").textContent = "Novo curso";
+    document.getElementById("modalFormCursoSub").textContent = "Informações gerais — módulos e aulas são montados depois, em \"Montar conteúdo\".";
+    document.getElementById("cursoNome").value = "";
+    document.getElementById("cursoCategoria").value = "";
+    document.getElementById("cursoDesc").value = "";
+    document.getElementById("cursoCarga").value = "";
+    document.getElementById("cursoPontos").value = "";
+    document.getElementById("cursoPublicoTipo").value = "todos";
+    document.getElementById("cursoObrigatorio").value = "opcional";
+    document.getElementById("cursoPrazo").value = "";
+    document.getElementById("cursoFormErro").textContent = "";
+    atualizarPublicoNovoCurso();
+    atualizarObrigatoriedadeCurso();
+    document.getElementById("modalFormCurso").classList.add("open");
+  }
+
+  function abrirModalEditarCurso(id) {
+    const c = CURSOS[id];
+    if (!c) return;
+    document.getElementById("modalFormCursoTitulo").textContent = "Editar curso";
+    document.getElementById("modalFormCursoSub").textContent = "Status atual: " + c.status + ".";
+    document.getElementById("cursoNome").value = c.nome;
+    document.getElementById("cursoCategoria").value = c.categoria;
+    document.getElementById("cursoDesc").value = c.desc;
+    document.getElementById("cursoPontos").value = c.pontos || "";
+    document.getElementById("cursoObrigatorio").value = c.obrigatorio ? "obrigatorio" : "opcional";
+    document.getElementById("cursoFormErro").textContent = "";
+    atualizarPublicoNovoCurso();
+    atualizarObrigatoriedadeCurso();
+    document.getElementById("modalFormCurso").classList.add("open");
+  }
+
+  function validarCursoCompleto() {
+    const nome = document.getElementById("cursoNome").value.trim();
+    const categoria = document.getElementById("cursoCategoria").value.trim();
+    const desc = document.getElementById("cursoDesc").value.trim();
+    const erro = document.getElementById("cursoFormErro");
+    if (!nome || !categoria || !desc) {
+      erro.textContent = "Preencha nome, categoria e descrição antes de enviar ou publicar.";
+      return false;
+    }
+    if (document.getElementById("cursoObrigatorio").value === "obrigatorio" && !document.getElementById("cursoPrazo").value) {
+      erro.textContent = "Curso obrigatório precisa de um prazo para concluir.";
+      return false;
+    }
+    erro.textContent = "";
+    return true;
+  }
+
+  function salvarRascunhoCurso() {
+    const nome = document.getElementById("cursoNome").value.trim();
+    const erro = document.getElementById("cursoFormErro");
+    if (!nome) {
+      erro.textContent = "Para salvar rascunho, preencha o nome do curso.";
+      return;
+    }
+    erro.textContent = "";
+    fecharModais();
+  }
+
+  function enviarCursoParaAprovacao() {
+    if (!validarCursoCompleto()) return;
+    fecharModais();
+  }
+
+  function publicarCursoDireto() {
+    if (!validarCursoCompleto()) return;
+    fecharModais();
+  }
+
+  function abrirModalVerCurso(id) {
+    const c = CURSOS[id];
+    if (!c) return;
+    document.getElementById("modalVerCursoTitulo").textContent = c.nome;
+    document.getElementById("verCursoCategoria").value = c.categoria;
+    document.getElementById("verCursoAutor").value = c.autor;
+    document.getElementById("verCursoDesc").value = c.desc;
+    document.getElementById("verCursoPublico").value = c.publico;
+    document.getElementById("verCursoObrigatorio").value = c.obrigatorio ? "Obrigatório até " + c.prazo : "Opcional";
+    document.getElementById("verCursoStatus").value = c.status;
+    document.getElementById("verCursoBeneficios").innerHTML = beneficiosHtml(c);
+    document.getElementById("modalVerCurso").classList.add("open");
+  }
+
+  let cursoAprovarId = null;
+
+  function abrirModalAprovarCurso(id) {
+    const c = CURSOS[id];
+    if (!c) return;
+    cursoAprovarId = id;
+    document.getElementById("modalAprovarCursoTitulo").textContent = "Revisar: " + c.nome;
+    document.getElementById("modalAprovarCursoSub").textContent = "Enviado por " + c.autor + " — aguardando aprovação do Academy-RH.";
+    document.getElementById("aprovarCursoCategoria").value = c.categoria;
+    document.getElementById("aprovarCursoPublico").value = c.publico;
+    document.getElementById("aprovarCursoBeneficios").value = (c.cert ? "Certificado" : "") + (c.cert && c.pontos ? " + " : "") + (c.pontos ? c.pontos + " pts" : "") || "Nenhum definido";
+    document.getElementById("aprovarCursoComentario").value = "";
+    document.getElementById("aprovarCursoErro").textContent = "";
+    document.getElementById("modalAprovarCurso").classList.add("open");
+  }
+
+  function atualizarLinhaCurso(id) {
+    const c = CURSOS[id];
+    const row = document.querySelector('#tbodyCursos tr[data-curso="' + id + '"]');
+    if (!c || !row) return;
+    const statusMap = {
+      "Publicada": '<span class="badge badge-ok">Publicada</span>',
+      "Em aprovação": '<span class="badge badge-info">Em aprovação</span>',
+      "Rascunho": '<span class="badge badge-rascunho">Rascunho</span>',
+      "Arquivada": '<span class="badge badge-arquivado">Arquivada</span>',
+    };
+    row.dataset.status = c.status.toLowerCase() === "em aprovação" ? "aprovacao" : c.status.toLowerCase();
+    row.querySelector(".cel-status").innerHTML = statusMap[c.status] || "";
+  }
+
+  function confirmarAprovarCurso() {
+    const id = cursoAprovarId;
+    if (!id || !CURSOS[id]) return;
+    CURSOS[id].status = "Publicada";
+    atualizarLinhaCurso(id);
+    fecharModais();
+  }
+
+  function confirmarReprovarCurso() {
+    const id = cursoAprovarId;
+    const comentario = document.getElementById("aprovarCursoComentario").value.trim();
+    const erro = document.getElementById("aprovarCursoErro");
+    if (!comentario) {
+      erro.textContent = "Para reprovar, registre um comentário explicando o motivo pro autor.";
+      return;
+    }
+    if (!id || !CURSOS[id]) return;
+    CURSOS[id].status = "Rascunho";
+    atualizarLinhaCurso(id);
+    fecharModais();
+  }
+
+  function setCursoStatusFiltro(key) {
+    document.querySelectorAll("#filtroCatalogoStatus .pill").forEach((p) => p.classList.remove("active"));
+    const pillMap = { todos: "clStatusTodos", publicada: "clStatusPublicada", aprovacao: "clStatusAprovacao", rascunho: "clStatusRascunho", arquivada: "clStatusArquivada" };
+    document.getElementById(pillMap[key]).classList.add("active");
+    document.querySelectorAll("#tbodyCursos tr").forEach((row) => {
+      row.style.display = key === "todos" || row.dataset.status === key ? "" : "none";
+    });
+  }
+
+  function setCursoCategoriaFiltro(el) {
+    // Filtro visual de categoria — cruzamento real com o catálogo fica a critério do Tech Lead na implementação.
+    document.querySelectorAll("#filtroCatalogoCategorias .pill").forEach((p) => p.classList.remove("active"));
+    el.classList.add("active");
+  }
+
+  // ═══ MÓDULOS & AULAS ═══
+  function abrirModalModulosAulas(id) {
+    const c = CURSOS[id];
+    document.getElementById("modalModulosAulasTitulo").textContent = "Montar conteúdo" + (c ? " — " + c.nome : "");
+    document.getElementById("modalModulosAulas").classList.add("open");
+  }
+
+  function toggleModulo(card) {
+    card.classList.toggle("aberto");
+  }
+
+  let contadorModulo = 2;
+  function adicionarModulo() {
+    contadorModulo++;
+    const div = document.createElement("div");
+    div.className = "modulo-card aberto";
+    div.innerHTML =
+      '<div class="modulo-head" onclick="toggleModulo(this.parentElement)">' +
+      '<span class="titulo"><svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m9 6 6 6-6 6"/></svg>Módulo ' + contadorModulo + ' — Novo módulo</span>' +
+      '<span style="display:flex;gap:4px" onclick="event.stopPropagation()"><button class="btn-icon" title="Renomear módulo">✎</button><button class="btn-icon danger" title="Remover módulo" onclick="this.closest(\'.modulo-card\').remove()">✕</button></span>' +
+      "</div>" +
+      '<div class="modulo-body"><p class="empty" style="padding:12px 0">Nenhuma aula ainda.</p>' +
+      '<button type="button" class="btn-add-inline" onclick="iniciarNovaAula(this)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 5v14M5 12h14"/></svg>Nova aula</button></div>';
+    document.getElementById("listaModulos").appendChild(div);
+  }
+
+  // Conteúdo condicional de cada tipo de aula — é aqui que o material entra.
+  function formularioAulaHtml(tipo, formId) {
+    if (tipo === "pdf") {
+      return (
+        '<div class="upload-fake">📄 Arraste o PDF aqui ou clique para selecionar<br /><button type="button">Selecionar arquivo</button></div>' +
+        '<div class="field" style="margin-top:10px"><label>Duração estimada de leitura</label><input type="text" class="aula-form-duracao" placeholder="Ex.: 10 min" /></div>'
+      );
+    }
+    if (tipo === "texto") {
+      return (
+        '<div class="field"><label>Conteúdo da aula</label><textarea class="aula-form-conteudo-texto" style="min-height:120px" placeholder="Escreva o conteúdo da aula (aceita formatação básica)."></textarea></div>' +
+        '<div class="field"><label>Tempo estimado de leitura</label><input type="text" class="aula-form-duracao" placeholder="Ex.: 8 min de leitura" /></div>'
+      );
+    }
+    if (tipo === "exercicio") {
+      return (
+        '<div class="hint-box" style="margin-bottom:10px">Quiz de prática — o prestador vê o resultado na hora e pode refazer. Não bloqueia o curso.</div>' +
+        '<div id="' + formId + '-questoes"></div>' +
+        '<button type="button" class="btn-add-inline" onclick="adicionarQuestao(\'' + formId + '-questoes\')">+ Nova questão</button>'
+      );
+    }
+    // vídeo (padrão)
+    return (
+      '<div class="upload-fake">🎬 Arraste o vídeo aqui ou clique para selecionar (MP4, até 2GB)<br /><button type="button">Selecionar arquivo</button></div>' +
+      '<div class="field" style="margin-top:10px"><label>Ou cole o link do vídeo (Vimeo / YouTube não listado)</label><input type="text" placeholder="https://…" /></div>' +
+      '<div class="field"><label>Duração</label><input type="text" class="aula-form-duracao" placeholder="Ex.: 6 min" /></div>'
+    );
+  }
+
+  let aulaFormSeq = 0;
+
+  function iniciarNovaAula(btn) {
+    aulaFormSeq++;
+    const formId = "aulaForm" + aulaFormSeq;
+    const vazio = btn.parentElement.querySelector(".empty");
+    if (vazio) vazio.remove();
+    const div = document.createElement("div");
+    div.className = "aula-form";
+    div.id = formId;
+    div.innerHTML =
+      '<div class="field-grid-2">' +
+      '<div class="field"><label>Tipo de aula</label><select onchange="trocarTipoAulaForm(this)">' +
+      '<option value="video">Vídeo</option><option value="pdf">PDF</option><option value="texto">Texto</option><option value="exercicio">Exercício (quiz de prática)</option>' +
+      "</select></div>" +
+      '<div class="field"><label>Título da aula</label><input type="text" class="aula-form-titulo" placeholder="Ex.: Boas-vindas e objetivos do curso" /></div>' +
+      "</div>" +
+      '<div class="aula-form-conteudo">' + formularioAulaHtml("video", formId) + "</div>" +
+      '<div class="aula-form-actions">' +
+      '<button type="button" onclick="cancelarAulaForm(\'' + formId + '\')">Cancelar</button>' +
+      '<button type="button" class="primary" onclick="salvarAulaForm(\'' + formId + '\')">Salvar aula</button>' +
+      "</div>";
+    btn.parentElement.insertBefore(div, btn);
+    btn.style.display = "none";
+  }
+
+  function trocarTipoAulaForm(select) {
+    const form = select.closest(".aula-form");
+    const cont = form.querySelector(".aula-form-conteudo");
+    cont.innerHTML = formularioAulaHtml(select.value, form.id);
+    if (select.value === "exercicio") adicionarQuestao(form.id + "-questoes");
+  }
+
+  function cancelarAulaForm(formId) {
+    const form = document.getElementById(formId);
+    if (!form) return;
+    const btn = form.nextElementSibling;
+    form.remove();
+    if (btn) btn.style.display = "";
+  }
+
+  function salvarAulaForm(formId) {
+    const form = document.getElementById(formId);
+    if (!form) return;
+    const tipo = form.querySelector("select").value;
+    const titulo = form.querySelector(".aula-form-titulo").value.trim() || "Nova aula";
+    const info = {
+      video: { icon: "🎬", label: "Vídeo" },
+      pdf: { icon: "📄", label: "PDF" },
+      texto: { icon: "📝", label: "Texto" },
+      exercicio: { icon: "❓", label: "Exercício" },
+    }[tipo];
+    let duracao = "—";
+    if (tipo === "exercicio") {
+      duracao = form.querySelectorAll(".questao").length + " questões";
+    } else {
+      const campo = form.querySelector(".aula-form-duracao");
+      duracao = campo && campo.value.trim() ? campo.value.trim() : "—";
+    }
+    const item = document.createElement("div");
+    item.className = "aula-item";
+    item.innerHTML =
+      '<span class="aula-tipo-icon" title="' + info.label + '">' + info.icon + "</span>" +
+      '<span class="titulo-aula">' + titulo + "</span>" +
+      '<span class="duracao">' + duracao + "</span>" +
+      '<span class="aula-actions"><button class="btn-icon" title="Subir">↑</button><button class="btn-icon" title="Descer">↓</button><button class="btn-icon danger" title="Remover aula" onclick="this.closest(\'.aula-item\').remove()">✕</button></span>';
+    const btn = form.nextElementSibling;
+    form.parentElement.insertBefore(item, form);
+    form.remove();
+    if (btn) btn.style.display = "";
+  }
+
+  // Banco de questões compartilhado — usado tanto no Exercício de prática quanto na Prova final.
+  let questaoSeq = 0;
+
+  function marcarCorreta(radio) {
+    const questaoEl = radio.closest(".questao");
+    questaoEl.querySelectorAll(".opcao").forEach((o) => o.classList.remove("correta"));
+    radio.closest(".opcao").classList.add("correta");
+  }
+
+  function adicionarQuestao(containerId) {
+    questaoSeq++;
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    const n = container.querySelectorAll(".questao").length + 1;
+    const nomeRadio = "correta_" + containerId.replace(/[^a-zA-Z0-9]/g, "") + "_" + questaoSeq;
+    const div = document.createElement("div");
+    div.className = "questao";
+    div.innerHTML =
+      '<div class="questao-head"><strong>Questão ' + n + '</strong><button type="button" class="btn-icon danger" title="Remover questão" onclick="this.closest(\'.questao\').remove()">✕</button></div>' +
+      '<div class="questao-enunciado"><input type="text" placeholder="Digite o enunciado da questão…" /></div>' +
+      '<div class="opcao correta"><input type="radio" name="' + nomeRadio + '" checked onclick="marcarCorreta(this)" /><input type="text" placeholder="Resposta correta" /></div>' +
+      '<div class="opcao"><input type="radio" name="' + nomeRadio + '" onclick="marcarCorreta(this)" /><input type="text" placeholder="Alternativa incorreta" /></div>' +
+      '<div class="opcao"><input type="radio" name="' + nomeRadio + '" onclick="marcarCorreta(this)" /><input type="text" placeholder="Alternativa incorreta" /></div>' +
+      '<div class="opcao"><input type="radio" name="' + nomeRadio + '" onclick="marcarCorreta(this)" /><input type="text" placeholder="Alternativa incorreta" /></div>';
+    container.appendChild(div);
+  }
+
+  // ═══ ADESÃO OBRIGATÓRIA ═══
+  function abrirModalPendentes(id) {
+    const c = CURSOS[id];
+    document.getElementById("modalPendentesTitulo").textContent = "Pendentes — " + (c ? c.nome : "");
+    document.getElementById("modalPendentes").classList.add("open");
+  }
+</script>
+</body>
+</html>

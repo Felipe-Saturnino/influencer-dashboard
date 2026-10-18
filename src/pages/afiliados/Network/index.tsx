@@ -4,7 +4,8 @@ import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission, type Permissoes } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE, BRAND } from "../../../lib/dashboardConstants";
-import { supabase, supabaseAnonKey } from "../../../lib/supabase";
+import { supabase } from "../../../lib/supabase";
+import { headersChamadaEdgeComSessao } from "../../../lib/supabaseEdgeFetch";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { DashboardPageHeader, FiltroBarTabButton, FILTRO_BAR_TAB_ICON_PROPS, onFiltroBarTabsKeyDown } from "../../../components/dashboard";
 import { FunilProspeccaoKpiGrid } from "../../../components/FunilProspeccaoKpiGrid";
@@ -20,9 +21,12 @@ import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
+import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
+import { TabelaComPaginacao } from "../../../components/TabelaPaginacaoBar";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { textoContemBuscaEmAlgum } from "../../../lib/searchText";
+import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
 import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
 import {
   getPageContentBoxStyle,
@@ -33,6 +37,12 @@ import { X, Eye, Pencil, Loader2, Contact, Briefcase, StickyNote } from "lucide-
 import { BtnExcluirComTexto } from "../../../components/BtnExcluirComTexto";
 import { ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal";
 import {descricaoModalExcluirItem, tooltipExcluir} from "../../../lib/excluirItemUi";
+
+/** Proteção de volume (afiliados.mdc) — listagem inicial no máximo 500. */
+const NETWORK_LIST_LIMIT = 500;
+
+const NETWORK_COLS =
+  "id, nome, status, email, tipo_contato, telefone, live_cassino, operadora_slug, operacao, afiliado_user_id, created_by, created_at, updated_at";
 
 type NetworkModalTab = "contato" | "operacao" | "anotacoes";
 
@@ -137,11 +147,7 @@ export interface AfiliadoNetworkRow {
 async function criarAfiliadoDesdeNetwork(networkId: string): Promise<void> {
   const res = await fetch("/api/criar-afiliado-network", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${supabaseAnonKey}`,
-      Apikey: supabaseAnonKey,
-    },
+    headers: await headersChamadaEdgeComSessao(),
     body: JSON.stringify({
       network_id: networkId,
       ...(typeof window !== "undefined" ? { loginUrl: window.location.origin } : {}),
@@ -199,6 +205,9 @@ export default function AfiliadosNetwork() {
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("todos");
   const [operadorasOpt, setOperadorasOpt] = useState<OperadoraOpt[]>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [listaTruncada, setListaTruncada] = useState(false);
+  const loadGenRef = useRef(0);
 
   useEffect(() => {
     supabase.from("operadoras").select("slug, nome, brand_action").order("nome").then(({ data }) => {
@@ -207,20 +216,33 @@ export default function AfiliadosNetwork() {
   }, []);
 
   const loadData = useCallback(async () => {
+    const gen = ++loadGenRef.current;
     setLoading(true);
-    const { data, error } = await supabase
-      .from("afiliados_network")
-      .select("*")
-      .order("nome")
-      .limit(500);
-    if (error) {
-      console.error("[Afiliados Network] Erro ao carregar:", error);
-      setList([]);
-    } else {
-      const rows = await enrichProspectosComCriadorNome((data ?? []) as AfiliadoNetworkRow[]);
+    setLoadError(null);
+    try {
+      const { data, error } = await supabase
+        .from("afiliados_network")
+        .select(NETWORK_COLS)
+        .order("nome")
+        .limit(NETWORK_LIST_LIMIT);
+      if (error) throw new Error(error.message);
+      if (gen !== loadGenRef.current) return;
+      const raw = (data ?? []) as AfiliadoNetworkRow[];
+      setListaTruncada(raw.length >= NETWORK_LIST_LIMIT);
+      const rows = await enrichProspectosComCriadorNome(raw);
+      if (gen !== loadGenRef.current) return;
       setList(rows);
+    } catch (err) {
+      console.error("[Afiliados Network] Erro ao carregar:", err);
+      if (gen !== loadGenRef.current) return;
+      setList([]);
+      setListaTruncada(false);
+      setLoadError(
+        "Não foi possível carregar os prospectos. Se o problema persistir, entre em contato com o suporte.",
+      );
+    } finally {
+      if (gen === loadGenRef.current) setLoading(false);
     }
-    setLoading(false);
   }, []);
 
   useEffect(() => {
@@ -335,8 +357,41 @@ export default function AfiliadosNetwork() {
           )}
       </div>
 
-      {loading ? (
+      {listaTruncada && !loading && !loadError ? (
         <div
+          role="status"
+          style={{
+            background: `${BRAND.amarelo}18`,
+            border: `1px solid ${BRAND.amarelo}44`,
+            color: t.text,
+            borderRadius: 10,
+            padding: "10px 14px",
+            fontSize: 13,
+            marginBottom: 14,
+            fontFamily: FONT.body,
+          }}
+        >
+          Exibindo os primeiros {NETWORK_LIST_LIMIT} prospectos (ordem alfabética). Refine a busca ou os filtros para localizar os demais.
+        </div>
+      ) : null}
+
+      {loadError ? (
+        <div
+          role="alert"
+          aria-live="polite"
+          style={{
+            ...getPageContentBoxStyle(brand, t, { padding: 48, textAlign: "center" }),
+            color: BRAND.vermelho,
+            fontFamily: FONT.body,
+            fontSize: 13,
+          }}
+        >
+          {loadError}
+        </div>
+      ) : loading ? (
+        <div
+          role="status"
+          aria-label="Carregando prospectos"
           style={{
             textAlign: "center",
             padding: "60px",
@@ -348,7 +403,8 @@ export default function AfiliadosNetwork() {
             gap: 8,
           }}
         >
-          <Loader2 size={16} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-label="Carregando…" />
+          <Loader2 size={16} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden="true" />
+          <span style={{ fontSize: 13 }}>Carregando…</span>
         </div>
       ) : filtered.length === 0 ? (
         <div
@@ -361,7 +417,10 @@ export default function AfiliadosNetwork() {
           Nenhum afiliado encontrado.
         </div>
       ) : (
-        filtered.map((r) => (
+        <TabelaComPaginacao items={filtered} t={t} resetKey={`${filterStatus}|${search}`}>
+          {(linhas) => (
+            <>
+              {linhas.map((r) => (
           <div
             key={r.id}
             style={{
@@ -436,53 +495,20 @@ export default function AfiliadosNetwork() {
               </div>
             </div>
             <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-              <button
-                type="button"
-                onClick={() => setModal({ mode: "visualizar", row: r })}
-                aria-label={`Ver afiliado ${r.nome}`}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 6,
-                  padding: "8px 14px",
-                  borderRadius: 10,
-                  border: `1px solid ${t.cardBorder}`,
-                  background: "transparent",
-                  color: t.text,
-                  fontSize: 12,
-                  fontWeight: 700,
-                  fontFamily: FONT.body,
-                  cursor: "pointer",
-                }}
-              >
-                <Eye size={13} aria-hidden="true" /> Ver
-              </button>
+              <BtnIconeAcaoLinha label={tooltipAcao("Ver prospecto")} onClick={() => setModal({ mode: "visualizar", row: r })}>
+                <Eye size={13} aria-hidden="true" />
+              </BtnIconeAcaoLinha>
               {podeEditar(r) && (
-                <button
-                  type="button"
-                  onClick={() => setModal({ mode: "editar", row: r })}
-                  aria-label={`Editar afiliado ${r.nome}`}
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 6,
-                    padding: "8px 14px",
-                    borderRadius: 10,
-                    border: "none",
-                    cursor: "pointer",
-                    background: getCtaCriarGradient(brand),
-                    color: "#fff",
-                    fontSize: 12,
-                    fontWeight: 700,
-                    fontFamily: FONT.body,
-                  }}
-                >
-                  <Pencil size={13} aria-hidden="true" /> Editar
-                </button>
+                <BtnIconeAcaoLinha label={tooltipAcao("Editar prospecto")} onClick={() => setModal({ mode: "editar", row: r })}>
+                  <Pencil size={13} aria-hidden="true" />
+                </BtnIconeAcaoLinha>
               )}
             </div>
           </div>
-        ))
+              ))}
+            </>
+          )}
+        </TabelaComPaginacao>
       )}
 
       {modal?.mode === "visualizar" && modal.row && (
@@ -1170,7 +1196,7 @@ function ModalEditar({
             {saving ? (
               <>
                 <Loader2 size={14} className="app-lucide-spin" aria-hidden="true" color="#fff" />
-                Salvando...
+                Salvando…
               </>
             ) : (
               "Salvar"

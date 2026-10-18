@@ -25,6 +25,7 @@ type Props = {
   avaliacoes: PerformanceHubAvaliacao[];
   timeSelecionado: PerformanceHubTimeSlug;
   agenda: PerformanceHubAgendaItem[];
+  cargaComErro?: boolean;
   onAvaliar: (row: PerformanceHubAvaliacao) => void;
   onAvaliarPorNome: (nome: string) => void;
 };
@@ -36,6 +37,7 @@ export function PerformanceHubAbaGerenciamento({
   avaliacoes,
   timeSelecionado,
   agenda,
+  cargaComErro = false,
   onAvaliar,
   onAvaliarPorNome,
 }: Props) {
@@ -103,7 +105,7 @@ export function PerformanceHubAbaGerenciamento({
           Avaliações em Rascunho
         </SectionTitle>
 
-        {avaliacoesPendentes.length === 0 ? (
+        {cargaComErro ? null : avaliacoesPendentes.length === 0 ? (
           <div style={{ padding: "28px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
             Sem dados para o período selecionado.
           </div>
@@ -164,7 +166,7 @@ export function PerformanceHubAbaGerenciamento({
           />
         </div>
 
-        {agendaFiltrada.length === 0 ? (
+        {cargaComErro ? null : agendaFiltrada.length === 0 ? (
           <div style={{ padding: "28px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
             Sem dados para o período selecionado.
           </div>

@@ -1,4 +1,7 @@
+import { Eye, History } from "lucide-react";
 import { FONT } from "../../../constants/theme";
+import { BtnIconeAcaoLinha } from "../../BtnIconeAcaoLinha";
+import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
 import { labelCampoLinha4Kanban, labelLinha4CardKanban, labelTipoCandidatura } from "../../../lib/rhVagaCandidaturaKanban";
 import type { RhVagaCandidaturaEtapa, RhVagaCandidaturaRow } from "../../../types/rhVagaCandidatura";
 import type { RhVagaTipo } from "../../../types/rhVaga";
@@ -33,18 +36,6 @@ export function CandidaturaKanbanCard({
   const linhaStyle = { fontSize: 12, color: t.textMuted, marginBottom: 4, fontFamily: FONT.body, lineHeight: 1.4 };
   const valorStyle = { color: t.text, fontWeight: 600 as const };
 
-  const btnStyle = {
-    padding: "6px 10px",
-    borderRadius: 8,
-    border: `1px solid ${t.cardBorder}`,
-    background: t.cardBg ?? t.inputBg,
-    color: t.text,
-    fontWeight: 600,
-    fontSize: 12,
-    fontFamily: FONT.body,
-    cursor: "pointer" as const,
-  };
-
   return (
     <li
       style={{
@@ -68,14 +59,16 @@ export function CandidaturaKanbanCard({
           Motivo da Dispensa: <span style={valorStyle}>{(c.motivo_dispensa ?? "").trim() || "—"}</span>
         </div>
       ) : null}
-      <div style={{ ...linhaStyle, marginBottom: 10 }}>Tipo: <span style={valorStyle}>{tipoCand}</span></div>
+      <div style={{ ...linhaStyle, marginBottom: 10 }}>
+        Tipo: <span style={valorStyle}>{tipoCand}</span>
+      </div>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-        <button type="button" onClick={onVer} style={btnStyle} aria-label={`Ver candidatura de ${c.nome_completo}`}>
-          Ver
-        </button>
-        <button type="button" onClick={onHistorico} style={btnStyle} aria-label={`Histórico de ${c.nome_completo}`}>
-          Histórico
-        </button>
+        <BtnIconeAcaoLinha label={tooltipAcao("Ver candidatura")} onClick={onVer}>
+          <Eye size={14} aria-hidden />
+        </BtnIconeAcaoLinha>
+        <BtnIconeAcaoLinha label={tooltipAcao("Histórico da candidatura")} onClick={onHistorico}>
+          <History size={14} aria-hidden />
+        </BtnIconeAcaoLinha>
       </div>
     </li>
   );

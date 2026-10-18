@@ -1,4 +1,4 @@
-import { getPeriodoHistoricoCompetencias } from "./dashboardHelpers";
+import { fmtDate, getPeriodoHistoricoCompetencias } from "./dashboardHelpers";
 import { supabase } from "./supabase";
 import { fetchAllPages } from "./supabasePaginate";
 import type {
@@ -63,6 +63,26 @@ function formatDataBrFromIso(iso: string): string {
   return `${String(d).padStart(2, "0")}/${String(m).padStart(2, "0")}/${y}`;
 }
 
+/** Data civil local (YYYY-MM-DD) — nunca `toISOString()` (UTC pode ser D+1 à noite no BR). */
+export function dataAvaliacaoHojeIso(ref: Date = new Date()): string {
+  return fmtDate(ref);
+}
+
+/** Data civil local em dd/mm/aaaa para o modelo de UI. */
+export function dataAvaliacaoHojeBr(ref: Date = new Date()): string {
+  return formatDataBrFromIso(dataAvaliacaoHojeIso(ref));
+}
+
+/**
+ * Janela do Performance Hub: 13 competências (início canónico) até o **fim do mês** corrente.
+ * Evita buraco se `data_avaliacao` cair em dia futuro do mês (ex.: fallback UTC antigo).
+ */
+export function periodoHistoricoPerformanceHub(ref: Date = new Date()): { inicio: string; fim: string } {
+  const { inicio } = getPeriodoHistoricoCompetencias(ref);
+  const fim = fmtDate(new Date(ref.getFullYear(), ref.getMonth() + 1, 0));
+  return { inicio, fim };
+}
+
 function parseDataBrParaIso(dataBr: string): string | null {
   const [dia, mes, ano] = dataBr.split("/").map(Number);
   if (!dia || !mes || !ano) return null;
@@ -104,7 +124,7 @@ export function mapRowParaAvaliacao(row: AvaliacaoRow): PerformanceHubAvaliacao 
 }
 
 function mapAvaliacaoParaRow(row: PerformanceHubAvaliacao): AvaliacaoWriteRow {
-  const dataIso = parseDataBrParaIso(row.data) ?? new Date().toISOString().slice(0, 10);
+  const dataIso = parseDataBrParaIso(row.data) ?? dataAvaliacaoHojeIso();
   return {
     id: row.id.startsWith("novo-") ? undefined : row.id,
     data_avaliacao: dataIso,
@@ -181,22 +201,18 @@ const SELECT_AVALIACAO = `
 `;
 
 export async function fetchPerformanceHubAvaliacoes(): Promise<PerformanceHubAvaliacao[]> {
-  try {
-    const { inicio, fim } = getPeriodoHistoricoCompetencias();
-    const rows = await fetchAllPages<AvaliacaoRow>(async (from, to) =>
-      supabase
-        .from("academy_performance_hub_avaliacao")
-        .select(SELECT_AVALIACAO)
-        .gte("data_avaliacao", inicio)
-        .lte("data_avaliacao", fim)
-        .order("data_avaliacao", { ascending: false })
-        .range(from, to),
-    );
-    return rows.map(mapRowParaAvaliacao);
-  } catch (error) {
-    console.error("Performance Hub: falha ao carregar avaliações", error);
-    return [];
-  }
+  const { inicio, fim } = periodoHistoricoPerformanceHub();
+  const rows = await fetchAllPages<AvaliacaoRow>(async (from, to) =>
+    supabase
+      .from("academy_performance_hub_avaliacao")
+      .select(SELECT_AVALIACAO)
+      .gte("data_avaliacao", inicio)
+      .lte("data_avaliacao", fim)
+      .order("data_avaliacao", { ascending: false })
+      .order("id", { ascending: true })
+      .range(from, to),
+  );
+  return rows.map(mapRowParaAvaliacao);
 }
 
 export async function upsertPerformanceHubAvaliacao(
@@ -241,10 +257,11 @@ export async function fetchHistoricoAvaliacaoPerformanceHub(
     .from("academy_performance_hub_avaliacao_historico")
     .select("id, avaliacao_id, created_at, acao, usuario_nome, mensagem")
     .eq("avaliacao_id", avaliacaoId)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: true });
   if (error) {
     console.error("Performance Hub: falha ao carregar histórico", error);
-    return [];
+    throw new Error(error.message);
   }
   return ((data ?? []) as HistoricoRow[]).map(mapHistoricoRow);
 }

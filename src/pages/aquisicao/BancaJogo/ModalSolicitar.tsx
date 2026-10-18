@@ -152,7 +152,8 @@ export function ModalSolicitar({
     });
     setSaving(false);
     if (error) {
-      setErr(error.message ?? "Não foi possível salvar.");
+      console.error("[Banca de Jogo] Erro ao solicitar:", error);
+      setErr("Não foi possível salvar a solicitação. Se o problema persistir, entre em contato com o suporte.");
       return;
     }
     onSalvo();
@@ -251,7 +252,7 @@ export function ModalSolicitar({
               color: "#fff",
             }}
           >
-            {saving ? "Salvando..." : "Solicitar"}
+            {saving ? "Salvando…" : "Solicitar"}
           </button>
         </div>
       </div>

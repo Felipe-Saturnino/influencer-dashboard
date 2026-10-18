@@ -54,6 +54,18 @@ export function ModalAdicionarAgendaCalendario({ onClose }: Props) {
     };
   }, []);
 
+  async function carregarFeed() {
+    setCarregando(true);
+    setErro(null);
+    const r = await obterFeedCalendarioIcs();
+    setCarregando(false);
+    if (!r.ok) {
+      setErro(mensagemErroCalendarioIcsFeed(r.error));
+      return;
+    }
+    setUrl(urlPublicaCalendarioIcs(r.token));
+  }
+
   useEffect(() => {
     if (!copiado) return;
     const id = window.setTimeout(() => setCopiado(false), 2000);
@@ -158,9 +170,36 @@ export function ModalAdicionarAgendaCalendario({ onClose }: Props) {
         <div
           role="alert"
           aria-live="polite"
-          style={{ color: "#e84025", fontSize: 12, fontFamily: FONT.body, marginBottom: 12 }}
+          style={{
+            color: "#e84025",
+            fontSize: 12,
+            fontFamily: FONT.body,
+            marginBottom: 12,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+            flexWrap: "wrap",
+          }}
         >
-          {erroCopia}
+          <span>{erroCopia}</span>
+          <button
+            type="button"
+            disabled={!url}
+            onClick={() => void copiar()}
+            style={{
+              padding: "8px 14px",
+              borderRadius: 10,
+              border: "1px solid rgba(232,64,37,0.35)",
+              background: "transparent",
+              color: "#e84025",
+              fontWeight: 700,
+              fontFamily: FONT.body,
+              cursor: !url ? "not-allowed" : "pointer",
+            }}
+          >
+            Tentar de novo
+          </button>
         </div>
       ) : null}
 
@@ -168,9 +207,39 @@ export function ModalAdicionarAgendaCalendario({ onClose }: Props) {
         <div
           role="alert"
           aria-live="polite"
-          style={{ color: "#e84025", fontSize: 12, fontFamily: FONT.body, marginBottom: 12 }}
+          style={{
+            color: "#e84025",
+            fontSize: 12,
+            fontFamily: FONT.body,
+            marginBottom: 12,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+            flexWrap: "wrap",
+          }}
         >
-          {erro}
+          <span>{erro}</span>
+          <button
+            type="button"
+            disabled={ocupado}
+            onClick={() => {
+              if (confirmarRegen) void confirmarNovoLink();
+              else void carregarFeed();
+            }}
+            style={{
+              padding: "8px 14px",
+              borderRadius: 10,
+              border: "1px solid rgba(232,64,37,0.35)",
+              background: "transparent",
+              color: "#e84025",
+              fontWeight: 700,
+              fontFamily: FONT.body,
+              cursor: ocupado ? "not-allowed" : "pointer",
+            }}
+          >
+            Tentar de novo
+          </button>
         </div>
       ) : null}
 

@@ -8,6 +8,7 @@ import { hojeIsoDate, type RhVagaTipoSelecionavel } from "../../../lib/rhVagasFo
 import { SimNaoField } from "./SimNaoField";
 import { TipoVagaField } from "./TipoVagaField";
 import type { RhOrgOrganogramaGrupoPrestador } from "../../../types/rhOrganograma";
+import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
 import { CampoObrigatorioMark } from "../../CampoObrigatorioMark";
 import {
   ModalBase,
@@ -28,12 +29,6 @@ type Theme = {
   inputBg: string;
   cardBg?: string;
 };
-
-function ctaGradient(brand: ReturnType<typeof useDashboardBrand>): string {
-  return brand.useBrand
-    ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
-    : "linear-gradient(135deg, var(--brand-action, #7c3aed), var(--brand-contrast, #1e36f8))";
-}
 
 export function ModalNovaVaga({
   open,
@@ -317,7 +312,7 @@ export function ModalNovaVaga({
               padding: "10px 18px",
               borderRadius: 10,
               border: "none",
-              background: ctaGradient(brand),
+              background: getCtaCriarGradient(brand),
               color: "#fff",
               fontWeight: 700,
               fontSize: 13,

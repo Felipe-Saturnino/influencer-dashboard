@@ -5,6 +5,7 @@ globs:
   - src/pages/academy/**/*.ts
   - src/lib/academyPerformanceHub*.ts
   - src/lib/academyPortal*.ts
+  - src/lib/academyCronograma*.ts
 alwaysApply: false
 ---
 
@@ -22,6 +23,7 @@ alwaysApply: false
 |---|---|---|
 | `academy_performance_hub` | Performance Hub | Portal de avaliação de desempenho dos Prestadores. |
 | `academy_portal` | Portal da Academy | Comunicados, dicas e manuais de treinamento para a operação. |
+| `academy_cronograma` | Cronograma | Monte as trilhas, os materiais das aulas e as provas dos cronogramas de entrada e atualização. |
 
 ---
 
@@ -31,10 +33,41 @@ alwaysApply: false
 |---------|--------|---------|
 | `academy_performance_hub` | Performance Hub | `academy/PerformanceHub/` |
 | `academy_portal` | Portal da Academy | `academy/PortalAcademy/` |
+| `academy_cronograma` | Cronograma | `academy/Cronograma/` |
 
-**Ajuda contextual:** ambas as páginas usam **`AjudaContextualAcoes`** no grupo de ações à direita da linha principal da barra de filtros (contrato em `geral.mdc` § Ajuda contextual). **Performance Hub:** Conheça + Troubleshooting; tutorial por aba — **Avaliações** → `performance-hub-analisar-avaliacao` (`PerformanceHubAnalisarAvaliacao`); **Feedback** → `performance-hub-aplicar-feedback` (`PerformanceHubAplicarFeedback`); **Gerenciamento** → `performance-hub-avaliar` (`PerformanceHubAvaliar`); **Configuração** → `performance-hub-configuracao-pesos` (`PerformanceHubConfiguracaoPesos`). **Portal da Academy:** tutorial por aba — **Manuais** → `ciencia-manuais-academy` (`CienciaManuaisAcademy`); **Gerenciamento** → `postagem-academy-aprovacao` (`DicasAcademy`); **Comunicados** e **Dicas** sem tutorial. O grupo entra via prop `acoesAjuda` de `PortalAcademyBlocoFiltros`, na mesma linha do carrossel e do Histórico.
+**Ajuda contextual:** as páginas Academy usam **`AjudaContextualAcoes`** no grupo de ações à direita da linha principal da barra de filtros (contrato em `geral.mdc` § Ajuda contextual). **Performance Hub:** Conheça + Troubleshooting; tutorial por aba — **Avaliações** → `performance-hub-analisar-avaliacao` (`PerformanceHubAnalisarAvaliacao`); **Feedback** → `performance-hub-aplicar-feedback` (`PerformanceHubAplicarFeedback`); **Gerenciamento** → `performance-hub-avaliar` (`PerformanceHubAvaliar`); **Configuração** → `performance-hub-configuracao-pesos` (`PerformanceHubConfiguracaoPesos`). **Portal da Academy:** tutorial por aba — **Manuais** → `ciencia-manuais-academy` (`CienciaManuaisAcademy`); **Gerenciamento** → `postagem-academy-aprovacao` (`DicasAcademy`); **Comunicados** e **Dicas** sem tutorial. **Cronograma:** Conheça + Troubleshooting; sem tutorial na v1. O grupo entra via prop `acoesAjuda` de `PortalAcademyBlocoFiltros` (Portal) ou na linha de abas (`CronogramaFiltroBar` / Performance Hub).
 
-Libs de domínio: `src/lib/academyPerformanceHubTypes.ts`, `academyPerformanceHubScoring.ts`, `academyPerformanceHubConstants.ts`, `academyPerformanceHubMockData.ts` (temporário até schema Supabase); **`academyPortalWorkflow.ts`**, **`academyPortalPostagemFiles.ts`**, **`academyPortalJogosMesa.ts`**, **`academyPortalAutorMeta.ts`**, **`academyPortalCiencia.ts`**, **`academyPortalAplicavel.ts`**, **`academyPortalManualCodigo.ts`**, **`academyPortalUi.ts`**.
+Libs de domínio: `src/lib/academyPerformanceHubTypes.ts`, `academyPerformanceHubScoring.ts`, `academyPerformanceHubConstants.ts`, `academyPerformanceHubMockData.ts` (temporário até schema Supabase); **`academyPortalWorkflow.ts`**, **`academyPortalPostagemFiles.ts`**, **`academyPortalJogosMesa.ts`**, **`academyPortalAutorMeta.ts`**, **`academyPortalCiencia.ts`**, **`academyPortalAplicavel.ts`**, **`academyPortalManualCodigo.ts`**, **`academyPortalUi.ts`**; **`academyCronogramaTypes.ts`**, **`academyCronogramaConstants.ts`**, **`academyCronogramaDb.ts`**, **`academyCronogramaUi.ts`**.
+
+---
+
+## Cronograma (`academy_cronograma`)
+
+Catálogo próprio do onboarding — **sem** vínculo com Portal da Academy, Performance Hub, `mesas_spin` ou financeiro. Gestão de Turmas e Meu Onboarding consomem este catálogo depois.
+
+### Personas e permissões
+
+| Perfil | Escopo |
+|--------|--------|
+| **Admin** | Irrestrito |
+| **Demais** | Migração `20260923190000_academy_cronograma.sql` — Ver/Criar/Editar/Excluir = **Não**. Criar = CTAs; Editar = gravar, reordenar, arquivar. |
+
+### Abas
+
+| Aba | Função |
+|-----|--------|
+| Cronogramas | Seletor do currículo + ordem das trilhas (sem datas) + KPIs (trilhas, provas, duração) |
+| Trilhas | Catálogo de módulos (Institucional / Jogo / Operação / Prática). Jogo: lista estática Blackjack, Roleta, Baccarat, Futebol Brasileiro |
+| Materiais | Arquivo da aula (PDF/vídeo/apresentação) — lido na turma, não no Portal |
+| Provas | Múltipla escolha; nota mínima; gabarito. A nota **não** libera Live |
+
+Filtro **Status** nas abas de catálogo: Publicado (default) \| Arquivado. Busca com `textoContemBuscaEmAlgum`. Tabelas paginam 20 (`TabelaPaginacaoBar`). Ações **Ver** / **Editar** = `BtnIconeAcaoLinha` + `tooltipAcao`. Sem filtro de operadora.
+
+### Dados
+
+Tabelas `academy_cronograma`, `academy_cronograma_trilha`, `academy_cronograma_item`, `academy_cronograma_material`, `academy_cronograma_trilha_material`, `academy_cronograma_prova`, `academy_cronograma_trilha_prova`, `academy_cronograma_historico`. Bucket `academy-cronograma-materiais`. RLS via `_academy_cronograma_perm`. Carga: `fetchAllPages` + `order` estável; falha → alerta + **Tentar novamente**. Sem seed fictício.
+
+**Proibido:** puxar jogos de `mesas_spin_cadastro`; misturar anexos com `academy-portal-assets`; criar turma a partir de cronograma sem trilha (regra da página Turmas).
 
 ---
 
@@ -80,7 +113,7 @@ URL: `appRoutes.ts` — segmentos `Comunicados`, `Dicas`, `Manuais`, `Gerenciame
 
 - **Comunicados:** Tipo (Treinamentos/Geral)*, Título*, Descrição* (rich text), Imagem/Vídeo (multi), Anexo (multi)
 - **Dicas:** Tipo (Jogos/Imagem/Comunicação/Geral)*, **Qual Jogo?** (se Jogos — **multi-seleção**; lista `tipo_jogo` distinto de `mesas_spin_cadastro`), Título*, Descrição*, Imagem/Vídeo (multi), Anexo (multi)
-- **Manuais:** Tipo*, **Qual Jogo?** (somente se tipo = Jogos — multi-seleção; demais tipos gravam automaticamente **`Todos os Jogos`** em `jogo_mesa`, sem mostrar o campo no modal — valor aparece nos cards Manuais), **Versão*** (default 1.0; ao **editar**, sobe automaticamente a major — ex. 1.0 → 2.0 via `proximaVersaoMajorManual`), **Exige ciência do colaborador?***, **Aplicável a*** (multi-seleção — **somente** quando ciência = Sim; times ativos das gerências **Game Floor** e **Operation Management**, mesma regra de Gestão de Staff; sem «Todos os prestadores»), Título*, Introdução* (texto plano), Descrição* (rich text), Imagem/Vídeo (multi), Anexo (multi) — **sem** campo Código no modal (gerado no primeiro salvamento).
+- **Manuais:** Tipo*, **Qual Jogo?** (somente se tipo = Jogos — multi-seleção; demais tipos gravam automaticamente **`Todos os Jogos`** em `jogo_mesa`, sem mostrar o campo no modal — valor aparece nos cards Manuais), **Versão*** (default 1.0; ao **editar**, sobe automaticamente a major — ex. 1.0 → 2.0 via `proximaVersaoMajorManual`), **Exige ciência do colaborador?***, **Aplicável a*** (multi-seleção — **somente** quando ciência = Sim; `SelectOrganogramaMultiForm` com painel em portal `fixed` — Global § Lista pesquisável em modal; times ativos das gerências **Game Floor** e **Operation Management**, mesma regra de Gestão de Staff; sem «Todos os prestadores»), Título*, Introdução* (texto plano), Descrição* (rich text), Imagem/Vídeo (multi), Anexo (multi) — **sem** campo Código no modal (gerado no primeiro salvamento).
 
 **Imagem/Vídeo** e **Anexo:** botão customizado («Adicionar imagem ou vídeo» / «Adicionar anexo») + lista de arquivos (badge **Pendente** até salvar); input nativo oculto — sem «Nenhum arquivo selecionado».
 
@@ -92,7 +125,7 @@ Espelha **Políticas e normativas** do Portal de RH: **`AcademyPortalManuaisCard
 
 **Tutorial (Ajuda → Tutoriais):** **Ciência nos Manuais** (`ciencia-manuais-academy`, URL `/Ajuda/Tutoriais/CienciaManuaisAcademy`) — visão prestador: badge de ciência no card, abrir com **Visualizar**, ler descrição/mídia/**anexos** (**Ver anexo**) e confirmar **Lido e Ciente**; imagens em `public/tutoriais/academy/ciencia-manuais/`.
 
-Jogos do campo **Qual Jogo?** vêm de **`carregarJogosMesasEstudio()`** — valores distintos da coluna Jogo (tipo_jogo) em Gestão de Estúdios; sem duplicar; novos jogos cadastrados aparecem automaticamente. Persistência em `jogo_mesa text[]` (dica/manual).
+Jogos do campo **Qual Jogo?** vêm de **`carregarJogosMesasEstudio()`** (`fetchAllPages` + `tipo_jogo` distinto de `mesas_spin_cadastro`); falha → erro no modal + **Tentar de novo** (não lista vazia silenciosa). Persistência em `jogo_mesa text[]` (dica/manual).
 
 ### Workflow Gerenciamento
 
@@ -107,13 +140,13 @@ Se essa migration ainda não estiver aplicada, a listagem de Gerenciamento refaz
 
 **Tutorial (Ajuda → Tutoriais):** **Dicas Academy** (`postagem-academy-aprovacao`, URL `/Ajuda/Tutoriais/DicasAcademy`) — criar Dica/Comunicado e enviar para aprovação; imagens em `public/tutoriais/academy/postagem-aprovacao/`.
 
-Ações por status: rascunho → Editar + Ver; **aprovacao** → Editar + **Aprovar** (só Sim) + Ver; publicado → Editar + Arquivar + Ver; arquivado → Ver. **Ver** abre **`ModalVerPostagem`** com abas **Ver** (campos preenchidos, só leitura) e **Histórico** (`academy_portal_postagem_status_historico`, mesma lista do modal de histórico anterior). Tabela: Assunto, Autor, Tipo, Categoria, Criado em, Status, **Data de Aprovação**, **Aprovador**, Publicado em, Ações. Tabelas Supabase **independentes** do Portal de RH (`academy_portal_*`). **Carga:** `fetchAllPages` + janela 13 competências em `created_at`; paginação de vista 20/página (`TabelaPaginacaoBar`).
+Ações por status: rascunho → Editar + Ver; **aprovacao** → Editar + **Aprovar** (só Sim) + Ver; publicado → Editar + Arquivar + Ver; arquivado → Ver. **Ver** abre **`ModalVerPostagem`** com abas **Ver** (campos preenchidos, só leitura) e **Histórico** (`academy_portal_postagem_status_historico`, mesma lista do modal de histórico anterior). Tabela: Assunto, Autor, Tipo, Categoria, Criado em, Status, **Data de Aprovação**, **Aprovador**, Publicado em, Ações. Tabelas Supabase **independentes** do Portal de RH (`academy_portal_*`). **Carga:** `fetchAllPages` + janela 13 competências em `created_at` + `order(created_at desc, id asc)`; paginação de vista 20/página (`TabelaPaginacaoBar`); falha → alerta + **Tentar novamente** (não empty falso).
 
 ### Filtros
 
 Carrossel mês + Histórico (`Todo o período`) por `published_at`; o Histórico usa 13 competências mensais inclusivas e inicia **ativo** ao abrir a página; abas leitura só `status === publicado`. **Ordenação (Comunicados / Dicas / Manuais):** ciência pendente no topo (Manuais); depois mais nova → mais antiga (`published_at`) — `lib/portalPostagemSort.ts`. **Não** ordenar Manuais por código na listagem pública.
 
-Comunicados, dicas e manuais na **leitura pública** usam `fetchAllPages` com **`status = publicado`** e **`published_at >=` janela de 13 competências**; colunas e join de categoria **explícitos**. Receipts com `.in("content_id", ids)` do conjunto carregado + autores em **`Promise.all`**. **Proibido** baixar rascunhos/arquivados no portal de leitura, dump all-time de receipts, ou filtrar só no cliente o status/período da listagem pública.
+Comunicados, dicas e manuais na **leitura pública** usam `fetchAllPages` com **`status = publicado`** e **`published_at >=` janela de 13 competências**; colunas e join de categoria **explícitos**; `order(published_at desc, id asc)`. Receipts com `.in("content_id", ids)` do conjunto carregado + autores em **`Promise.all`**, sempre com **`user_id` = identidade efetiva** (`useIdentidadeEfetiva`) — ler e gravar («Lido e Ciente») a mesma identidade; em simulação `somenteLeitura` não grava. Falha de carga → alerta + **Tentar novamente** (não empty falso). **Boot setores** (RH + organograma para ciência): idem. Abas shell: **4 tabpanels** montados (`hidden` + `aria-controls`), padrão Performance Hub. **Proibido** baixar rascunhos/arquivados no portal de leitura, dump all-time de receipts, ou filtrar só no cliente o status/período da listagem pública.
 
 ### Cards Comunicados e Dicas (leitura)
 
@@ -121,8 +154,10 @@ Mesmo formato: descrição **completa** no card; link **Ver anexo** abaixo do te
 
 ### Strings de vazio
 
-- Período sem dados: **`Sem dados para o período selecionado.`**
-- Busca/filtro sem match: **Nenhuma postagem encontrada.**
+- Período / Histórico sem dados: **`Sem dados para o período selecionado.`**
+- Busca ou subaba de categoria sem match: **Nenhuma postagem encontrada.**
+
+Ações por status no Gerenciamento: falha de listagem → alerta + **Tentar novamente** (não «Nenhuma postagem…»); `order(created_at desc, id asc)`. Modais Ver / Ciência / editar: erro de carga + **Tentar de novo**. Edição: colunas explícitas (sem `select("*")`).
 
 ---
 
@@ -138,7 +173,7 @@ Mesmo formato: descrição **completa** no card; link **Ver anexo** abaixo do te
 
 Times avaliados: **Game Presenter** e **Shuffler**. Com escopo amplo (Ver ≠ Próprios ou Editar), filtro de time **obrigatório** — sem agregador «Todos»; default **Game Presenter**. Com **Ver = Próprios** (sem Editar), o filtro de Time **não aparece** — a lista fica só nas avaliações do usuário (todos os times).
 
-**Carga:** `fetchPerformanceHubAvaliacoes` — janela 13 competências no SQL (`data_avaliacao`) + `fetchAllPages` (Global § Eficiência de fetch).
+**Carga:** `fetchPerformanceHubAvaliacoes` — janela 13 competências no SQL (`data_avaliacao`) com **fim = último dia do mês corrente** (`periodoHistoricoPerformanceHub`) + `fetchAllPages` com `order(data_avaliacao desc, id asc)`. Data de criação usa calendário **local** (`dataAvaliacaoHojeBr` / `fmtDate`) — **proibido** fallback `toISOString().slice(0,10)` (UTC pode gravar D+1). Falha de avaliações ou cadastro (times/staff/mesas) → alerta + **Tentar novamente** (não empty falso). Modal **Histórico**: idem. Configuração: `loadError` + retry; **Salvar** bloqueado até a carga OK.
 
 ### Permissões iniciais
 
@@ -162,7 +197,7 @@ Gestão de Usuários → `PAGES`: secção **Academy**, `hasCriar` / `hasEditar`
 | Gerenciamento | `ClipboardList` | `canCriar === "sim"` |
 | Configuração | `Settings` | `canCriar === "sim"` |
 
-URL: `appRoutes.ts` — segmentos `Avaliacoes`, `Feedback`, `Gerenciamento`, `Configuracao`.
+URL: `appRoutes.ts` — segmentos `Avaliacoes`, `Feedback`, `Gerenciamento`, `Configuracao`. Painéis permitidos pelas gates montam no 1º render (`hidden` na inativa) — `aria-controls` válidos.
 
 ### Aba Feedback (`PerformanceHubAbaFeedback`)
 
@@ -204,6 +239,10 @@ Modal **Ver**: igual ao Analisar sem CTAs; aba **Feedback** com quadros Solicita
 Modal **Histórico**: linhas com data/hora, ação e usuário (`academy_performance_hub_avaliacao_historico`).
 
 Rascunho **não** entra na aba Avaliações. **Concluir** grava **Aguardando** e registra histórico `publicada`. Retenção de vídeo (`concluida_em`) dispara ao entrar em **Aprovado**.
+
+**Validação do Concluir (obrigatório):** o modal tem 5 abas, então erro genérico deixa o campo em falta invisível — rascunhos ficavam presos por 1 nota ou pelos Pontos Fortes numa aba que o coach não estava a ver, e ele lia isso como «a avaliação sumiu». `validarConcluir` devolve `{ mensagens, pendencias }`: mensagem **por aba** nomeando o que falta (`Comunicação: faltam 2 notas e 1 comentário.`) e `pendencias` na ordem das abas. Ao falhar, `irParaPendencia` troca para a aba do **primeiro** pendente e um efeito (dep. `[foco, aba]`, porque `ModalTabPanel` fica montado com `hidden`) rola até ele com foco. Campo de vídeo é input `type=file` oculto — rolar para o `label[for]`, nunca focar o input. **Proibido** publicar com erro genérico sem levar o usuário ao campo.
+
+Validação bloqueada **grava o rascunho** (`guardarPreenchimentoPendente` → `onSalvar`) antes de devolver o controle: o rascunho só persiste no clique manual em Salvar, então fechar o modal depois do erro perdia tudo o que foi digitado. Não sobe vídeo pendente nesse caminho (upload continua em Salvar/Concluir) e `statusAposSalvarRascunho` preserva o status de linha já publicada. Confirmação no rodapé: «Rascunho salvo às HH:MM — o preenchimento não se perde.»
 
 **Ações só ícone:** `BtnIconeAcaoLinha` + `tooltipAcao` (rótulo da ação, sem nome do avaliado).
 
@@ -255,7 +294,7 @@ Estado **`PerformanceHubScoringPorTime`** — configs independentes por time.
 - Carrossel de mês + **Histórico** (`Todo o período`) — lista derivada das avaliações no banco (**sempre** inclui o mês civil corrente); ao abrir a página (e ao sair do Histórico / trocar Time) o índice inicia no **mês corrente**, sem bloquear navegação para competências anteriores.
 - Time: select obrigatório GP / Shuffler (oculto com Ver = Próprios).
 - Staff: multi quando escopo amplo; oculto na aba **Configuração**; oculto ou fixo em **Próprios**.
-- No bloco **Avaliações** (aba Avaliações), com **Ver = Sim**: busca por nome + filtros **Turno** (`FiltroTurnoSelect` — Todos Turnos / Manhã / Tarde / Noite) e **Status** (`FiltroBarCampoSelect` — Todos Status / Aguardando / Feedback / Aprovado) na mesma fileira. Com Ver = Próprios esses filtros não aparecem. Tabelas de Avaliações, Feedbacks e Gerenciamento: paginação 20/página (`TabelaPaginacaoBar`).
+- No bloco **Avaliações** (aba Avaliações), com **Ver = Sim** (não Próprios): **`BarraPesquisaPagina`** + filtros **Turno** (`FiltroTurnoSelect` — Todos Turnos / Manhã / Tarde / Noite) e **Status** (`FiltroBarCampoSelect` — Todos Status / Aguardando / Feedback / Aprovado) na mesma fileira. Com Ver = Próprios esses filtros não aparecem. Tabelas de Avaliações, Feedbacks e Gerenciamento: paginação 20/página (`TabelaPaginacaoBar`).
 - Centralização de fileiras: Global § Alinhamento no bloco de filtros.
 
 ### Dados (Supabase)
@@ -276,7 +315,8 @@ Estado **`PerformanceHubScoringPorTime`** — configs independentes por time.
 | Tamanho máximo | **500 MB** por arquivo — `ACADEMY_PERFORMANCE_HUB_VIDEO_MAX_BYTES` alinhado ao `file_size_limit` do bucket **e** ao **limite global** do Storage no Dashboard (Storage → Settings). O TUS usa o **mínimo** dos dois; global em 50 MB (default) recusa vídeo de ~126 MB com `Maximum size exceeded` mesmo com o bucket em 500 MB |
 | Validação | No `onChange` do campo (rejeita antes do upload) **e** antes de enviar ao Storage |
 | Orientação no campo | `ACADEMY_PERFORMANCE_HUB_VIDEO_ORIENTACAO` — grave em 720p; texto único abaixo do input |
-| Upload | Arquivos **≥ 6 MB** usam TUS (`tus-js-client` build **browser**): contrato oficial Supabase (`uploadDataDuringCreation: true`, `x-upsert: true`, chunks 6 MB, **um** header `Authorization: Bearer <JWT>` — sem `onBeforeRequest` duplicado, senão o Storage devolve `Invalid Compact JWS`), host `*.storage.supabase.co` com fallback no host da API. Menores usam `storage.upload` simples. Progresso `%` nos botões Salvar/Concluir. TUS exige políticas Storage **INSERT + UPDATE** |
+| Upload | Arquivos **≥ 6 MB** usam TUS (`tus-js-client` build **browser**): contrato oficial Supabase (`uploadDataDuringCreation: true`, `x-upsert: true`, chunks 6 MB, **um** header `Authorization: Bearer <JWT>` — sem `onBeforeRequest` duplicado, senão o Storage devolve `Invalid Compact JWS`), host `*.storage.supabase.co` com fallback no host da API. Menores usam `storage.upload` simples. Progresso `%` nos botões Salvar/Concluir. TUS exige políticas Storage **INSERT + UPDATE**. **Proibido** chamar `refreshSession()` no caminho do upload — refresh falho limpa a sessão (`SIGNED_OUT`) e desloga o usuário; usar só `getSession()` + JWT vigente |
+| Persistência | Create inicial com id `novo-*` é serializado; Concluir/Salvar aguardam o UUID real (mapa cliente→servidor) para **não** gerar INSERT duplicado. Falha de gravação exibe erro no modal (não fecha como sucesso). Após **Concluir**, a UI troca para a aba **Avaliações** |
 | Retenção | **90 dias após a conclusão** — `ACADEMY_PERFORMANCE_HUB_VIDEO_RETENCAO_DIAS`; `concluida_em` marca o início do prazo (trigger `trg_academy_performance_hub_avaliacao_concluida_em`) |
 | Purga | Edge Function **`purge-academy-performance-hub-videos`** + cron semanal (`purge-academy-performance-hub-videos-semanal`, domingos 04:20 UTC) — apaga o arquivo, limpa `video_url` e grava `video_removido_em`; `video_nome` permanece |
 | Órfãos | A mesma function apaga arquivos do bucket que nenhuma avaliação referencia (troca de vídeo, upload não salvo) com mais de 24 h |

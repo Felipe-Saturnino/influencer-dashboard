@@ -1,6 +1,6 @@
 ---
-description: Conceitos de negócio Spin Gaming — estúdios, operadoras, produtos Live, atores, dados financeiros e glossário. Consultar em dúvidas de domínio antes de modelar schema ou UX.
-alwaysApply: true
+description: Conceitos de negócio Spin Gaming — estúdios, operadoras, produtos Live, atores, dados financeiros e glossário. Ler em /nova-feature se o domínio for estúdio/operadora/mesa; não always-on.
+alwaysApply: false
 ---
 
 # Spin Gaming — Negócio e domínio
@@ -28,7 +28,7 @@ A Spin Gaming opera **estúdios de live cassino** e fornece **sinal de mesas ao 
 - Canais de aquisição (influencers, afiliados, campanhas, UTM).
 - RH, comercial B2B e gestão de parceiros.
 
-A plataforma **não substitui** o PLS/fornecedor de relatórios. A origem continua sendo os prints/extracts; a carga operacional no Supabase segue **`mesas-spin-carga.mdc`** (Superset dashboard 15 → JSON em `tmp/` → UPSERT `--gravar`). **Não** pedir ao usuário colar SQL no Editor, salvo falha de `--gravar`. Reconciliação diária entre blocos Per table, Daily, UAP por jogo e Monthly.
+A plataforma **não substitui** o fornecedor do data lake. A carga operacional no Supabase segue **`mesas-spin-carga.mdc`** (Grafana → ClickHouse → JSON em `tmp/` → UPSERT `--gravar`). **Não** pedir ao usuário colar SQL no Editor, salvo falha de `--gravar`. Reconciliação diária entre mesa, daily, UAP por jogo e Monthly.
 
 ---
 
@@ -109,7 +109,7 @@ Relatórios PLS (Per table, Daily, UAP por jogo, Monthly) — leitura humana / p
 
 ### Grupo EsportivaBet (Network) — marcas no `player_id`
 
-No Superset/ClickHouse, `operator_name = EsportivaBet` e `brand_name` vem vazio (diferente de Blaze/Jon Bet, que usam `brand_name`). A marca do provedor aparece no **último segmento** de `player_id` (mesmo padrão do BKO):
+No ClickHouse, `operator_name = EsportivaBet` e `brand_name` vem vazio (diferente de Blaze/Jon Bet, que usam `brand_name`). A marca do provedor aparece no **último segmento** de `player_id` (mesmo padrão do BKO):
 
 | Token no `player_id` | Marca na plataforma | Slug canónico |
 |----------------------|---------------------|---------------|
@@ -120,12 +120,13 @@ No Superset/ClickHouse, `operator_name = EsportivaBet` e `brand_name` vem vazio 
 | `ricobetbr_*` | Rico Bet | `rico_bet` |
 | `donaldbetbr_*` | Donald Bet | `donald_bet` |
 | `betpontobetbetbr_*` | Bet.Bet | `betponto_bet` |
+| `goldebetbr_*` | Goldebet | `goldebet` |
 
-Carga: `scripts/superset-mesas-spin-extract-browser.js` + `scripts/superset-mesas-spin-run.mjs`. Operadoras do split (`bateu_bet`, `brx_bet`, `rico_bet`, `donald_bet`, `betponto_bet`, `esportiva_bet`) devem existir em **Gestão de Operadoras** (e IDs Network em Gestão de Estúdios / Mesas, se aplicável).
+Carga: `scripts/grafana-mesas-spin-extract-browser.js` + `scripts/mesas-spin-run.mjs`. Operadoras do split (`bateu_bet`, `brx_bet`, `rico_bet`, `donald_bet`, `betponto_bet`, `goldebet`, `esportiva_bet`) devem existir em **Gestão de Operadoras** (e IDs Network em Gestão de Estúdios / Mesas, se aplicável). Sem `goldebetbr_*` no `player_id`, volume da Goldebet continua no resto da Esportiva Bet.
 
 ### Atualização diária (padrão agent)
 
-Quando o usuário pedir **atualizar / carregar** dados Mesas Spin neste chat: seguir **`.cursor/rules/mesas-spin-carga.mdc`** — extract Superset (dashboard 15) com split EsportivaBet → JSON em `tmp/` → UPSERT direto (`--gravar`). Não carregar o dia corrente incompleto; `ATE` exclusivo no Superset. **Zeros no Detalhamento Diário:** após o 1º dia com dado de uma operadora na janela, preencher dias seguintes (mesmo sem volume no Superset) — ver `mesas-spin-carga.mdc` § Preenchimento com zero.
+Quando o pedido for **atualizar / carregar** Mesas Spin: frente **`/carga-mesas`** (chat diário). Lei em **`.cursor/rules/mesas-spin-carga.mdc`**. Não carregar D-0; `--de`/`--ate` inclusivos; zeros no Detalhamento Diário após o 1º dia com dado — ver esse MDC. Não misturar carga com UI neste chat.
 
 ### Regras de reconciliação (carga)
 
@@ -133,6 +134,10 @@ Quando o usuário pedir **atualizar / carregar** dados Mesas Spin neste chat: se
 2. Em discrepância: **não** gerar SQL nem assumir correção — sinalizar e aguardar confirmação humana.
 3. Soma UAP por jogo **pode** exceder UAP daily (overlap entre verticais) — **não** é discrepância.
 4. Monthly só atualiza quando o print Monthly mudar; evitar sobrescrever `arpu` sem valor explícito.
+
+### Jogador do canal (TAP → mesas Spin)
+
+Streamers/Afiliados medem o canal de aquisição em **agregado** (`influencer_metricas`). A aba **Jogadores** precisa do **ID Ext** TAP (`ext_customer_id`) por UTM (`origem`) para cruzar com quem jogou mesas Spin. TAP ID ≠ `player_id` BKO; a ponte é o ID Ext + CRM/identity_map. GGR desta vista = GGR **Spin**, não GGR TAP. Cadastro: `jogadores` + `jogadores_metricas_diarias` no sync CDA (`sync-metricas-cda`); enriquecimento Spin no job Revenue Sentinel. **Não** despejar o lago BKO no Supabase nem inflar `influencer_metricas` com linha por jogador.
 
 ### Visão analítica alvo (pós-migração estúdios)
 

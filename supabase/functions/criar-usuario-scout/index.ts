@@ -2,7 +2,9 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { enviarEmailBoasVindasConta } from './enviarBoasVindas.ts'
 import { DEFAULT_LOGIN_URL } from './transacionalShell.ts'
-import { accessGrantedByPayload, registrarHistoricoPerfil } from './common.ts'
+import { accessGrantedByPayload, exigirPermissaoCriar, registrarHistoricoPerfil } from './common.ts'
+
+const ERRO_CRIAR = 'Não foi possível criar o usuário. Se o problema persistir, entre em contato com o suporte.'
 
 type SupabaseAdmin = ReturnType<typeof createClient>
 
@@ -127,7 +129,10 @@ async function vincularOperadoraInfluencer(
     { influencer_id: userId, operadora_slug: trim, ativo: true },
     { onConflict: 'influencer_id,operadora_slug', ignoreDuplicates: false },
   )
-  if (ioErr) return { error: ioErr.message }
+  if (ioErr) {
+    console.error('[criar-usuario-scout] influencer_operadoras:', ioErr.message)
+    return { error: ERRO_CRIAR }
+  }
 
   const { data: existing } = await supabase
     .from('user_scopes')
@@ -143,7 +148,10 @@ async function vincularOperadoraInfluencer(
       scope_type: 'operadora',
       scope_ref: trim,
     })
-    if (scErr) return { error: scErr.message }
+    if (scErr) {
+      console.error('[criar-usuario-scout] user_scopes:', scErr.message)
+      return { error: ERRO_CRIAR }
+    }
   }
   return {}
 }
@@ -182,7 +190,15 @@ serve(async (req) => {
     })
   }
 
+  const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
   const supabase = createClient(supabaseUrl, serviceRoleKey, supabaseServiceOptions)
+  const gate = await exigirPermissaoCriar(req, supabaseUrl, anonKey, supabase, 'scout')
+  if (gate) {
+    return new Response(JSON.stringify({ error: gate.error }), {
+      status: gate.status,
+      headers: { ...cors, 'Content-Type': 'application/json' },
+    })
+  }
 
   let raw: Record<string, unknown>
   try {
@@ -227,7 +243,8 @@ serve(async (req) => {
         .update({ cache_hora: cacheHoraVinc })
         .eq('id', userIdTrim)
       if (cacheErr) {
-        return new Response(JSON.stringify({ error: cacheErr.message }), {
+        console.error('[criar-usuario-scout] cache:', cacheErr.message)
+        return new Response(JSON.stringify({ error: ERRO_CRIAR }), {
           status: 500,
           headers: { ...cors, 'Content-Type': 'application/json' },
         })
@@ -243,9 +260,7 @@ serve(async (req) => {
   }
 
   if (!senhaPadrao || senhaPadrao.length < 8) {
-    return new Response(JSON.stringify({
-      error: 'SENHA_PADRAO deve ter no mínimo 8 caracteres. Configure no Supabase → Settings → Edge Functions → Secrets.',
-    }), {
+    return new Response(JSON.stringify({ error: 'Configuração do servidor incompleta' }), {
       status: 500,
       headers: { ...cors, 'Content-Type': 'application/json' },
     })
@@ -304,7 +319,8 @@ serve(async (req) => {
   try {
     const created = await goTrueAdminCreateUser(supabaseUrl, serviceRoleKey, email, senhaPadrao, nome)
     if ('error' in created) {
-      return new Response(JSON.stringify({ error: created.error }), {
+      console.error('[criar-usuario-scout] Auth:', created.error)
+      return new Response(JSON.stringify({ error: ERRO_CRIAR }), {
         status: 400,
         headers: { ...cors, 'Content-Type': 'application/json' },
       })
@@ -341,7 +357,8 @@ serve(async (req) => {
 
     if (profileErr) {
       await goTrueAdminDeleteUser(supabaseUrl, serviceRoleKey, uid)
-      return new Response(JSON.stringify({ error: profileErr.message }), {
+      console.error('[criar-usuario-scout] profile:', profileErr.message)
+      return new Response(JSON.stringify({ error: ERRO_CRIAR }), {
         status: 500,
         headers: { ...cors, 'Content-Type': 'application/json' },
       })
@@ -379,7 +396,8 @@ serve(async (req) => {
 
     if (perfilErr) {
       await goTrueAdminDeleteUser(supabaseUrl, serviceRoleKey, uid)
-      return new Response(JSON.stringify({ error: perfilErr.message }), {
+      console.error('[criar-usuario-scout] perfil:', perfilErr.message)
+      return new Response(JSON.stringify({ error: ERRO_CRIAR }), {
         status: 500,
         headers: { ...cors, 'Content-Type': 'application/json' },
       })
@@ -388,7 +406,8 @@ serve(async (req) => {
     const vErr = await vincularOperadoraInfluencer(supabase, uid, operadoraSlug)
     if (vErr.error) {
       await goTrueAdminDeleteUser(supabaseUrl, serviceRoleKey, uid)
-      return new Response(JSON.stringify({ error: vErr.error }), {
+      console.error('[criar-usuario-scout] vínculo:', vErr.error)
+      return new Response(JSON.stringify({ error: ERRO_CRIAR }), {
         status: 500,
         headers: { ...cors, 'Content-Type': 'application/json' },
       })
@@ -419,7 +438,7 @@ serve(async (req) => {
   } catch (e) {
     console.error('[criar-usuario-scout] Erro:', e)
     return new Response(JSON.stringify({
-      error: e instanceof Error ? e.message : 'Erro interno ao criar usuário',
+      error: ERRO_CRIAR,
     }), {
       status: 500,
       headers: { ...cors, 'Content-Type': 'application/json' },

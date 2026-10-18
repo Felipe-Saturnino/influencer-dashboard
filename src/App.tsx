@@ -74,6 +74,7 @@ const GestaoLinks = lazyWithRetry(() => import("./pages/marketing/GestaoLinks"))
 const Campanhas = lazyWithRetry(() => import("./pages/marketing/Campanhas"));
 const GaleriaFotos = lazyWithRetry(() => import("./pages/marketing/GaleriaFotos"));
 const PipelineB2B = lazyWithRetry(() => import("./pages/comercial/PipelineB2B"));
+const PipelineCrypto = lazyWithRetry(() => import("./pages/comercial/PipelineCrypto"));
 const PipelineAgregadoras = lazyWithRetry(() => import("./pages/comercial/PipelineAgregadoras"));
 const OverviewComercial = lazyWithRetry(() => import("./pages/comercial/OverviewComercial"));
 const ComercialIntegracao = lazyWithRetry(() => import("./pages/comercial/Integracao"));
@@ -112,6 +113,7 @@ const TechOpsOrdemSaida = lazyWithRetry(() => import("./pages/techOps/OrdemSaida
 const TechOpsItensAlocados = lazyWithRetry(() => import("./pages/techOps/ItensAlocados"));
 const PerformanceHub = lazyWithRetry(() => import("./pages/academy/PerformanceHub"));
 const PortalAcademy = lazyWithRetry(() => import("./pages/academy/PortalAcademy"));
+const AcademyCronograma = lazyWithRetry(() => import("./pages/academy/Cronograma"));
 const SemAcesso = lazyWithRetry(() => import("./pages/geral/SemAcesso"));
 
 // ─── MAPA DE PÁGINAS ─────────────────────────────────────────────────────────
@@ -140,6 +142,7 @@ const PAGE_MAP: Record<string, LazyExoticComponent<ComponentType>> = {
   comercial_overview: OverviewComercial,
   comercial_integracao: ComercialIntegracao,
   comercial_pipeline_b2b: PipelineB2B,
+  comercial_pipeline_crypto: PipelineCrypto,
   comercial_pipeline_agregadoras: PipelineAgregadoras,
   cs_atendimento: CsAtendimento,
   gestao_dealers:   GestaoDealers,
@@ -174,6 +177,7 @@ const PAGE_MAP: Record<string, LazyExoticComponent<ComponentType>> = {
   tech_ops_itens_alocados: TechOpsItensAlocados,
   academy_performance_hub: PerformanceHub,
   academy_portal: PortalAcademy,
+  academy_cronograma: AcademyCronograma,
   configuracoes:    Configuracoes,
   simulador_login:  SimuladorLogin,
   ajuda:            Ajuda,

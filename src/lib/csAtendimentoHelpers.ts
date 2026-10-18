@@ -23,7 +23,7 @@ export async function carregarAtendentesCustomerService(): Promise<CsAtendenteFi
 
   if (error) {
     console.error("[csAtendimento] atendentes", error);
-    return [];
+    throw new Error(error.message);
   }
 
   const rows = (data ?? []) as CsAtendenteRpcRow[];
@@ -79,7 +79,7 @@ export async function carregarMensagensChamado(chamadoId: string): Promise<CsCha
 
   if (error) {
     console.error("[csAtendimento] mensagens", error);
-    return [];
+    throw new Error(error.message);
   }
   return (data ?? []) as CsChamadoMensagemRow[];
 }

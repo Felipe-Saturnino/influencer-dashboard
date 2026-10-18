@@ -13,6 +13,7 @@ import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { useIdentidadeEfetiva } from "../../../hooks/useIdentidadeEfetiva";
 import { supabase } from "../../../lib/supabase";
+import { fetchAllPages } from "../../../lib/supabasePaginate";
 import { hojeIsoBrasil } from "../../../lib/dateBrasil";
 import { FONT } from "../../../constants/theme";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
@@ -146,6 +147,10 @@ import {
 } from "./gestaoEscalaExcel";
 import { baixarXlsx } from "../../../lib/xlsxWriter";
 import { buscarRhFuncionarioAtivoPorEmailLogin } from "../../../lib/rhFuncionarioLoginMatch";
+import {
+  areaKeysEscritorioDasUnidades,
+  fetchRhLiderancaEscopoResult,
+} from "../../../lib/rhLiderancaEscopo";
 
 function vistaColunasInicialEscala(): EscalaVistaColunas {
   if (typeof window === "undefined") return "mes";
@@ -180,14 +185,20 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
   const [prestadoresRaw, setPrestadoresRaw] = useState<RpcPrestadorEscala[]>([]);
   const [loadingPrestadores, setLoadingPrestadores] = useState(true);
   const [erroPrestadores, setErroPrestadores] = useState<string | null>(null);
+  const [avisoPropriosSemVinculo, setAvisoPropriosSemVinculo] = useState<string | null>(null);
   /** Abas de time (Organograma) conforme área de atuação / modo. */
   const [abasTimes, setAbasTimes] = useState<AbaEscalaTime[]>([]);
   /** Estúdios ativos para o select ao lado do período. */
   const [estudiosAtivosEscala, setEstudiosAtivosEscala] = useState<{ slug: string; nome: string }[]>([]);
+  const [erroEstudios, setErroEstudios] = useState<string | null>(null);
   const [opParaEstudio, setOpParaEstudio] = useState<Record<string, string>>({});
   /** `todos` | `nenhum` | slug do estúdio. */
   const [filtroEstudioEscala, setFiltroEstudioEscala] = useState<string>(FILTRO_STAFF_ESTUDIO_TODOS);
   const [erroSalvarGrade, setErroSalvarGrade] = useState<string | null>(null);
+  /** Última ação de grade que falhou — para «Tentar de novo». */
+  const [acaoGradeFalha, setAcaoGradeFalha] = useState<"salvar" | "aprovar" | "nova_escala" | "recarregar" | null>(
+    null,
+  );
   const [avisoRascunhoLocal, setAvisoRascunhoLocal] = useState<string | null>(null);
   const [erroDownloadEscala, setErroDownloadEscala] = useState<string | null>(null);
   const [salvandoGrade, setSalvandoGrade] = useState(false);
@@ -249,6 +260,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
   const carregarPrestadores = useCallback(async () => {
     setLoadingPrestadores(true);
     setErroPrestadores(null);
+    setAvisoPropriosSemVinculo(null);
     const pAreaAtuacao = modo === "escritorio" ? "escritorio" : "estudio";
     const [timesRes, prestRes, meuFuncionario] = await Promise.all([
       supabase.rpc("rh_escala_times_por_area_atuacao", { p_area_atuacao: pAreaAtuacao }),
@@ -257,30 +269,60 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
         ? buscarRhFuncionarioAtivoPorEmailLogin(emailEfetivo)
         : Promise.resolve(null),
     ]);
-    if (prestRes.error) {
+    if (prestRes.error || timesRes.error) {
       setErroPrestadores(
-        "Não foi possível carregar o staff. Se o problema persistir, entre em contato com o suporte.",
+        timesRes.error && !prestRes.error
+          ? "Não foi possível carregar os times da escala. Se o problema persistir, entre em contato com o suporte."
+          : "Não foi possível carregar o staff. Se o problema persistir, entre em contato com o suporte.",
       );
       setPrestadoresRaw([]);
       setAbasTimes([]);
+      setAvisoPropriosSemVinculo(null);
     } else {
       const prestadores = (prestRes.data ?? []) as RpcPrestadorEscala[];
       setPrestadoresRaw(prestadores);
-      const times = timesRes.error
-        ? []
-        : ((timesRes.data ?? []) as { id: string; nome: string; tipo?: string }[]).map((row) => ({
-            id: String(row.id ?? ""),
-            nome: String(row.nome ?? ""),
-            tipo: row.tipo === "gerencia" ? ("gerencia" as const) : ("time" as const),
-          }));
+      const times = ((timesRes.data ?? []) as { id: string; nome: string; tipo?: string }[]).map((row) => ({
+        id: String(row.id ?? ""),
+        nome: String(row.nome ?? ""),
+        tipo: row.tipo === "gerencia" ? ("gerencia" as const) : ("time" as const),
+      }));
       let abas = buildAbasEscalaFromTimes(modo, times);
       if (perm.canView === "proprios") {
         const meuId = meuFuncionario?.id ?? "";
         const eu = meuId ? prestadores.find((p) => p.id === meuId) : undefined;
         const myArea = eu ? areaKeyDoPrestadorEscala(modo, eu) : null;
-        abas = myArea ? abas.filter((a) => a.areaKey === myArea) : [];
+        if (modo === "escritorio") {
+          const escopoFetch = await fetchRhLiderancaEscopoResult(meuId || null);
+          if (!escopoFetch.ok) {
+            setErroPrestadores(
+              "Não foi possível carregar o escopo de liderança. Se o problema persistir, entre em contato com o suporte.",
+            );
+            setPrestadoresRaw([]);
+            setAbasTimes([]);
+            setLoadingPrestadores(false);
+            return;
+          }
+          const escopo = escopoFetch.escopo;
+          const allowed = areaKeysEscritorioDasUnidades(escopo.unidades);
+          if (myArea) allowed.add(myArea);
+          abas = abas.filter((a) => allowed.has(a.areaKey));
+          if (abas.length === 0) {
+            setAvisoPropriosSemVinculo(
+              escopo.ehLider
+                ? "Você não lidera times de escritório nesta página. A escala fica vazia — a Escala Estúdio cobre os times de operação."
+                : "Seu login não está vinculado a um prestador ativo de escritório. A escala fica vazia — entre em contato com o RH.",
+            );
+          }
+        } else if (!myArea) {
+          setAvisoPropriosSemVinculo(
+            "Seu login não está vinculado a um prestador ativo nos times de Escala Estúdio. A escala fica vazia — entre em contato com o RH.",
+          );
+          abas = [];
+        } else {
+          abas = abas.filter((a) => a.areaKey === myArea);
+        }
         setAbasTimes(abas);
-        if (myArea) {
+        if (myArea && abas.some((a) => a.areaKey === myArea)) {
           setFiltroArea(myArea);
         } else if (abas[0]) {
           setFiltroArea(abas[0].areaKey);
@@ -305,43 +347,59 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
     void carregarPrestadores();
   }, [perm.loading, perm.canView, carregarPrestadores]);
 
+  const carregarEstudios = useCallback(async () => {
+    setErroEstudios(null);
+    type EstudioSpinBootRow = {
+      slug: string;
+      nome: string;
+      tipo: string;
+      estudios_spin_operadoras: { operadora_slug: string } | { operadora_slug: string }[] | null;
+    };
+    try {
+      const rows = await fetchAllPages<EstudioSpinBootRow>(async (from, to) => {
+        const { data, error } = await supabase
+          .from("estudios_spin")
+          .select("slug, nome, tipo, estudios_spin_operadoras(operadora_slug)")
+          .eq("ativo", true)
+          .order("slug", { ascending: true })
+          .range(from, to);
+        return { data: (data as EstudioSpinBootRow[] | null) ?? null, error };
+      });
+      const opts: { slug: string; nome: string }[] = [];
+      const junctionFlat: { operadora_slug: string; estudio_slug: string; tipo: string }[] = [];
+      for (const e of rows) {
+        opts.push({ slug: e.slug, nome: (e.nome ?? "").trim() || e.slug });
+        const joins = e.estudios_spin_operadoras;
+        const list = joins == null ? [] : Array.isArray(joins) ? joins : [joins];
+        for (const j of list) {
+          junctionFlat.push({
+            operadora_slug: j.operadora_slug,
+            estudio_slug: e.slug,
+            tipo: e.tipo,
+          });
+        }
+      }
+      setEstudiosAtivosEscala(opts.sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")));
+      setOpParaEstudio(buildOperadoraParaEstudioMap(junctionFlat));
+    } catch {
+      setEstudiosAtivosEscala([]);
+      setOpParaEstudio({});
+      setErroEstudios(
+        "Não foi possível carregar os estúdios. Se o problema persistir, entre em contato com o suporte.",
+      );
+    }
+  }, []);
+
   useEffect(() => {
     if (perm.loading || perm.canView === "nao") return;
-    void supabase
-      .from("estudios_spin")
-      .select("slug, nome, tipo, estudios_spin_operadoras(operadora_slug)")
-      .eq("ativo", true)
-      .order("nome", { ascending: true })
-      .then(({ data, error }) => {
-        if (error) {
-          setEstudiosAtivosEscala([]);
-          setOpParaEstudio({});
-          return;
-        }
-        const opts: { slug: string; nome: string }[] = [];
-        const junctionFlat: { operadora_slug: string; estudio_slug: string; tipo: string }[] = [];
-        for (const raw of data ?? []) {
-          const e = raw as {
-            slug: string;
-            nome: string;
-            tipo: string;
-            estudios_spin_operadoras: { operadora_slug: string } | { operadora_slug: string }[] | null;
-          };
-          opts.push({ slug: e.slug, nome: (e.nome ?? "").trim() || e.slug });
-          const joins = e.estudios_spin_operadoras;
-          const list = joins == null ? [] : Array.isArray(joins) ? joins : [joins];
-          for (const j of list) {
-            junctionFlat.push({
-              operadora_slug: j.operadora_slug,
-              estudio_slug: e.slug,
-              tipo: e.tipo,
-            });
-          }
-        }
-        setEstudiosAtivosEscala(opts);
-        setOpParaEstudio(buildOperadoraParaEstudioMap(junctionFlat));
-      });
-  }, [perm.loading, perm.canView]);
+    if (modo === "escritorio") {
+      setErroEstudios(null);
+      setEstudiosAtivosEscala([]);
+      setOpParaEstudio({});
+      return;
+    }
+    void carregarEstudios();
+  }, [perm.loading, perm.canView, modo, carregarEstudios]);
 
   useEffect(() => {
     if (
@@ -454,6 +512,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
   /** Novo mês: limpa rascunhos antigos e carrega o do mês aberto. */
   useEffect(() => {
     setErroSalvarGrade(null);
+    setAcaoGradeFalha(null);
     setAvisoRascunhoLocal(null);
     setErroGrade(null);
     mesHydratingRef.current = true;
@@ -570,15 +629,29 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
             p_area_key: areaKey,
             p_celulas: celulas,
           });
-          if (!cancelled && !saveErr && (saveData as RpcGradeSalvarResult | null)?.ok) {
-            const { data: aprovData, error: aprovErr } = await supabase.rpc("rh_gestao_escala_grade_aprovar", {
-              p_ref_mes: ref,
-              p_area_key: areaKey,
-            });
-            if (!aprovErr && (aprovData as RpcGradeAprovarResult | null)?.ok) {
-              aprovadaEfetiva = true;
-            }
+          if (cancelled) return;
+          if (saveErr || !(saveData as RpcGradeSalvarResult | null)?.ok) {
+            console.error("[GestaoEscala] auto-salvar escritório", saveErr ?? saveData);
+            setErroGrade(
+              "Não foi possível preparar a escala do escritório. Se o problema persistir, entre em contato com o suporte.",
+            );
+            setLoadingGrade(false);
+            return;
           }
+          const { data: aprovData, error: aprovErr } = await supabase.rpc("rh_gestao_escala_grade_aprovar", {
+            p_ref_mes: ref,
+            p_area_key: areaKey,
+          });
+          if (cancelled) return;
+          if (aprovErr || !(aprovData as RpcGradeAprovarResult | null)?.ok) {
+            console.error("[GestaoEscala] auto-aprovar escritório", aprovErr ?? aprovData);
+            setErroGrade(
+              "Não foi possível aprovar a escala do escritório. Se o problema persistir, entre em contato com o suporte.",
+            );
+            setLoadingGrade(false);
+            return;
+          }
+          aprovadaEfetiva = true;
         }
         if (cancelled) return;
         const aprovadoEmIso =
@@ -672,10 +745,12 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
   const salvarGradeEscalaDb = useCallback(
     async (areaKey: AreaEscalaKey, celulasOverride?: Record<string, string>): Promise<boolean> => {
       setErroSalvarGrade(null);
+      setAcaoGradeFalha(null);
       const est = gerarPorFiltro[areaKey];
       const celulas = celulasOverride ?? est?.celulas ?? {};
       if (Object.keys(celulas).length === 0) {
         setErroSalvarGrade("Não há células para salvar.");
+        setAcaoGradeFalha(null);
         return false;
       }
       setSalvandoGrade(true);
@@ -695,6 +770,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
               setErroSalvarGrade(
                 "Não foi possível verificar a escala antes de salvar. Se o problema persistir, entre em contato com o suporte.",
               );
+              setAcaoGradeFalha("salvar");
               return false;
             }
             const fromDb = mapaCelulasFromGradeCarregarPayload(remoteData);
@@ -714,6 +790,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
               setErroSalvarGrade(
                 "A escala foi atualizada por outra pessoa. Recarregue antes de salvar.",
               );
+              setAcaoGradeFalha("recarregar");
               return false;
             }
           }
@@ -739,6 +816,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                     ? `Não foi possível salvar: ${code}.`
                     : "Não foi possível salvar a grade.",
           );
+          setAcaoGradeFalha(code === "forbidden" || code === "escala_aprovada" || code === "prestador_fora_area" ? null : "salvar");
           return false;
         }
         setGerarPorFiltro((prev) => {
@@ -767,6 +845,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
         setErroSalvarGrade(
           "Não foi possível salvar a grade. Se o problema persistir, entre em contato com o suporte.",
         );
+        setAcaoGradeFalha("salvar");
         return false;
       } finally {
         setSalvandoGrade(false);
@@ -985,6 +1064,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                   ? `Não foi possível aprovar: ${code}.`
                   : "Não foi possível aprovar a escala.",
           );
+          setAcaoGradeFalha(code === "forbidden" || code === "sem_grade" ? null : "aprovar");
           return false;
         }
         const aprovadoEmDb = typeof ap.aprovado_em === "string" ? ap.aprovado_em : null;
@@ -1036,6 +1116,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
         setErroSalvarGrade(
           "Não foi possível aprovar a escala. Se o problema persistir, entre em contato com o suporte.",
         );
+        setAcaoGradeFalha("aprovar");
         return false;
       }
     },
@@ -1045,6 +1126,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
   const resetarGradeEscalaDb = useCallback(
     async (areaKey: AreaEscalaKey): Promise<boolean> => {
       setErroSalvarGrade(null);
+      setAcaoGradeFalha(null);
       setResetandoGrade(true);
       try {
         const ref = refMesISO(ano, mes);
@@ -1063,6 +1145,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                 ? `Não foi possível refazer: ${code}.`
                 : "Não foi possível refazer a escala.",
           );
+          setAcaoGradeFalha(code === "forbidden" ? null : "nova_escala");
           return false;
         }
         setGerarPorFiltro((prev) => {
@@ -1097,6 +1180,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
         setErroSalvarGrade(
           "Não foi possível refazer a escala. Se o problema persistir, entre em contato com o suporte.",
         );
+        setAcaoGradeFalha("nova_escala");
         return false;
       } finally {
         setResetandoGrade(false);
@@ -1471,35 +1555,48 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
               : []),
           ];
 
-    const blocos: EscalaExcelBlocoTurno[] = turnos.map((turno) => {
-      const linhasEstudio = contarCelulasComSiglaPorEstudio(
-        prestadoresArea,
-        dias,
-        celulasGerarAtivas,
-        turno.sigla,
-        opParaEstudio,
-        estudiosNomeEscala,
-      );
-      return {
-        titulo: turno.titulo,
-        linhas: linhasEstudio.map((l) => ({ label: l.label, counts: l.counts })),
-        total: dias.map((_, i) => linhasEstudio.reduce((acc, l) => acc + (l.counts[i] ?? 0), 0)),
-      };
-    });
+    const blocos: EscalaExcelBlocoTurno[] =
+      modo === "escritorio"
+        ? turnos.map((turno) => {
+            const linhasExcel = prestadoresArea.map(mapLinhaPrestador);
+            const counts = contarCelulasComSigla(linhasExcel, dias, celulasGerarAtivas, turno.sigla);
+            return {
+              titulo: turno.titulo,
+              linhas: [{ label: "Equipe", counts }],
+              total: counts,
+            };
+          })
+        : turnos.map((turno) => {
+            const linhasEstudio = contarCelulasComSiglaPorEstudio(
+              prestadoresArea,
+              dias,
+              celulasGerarAtivas,
+              turno.sigla,
+              opParaEstudio,
+              estudiosNomeEscala,
+            );
+            return {
+              titulo: turno.titulo,
+              linhas: linhasEstudio.map((l) => ({ label: l.label, counts: l.counts })),
+              total: dias.map((_, i) => linhasEstudio.reduce((acc, l) => acc + (l.counts[i] ?? 0), 0)),
+            };
+          });
 
     const estudioPorPrestador = new Map<string, string>();
-    for (const p of prestadoresArea) {
-      estudioPorPrestador.set(
-        p.id,
-        bucketEstudioConsolidado(p, opParaEstudio, estudiosNomeEscala).label,
-      );
+    if (modo !== "escritorio") {
+      for (const p of prestadoresArea) {
+        estudioPorPrestador.set(
+          p.id,
+          bucketEstudioConsolidado(p, opParaEstudio, estudiosNomeEscala).label,
+        );
+      }
     }
 
     const linhasDetalhe: EscalaExcelLinhaDetalhe[] = linhasOrdenadasEscalaDiaria.map((row) => ({
       nome: row.nome,
       nickname: row.nickname,
       turno: row.turnoStaffNome,
-      estudio: estudioPorPrestador.get(row.id) ?? "",
+      estudio: modo === "escritorio" ? "" : (estudioPorPrestador.get(row.id) ?? ""),
       valoresPorDia: dias.map((dia) => {
         const ck = chaveCelulaGerar(row.id, dia.iso);
         const texto = gradeAprovada
@@ -1525,8 +1622,12 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
           mes,
         ),
         [
-          buildAbaConsolidadoEscalaExcel(diasExcel, blocos),
-          buildAbaDetalhadoEscalaExcel(diasExcel, linhasDetalhe),
+          buildAbaConsolidadoEscalaExcel(diasExcel, blocos, {
+            rotuloPrimeiraColuna: modo === "escritorio" ? "Equipe" : "Estúdio",
+          }),
+          buildAbaDetalhadoEscalaExcel(diasExcel, linhasDetalhe, {
+            incluirEstudio: modo !== "escritorio",
+          }),
         ],
       );
     } catch (e) {
@@ -2071,6 +2172,62 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
           </button>
           </div>
       )}
+      {avisoPropriosSemVinculo && (
+        <div
+          role="status"
+          style={{
+            marginBottom: 16,
+            padding: "10px 14px",
+            borderRadius: 10,
+            fontSize: 13,
+            fontFamily: FONT.body,
+            color: "#b45309",
+            border: "1px solid rgba(245,158,11,0.4)",
+            background: "rgba(245,158,11,0.1)",
+          }}
+        >
+          {avisoPropriosSemVinculo}
+        </div>
+      )}
+      {erroEstudios && (
+        <div
+          role="alert"
+          style={{
+            marginBottom: 16,
+            padding: "10px 14px",
+            borderRadius: 10,
+            fontSize: 13,
+            fontFamily: FONT.body,
+            color: "#e84025",
+            border: "1px solid rgba(232,64,37,0.35)",
+            background: "rgba(232,64,37,0.08)",
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "center",
+            gap: 12,
+            justifyContent: "space-between",
+          }}
+        >
+          <span>{erroEstudios}</span>
+          <button
+            type="button"
+            onClick={() => void carregarEstudios()}
+            style={{
+              padding: "8px 14px",
+              borderRadius: 10,
+              border: `1px solid ${t.cardBorder}`,
+              background: t.inputBg,
+              color: t.text,
+              fontFamily: FONT.body,
+              fontSize: 13,
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
+          >
+            Tentar de novo
+          </button>
+        </div>
+      )}
 
       {avisoRascunhoLocal && (
         <div
@@ -2142,9 +2299,49 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
             color: "#e84025",
             border: "1px solid rgba(232,64,37,0.35)",
             background: "rgba(232,64,37,0.08)",
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "center",
+            gap: 12,
+            justifyContent: "space-between",
           }}
         >
-          {erroSalvarGrade}
+          <span>{erroSalvarGrade}</span>
+          {acaoGradeFalha ? (
+            <button
+              type="button"
+              onClick={() => {
+                if (acaoGradeFalha === "recarregar") {
+                  recarregarGradeAtiva();
+                  setErroSalvarGrade(null);
+                  setAcaoGradeFalha(null);
+                  return;
+                }
+                if (acaoGradeFalha === "aprovar") {
+                  void aprovarEscalaGerar(filtroArea);
+                  return;
+                }
+                if (acaoGradeFalha === "nova_escala") {
+                  void resetarGradeEscalaDb(filtroArea);
+                  return;
+                }
+                void salvarGradeEscalaDb(filtroArea);
+              }}
+              style={{
+                padding: "8px 14px",
+                borderRadius: 10,
+                border: `1px solid ${t.cardBorder}`,
+                background: t.inputBg,
+                color: t.text,
+                fontFamily: FONT.body,
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              Tentar de novo
+            </button>
+          ) : null}
         </div>
       )}
 
@@ -2154,7 +2351,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
             <Loader2 size={22} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden />
             <span style={{ color: t.textMuted, fontSize: 13 }}>Carregando…</span>
           </div>
-        ) : erroGrade ? null : (
+        ) : erroPrestadores || erroGrade || avisoPropriosSemVinculo ? null : (
           <>
             {resumoTurnoDias && mostrarFiltroArea ? (
               <section
@@ -2493,7 +2690,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                           type="button"
                           disabled={toolbarGradeBloqueada}
                           onClick={() => void aplicarSugestaoEscalaArea(filtroArea)}
-                          aria-label="Gerar suEscala Estúdio para a área selecionada"
+                          aria-label="Gerar sugestão de escala para a área selecionada"
                           style={{
                             padding: "10px 16px",
                             borderRadius: 10,
@@ -2596,9 +2793,30 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                     fontSize: 12,
                     fontFamily: FONT.body,
                     marginBottom: 12,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 12,
+                    flexWrap: "wrap",
                   }}
                 >
-                  {erroDownloadEscala}
+                  <span>{erroDownloadEscala}</span>
+                  <button
+                    type="button"
+                    onClick={() => baixarEscalaExcel()}
+                    style={{
+                      padding: "8px 14px",
+                      borderRadius: 10,
+                      border: "1px solid rgba(232,64,37,0.35)",
+                      background: "transparent",
+                      color: "#e84025",
+                      fontWeight: 700,
+                      fontFamily: FONT.body,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Tentar de novo
+                  </button>
                 </div>
               ) : null}
               <div className="app-table-wrap" style={getDataTableWrapStyle()}>
@@ -3036,6 +3254,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
           prestadores={linhas}
           celulas={gerarPorFiltro[filtroArea]?.celulas ?? {}}
           canEditar={podeAlterarEscalaAprovada}
+          modoEscritorio={modo === "escritorio"}
           sanitizarValor={(_sigla, valor) => sanitizarValorCelulaAlterarEscala(valor, modo, filtroArea)}
           opcoesSelectCelula={() => opcoesSelectCelulaAlterarEscala(modo, filtroArea)}
           labelExibicaoCelula={(_sigla, valor) => labelExibicaoCelulaAlterarEscala(valor, modo, filtroArea)}

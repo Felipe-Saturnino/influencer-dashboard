@@ -30,11 +30,13 @@ export function ModalDecidirTrocaMarketplace({
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
   const [erro, setErro] = useState<string | null>(null);
+  const [erroRetentavel, setErroRetentavel] = useState(false);
   const [gravando, setGravando] = useState(false);
   const [ofertaExpirada, setOfertaExpirada] = useState(false);
 
   useEffect(() => {
     setErro(null);
+    setErroRetentavel(false);
     setGravando(false);
     setOfertaExpirada(false);
   }, [oferta?.id, decisao]);
@@ -73,6 +75,7 @@ export function ModalDecidirTrocaMarketplace({
 
   async function confirmar() {
     setErro(null);
+    setErroRetentavel(false);
     setGravando(true);
     const res = desistindo
       ? await desistirOfertaMarketplace(oferta!.id)
@@ -82,6 +85,7 @@ export function ModalDecidirTrocaMarketplace({
     setGravando(false);
     if ("error" in res) {
       setErro(mensagemErroOfertaMarketplace(res.error));
+      setErroRetentavel(res.error !== "oferta_expirada");
       if (res.error === "oferta_expirada") {
         setOfertaExpirada(true);
         onConcluida();
@@ -131,9 +135,41 @@ export function ModalDecidirTrocaMarketplace({
         </p>
 
         {erro ? (
-          <p role="alert" aria-live="polite" style={{ margin: "0 0 12px", color: "#e84025", fontSize: 13 }}>
-            {erro}
-          </p>
+          <div
+            role="alert"
+            aria-live="polite"
+            style={{
+              margin: "0 0 12px",
+              color: "#e84025",
+              fontSize: 13,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
+              flexWrap: "wrap",
+            }}
+          >
+            <span>{erro}</span>
+            {erroRetentavel ? (
+              <button
+                type="button"
+                disabled={gravando || ofertaExpirada}
+                onClick={() => void confirmar()}
+                style={{
+                  padding: "8px 14px",
+                  borderRadius: 10,
+                  border: "1px solid rgba(232,64,37,0.35)",
+                  background: "transparent",
+                  color: "#e84025",
+                  fontWeight: 700,
+                  fontFamily: FONT.body,
+                  cursor: gravando || ofertaExpirada ? "not-allowed" : "pointer",
+                }}
+              >
+                Tentar de novo
+              </button>
+            ) : null}
+          </div>
         ) : null}
 
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, flexWrap: "wrap" }}>

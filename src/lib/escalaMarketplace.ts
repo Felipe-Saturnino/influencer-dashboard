@@ -511,21 +511,31 @@ export function parseOfertasMarketplacePayload(data: unknown): LinhaOfertaMarket
   return out;
 }
 
+export type MarketplaceOfertasLoad = {
+  rows: LinhaOfertaMarketplace[];
+  error: string | null;
+};
+
 /**
  * Lista ofertas do Marketplace.
  * @param refMesIso primeiro dia do mês (`YYYY-MM-01`) ou `null` = todo o histórico
+ * Erro ≠ lista vazia: `error` preenchido e `rows` [].
  */
 export async function carregarOfertasMarketplace(
   refMesIso: string | null,
-): Promise<LinhaOfertaMarketplace[]> {
+): Promise<MarketplaceOfertasLoad> {
   const { data, error } = await supabase.rpc("escala_marketplace_ofertas_listar", {
     p_ref_mes: refMesIso,
   });
   if (error) {
     console.error("[carregarOfertasMarketplace]", error);
-    return [];
+    return {
+      rows: [],
+      error:
+        "Não foi possível carregar as ofertas. Se o problema persistir, entre em contato com o suporte.",
+    };
   }
-  return parseOfertasMarketplacePayload(data);
+  return { rows: parseOfertasMarketplacePayload(data), error: null };
 }
 
 // ─── Contexto do prestador e grade própria ──────────────────────────────────
@@ -597,22 +607,38 @@ export function parseMeuContextoMarketplace(data: unknown): MarketplaceMeuContex
   };
 }
 
+export type MarketplaceContextoLoad = {
+  contexto: MarketplaceMeuContexto | null;
+  error: string | null;
+};
+
+/**
+ * Contexto do prestador no Marketplace.
+ * Falha de RPC ≠ «sem prestador»: `error` preenchido e `contexto` null.
+ */
 export async function carregarMeuContextoMarketplace(
   emailEfetivo?: string | null,
-): Promise<MarketplaceMeuContexto | null> {
+): Promise<MarketplaceContextoLoad> {
   const { data, error } = await supabase.rpc("escala_marketplace_meu_contexto");
   if (error) {
     console.error("[carregarMeuContextoMarketplace]", error);
-    return null;
+    return {
+      contexto: null,
+      error:
+        "Não foi possível carregar o seu contexto no Marketplace. Se o problema persistir, entre em contato com o suporte.",
+    };
   }
   const ctx = parseMeuContextoMarketplace(data);
   const email = emailEfetivo?.trim();
-  if (!email) return ctx;
+  if (!email) return { contexto: ctx, error: null };
   const func = await buscarRhFuncionarioAtivoPorEmailLogin(email);
   if (!func) {
-    return ctx
-      ? { ...ctx, funcionarioId: null, nome: "", orgTimeId: null, timeNome: "", areaKey: "" }
-      : null;
+    return {
+      contexto: ctx
+        ? { ...ctx, funcionarioId: null, nome: "", orgTimeId: null, timeNome: "", areaKey: "" }
+        : null,
+      error: null,
+    };
   }
   let timeNome = "";
   if (func.org_time_id) {
@@ -625,21 +651,24 @@ export async function carregarMeuContextoMarketplace(
   }
   const areaKey = timeKeyFromOrgTimeNome(timeNome);
   return {
-    escopo: "proprios",
-    funcionarioId: func.id,
-    nome: func.nome,
-    orgTimeId: func.org_time_id ?? null,
-    timeNome,
-    areaKey: areaKey === "todos" ? "" : areaKey,
-    areaAtuacao: func.area_atuacao ?? ctx?.areaAtuacao ?? "",
-    horario: {
-      escala: (func as { escala?: string | null }).escala ?? ctx?.horario.escala ?? null,
-      staff_turno: func.staff_turno ?? ctx?.horario.staff_turno ?? null,
-      staff_horario_turno: (func as { staff_horario_turno?: string | null }).staff_horario_turno
-        ?? ctx?.horario.staff_horario_turno
-        ?? null,
+    contexto: {
+      escopo: "proprios",
+      funcionarioId: func.id,
+      nome: func.nome,
+      orgTimeId: func.org_time_id ?? null,
+      timeNome,
+      areaKey: areaKey === "todos" ? "" : areaKey,
+      areaAtuacao: func.area_atuacao ?? ctx?.areaAtuacao ?? "",
+      horario: {
+        escala: (func as { escala?: string | null }).escala ?? ctx?.horario.escala ?? null,
+        staff_turno: func.staff_turno ?? ctx?.horario.staff_turno ?? null,
+        staff_horario_turno: (func as { staff_horario_turno?: string | null }).staff_horario_turno
+          ?? ctx?.horario.staff_horario_turno
+          ?? null,
+      },
+      operadora: ctx?.operadora ?? null,
     },
-    operadora: ctx?.operadora ?? null,
+    error: null,
   };
 }
 
@@ -687,40 +716,65 @@ export function parseMinhaGradeMarketplace(data: unknown): MarketplaceMinhaGrade
   };
 }
 
+export type MarketplaceGradeLoad = {
+  grade: MarketplaceMinhaGrade;
+  error: string | null;
+};
+
+const MSG_ERRO_GRADE_MARKETPLACE =
+  "Não foi possível carregar a escala. Se o problema persistir, entre em contato com o suporte.";
+
+/**
+ * Grade do mês do prestador.
+ * Falha de RPC ≠ escala não aprovada: `error` preenchido (não confundir com `aprovada: false`).
+ */
 export async function carregarMinhaGradeMarketplace(
   refMesIso: string,
-): Promise<MarketplaceMinhaGrade> {
+): Promise<MarketplaceGradeLoad> {
   const { data, error } = await supabase.rpc("escala_marketplace_minha_grade_mes", {
     p_ref_mes: refMesIso,
   });
   if (error) {
     console.error("[carregarMinhaGradeMarketplace]", error);
-    return { aprovada: false, areaKey: "", valorPorIso: new Map() };
+    return {
+      grade: { aprovada: false, areaKey: "", valorPorIso: new Map() },
+      error: MSG_ERRO_GRADE_MARKETPLACE,
+    };
   }
-  return parseMinhaGradeMarketplace(data);
+  return { grade: parseMinhaGradeMarketplace(data), error: null };
 }
 
 /**
  * Junta células de vários meses aprovados (ex.: Julho + Agosto) para o modal
  * Ofertar listar todos os dias futuros com escala publicada — não só o mês do carrossel.
+ * Se qualquer mês falhar, `error` é preenchido (não tratar como «sem escala aprovada»).
  */
 export async function carregarMinhaGradeMarketplaceMeses(
   refsMesIso: string[],
-): Promise<MarketplaceMinhaGrade> {
+): Promise<MarketplaceGradeLoad> {
   const unicos = [...new Set(refsMesIso.filter((r) => /^\d{4}-\d{2}-01$/.test(r)))];
-  if (unicos.length === 0) return { aprovada: false, areaKey: "", valorPorIso: new Map() };
+  if (unicos.length === 0) {
+    return { grade: { aprovada: false, areaKey: "", valorPorIso: new Map() }, error: null };
+  }
 
-  const grades = await Promise.all(unicos.map((ref) => carregarMinhaGradeMarketplace(ref)));
+  const results = await Promise.all(unicos.map((ref) => carregarMinhaGradeMarketplace(ref)));
+  const primeiroErro = results.find((r) => r.error)?.error ?? null;
+  if (primeiroErro) {
+    return {
+      grade: { aprovada: false, areaKey: "", valorPorIso: new Map() },
+      error: primeiroErro,
+    };
+  }
   const valorPorIso = new Map<string, string>();
   let areaKey = "";
   let aprovada = false;
-  for (const g of grades) {
+  for (const { grade: g } of results) {
     if (!g.aprovada) continue;
     aprovada = true;
     if (g.areaKey) areaKey = g.areaKey;
     for (const [iso, valor] of g.valorPorIso) valorPorIso.set(iso, valor);
   }
-  return { aprovada, areaKey, valorPorIso };
+  return { grade: { aprovada, areaKey, valorPorIso }, error: null };
 }
 
 // ─── Regra de intervalo mínimo (12h) ────────────────────────────────────────

@@ -25,6 +25,7 @@ Ao alterar um template de e-mail, replique o ficheiro em **todas** as functions 
 | `monitor-lobby-cda` |
 | `monitor-lobby-esportiva` |
 | `monitor-lobby-bateu` |
+| `monitor-lobby-goldebet` |
 | `monitor-lobby-donald` |
 | `monitor-lobby-betponto` |
 | `monitor-lobby-rico` |
@@ -64,6 +65,16 @@ Espelho do builder: `src/lib/rhCalendarioIcs.ts`. `verify_jwt = false` no Dashbo
 **`validate-comercial-dominios`:** deploy com **apenas** `index.ts`. Lógica HTTP espelhada em `src/lib/comercialDominioValidation.ts`.
 
 **`enrich-comercial-cnpj`:** deploy com **apenas** `index.ts`. Parser/localidade espelhado em `src/lib/comercialCnpjEnrichment.ts`.
+
+### `index.ts` + parsers Revenue Sentinel
+
+**Function:** `sync-revenue-sentinel` v1.5.0 — GET paginado `/v1/datasets/operator-player-rounds` (fonte principal por data/mesa) + POST `/v1/jogadores/spin` (reconciliação/fallback), header `X-API-Key`, e UPSERT em `jogadores` / `jogadores_metricas_diarias` (só colunas Spin). Cruza `game_table_id` com Gestão de Estúdios para rotular **Dedicada/Network + nome canónico**. Secrets **`RS_API_URL`** (opcional; default `https://api.spingaming.com.br/api/v1/data`) e **`RS_API_KEY`**. Cron `daily-sync-revenue-sentinel` ~4h20 BRT. Status Técnico → Integrações Externas → **Sync**. Espelhos dos parsers em `src/lib/revenueSentinelJogadores.ts` e `src/lib/revenueSentinelRounds.ts`. `verify_jwt = false`.
+
+| Ficheiro |
+|----------|
+| `index.ts` |
+| `revenueSentinelJogadores.ts` |
+| `revenueSentinelRounds.ts` |
 
 ### `index.ts` + `platformHealthDiagnostics.ts`
 
@@ -268,6 +279,7 @@ Com permissão **Editar** em Status Técnico, use **Executar** (com confirmaçã
 - **Social KPIs** → `trigger-social-kpis`
 - **Spin na Rede RSS** → `sync-spin-na-rede-rss`
 - **Painel de Notícias RSS** → `sync-painel-noticias-rss` (secret `PAINEL_NOTICIAS_INGEST_SECRET` no cron; TV em `/painel-noticias`)
+- **Revenue Sentinel — Jogadores Spin** → `sync-revenue-sentinel` (secrets `RS_API_URL` / `RS_API_KEY`; publicar também `revenueSentinelJogadores.ts`)
 - **Lobby Blaze** → `monitor-lobby-blaze`
 
 E-mails cron (enviam de verdade): botões de teste na mesma página → `relatorio-diario-diretoria`, `email-agenda-diaria` (use destinatário de teste se configurado).

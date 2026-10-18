@@ -4,12 +4,20 @@ import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { FONT } from "../../../constants/theme";
+import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
+import { fetchAllPages } from "../../../lib/supabasePaginate";
 import OperadoraTag from "../../../components/OperadoraTag";
 import type { OperadoraTagDados } from "./BannerPendencias";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { corStatusSolicitacao, labelTipoSolicitacao, tempoRelativo, type SolicitacaoStatus, type SolicitacaoTipo } from "./solicitacoesUtils";
 import type { Role } from "../../../types";
 import { ROLES_VISAO_OPERACAO_SPIN } from "../../../lib/staffRoles";
+
+const MSG_ERRO_CARREGAR_THREAD =
+  "Não foi possível carregar a solicitação. Se o problema persistir, entre em contato com o suporte.";
+const MSG_THREAD_NAO_ENCONTRADA = "Solicitação não encontrada ou sem permissão.";
+const MSG_ERRO_MENSAGENS =
+  "Não foi possível carregar as mensagens. Se o problema persistir, entre em contato com o suporte.";
 
 export type ThreadSolicitacaoOrigem = "dealer" | "campanha_roteiro" | "roteiro_mesa";
 
@@ -120,6 +128,8 @@ export function ModalThreadSolicitacao({
   const [texto, setTexto] = useState("");
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(true);
+  const [loadCabError, setLoadCabError] = useState<string | null>(null);
+  const [loadMsgError, setLoadMsgError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [resolvendo, setResolvendo] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
@@ -156,6 +166,9 @@ export function ModalThreadSolicitacao({
   }, []);
 
   const carregar = useCallback(async () => {
+    setLoading(true);
+    setLoadCabError(null);
+    setLoadMsgError(null);
     const papelMsg = papelMensagemFromUser(user?.role);
 
     if (origem === "campanha_roteiro") {
@@ -167,7 +180,13 @@ export function ModalThreadSolicitacao({
         .eq("id", solicitacaoId)
         .maybeSingle();
 
-      if (e1 || !s) {
+      if (e1) {
+        setCab(null);
+        setLoadCabError(MSG_ERRO_CARREGAR_THREAD);
+        setLoading(false);
+        return;
+      }
+      if (!s) {
         setCab(null);
         setLoading(false);
         return;
@@ -204,7 +223,13 @@ export function ModalThreadSolicitacao({
         .eq("id", solicitacaoId)
         .maybeSingle();
 
-      if (e1 || !s) {
+      if (e1) {
+        setCab(null);
+        setLoadCabError(MSG_ERRO_CARREGAR_THREAD);
+        setLoading(false);
+        return;
+      }
+      if (!s) {
         setCab(null);
         setLoading(false);
         return;
@@ -240,7 +265,13 @@ export function ModalThreadSolicitacao({
         .eq("id", solicitacaoId)
         .maybeSingle();
 
-      if (e1 || !s) {
+      if (e1) {
+        setCab(null);
+        setLoadCabError(MSG_ERRO_CARREGAR_THREAD);
+        setLoading(false);
+        return;
+      }
+      if (!s) {
         setCab(null);
         setLoading(false);
         return;
@@ -263,15 +294,21 @@ export function ModalThreadSolicitacao({
       });
     }
 
-    const { data: msgs, error: e2 } = await supabase
-      .from(tabMsg)
-      .select("id, solicitacao_id, autor, usuario_id, texto, visto, created_at")
-      .eq("solicitacao_id", solicitacaoId)
-      .order("created_at", { ascending: true })
-      .limit(50);
-
-    if (e2) setMensagens([]);
-    else await aplicarMensagensComNomes(msgs as MensagemRow[] | null);
+    try {
+      const msgs = await fetchAllPages<MensagemRow>(async (from, to) =>
+        supabase
+          .from(tabMsg)
+          .select("id, solicitacao_id, autor, usuario_id, texto, visto, created_at")
+          .eq("solicitacao_id", solicitacaoId)
+          .order("created_at", { ascending: true })
+          .range(from, to),
+      );
+      await aplicarMensagensComNomes(msgs);
+    } catch (e) {
+      console.error("[ModalThreadSolicitacao] Erro ao carregar mensagens:", e);
+      setMensagens([]);
+      setLoadMsgError(MSG_ERRO_MENSAGENS);
+    }
 
     const outro = papelMsg === "gestor" ? "operadora" : "gestor";
     await supabase.from(tabMsg).update({ visto: true }).eq("solicitacao_id", solicitacaoId).eq("autor", outro);
@@ -296,13 +333,21 @@ export function ModalThreadSolicitacao({
         },
         () => {
           void (async () => {
-            const { data: msgs } = await supabase
-              .from(tabMsg)
-              .select("id, solicitacao_id, autor, usuario_id, texto, visto, created_at")
-              .eq("solicitacao_id", solicitacaoId)
-              .order("created_at", { ascending: true })
-              .limit(50);
-            await aplicarMensagensComNomes(msgs as MensagemRow[] | null);
+            try {
+              const msgs = await fetchAllPages<MensagemRow>(async (from, to) =>
+                supabase
+                  .from(tabMsg)
+                  .select("id, solicitacao_id, autor, usuario_id, texto, visto, created_at")
+                  .eq("solicitacao_id", solicitacaoId)
+                  .order("created_at", { ascending: true })
+                  .range(from, to),
+              );
+              setLoadMsgError(null);
+              await aplicarMensagensComNomes(msgs);
+            } catch (e) {
+              console.error("[ModalThreadSolicitacao] Erro realtime mensagens:", e);
+              setLoadMsgError(MSG_ERRO_MENSAGENS);
+            }
           })();
         },
       )
@@ -405,8 +450,29 @@ export function ModalThreadSolicitacao({
         <div style={{ display: "flex", justifyContent: "center", padding: 32 }}>
           <Loader2 size={28} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden />
         </div>
+      ) : loadCabError ? (
+        <div role="alert" aria-live="polite" style={{ textAlign: "center", padding: "12px 0", fontFamily: FONT.body }}>
+          <p style={{ color: "#e84025", fontSize: 13, marginBottom: 12 }}>{loadCabError}</p>
+          <button
+            type="button"
+            onClick={() => void carregar()}
+            style={{
+              padding: "8px 16px",
+              borderRadius: 10,
+              border: `1px solid ${t.cardBorder}`,
+              background: t.inputBg,
+              color: t.text,
+              fontSize: 12,
+              fontWeight: 700,
+              fontFamily: FONT.body,
+              cursor: "pointer",
+            }}
+          >
+            Tentar novamente
+          </button>
+        </div>
       ) : !cab ? (
-        <p style={{ color: t.textMuted, fontFamily: FONT.body }}>Solicitação não encontrada ou sem permissão.</p>
+        <p style={{ color: t.textMuted, fontFamily: FONT.body }}>{MSG_THREAD_NAO_ENCONTRADA}</p>
       ) : (
         <>
           <div style={{ display: "flex", gap: 12, marginBottom: 16, alignItems: "flex-start" }}>
@@ -484,6 +550,28 @@ export function ModalThreadSolicitacao({
               borderBottom: `1px solid ${t.cardBorder}`,
             }}
           >
+            {loadMsgError ? (
+              <div role="alert" aria-live="polite" style={{ textAlign: "center", padding: 12, fontFamily: FONT.body }}>
+                <p style={{ color: "#e84025", fontSize: 12, marginBottom: 8 }}>{loadMsgError}</p>
+                <button
+                  type="button"
+                  onClick={() => void carregar()}
+                  style={{
+                    padding: "6px 12px",
+                    borderRadius: 8,
+                    border: `1px solid ${t.cardBorder}`,
+                    background: t.inputBg,
+                    color: t.text,
+                    fontSize: 12,
+                    fontWeight: 700,
+                    fontFamily: FONT.body,
+                    cursor: "pointer",
+                  }}
+                >
+                  Tentar novamente
+                </button>
+              </div>
+            ) : null}
             {mensagens.map((m) => {
               const daOperadora = m.autor === "operadora";
               return (
@@ -561,7 +649,8 @@ export function ModalThreadSolicitacao({
                 />
                 <button
                   type="button"
-                  aria-label="Enviar mensagem"
+                  aria-label={tooltipAcao("Enviar mensagem")}
+                  title={tooltipAcao("Enviar mensagem")}
                   disabled={sending || !texto.trim()}
                   onClick={() => void enviarMensagem()}
                   style={{
@@ -607,7 +696,7 @@ export function ModalThreadSolicitacao({
                     cursor: resolvendo ? "not-allowed" : "pointer",
                   }}
                 >
-                  {resolvendo ? "Salvando..." : "Marcar como resolvido"}
+                  {resolvendo ? "Salvando…" : "Marcar como resolvido"}
                 </button>
               ) : null}
             </>

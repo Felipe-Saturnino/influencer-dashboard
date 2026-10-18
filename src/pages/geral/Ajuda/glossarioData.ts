@@ -201,8 +201,46 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Registros",
         definicao:
-          "Número de novos cadastros realizados via link do influencer. Um acesso que resulta em cadastro completo conta como 1 registro.",
-        referencia: "Streamers → Conversão · Streamers → Overview · Overview Influencer · Mídias Sociais",
+          "Número de novos cadastros via link do influencer. Em Streamers (Overview, Conversão e Jogadores) conta IDs Ext únicos no período, não eventos TAP repetidos.",
+        referencia: "Streamers → Conversão · Streamers → Overview · Streamers → Jogadores · Overview Influencer · Mídias Sociais",
+      },
+      {
+        termo: "ID Ext",
+        definicao:
+          "Identificador do jogador na Casa de Apostas, o mesmo ID Ext da plataforma de afiliados. Não é o ID interno das mesas Spin — o cruzamento com quem jogou live cassino usa este ID como ponte.",
+        nota: "Em Streamers (Overview, Conversão e Jogadores), cada cadastro do canal (UTM de influencer) conta como um ID Ext único no período. `sem_utm` e UTM sem mapeamento não entram — o número é de pessoas, não de eventos TAP.",
+        referencia: "Streamers → Jogadores",
+      },
+      {
+        termo: "Origem",
+        definicao:
+          "Canal que trouxe o jogador. Na TAP da Casa de Apostas a origem é o UTM (utm_source) do link. Outras origens (campanha, afiliado, direto) entram em trabalhos futuros.",
+        referencia: "Streamers → Jogadores · Gestão de Links",
+      },
+      {
+        termo: "Jogaram Spin",
+        definicao:
+          "Cadastros do canal (UTM de influencer) com **pelo menos 1 rodada** identificada por `game_id` no dataset de mesas do Revenue Sentinel na competência selecionada — atividade no backoffice do operador (outros produtos) não conta. O RS é consultado mês a mês para respeitar o carrossel. Rodadas, Média, GGR Spin e Turnover Spin somam apenas estes jogadores — quem rodou na competência mas se cadastrou antes fica fora. Não inclui quem só existe no lake sem rodada. O GGR desta vista é o das mesas Spin, não o GGR TAP.",
+        referencia: "Streamers → Jogadores",
+      },
+      {
+        termo: "Jogaram Outros",
+        definicao:
+          "Cadastros do canal (UTM de influencer) que depositaram e não tiveram rodada Spin na competência selecionada. Quem jogou Spin tem prioridade e não é contado novamente neste grupo.",
+        referencia: "Streamers → Jogadores",
+      },
+      {
+        termo: "Não Jogaram",
+        definicao:
+          "Cadastros únicos das UTMs mapeadas a influencer sem depósito nem rodada Spin na competência selecionada. Spin + Outros + Não Jogaram = total de Registros únicos do período.",
+        referencia: "Streamers → Jogadores",
+      },
+      {
+        termo: "Taxa de ativação",
+        definicao:
+          "Percentual dos cadastros do canal que sentaram em mesa Spin no período. Não usa o GGR TAP.",
+        formula: "Jogaram Spin ÷ Registros × 100",
+        referencia: "Streamers → Jogadores",
       },
       {
         termo: "FTD (First Time Deposit)",
@@ -810,6 +848,24 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         referencia: "Pipeline B2B",
       },
       {
+        termo: "Pipeline Crypto",
+        definicao:
+          "Funil comercial de marcas no mercado crypto, independente do Pipeline B2B. Usa as empresas da Lista SPA e colunas Possui Crypto e Retorno. Marcas criadas manualmente não entram no B2B.",
+        referencia: "Pipeline Crypto",
+      },
+      {
+        termo: "Possui Crypto",
+        definicao:
+          "Coluna do Pipeline Crypto com Sim, Não ou em branco. Não dispara a automação de Status.",
+        referencia: "Pipeline Crypto",
+      },
+      {
+        termo: "Retorno",
+        definicao:
+          "Coluna do Pipeline Crypto com os mesmos status de proposta de Network. Só esta coluna recalcula o Status do funil crypto.",
+        referencia: "Pipeline Crypto",
+      },
+      {
         termo: "Mesa Dedicada",
         definicao:
           "Produto de Live Cassino exclusivo para a marca/operadora, negociado no Pipeline B2B. Status de proposta aparece na coluna Dedicada.",
@@ -1176,7 +1232,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Integração (Status Técnico)",
         definicao:
-          "Pipeline automático de dados monitorado na página Status Técnico — CDA Influencers, CDA Afiliados, Social Media, Spin na Rede, Painel de Notícias RSS, automações do Pipeline B2B, Lobby e envios de e-mail — com horário da última execução, volume processado e erros.",
+          "Pipeline automático de dados monitorado na página Status Técnico — CDA Influencers, CDA Afiliados, Social Media, Spin na Rede, Painel de Notícias RSS, automações do Pipeline B2B, Revenue Sentinel (Jogadores Spin), Lobby e envios de e-mail — com horário da última execução, volume processado e erros.",
         referencia: "Status Técnico",
       },
       {
@@ -1196,9 +1252,15 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         referencia: "docs/SETUP-TORNEIO-CDA-BKO.md · /TorneioCDA",
       },
       {
+        termo: "Revenue Sentinel",
+        definicao:
+          "Integração que cruza os IDs TAP dos jogadores de influencer com as rodadas nas mesas Spin. O GGR desta vista é o das mesas Spin, não o GGR da TAP. Roda após o sync CDA e aparece em Status Técnico na linha Revenue Sentinel — Jogadores Spin.",
+        referencia: "Status Técnico · Streamers",
+      },
+      {
         termo: "Sync manual",
         definicao:
-          "Execução sob demanda de uma integração, disponível para quem tem permissão de Editar em Status Técnico (inclui Painel de Notícias RSS). Lobby Blaze, Lobby CDA, Lobby Esportiva Bet, Lobby Jonbet, Lobby Bateu Bet, Lobby Rico Bet, Lobby BRX Bet, Lobby Donald Bet e Lobby BetPontoBet rodam por job automatizado e não têm essa ação.",
+          "Execução sob demanda de uma integração, disponível para quem tem permissão de Editar em Status Técnico (inclui Painel de Notícias RSS e Revenue Sentinel — Jogadores Spin). Lobby Blaze, Lobby CDA, Lobby Esportiva Bet, Lobby Jonbet, Lobby Bateu Bet, Lobby Rico Bet, Lobby BRX Bet, Lobby Donald Bet, Lobby BetPontoBet e Lobby Goldebet rodam por job automatizado e não têm essa ação.",
         referencia: "Status Técnico",
       },
       {
@@ -1524,7 +1586,7 @@ export const GLOSSARIO_CATEGORIA_PAGE_KEYS: Record<string, PageKey[]> = {
   financeiro_operacional: ["financeiro", "banca_jogo"],
   estudio: ["gestao_dealers", "central_notificacoes", "rh_figurinos", "roteiro_mesa", "incidentes", "escala_controle_turno"],
   marketing_digital: ["campanhas", "gestao_links", "galeria_fotos"],
-  comercial: ["comercial_overview", "comercial_integracao", "comercial_pipeline_b2b", "comercial_pipeline_agregadoras"],
+  comercial: ["comercial_overview", "comercial_integracao", "comercial_pipeline_b2b", "comercial_pipeline_crypto", "comercial_pipeline_agregadoras"],
   customer_success: ["cs_atendimento"],
   rh_portal: ["rh_portal", "spin_na_rede", "informativos", "academy_portal"],
   escala: [
@@ -1541,7 +1603,7 @@ export const GLOSSARIO_CATEGORIA_PAGE_KEYS: Record<string, PageKey[]> = {
   permissoes_plataforma: ["gestao_usuarios", "gestao_operadoras", "gestao_mesas", "status_tecnico"],
   home_perfis: ["informativos", "mesas_spin", "streamers", "gestao_operadoras"],
   whitelabel: ["gestao_operadoras"],
-  academy: ["academy_performance_hub", "academy_portal"],
+  academy: ["academy_performance_hub", "academy_portal", "academy_cronograma"],
   tech_ops_estoque: ["tech_ops_estoque"],
   tech_ops_ordem_saida: ["tech_ops_ordem_saida"],
   tech_ops_itens_alocados: ["tech_ops_itens_alocados"],

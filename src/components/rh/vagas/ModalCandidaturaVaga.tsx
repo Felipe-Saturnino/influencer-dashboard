@@ -10,6 +10,7 @@ import { prestadorJaInscritoNaVaga } from "../../../lib/rhVagaCandidaturaInscric
 import { uploadCurriculoCandidaturaVaga } from "../../../lib/rhVagaCandidaturaFiles";
 import type { RhVagaRow } from "../../../types/rhVaga";
 import type { RhFuncionario } from "../../../types/rhFuncionario";
+import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
 import { CampoObrigatorioMark } from "../../CampoObrigatorioMark";
 import { CampoUploadArquivos } from "../../CampoUploadArquivos";
 import { ModalBase, ModalHeader, MODAL_SCROLL_FOCUS_SAFE_PAD } from "../../OperacoesModal";
@@ -20,6 +21,9 @@ const CARTA_PLACEHOLDER =
 const CURRICULO_ACCEPT =
   ".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
+const ERRO_SALVAR_CANDIDATURA =
+  "Não foi possível enviar a candidatura. Se o problema persistir, entre em contato com o suporte.";
+
 type Theme = {
   text: string;
   textMuted: string;
@@ -27,12 +31,6 @@ type Theme = {
   inputBg: string;
   cardBg?: string;
 };
-
-function ctaGradient(brand: ReturnType<typeof useDashboardBrand>): string {
-  return brand.useBrand
-    ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
-    : "linear-gradient(135deg, var(--brand-action, #7c3aed), var(--brand-contrast, #1e36f8))";
-}
 
 export function ModalCandidaturaVaga({
   open,
@@ -195,7 +193,8 @@ export function ModalCandidaturaVaga({
       if (error.code === "23505") {
         setErroSalvar("Você já possui candidatura para esta vaga.");
       } else {
-        setErroSalvar(error.message);
+        console.error("[rh_vaga_candidaturas] salvar", error);
+        setErroSalvar(ERRO_SALVAR_CANDIDATURA);
       }
       return;
     }
@@ -337,7 +336,7 @@ export function ModalCandidaturaVaga({
                 padding: "10px 18px",
                 borderRadius: 10,
                 border: "none",
-                background: ctaGradient(brand),
+                background: getCtaCriarGradient(brand),
                 color: "#fff",
                 fontWeight: 700,
                 fontSize: 13,

@@ -28,10 +28,69 @@ import {
   STATUS_PRODUTO_LABEL,
   type HistoricoOverviewRow,
   type OverviewMarcaRow,
+  type ProdutoStatusCounts,
 } from "./helpers";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import type { CSSProperties } from "react";
 import { useMemo } from "react";
+
+function BarrasStatus({
+  counts,
+  maxVal,
+  t,
+}: {
+  counts: ProdutoStatusCounts;
+  maxVal: number;
+  t: { textMuted: string; inputBg: string };
+}) {
+  const linhas = [
+    ...STATUS_PRODUTO_ORDEM.map((st) => ({
+      key: st,
+      label: STATUS_PRODUTO_LABEL[st],
+      value: counts[st],
+      color: STATUS_PRODUTO_COLOR[st],
+    })),
+    { key: "sem_status", label: "Sem Status", value: counts.sem_status, color: "#6b7280" },
+  ];
+  return (
+    <div>
+      {linhas.map((linha) => (
+        <div
+          key={linha.key}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            marginBottom: 8,
+            fontFamily: FONT.body,
+          }}
+        >
+          <span style={{ width: 110, fontSize: 11, color: t.textMuted }}>{linha.label}</span>
+          <div
+            style={{
+              flex: 1,
+              height: 10,
+              background: t.inputBg,
+              borderRadius: 999,
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={{
+                height: "100%",
+                width: `${(linha.value / maxVal) * 100}%`,
+                borderRadius: 999,
+                background: linha.color,
+                opacity: 0.85,
+              }}
+            />
+          </div>
+          <span style={{ width: 28, fontSize: 11, fontWeight: 700, textAlign: "right" }}>{linha.value}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export function OverviewOperadorasPanel({
   filtered,
@@ -40,6 +99,7 @@ export function OverviewOperadorasPanel({
   pageBox,
   t,
   onGoPipeline,
+  modo = "operadoras",
 }: {
   filtered: OverviewMarcaRow[];
   comerciais: ComercialOpcao[];
@@ -52,6 +112,7 @@ export function OverviewOperadorasPanel({
     inputBg: string;
   };
   onGoPipeline: (tabSlug?: string) => void;
+  modo?: "operadoras" | "crypto";
 }) {
   const brand = useDashboardBrand();
   const { theme } = useApp();
@@ -92,7 +153,13 @@ export function OverviewOperadorasPanel({
   return (
     <>
       <div style={pageBox}>
-        <SectionTitle sub="Clique para abrir o Pipeline B2B detalhado">
+        <SectionTitle
+          sub={
+            modo === "crypto"
+              ? "Clique para abrir o Pipeline Crypto detalhado"
+              : "Clique para abrir o Pipeline B2B detalhado"
+          }
+        >
           KPIs consolidados
         </SectionTitle>
         <div className="app-grid-kpi-5">
@@ -145,92 +212,30 @@ export function OverviewOperadorasPanel({
           <OverviewPipelineFunnel funnel={funnel} funnelCounts={funnelCounts} />
         </div>
         <div style={pageBox}>
-          <SectionTitle sub="Status de Dedicada x Network">Produto</SectionTitle>
-          <div className="app-grid-2" style={{ gap: 20 }}>
-            {(
-              [
-                ["Dedicada", dedicadaCounts, maxDed],
-                ["Network", networkCounts, maxNet],
-              ] as const
-            ).map(([title, counts, maxVal]) => (
-              <div key={title}>
-                <h4 style={{ fontSize: 12, fontWeight: 700, marginBottom: 12, fontFamily: FONT.body }}>
-                  {title}
-                </h4>
-                {STATUS_PRODUTO_ORDEM.map((st) => (
-                  <div
-                    key={st}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 8,
-                      marginBottom: 8,
-                      fontFamily: FONT.body,
-                    }}
-                  >
-                    <span style={{ width: 110, fontSize: 11, color: t.textMuted }}>
-                      {STATUS_PRODUTO_LABEL[st]}
-                    </span>
-                    <div
-                      style={{
-                        flex: 1,
-                        height: 10,
-                        background: t.inputBg,
-                        borderRadius: 999,
-                        overflow: "hidden",
-                      }}
-                    >
-                      <div
-                        style={{
-                          height: "100%",
-                          width: `${(counts[st] / maxVal) * 100}%`,
-                          borderRadius: 999,
-                          background: STATUS_PRODUTO_COLOR[st],
-                          opacity: 0.85,
-                        }}
-                      />
-                    </div>
-                    <span style={{ width: 28, fontSize: 11, fontWeight: 700, textAlign: "right" }}>
-                      {counts[st]}
-                    </span>
-                  </div>
-                ))}
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                    marginBottom: 8,
-                    fontFamily: FONT.body,
-                  }}
-                >
-                  <span style={{ width: 110, fontSize: 11, color: t.textMuted }}>Sem Status</span>
-                  <div
-                    style={{
-                      flex: 1,
-                      height: 10,
-                      background: t.inputBg,
-                      borderRadius: 999,
-                      overflow: "hidden",
-                    }}
-                  >
-                    <div
-                      style={{
-                        height: "100%",
-                        width: `${(counts.sem_status / maxVal) * 100}%`,
-                        borderRadius: 999,
-                        background: "#6b7280",
-                        opacity: 0.85,
-                      }}
-                    />
-                  </div>
-                  <span style={{ width: 28, fontSize: 11, fontWeight: 700, textAlign: "right" }}>
-                    {counts.sem_status}
-                  </span>
+          <SectionTitle
+            sub={modo === "crypto" ? "Status da coluna Retorno" : "Status de Dedicada x Network"}
+          >
+            {modo === "crypto" ? "Interesse" : "Produto"}
+          </SectionTitle>
+          {modo === "crypto" ? (
+            <BarrasStatus counts={networkCounts} maxVal={maxNet} t={t} />
+          ) : (
+            <div className="app-grid-2" style={{ gap: 20 }}>
+              {(
+                [
+                  ["Dedicada", dedicadaCounts, maxDed],
+                  ["Network", networkCounts, maxNet],
+                ] as const
+              ).map(([title, counts, maxVal]) => (
+                <div key={title}>
+                  <h4 style={{ fontSize: 12, fontWeight: 700, marginBottom: 12, fontFamily: FONT.body }}>
+                    {title}
+                  </h4>
+                  <BarrasStatus counts={counts} maxVal={maxVal} t={t} />
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 

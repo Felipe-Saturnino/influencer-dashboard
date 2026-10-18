@@ -72,9 +72,24 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
           "O PVI (Player Value Index) é calculado com base em três componentes: ticket médio de depósito, GGR por jogador e WD Ratio. Se qualquer um desses dados for zero (ex.: influencer sem depósitos registrados), o PVI não pode ser calculado corretamente e pode aparecer baixo ou zerado. Isso é esperado para influencers com poucos FTDs no período.",
       },
       {
+        subtitulo: "Por que vejo 'Sem dados para o período selecionado.' nos KPIs ou no ranking?",
+        texto:
+          "Quando não há influencers com lives ou métricas no período (e filtros de Influencer/Operadora), os blocos de KPI, Funil e Ranking mostram a mensagem canónica de período vazio — não R$ 0,00. Se o período tem dados mas um chip de status/ação zera a tabela, a mensagem passa a ser 'Sem dados para o filtro selecionado'. Troque o mês, ative Histórico ou limpe o chip.",
+      },
+      {
+        subtitulo: "A aba Jogadores está vazia ou sem IDs?",
+        texto:
+          "Os cadastros por jogador (ID Ext + UTM) entram no mesmo sync da Casa de Apostas que atualiza as métricas consolidadas. Overview, Conversão e Jogadores contam IDs únicos das UTMs mapeadas a influencer; `sem_utm` e UTM sem mapeamento não entram. Os grupos da aba Jogadores fecham o total sem duplicação: Spin (já tem rodada em mesa Spin), Outros (já depositou, sem rodada Spin) e Não Jogaram (sem depósito e sem rodada Spin). Se Overview e Conversão têm números mas Jogadores não, o sync agregado rodou e a fase de IDs falhou — em geral falta permissão de relatório de registros na TAP. Se o Status Técnico mostrar o sync **OK** com 0 registros no dia, republicar a Edge `sync-revenue-sentinel` (parser incluso, v1.3.0+) e rodar o Sync de novo. Se o problema persistir, entre em contato com o suporte.",
+      },
+      {
+        subtitulo: "Na aba Jogadores, por que um mês antigo aparece sem rodadas Spin?",
+        texto:
+          "A integração consulta o Revenue Sentinel uma competência por vez e grava a data real das rodadas. O botão Sync do Status Técnico atualiza apenas o mês corrente (até D-1); meses antigos precisam do backfill histórico. Depois dele, Ativação, Rodadas, GGR, Turnover, mesas e ranking refletem o mês selecionado; Histórico soma as competências.\n\nRodadas, Média, GGR e Turnover do bloco Ativação contam só os jogadores do card Jogaram Spin (cadastro e rodada na competência). Quem rodou no mês mas se cadastrou antes não entra nesses cards. Se Rodadas por Mesa mostrar “Mesa não informada”, confira se a Edge `sync-revenue-sentinel` v1.5.0+ está publicada com os três ficheiros e se o `game_table_id` retornado pelo RS existe na Gestão de Estúdios.",
+      },
+      {
         subtitulo: "Os KPIs mostram valores diferentes entre Overview e Financeiro?",
         texto:
-          "As três abas usam a mesma busca linha a linha de métricas e lives do período. Diferenças entre Overview e Financeiro costumam vir do recorte exibido (ex.: investimento de agentes no Overview, PVI e perfil de jogador no Financeiro), não de um procedimento especial do banco. Se a divergência parecer inconsistente para o mesmo filtro e mês, entre em contato com o suporte informando o mês e os valores observados.",
+          "As quatro abas usam a mesma busca linha a linha de métricas e lives do período (Overview, Conversão e Financeiro) ou o cadastro diário de jogadores (aba Jogadores). Diferenças entre Overview e Financeiro costumam vir do recorte exibido (ex.: investimento de agentes no Overview, PVI e perfil de jogador no Financeiro), não de um procedimento especial do banco. O GGR da aba Jogadores é o das mesas Spin, não o GGR TAP. Se a divergência parecer inconsistente para o mesmo filtro e mês, entre em contato com o suporte informando o mês e os valores observados.",
       },
     ],
   },
@@ -82,14 +97,19 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
     titulo: "Afiliados",
     blocos: [
       {
-        subtitulo: "Por que vejo 'Sem dados para o filtro selecionado' em todos os blocos?",
+        subtitulo: "Por que vejo 'Sem dados para o período selecionado.'?",
         texto:
-          "Confirme o período no carrossel (ou Histórico), o filtro de afiliado e a operadora. As métricas vêm do sync CDA — conta Afiliados (Status Técnico → Casa de Apostas (CDA) — Afiliados). O afiliado precisa ter UTM mapeado (Links e Materiais ou Gestão de Links → Mapear como Afiliado) e o sync precisa ter rodado após o mapeamento. Links só com visita na TAP e ainda não mapeados aparecem em Gestão de Links → Pendentes (Origem = TAP Afiliados). Se o filtro de afiliados estiver vazio, verifique cadastros na página Afiliados.",
+          "Quando não há afiliados com métricas ou investimento no período (e filtros de Afiliado/Operadora), os blocos de KPI, Funil, Ranking e Investimento mostram a mensagem canónica de período vazio — não R$ 0,00. Confirme o carrossel (ou Histórico), o filtro de afiliado e a operadora. As métricas vêm do sync CDA — conta Afiliados (Status Técnico → Casa de Apostas (CDA) — Afiliados). O afiliado precisa ter UTM mapeado (Links e Materiais ou Gestão de Links → Mapear como Afiliado) e o sync precisa ter rodado após o mapeamento. Links só com visita na TAP e ainda não mapeados aparecem em Gestão de Links → Pendentes (Origem = TAP Afiliados). Se o filtro de afiliados estiver vazio, verifique cadastros na página Afiliados.",
+      },
+      {
+        subtitulo: "A página fica em 'Carregando…' ou pede para tentar de novo?",
+        texto:
+          "Falha de rede ou do sync mostra mensagem canónica com **Tentar de novo** — isso não é o mesmo que «sem dados». Se o problema persistir após o botão e um hard refresh (Ctrl+Shift+R), entre em contato com o suporte.",
       },
       {
         subtitulo: "Não vejo Afiliados no menu de Dashboards?",
         texto:
-          "Confirme em Gestão de Usuários se seu perfil tem permissão de **Ver** para a página **Afiliados** na seção **Dashboards**. Administradores têm acesso total. Não confunda com **Overview Afiliado** (visão do próprio afiliado) nem com a página **Afiliados** da seção de cadastro.",
+          "Confirme em Gestão de Usuários se seu perfil tem permissão de **Ver** para a página **Afiliados** na seção **Dashboards**. Administradores têm acesso total. Não confunda com **Overview Afiliado** (visão do próprio afiliado) nem com a página **Afiliados** da seção de cadastro. A URL do dashboard é **/DashAfiliados/**.",
       },
     ],
   },
@@ -109,7 +129,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "A aba Posicionamento não carrega ou aparece vazia?",
         texto:
-          "O Posicionamento tenta o snapshot do **dia civil de Brasília**. Se o monitor horário ainda não executou hoje, a aba mostra o **último horário** válido (em geral ontem) — não fica vazia só por falta de coleta do dia. Confira **Última atualização** no bloco de mesas e, em **Status Técnico**, se Lobby Blaze / CDA / Esportiva Bet / Jonbet / Bateu Bet / Rico Bet / BRX Bet / Donald Bet / BetPontoBet estão OK. Com **Todas Operadoras**, as nove parceiras aparecem lado a lado; com operadora específica, só aquela. Se a aba continuar vazia após **Tentar de novo** e hard refresh (Ctrl+Shift+R), avise o time de produto.",
+          "O Posicionamento tenta o snapshot do **dia civil de Brasília**. Se o monitor horário ainda não executou hoje, a aba mostra o **último horário** válido (em geral ontem) — não fica vazia só por falta de coleta do dia. Confira **Última atualização** no bloco de mesas e, em **Status Técnico**, se Lobby Blaze / CDA / Esportiva Bet / Jonbet / Bateu Bet / Rico Bet / BRX Bet / Donald Bet / BetPontoBet / Goldebet estão OK. Com **Todas Operadoras**, as dez parceiras aparecem lado a lado; com operadora específica, só aquela. Se a aba continuar vazia após **Tentar de novo** e hard refresh (Ctrl+Shift+R), avise o time de produto.",
       },
       {
         subtitulo: "O heatmap ou os Alertas do período mostram erro?",
@@ -792,6 +812,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
           "Com **Ver = Próprios**, só entram avaliações publicadas (**Aguardando**, **Feedback** ou **Aprovado**) do **seu** cadastro — o filtro de Time some e a lista não depende do nome do perfil coincidir letra a letra com o avaliado: a plataforma usa o prestador ligado ao e-mail de login (e-mail pessoal ou E-mail Spin) e o `staff` da avaliação.\n\nSe a lista continuar vazia: confira o mês/Histórico; se o login não estiver vinculado a um prestador em Gestão de Prestadores, ou o e-mail não bater com o cadastro, peça ajuste ao RH. Rascunhos não aparecem nesta aba.",
       },
       {
+        subtitulo: "Publiquei a avaliação e ela sumiu?",
+        texto:
+          "O motivo mais comum é **campo obrigatório pendente**: se faltar uma nota, um comentário, os Pontos Fortes / a Desenvolver ou o vídeo, o **Concluir** não publica e a avaliação continua em **rascunho** no Gerenciamento. Como o campo em falta costuma estar em outra aba do modal, o modal agora **abre a aba do primeiro pendente e rola até ele**, e a mensagem diz o que falta em cada aba (ex.: «Comunicação: faltam 2 notas e 1 comentário»). Preencha os campos em vermelho e clique em Concluir de novo. Nesse bloqueio o que você já digitou é **gravado como rascunho automaticamente** (confirmação no rodapé do modal), então nada se perde se você fechar e voltar depois.\n\nQuando publica de verdade, a avaliação **sai dos rascunhos** e passa para a aba **Avaliações** com status **Aguardando** — isso é esperado, e a página já abre nessa aba.\n\nSe ainda não aparecer: confira o **mês** no carrossel (a data da avaliação precisa estar no mês filtrado) ou ative **Histórico**; confira o filtro de **Time** e de **Staff**. Se a gravação falhar, a mensagem de erro permanece no modal — nesse caso a avaliação **não** foi publicada; tente de novo. Se o problema persistir, entre em contato com o suporte.",
+      },
+      {
         subtitulo: "Alguns prestadores não aparecem para avaliar?",
         texto:
           "A lista inclui só prestadores **ativos** ou **indisponíveis** do time **Game Presenter** ou **Shuffler** no Organograma (Gestão de Prestadores). Encerrados não entram.\n\nNa **Agenda de Avaliações**, quem ainda não chegou na data de go-live / início no mês selecionado fica de fora até essa competência — use o carrossel para o mês em que a pessoa já está no estúdio.\n\nSe o prestador aparece em **Gestão de Staff** no time certo e mesmo assim falta no Performance Hub, entre em contato com o suporte.",
@@ -804,7 +829,12 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Erro ao enviar o vídeo da avaliação?",
         texto:
-          "O limite da página é **500 MB** por arquivo. Um vídeo de ~126 MB ou **300.000 KB** está **dentro** desse teto.\n\nSe a mensagem disser que o armazenamento recusou o tamanho, o envio chegou ao servidor e foi barrado lá — não é a internet. Grave em **720p** ou envie um trecho mais curto; se o arquivo já estiver abaixo de 500 MB, entre em contato com o suporte.\n\nArquivos grandes sobem em partes (progresso **Enviando X%…**). Mantenha a aba aberta até 100%. Se aparecer falha de conexão, tente de novo.\n\nSe a mensagem falar de permissão, confirme em **Gestão de Usuários → Permissões** se o perfil tem permissão de **Criar = Sim** em Performance Hub (Gerenciamento). Use **MP4** ou **MOV (H.264)** — WebM não funciona no iPhone.",
+          "O limite da página é **500 MB** por arquivo. Um vídeo de ~126 MB ou **300.000 KB** está **dentro** desse teto.\n\nSe a mensagem disser que o armazenamento recusou o tamanho, o envio chegou ao servidor e foi barrado lá — não é a internet. Grave em **720p** ou envie um trecho mais curto; se o arquivo já estiver abaixo de 500 MB, entre em contato com o suporte.\n\nArquivos grandes sobem em partes (progresso **Enviando X%…**). Mantenha a aba aberta até 100%. Se aparecer falha de conexão, tente de novo.\n\nSe a mensagem falar de sessão expirada, faça login novamente e reenvie. Se a mensagem falar de permissão, confirme em **Gestão de Usuários → Permissões** se o perfil tem permissão de **Criar = Sim** em Performance Hub (Gerenciamento). Use **MP4** ou **MOV (H.264)** — WebM não funciona no iPhone.",
+      },
+      {
+        subtitulo: "Fui deslogado ao publicar a avaliação com vídeo?",
+        texto:
+          "Uploads longos usam a sessão ativa e marcam atividade no temporizador de idle (60 min) a cada progresso do envio. Se a sessão já estava inválida, o envio falha com mensagem para fazer login de novo — a plataforma não deve forçar logout só por tentar renovar o token no upload. Faça login novamente, reabra o rascunho e conclua. Se o deslogue se repetir com a sessão ainda válida, entre em contato com o suporte.",
       },
       {
         subtitulo: "Toque em Assistir e o vídeo não abre no iPhone?",
@@ -865,6 +895,36 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "Não aparece o botão Ver ciência no manual?",
         texto:
           "O botão **Ver ciência** nos cards de Manuais só aparece com permissão de **Editar = Sim** no Portal da Academy **e** quando a postagem foi cadastrada com **Exige ciência do prestador? = Sim**. Com apenas Ver, você registra a própria ciência no modal (**Lido e Ciente**), mas não consulta quem já aceitou.",
+      },
+    ],
+  },
+  academy_cronograma: {
+    titulo: "Cronograma",
+    blocos: [
+      {
+        subtitulo: "Não vejo Cronograma no menu?",
+        texto:
+          "Verifique em **Gestão de Usuários → Permissões** se o perfil tem permissão de **Ver** diferente de **Não**. Administradores veem a página automaticamente; demais perfis começam bloqueados até a liberação.",
+      },
+      {
+        subtitulo: "Não foi possível carregar o catálogo?",
+        texto:
+          "Atualize a página e clique em **Tentar novamente**. Se a mensagem continuar, a migração do Cronograma pode ainda não ter sido aplicada neste ambiente — o suporte precisa aplicar `academy_cronograma` no Supabase.",
+      },
+      {
+        subtitulo: "Não aparece o botão Novo Cronograma, Nova Trilha, Novo Material ou Nova Prova?",
+        texto:
+          "Esses botões exigem permissão de **Criar**. Editar ordem, gravar alterações e arquivar exigem **Editar**. Com apenas Ver, você consulta o catálogo e abre os modais de leitura.",
+      },
+      {
+        subtitulo: "A lista de trilhas, materiais ou provas parece vazia?",
+        texto:
+          "O filtro **Status** começa em **Publicado**. Itens arquivados só aparecem quando você troca o filtro para **Arquivado**. A busca também restringe a lista — limpe o campo se não encontrar o nome.",
+      },
+      {
+        subtitulo: "Não consigo adicionar trilha ao cronograma?",
+        texto:
+          "Só entram trilhas **publicadas** que ainda não estão naquele currículo. Cadastre a trilha na aba **Trilhas** e publique antes de usar **Adicionar trilha**.",
       },
     ],
   },
@@ -1279,7 +1339,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "KPIs zerados mas há marcas no Pipeline?",
         texto:
-          "Na aba **Operadoras**, verifique o filtro **Comercial** (**Todos Comerciais**). Na aba **Integrações**, confira **Prioridade** (**Todas Prioridades**). Os KPIs e gráficos da aba ativa respeitam só esses filtros — não há mais filtros de status do funil nem filtro de Estados no Overview.",
+          "Nas abas **Operadoras**, **Crypto** e **Agregadoras**, verifique o filtro **Comercial** (**Todos Comerciais**). Na aba **Integrações**, confira **Prioridade** (**Todas Prioridades**). Os KPIs e gráficos da aba ativa respeitam só esses filtros — não há mais filtros de status do funil nem filtro de Estados no Overview. O comercial da aba Crypto é o do Pipeline Crypto, separado do B2B.",
       },
     ],
   },
@@ -1330,6 +1390,31 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "Sync da Lista SPA falhou com erro de planilha ou HTTP 404?",
         texto:
           "A lista oficial junta a tabela **Empresas Autorizadas** (portaria SPA/MF) e a página **Autorizadas por Determinação Judicial** no portal do Ministério da Fazenda. O sync lê as duas páginas HTML; links antigos de planilha sob Transparência Ativa podem estar quebrados e são ignorados. Em Status Técnico, use **Sync** na linha **Lista SPA** (pode ser necessário **force** após incluir a fonte judicial, se o hash anterior ainda for o da lista só por portaria). Se o erro persistir após o deploy da Edge Function, entre em contato com o suporte.",
+      },
+    ],
+  },
+  comercial_pipeline_crypto: {
+    titulo: "Pipeline Crypto",
+    blocos: [
+      {
+        subtitulo: "Não vejo a página Pipeline Crypto no menu?",
+        texto:
+          "Confirme em Gestão de Usuários se seu perfil tem permissão de Ver para Pipeline Crypto. A página nasce com Ver, Criar e Editar em **Não** para todos os perfis, exceto Administrador. Se for Operador, a página também precisa estar liberada na aba Escopos → Operadora.",
+      },
+      {
+        subtitulo: "Criei uma marca e ela apareceu no Pipeline B2B?",
+        texto:
+          "Marcas criadas em **Nova Marca** ficam só no Pipeline Crypto. Se o CNPJ coincidir com uma empresa da Lista SPA, a razão social vem dessa empresa, mas a marca nova não é gravada no B2B.",
+      },
+      {
+        subtitulo: "Alterei Possui Crypto e o Status não mudou?",
+        texto:
+          "A automação de Status roda apenas na coluna **Retorno**. Possui Crypto (Sim, Não ou em branco) não altera o funil.",
+      },
+      {
+        subtitulo: "Não consigo editar Comercial, Status, Retorno ou a data?",
+        texto:
+          "A edição inline exige permissão de Editar na página Pipeline Crypto. Sem essa permissão, os modais de contato e Ver funcionam em modo consulta.",
       },
     ],
   },
@@ -1404,7 +1489,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "O botão Sync não aparece para uma integração?",
         texto:
-          "Apenas as integrações **CDA Influencers**, **CDA Afiliados**, Social Media KPIs, Spin na Rede RSS, **Painel de Notícias RSS**, **Lista SPA**, **Validação de domínios de Marcas** e **Estado / Cidade** possuem sync manual. Lobby Blaze, Lobby CDA, Lobby Esportiva Bet, Lobby Jonbet, Lobby Bateu Bet, Lobby Rico Bet, Lobby BRX Bet, Lobby Donald Bet e Lobby BetPontoBet operam via job automatizado externo e não têm ação disponível na interface.\n\nSe a TV em `/painel-noticias` ficar vazia ou em «Aguardando notícias…», use **Sync** na linha Painel de Notícias (RSS) e confira se o job horário está ativo.",
+          "Apenas as integrações **CDA Influencers**, **CDA Afiliados**, Social Media KPIs, Spin na Rede RSS, **Painel de Notícias RSS**, **Lista SPA**, **Validação de domínios de Marcas**, **Estado / Cidade** e **Revenue Sentinel — Jogadores Spin** possuem sync manual. Lobby Blaze, Lobby CDA, Lobby Esportiva Bet, Lobby Jonbet, Lobby Bateu Bet, Lobby Rico Bet, Lobby BRX Bet, Lobby Donald Bet, Lobby BetPontoBet e Lobby Goldebet operam via job automatizado externo e não têm ação disponível na interface.\n\nSe a TV em `/painel-noticias` ficar vazia ou em «Aguardando notícias…», use **Sync** na linha Painel de Notícias (RSS) e confira se o job horário está ativo.",
       },
       {
         subtitulo: "Um prestador não consegue fazer check-in?",

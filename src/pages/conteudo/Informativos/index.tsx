@@ -13,7 +13,8 @@ import { FiltroBarTabButton, onFiltroBarTabsKeyDown } from "../../../components/
 import { FILTRO_BAR_TAB_ICON_PROPS } from "../../../lib/filterBarStyles";
 import { getPageContentBoxShadow } from "../../../lib/pageContentBoxStyles";
 import { stripHtmlText } from "../../../lib/informativosWorkflow";
-import { isDataNoPeriodoHistoricoCompetencias } from "../../../lib/dashboardHelpers";
+import { isDataNoPeriodoHistoricoCompetencias, getPeriodoHistoricoCompetencias } from "../../../lib/dashboardHelpers";
+import { fetchAllPages } from "../../../lib/supabasePaginate";
 import { normalizarTextoBusca } from "../../../lib/searchText";
 import { buildMesesCarrossel, itemNoMesCarrossel, type MesCarrosselEntry } from "../PortalRh/portalRhCarrossel";
 import { InformativosBlocoFiltros } from "./InformativosBlocoFiltros";
@@ -89,39 +90,53 @@ export default function InformativosPage() {
   const carregar = useCallback(async () => {
     setLoading(true);
     setErro(null);
-    const { data, error } = await supabase
-      .from("conteudo_informativo")
-      .select("id, assunto, descricao, perfis, published_at, created_by, published_by, status")
-      .eq("status", "publicado")
-      .order("published_at", { ascending: false })
-      .limit(200);
+    try {
+      const { inicio } = getPeriodoHistoricoCompetencias();
+      const rows = await fetchAllPages<{
+        id: string;
+        assunto: string;
+        descricao: string;
+        perfis: string[] | null;
+        published_at: string | null;
+        created_by: string | null;
+        published_by: string | null;
+        status: string;
+      }>(async (from, to) => {
+        const { data, error } = await supabase
+          .from("conteudo_informativo")
+          .select("id, assunto, descricao, perfis, published_at, created_by, published_by, status")
+          .eq("status", "publicado")
+          .gte("published_at", inicio)
+          .order("published_at", { ascending: false })
+          .order("id", { ascending: true })
+          .range(from, to);
+        return { data: data ?? null, error };
+      });
 
-    if (error) {
-      console.error("[Informativos] carregar:", error);
+      setLista(rows as typeof lista);
+      setMesesCarrossel(buildMesesCarrossel(rows.map((r) => ({ iso: r.published_at }))));
+
+      const userIds = new Set<string>();
+      for (const r of rows) {
+        const uid = r.created_by ?? r.published_by;
+        if (uid) userIds.add(uid);
+      }
+      const nomes: Record<string, string> = {};
+      if (userIds.size > 0) {
+        const { data: profs } = await supabase.from("profiles").select("id, name").in("id", [...userIds]);
+        for (const p of profs ?? []) {
+          const pr = p as { id: string; name: string | null };
+          nomes[pr.id] = pr.name ?? "";
+        }
+      }
+      setMetaAutores(nomes);
+      setErro(null);
+    } catch (err) {
+      console.error("[Informativos] carregar:", err);
       setErro(ERRO_CARREGAR);
       setLista([]);
-      setLoading(false);
-      return;
+      setMetaAutores({});
     }
-
-    const rows = (data ?? []) as typeof lista;
-    setLista(rows);
-    setMesesCarrossel(buildMesesCarrossel(rows.map((r) => ({ iso: r.published_at }))));
-
-    const userIds = new Set<string>();
-    for (const r of rows) {
-      const uid = r.created_by ?? r.published_by;
-      if (uid) userIds.add(uid);
-    }
-    const nomes: Record<string, string> = {};
-    if (userIds.size > 0) {
-      const { data: profs } = await supabase.from("profiles").select("id, name").in("id", [...userIds]);
-      for (const p of profs ?? []) {
-        const pr = p as { id: string; name: string | null };
-        nomes[pr.id] = pr.name ?? "";
-      }
-    }
-    setMetaAutores(nomes);
     setLoading(false);
   }, []);
 
@@ -204,7 +219,7 @@ export default function InformativosPage() {
       <PageHeader
         icon={<PageMenuIcon pageKey="informativos" />}
         title={getPageMenuLabel("informativos")}
-        subtitle="Comunicados e avisos para a Home de cada Perfil"
+        subtitle="Comunicados e avisos para a Home de cada Perfil."
       />
 
       <InformativosBlocoFiltros
@@ -259,8 +274,42 @@ export default function InformativosPage() {
       />
 
       {erro ? (
-        <div role="alert" style={{ marginBottom: 16, padding: 12, borderRadius: 10, background: "rgba(232,64,37,0.12)", color: "#e84025", fontSize: 13 }}>
-          {erro}
+        <div
+          role="alert"
+          style={{
+            marginBottom: 16,
+            padding: "10px 14px",
+            borderRadius: 10,
+            background: "rgba(232,64,37,0.12)",
+            border: "1px solid rgba(232,64,37,0.35)",
+            color: "#e84025",
+            fontSize: 13,
+            fontFamily: FONT.body,
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "center",
+            gap: 12,
+            justifyContent: "space-between",
+          }}
+        >
+          <span>{erro}</span>
+          <button
+            type="button"
+            onClick={() => void carregar()}
+            style={{
+              padding: "8px 14px",
+              borderRadius: 10,
+              border: "1px solid rgba(232,64,37,0.35)",
+              background: "rgba(232,64,37,0.08)",
+              color: "#e84025",
+              fontSize: 12,
+              fontWeight: 700,
+              cursor: "pointer",
+              fontFamily: FONT.body,
+            }}
+          >
+            Tentar de novo
+          </button>
         </div>
       ) : null}
 
@@ -280,7 +329,7 @@ export default function InformativosPage() {
           <Loader2 className="app-lucide-spin" size={22} color="var(--brand-primary, #7c3aed)" aria-hidden style={{ verticalAlign: "middle", marginRight: 8 }} />
           Carregando…
         </div>
-      ) : (
+      ) : erro ? null : (
         <div
           role="tabpanel"
           id="panel-informativos-informativos"

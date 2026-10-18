@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { FileText, MessageSquareText, Paperclip } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -106,31 +106,34 @@ export function ModalVerIncidente({
   const [anexos, setAnexos] = useState<(EstudioIncidenteAnexoRow & { url: string | null })[]>([]);
   const [loadingAnexos, setLoadingAnexos] = useState(true);
   const [erroAnexos, setErroAnexos] = useState<string | null>(null);
+  const [anexosReload, setAnexosReload] = useState(0);
+
+  const carregarAnexos = useCallback(async (cancelRef: { current: boolean }) => {
+    setLoadingAnexos(true);
+    setErroAnexos(null);
+    try {
+      const rows = await fetchEstudioIncidenteAnexos(incidente.id);
+      if (cancelRef.current) return;
+      const comUrl = await Promise.all(
+        rows.map(async (a) => ({ ...a, url: await urlAssinadaAnexoIncidente(a.storage_path) })),
+      );
+      if (cancelRef.current) return;
+      setAnexos(comUrl);
+    } catch (e) {
+      console.error("Incidentes: falha ao carregar anexos", e);
+      if (!cancelRef.current) setErroAnexos(ERRO_CARREGAR_ANEXOS);
+    } finally {
+      if (!cancelRef.current) setLoadingAnexos(false);
+    }
+  }, [incidente.id]);
 
   useEffect(() => {
-    let cancel = false;
-    void (async () => {
-      setLoadingAnexos(true);
-      setErroAnexos(null);
-      try {
-        const rows = await fetchEstudioIncidenteAnexos(incidente.id);
-        if (cancel) return;
-        const comUrl = await Promise.all(
-          rows.map(async (a) => ({ ...a, url: await urlAssinadaAnexoIncidente(a.storage_path) })),
-        );
-        if (cancel) return;
-        setAnexos(comUrl);
-      } catch (e) {
-        console.error("Incidentes: falha ao carregar anexos", e);
-        if (!cancel) setErroAnexos(ERRO_CARREGAR_ANEXOS);
-      } finally {
-        if (!cancel) setLoadingAnexos(false);
-      }
-    })();
+    const cancelRef = { current: false };
+    void carregarAnexos(cancelRef);
     return () => {
-      cancel = true;
+      cancelRef.current = true;
     };
-  }, [incidente.id]);
+  }, [carregarAnexos, anexosReload]);
 
   const categoriaCor = INCIDENTE_CATEGORIA_META[incidente.incidente]?.color ?? t.textMuted;
   const isShuffler = incidente.time_alvo === "shuf";
@@ -278,8 +281,37 @@ export function ModalVerIncidente({
               Anexos
             </div>
             {erroAnexos ? (
-              <div role="alert" aria-live="polite" style={{ color: "#e84025", fontSize: 12, fontFamily: FONT.body }}>
-                {erroAnexos}
+              <div
+                role="alert"
+                aria-live="polite"
+                style={{
+                  color: "#e84025",
+                  fontSize: 12,
+                  fontFamily: FONT.body,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  flexWrap: "wrap",
+                }}
+              >
+                <span>{erroAnexos}</span>
+                <button
+                  type="button"
+                  onClick={() => setAnexosReload((n) => n + 1)}
+                  style={{
+                    fontFamily: FONT.body,
+                    fontSize: 12,
+                    fontWeight: 700,
+                    padding: "6px 12px",
+                    borderRadius: 10,
+                    border: "1px solid rgba(232,64,37,0.35)",
+                    background: "transparent",
+                    color: "#e84025",
+                    cursor: "pointer",
+                  }}
+                >
+                  Tentar de novo
+                </button>
               </div>
             ) : loadingAnexos ? (
               <div style={{ fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>Carregando…</div>

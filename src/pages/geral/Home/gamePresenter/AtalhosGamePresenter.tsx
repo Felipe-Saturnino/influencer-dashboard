@@ -1,15 +1,18 @@
-import { CalendarRange, HelpCircle, Network } from "lucide-react";
-import { AtalhosStaffHome } from "../shared/AtalhosStaffHome";
+import { BookOpen, CalendarRange, HelpCircle, Network, ShoppingCart, Users } from "lucide-react";
+import { AtalhosCuradosHome, type HomeAtalhoCurado } from "../shared/AtalhosCuradosHome";
 
-const ATALHOS_GAME_PRESENTER = [
-  { key: "rh_calendario" as const, icon: CalendarRange },
-  { key: "ajuda" as const, icon: HelpCircle },
-  { key: "rh_organograma" as const, icon: Network },
+const ATALHOS_GAME_PRESENTER: HomeAtalhoCurado[] = [
+  { key: "rh_calendario", icon: CalendarRange },
+  { key: "escala_marketplace_turnos", icon: ShoppingCart },
+  { key: "academy_portal", icon: BookOpen },
+  { key: "rh_portal", icon: Users },
+  { key: "ajuda", icon: HelpCircle },
+  { key: "rh_organograma", icon: Network },
 ];
 
 export function AtalhosGamePresenter() {
   return (
-    <AtalhosStaffHome
+    <AtalhosCuradosHome
       sectionIdPrefix="home-game-presenter"
       atalhos={ATALHOS_GAME_PRESENTER}
       gridClassName="app-grid-atalhos-operador"

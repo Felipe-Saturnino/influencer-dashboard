@@ -8,7 +8,7 @@ import {
   type PortalRhAutorInfo,
 } from "../../../../lib/portalRhAutorMeta";
 import {
-  documentoVisivelPorPermissaoPortalRh,
+  documentoAplicavelAoUsuario,
   setoresAplicavelDoUsuario,
 } from "../../../../lib/portalRhDocumentoNormativo";
 import { buscarRhFuncionarioAtivoPorEmailLoginCached } from "../../../../lib/rhFuncionarioLoginMatch";
@@ -95,8 +95,7 @@ export function useHomePortalRhFeed() {
           }
         };
 
-        const precisaSetores = perm.canView === "proprios" && perm.canEditar !== "sim";
-
+        /** Home: Políticas/RH Talks só se aplicáveis a Todos Prestadores / Gerência / Times (mesmo com Ver=Sim). */
         const [comRes, docRes, talkRes, funcionario, org] = await Promise.all([
           fetchPortalSafe<PostagemRow & { is_pinned?: boolean | null }>("comunicados", async (from, to) => {
             const { data, error } = await supabase
@@ -131,15 +130,13 @@ export function useHomePortalRhFeed() {
               .range(from, to);
             return { data: (data ?? []) as PostagemRow[], error };
           }),
-          precisaSetores && emailEfetivo?.trim()
+          emailEfetivo?.trim()
             ? buscarRhFuncionarioAtivoPorEmailLoginCached(emailEfetivo).catch((e) => {
                 console.error("[Home] Portal de RH feed (funcionario):", e);
                 return null;
               })
             : Promise.resolve(null),
-          precisaSetores
-            ? carregarOpcoesTimesOrganograma()
-            : Promise.resolve({ grupos: [], opcoes: [], error: null }),
+          carregarOpcoesTimesOrganograma(),
         ]);
 
         if (cancelled) return;
@@ -149,7 +146,7 @@ export function useHomePortalRhFeed() {
         const talkData = talkRes.rows;
         const fontesFalharam = comRes.falhou && docRes.falhou && talkRes.falhou;
 
-        const setores = precisaSetores && funcionario
+        const setores = funcionario
           ? setoresAplicavelDoUsuario(funcionario, flattenVinculosDeGrupos(org.grupos))
           : [];
 
@@ -168,16 +165,7 @@ export function useHomePortalRhFeed() {
 
         for (const row of docData) {
           if (!isPublicado(row.status)) continue;
-          if (
-            !documentoVisivelPorPermissaoPortalRh(
-              row,
-              perm.canView,
-              perm.canEditar,
-              setores,
-            )
-          ) {
-            continue;
-          }
+          if (!documentoAplicavelAoUsuario(row.aplicavel_a, setores)) continue;
           drafts.push({
             kind: "politica",
             id: `portal-rh-doc-${row.id}`,
@@ -189,16 +177,7 @@ export function useHomePortalRhFeed() {
 
         for (const row of talkData) {
           if (!isPublicado(row.status)) continue;
-          if (
-            !documentoVisivelPorPermissaoPortalRh(
-              row,
-              perm.canView,
-              perm.canEditar,
-              setores,
-            )
-          ) {
-            continue;
-          }
+          if (!documentoAplicavelAoUsuario(row.aplicavel_a, setores)) continue;
           drafts.push({
             kind: "rh_talk",
             id: `portal-rh-talk-${row.id}`,
@@ -243,7 +222,7 @@ export function useHomePortalRhFeed() {
     return () => {
       cancelled = true;
     };
-  }, [perm.loading, perm.canView, perm.canEditar, userIdEfetivo, emailEfetivo]);
+  }, [perm.loading, perm.canView, userIdEfetivo, emailEfetivo]);
 
   return {
     loading: loading || perm.loading,

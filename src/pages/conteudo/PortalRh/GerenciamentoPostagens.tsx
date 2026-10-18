@@ -224,6 +224,7 @@ export function GerenciamentoPostagens({
             .select("id, titulo, corpo, status, created_at, published_at, approved_at, approved_by, created_by, published_by, categoria:rh_portal_categoria(slug)")
             .gte("created_at", inicio)
             .order("created_at", { ascending: false })
+            .order("id", { ascending: true })
             .range(from, to);
           return { data: res.data as unknown as Record<string, unknown>[] | null, error: res.error };
         }),
@@ -233,6 +234,7 @@ export function GerenciamentoPostagens({
             .select("id, titulo, corpo, introducao, resumo, status, created_at, published_at, approved_at, approved_by, created_by, codigo, versao, tipo_documento, categoria:rh_portal_categoria(slug)")
             .gte("created_at", inicio)
             .order("created_at", { ascending: false })
+            .order("id", { ascending: true })
             .range(from, to);
           return { data: res.data as unknown as Record<string, unknown>[] | null, error: res.error };
         }),
@@ -242,6 +244,7 @@ export function GerenciamentoPostagens({
             .select("id, titulo, corpo, resumo, introducao, status, created_at, published_at, approved_at, approved_by, created_by")
             .gte("created_at", inicio)
             .order("created_at", { ascending: false })
+            .order("id", { ascending: true })
             .range(from, to);
           return { data: res.data as unknown as Record<string, unknown>[] | null, error: res.error };
         }),
@@ -568,8 +571,42 @@ export function GerenciamentoPostagens({
   return (
     <div role="tabpanel" id="panel-rh-portal-gerenciamento" aria-labelledby="tab-rh-portal-gerenciamento" tabIndex={0}>
       {erro ? (
-        <div role="alert" style={{ marginBottom: 12, padding: 12, borderRadius: 10, background: "rgba(232,64,37,0.12)", color: "#e84025", fontSize: 13 }}>
-          {erro}
+        <div
+          role="alert"
+          style={{
+            marginBottom: 12,
+            padding: "10px 14px",
+            borderRadius: 10,
+            background: "rgba(232,64,37,0.12)",
+            border: "1px solid rgba(232,64,37,0.35)",
+            color: "#e84025",
+            fontSize: 13,
+            fontFamily: FONT.body,
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "center",
+            gap: 12,
+            justifyContent: "space-between",
+          }}
+        >
+          <span>{erro}</span>
+          <button
+            type="button"
+            onClick={() => void carregar()}
+            style={{
+              padding: "8px 14px",
+              borderRadius: 10,
+              border: "1px solid rgba(232,64,37,0.35)",
+              background: "rgba(232,64,37,0.08)",
+              color: "#e84025",
+              fontSize: 12,
+              fontWeight: 700,
+              cursor: "pointer",
+              fontFamily: FONT.body,
+            }}
+          >
+            Tentar de novo
+          </button>
         </div>
       ) : null}
 
@@ -578,7 +615,7 @@ export function GerenciamentoPostagens({
           <Loader2 className="app-lucide-spin" size={22} color="var(--brand-primary, #7c3aed)" aria-hidden style={{ verticalAlign: "middle", marginRight: 8 }} />
           Carregando…
         </div>
-      ) : rowsOrdenadas.length === 0 ? (
+      ) : erro ? null : rowsOrdenadas.length === 0 ? (
         <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
           Sem dados para o período selecionado.
         </div>

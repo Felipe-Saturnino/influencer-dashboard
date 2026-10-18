@@ -11,14 +11,14 @@ import {
   getPageContentBoxStyle,
   getPageFilterBoxStyle,
 } from "../../../../lib/pageContentBoxStyles";
-import { BRAND, MSG_SEM_DADOS_FILTRO } from "../../../../lib/dashboardConstants";
+import { BRAND, MSG_SEM_DADOS_PERIODO } from "../../../../lib/dashboardConstants";
 import { FiltroHistoricoButton, FiltroInfluencerSelect, FiltroOperadoraSelect, SectionTitle, KpiCard, SkeletonKpiCard, SortTableTh, type SortDir } from "../../../../components/dashboard";
 import { useDataTableBlock } from "../../../../hooks/useDataTableBlock";
 import { getDataTableWrapStyle, getDataTableStyle } from "../../../../lib/dataTableStyles";
 import { TabelaComPaginacao } from "../../../../components/TabelaPaginacaoBar";
 import { fetchInfluencerAnalyticsPeriodoCached } from "../../../../lib/influencerAnalyticsQuery";
 import { buscarInvestimentoPago, filtrosInvestimentoPorEscopo } from "../../../../lib/investimentoPago";
-import { MSG_ERRO_STREAMERS } from "../streamersInfluencerFilterHelpers";
+import { MSG_ERRO_STREAMERS, streamersInfluencerIdsQuery, streamersOperadoraSlugsQuery, travarRecortePropriosStreamers } from "../streamersInfluencerFilterHelpers";
 import {
   fmtBRL,
   getIdxMesCarrosselPadrao,
@@ -209,7 +209,6 @@ export default function DashboardFinanceiro() {
   const {
     perfis,
     operadoras,
-    operadoraInfluencers,
     isPending: catalogosPending,
     error: catalogosError,
   } = useDashboardCatalogos();
@@ -246,13 +245,17 @@ export default function DashboardFinanceiro() {
   const [investimentoAgentes, setInvestimentoAgentes] = useState(0);
   const [sortFinRank, setSortFinRank] = useState<{ col: FinanceRankSortCol; dir: SortDir }>({ col: "pvi", dir: "desc" });
   const operadorasList = embed ? sf.operadorasList : operadorasListStandalone;
-  const operadoraInfMap = embed ? sf.operadoraInfMap : operadoraInfluencers;
   const idxInicial = embed ? sf.idxInicial : idxStartLocal;
 
   useEffect(() => {
     if (!embed || !sf) return;
     sf.setIsLoading(loading);
   }, [embed, sf, loading]);
+
+  useEffect(() => {
+    if (!embed || !sf) return;
+    sf.setMomPronto(historico || momPronto);
+  }, [embed, sf, historico, momPronto]);
 
   const mesSelecionado = mesesDisponiveis[idxMes];
 
@@ -287,19 +290,20 @@ export default function DashboardFinanceiro() {
       const { inicio: periodoInicio, fim: periodoFim } = historico || !mesSelecionado
         ? getPeriodoHistoricoCompetencias()
         : getPeriodoComparativoMoM(mesSelecionado.ano, mesSelecionado.mes).atual;
-      const operadoraSlugsQuery = operadoraSlugsForcado?.length
-        ? operadoraSlugsForcado
-        : operadoraFiltro !== "todas"
-          ? [operadoraFiltro]
-          : escoposVisiveis.semRestricaoEscopo
-            ? null
-            : escoposVisiveis.operadorasVisiveis;
-      const influencerIdsQuery =
-        filtroInfluencer !== "todos"
-          ? [filtroInfluencer]
-          : escoposVisiveis.vêTodosInfluencers
-            ? null
-            : escoposVisiveis.influencersVisiveis;
+      let operadoraSlugsQuery = streamersOperadoraSlugsQuery(operadoraFiltro, escoposVisiveis, operadoraSlugsForcado);
+      let influencerIdsQuery = streamersInfluencerIdsQuery(
+        filtroInfluencer,
+        escoposVisiveis,
+        perfisLista.map((p) => p.id),
+      );
+      if (perm.canView === "proprios") {
+        const travado = travarRecortePropriosStreamers(
+          { influencerIds: influencerIdsQuery, operadoraSlugs: operadoraSlugsQuery },
+          escoposVisiveis,
+        );
+        influencerIdsQuery = travado.influencerIds;
+        operadoraSlugsQuery = travado.operadoraSlugs;
+      }
 
       function calcTotais(arr: FinanceiroRow[], totalInvestimento?: number): TotaisFinanceiros {
         const tFTDs = arr.reduce((s, r) => s + r.ftds, 0);
@@ -317,12 +321,44 @@ export default function DashboardFinanceiro() {
       }
 
       try {
-        const analytics = await fetchInfluencerAnalyticsPeriodoCached({
-          inicio: periodoInicio,
-          fim: periodoFim,
-          operadoraSlugs: operadoraSlugsQuery,
+        const filtrosInvest = {
+          ...filtrosInvestimentoPorEscopo(
+            {
+              semRestricaoEscopo: escoposVisiveis.semRestricaoEscopo,
+              vêTodosInfluencers: escoposVisiveis.vêTodosInfluencers,
+              influencersVisiveis: escoposVisiveis.influencersVisiveis,
+            },
+            { operadora_slug: operadoraForApi, filtroInfluencer }
+          ),
           influencerIds: influencerIdsQuery,
-        });
+        };
+
+        const aliasesPromise = historico
+          ? import("../../../../lib/metricasAliases").then(({ buscarMetricasDeAliases }) =>
+              buscarMetricasDeAliases({
+                operadora_slug: operadoraForApi ?? undefined,
+                influencerIds: influencerIdsQuery,
+                dataInicio: periodoInicio,
+                dataFim: periodoFim,
+              }),
+            )
+          : Promise.resolve([]);
+
+        const [analytics, investRes, aliasesSinteticas] = await Promise.all([
+          fetchInfluencerAnalyticsPeriodoCached({
+            inicio: periodoInicio,
+            fim: periodoFim,
+            operadoraSlugs: operadoraSlugsQuery,
+            influencerIds: influencerIdsQuery,
+          }),
+          buscarInvestimentoPago(
+            { inicio: periodoInicio, fim: periodoFim },
+            filtrosInvest,
+          ),
+          aliasesPromise,
+        ]);
+        const { total: investimentoTotal, porInfluencer: investimentoPorInf, agentes: investimentoAgentesRes } = investRes;
+
         const mapaAgreg = new Map<string, MetricaRow>();
         analytics.metricas.forEach((m) => {
           if (!mapaAgreg.has(m.influencer_id)) mapaAgreg.set(m.influencer_id, { influencer_id: m.influencer_id, ftd_count: 0, ftd_total: 0, deposit_count: 0, deposit_total: 0, withdrawal_count: 0, withdrawal_total: 0, ggr: 0 });
@@ -333,13 +369,6 @@ export default function DashboardFinanceiro() {
           r.ggr += m.ggr || 0;
         });
         if (historico) {
-          const { buscarMetricasDeAliases } = await import("../../../../lib/metricasAliases");
-          const aliasesSinteticas = await buscarMetricasDeAliases({
-            operadora_slug: operadoraForApi ?? undefined,
-            influencerIds: influencerIdsQuery ?? undefined,
-            dataInicio: periodoInicio,
-            dataFim: periodoFim,
-          });
           for (const a of aliasesSinteticas) {
             if (!mapaAgreg.has(a.influencer_id) && podeVerInfluencer(a.influencer_id)) {
               mapaAgreg.set(a.influencer_id, {
@@ -356,18 +385,6 @@ export default function DashboardFinanceiro() {
           }
         }
         const metricas = [...mapaAgreg.values()];
-
-        const { total: investimentoTotal, porInfluencer: investimentoPorInf, agentes: investimentoAgentesRes } = await buscarInvestimentoPago(
-          { inicio: periodoInicio, fim: periodoFim },
-          filtrosInvestimentoPorEscopo(
-            {
-              semRestricaoEscopo: escoposVisiveis.semRestricaoEscopo,
-              vêTodosInfluencers: escoposVisiveis.vêTodosInfluencers,
-              influencersVisiveis: escoposVisiveis.influencersVisiveis,
-            },
-            { operadora_slug: operadoraForApi, filtroInfluencer }
-          )
-        );
 
         const mapa = new Map<string, Record<string, unknown>>();
         metricas.forEach((m) => mapa.set(m.influencer_id, { ...m, ftd_count: Number(m.ftd_count)||0, ftd_total: Number(m.ftd_total)||0, deposit_count: Number(m.deposit_count)||0, deposit_total: Number(m.deposit_total)||0, withdrawal_count: Number(m.withdrawal_count)||0, withdrawal_total: Number(m.withdrawal_total)||0, ggr: Number(m.ggr)||0 }));
@@ -405,14 +422,7 @@ export default function DashboardFinanceiro() {
             const [investAnt, analyticsAnt] = await Promise.all([
               buscarInvestimentoPago(
                 { inicio: periodoAnt.inicio, fim: periodoAnt.fim },
-                filtrosInvestimentoPorEscopo(
-                  {
-                    semRestricaoEscopo: escoposVisiveis.semRestricaoEscopo,
-                    vêTodosInfluencers: escoposVisiveis.vêTodosInfluencers,
-                    influencersVisiveis: escoposVisiveis.influencersVisiveis,
-                  },
-                  { operadora_slug: operadoraForApi, filtroInfluencer }
-                )
+                filtrosInvest,
               ),
               fetchInfluencerAnalyticsPeriodoCached({
                 inicio: periodoAnt.inicio,
@@ -475,6 +485,7 @@ export default function DashboardFinanceiro() {
     operadoraFiltro,
     mesSelecionado,
     podeVerInfluencer,
+    perm.canView,
     operadoraSlugsForcado,
     operadoraForApi,
     perfis,
@@ -482,16 +493,8 @@ export default function DashboardFinanceiro() {
   ]);
 
   // ── DADOS FILTRADOS ───────────────────────────────────────────────────────────
-  const rowsParaExibir = useMemo(() => {
-    if (operadoraSlugsForcado?.length) {
-      const ids = new Set<string>();
-      operadoraSlugsForcado.forEach((slug) => (operadoraInfMap[slug] ?? []).forEach((id) => ids.add(id)));
-      return rows.filter((r) => ids.has(r.influencer_id));
-    }
-    if (operadoraFiltro === "todas") return rows;
-    const ids = operadoraInfMap[operadoraFiltro] ?? [];
-    return rows.filter((r) => ids.includes(r.influencer_id));
-  }, [rows, operadoraFiltro, operadoraInfMap, operadoraSlugsForcado]);
+  // SQL já filtra por operadora_slug — sem refiltro pela junction.
+  const rowsParaExibir = rows;
 
   const onSortFinRank = (col: FinanceRankSortCol) => {
     setSortFinRank((s) => ({ col, dir: s.col === col && s.dir === "desc" ? "asc" : "desc" }));
@@ -682,6 +685,8 @@ export default function DashboardFinanceiro() {
               {[0, 1, 2].map((i) => <SkeletonKpiCard key={`r2-${i}`} />)}
             </div>
           </>
+        ) : rowsParaExibir.length === 0 ? (
+          <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted }}>{MSG_SEM_DADOS_PERIODO}</div>
         ) : (
           <>
             <div className="app-grid-kpi-3" style={{ marginBottom: 12 }}>
@@ -743,7 +748,7 @@ export default function DashboardFinanceiro() {
 
         {loading || pieInvestimento.length === 0 ? (
           <div style={{ minHeight: 360, display: "flex", alignItems: "center", justifyContent: "center", color: t.textMuted, fontSize: 13 }}>
-            {loading ? "Carregando…" : MSG_SEM_DADOS_FILTRO}
+            {loading ? "Carregando…" : MSG_SEM_DADOS_PERIODO}
           </div>
         ) : (
           <div style={{ display: "flex", gap: 48, flexWrap: "wrap", alignItems: "center", justifyContent: "center" }}>
@@ -813,7 +818,7 @@ export default function DashboardFinanceiro() {
         {loading ? (
           <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted }}>Carregando…</div>
         ) : rowsParaExibir.length === 0 ? (
-          <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted }}>{MSG_SEM_DADOS_FILTRO}</div>
+          <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted }}>{MSG_SEM_DADOS_PERIODO}</div>
         ) : (
           <TabelaComPaginacao
             items={rowsFinOrdenadas}

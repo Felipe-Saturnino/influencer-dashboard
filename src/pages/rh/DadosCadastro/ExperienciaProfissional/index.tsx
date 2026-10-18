@@ -73,6 +73,7 @@ export default function ExperienciaProfissionalPainel({
   const dataTable = useDataTableBlock();
   const pageBox = getPageContentBoxStyle(brand, t);
   const [loading, setLoading] = useState(true);
+  const [erroCarga, setErroCarga] = useState<string | null>(null);
   const [rows, setRows] = useState<RhFuncionarioExperiencia[]>([]);
   const [sort, setSort] = useState<{ col: SortCol; dir: SortDir }>({ col: "periodo", dir: "desc" });
   const [modal, setModal] = useState<RhFuncionarioExperiencia | null | "novo">(null);
@@ -103,15 +104,19 @@ export default function ExperienciaProfissionalPainel({
 
   const carregar = useCallback(async () => {
     setLoading(true);
+    setErroCarga(null);
+    const EXPERIENCIA_SELECT =
+      "id, rh_funcionario_id, cargo, empresa, mes_ano_inicio, mes_ano_fim, descricao, created_at, updated_at";
     const { data, error } = await supabase
       .from("rh_funcionario_experiencia")
-      .select("*")
+      .select(EXPERIENCIA_SELECT)
       .eq("rh_funcionario_id", funcionarioId)
       .order("mes_ano_fim", { ascending: false, nullsFirst: true })
       .order("mes_ano_inicio", { ascending: false });
     setLoading(false);
     if (error) {
       notifyErro("Não foi possível carregar experiências profissionais.");
+      setErroCarga("Não foi possível carregar experiências profissionais.");
       setRows([]);
       return;
     }
@@ -169,8 +174,47 @@ export default function ExperienciaProfissionalPainel({
     <div style={pageBox}>
       <div style={getExperienciaSectionHeaderStyle()}>
         <SectionTitle sub="Cargos e empresas onde trabalhou antes">Experiências anteriores</SectionTitle>
-        {podeEditar ? <CtaCriarButton onClick={() => setModal("novo")}>Nova Experiência</CtaCriarButton> : null}
+        {podeEditar && !erroCarga ? <CtaCriarButton onClick={() => setModal("novo")}>Nova Experiência</CtaCriarButton> : null}
       </div>
+
+      {erroCarga ? (
+        <div
+          role="alert"
+          style={{
+            padding: "10px 14px",
+            borderRadius: 10,
+            marginBottom: 12,
+            background: "rgba(232,64,37,0.12)",
+            border: "1px solid rgba(232,64,37,0.35)",
+            color: "#e84025",
+            fontSize: 13,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 8,
+            flexWrap: "wrap",
+            fontFamily: FONT.body,
+          }}
+        >
+          <span>{erroCarga}</span>
+          <button
+            type="button"
+            onClick={() => void carregar()}
+            style={{
+              padding: "8px 14px",
+              borderRadius: 10,
+              border: "1px solid rgba(232,64,37,0.35)",
+              background: "transparent",
+              color: "#e84025",
+              fontWeight: 700,
+              fontFamily: FONT.body,
+              cursor: "pointer",
+            }}
+          >
+            Tentar de novo
+          </button>
+        </div>
+      ) : null}
 
       {loading ? (
         <div className="app-table-wrap" style={getDataTableWrapStyle()}>
@@ -183,7 +227,7 @@ export default function ExperienciaProfissionalPainel({
             </tbody>
           </table>
         </div>
-      ) : rowsSorted.length === 0 ? (
+      ) : erroCarga ? null : rowsSorted.length === 0 ? (
         <div style={{ padding: "24px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
           {RH_EXPERIENCIA_VAZIO}
         </div>

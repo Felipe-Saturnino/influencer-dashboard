@@ -12,6 +12,38 @@ export type HomeKpisMesasOperadoraData = {
   operadoraSlugs: string[];
 };
 
+/** Mesma origem da aba Overview do Overview Spin: Dedicado + Network por operadora. */
+async function fetchDailyDedicadoENetwork(
+  inicio: string,
+  fim: string,
+  operadoraSlugs: string[],
+): Promise<RelatorioDailySummaryRow[]> {
+  const selectCols = "data, turnover, ggr, apostas, operadora_slug";
+  const [ded, net] = await Promise.all([
+    fetchAllPages<RelatorioDailySummaryRow>(async (from, to) =>
+      supabase
+        .from("relatorio_daily_summary")
+        .select(selectCols)
+        .gte("data", inicio)
+        .lte("data", fim)
+        .in("operadora_slug", operadoraSlugs)
+        .order("data", { ascending: true })
+        .range(from, to),
+    ),
+    fetchAllPages<RelatorioDailySummaryRow>(async (from, to) =>
+      supabase
+        .from("relatorio_network_daily_summary")
+        .select(selectCols)
+        .gte("data", inicio)
+        .lte("data", fim)
+        .in("operadora_slug", operadoraSlugs)
+        .order("data", { ascending: true })
+        .range(from, to),
+    ),
+  ]);
+  return [...ded, ...net];
+}
+
 export function useHomeKpisMesasOperadora() {
   const { escoposVisiveis } = useApp();
   const [loading, setLoading] = useState(true);
@@ -42,26 +74,8 @@ export function useHomeKpisMesasOperadora() {
         const { atual: mtd, anterior: periodoAnterior } = getHomeKpiPeriodosComparativoMoM();
 
         const [rowsMtd, rowsAnterior] = await Promise.all([
-          fetchAllPages<RelatorioDailySummaryRow>(async (from, to) =>
-            supabase
-              .from("relatorio_daily_summary")
-              .select("data, turnover, ggr, apostas, operadora_slug")
-              .gte("data", mtd.inicio)
-              .lte("data", mtd.fim)
-              .in("operadora_slug", operadoraSlugs)
-              .order("data", { ascending: true })
-              .range(from, to),
-          ),
-          fetchAllPages<RelatorioDailySummaryRow>(async (from, to) =>
-            supabase
-              .from("relatorio_daily_summary")
-              .select("data, turnover, ggr, apostas, operadora_slug")
-              .gte("data", periodoAnterior.inicio)
-              .lte("data", periodoAnterior.fim)
-              .in("operadora_slug", operadoraSlugs)
-              .order("data", { ascending: true })
-              .range(from, to),
-          ),
+          fetchDailyDedicadoENetwork(mtd.inicio, mtd.fim, operadoraSlugs),
+          fetchDailyDedicadoENetwork(periodoAnterior.inicio, periodoAnterior.fim, operadoraSlugs),
         ]);
 
         if (cancelled) return;

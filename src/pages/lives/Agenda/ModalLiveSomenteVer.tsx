@@ -46,6 +46,7 @@ export default function ModalLiveSomenteVer({ live, onClose }: Props) {
 
   return (
     <div
+      className="app-modal-overlay-pad"
       style={{
         position: "fixed",
         inset: 0,
@@ -54,7 +55,6 @@ export default function ModalLiveSomenteVer({ live, onClose }: Props) {
         alignItems: "center",
         justifyContent: "center",
         zIndex: 1000,
-        padding: 20,
       }}
     >
       <div

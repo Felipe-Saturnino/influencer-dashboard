@@ -15,6 +15,9 @@ export type HomeCanalKpisTotais = {
   lives: number;
   horas: number;
   views: number;
+  /** UAP Spin — só preenchido quando o caller pede `comUapSpin`. */
+  uap_spin: number;
+  uap_spin_rodadas: number;
 };
 
 export const ZERO_HOME_CANAL_KPIS: HomeCanalKpisTotais = {
@@ -32,6 +35,8 @@ export const ZERO_HOME_CANAL_KPIS: HomeCanalKpisTotais = {
   lives: 0,
   horas: 0,
   views: 0,
+  uap_spin: 0,
+  uap_spin_rodadas: 0,
 };
 
 export function agregarHomeCanalPeriodo(
@@ -77,5 +82,7 @@ export function agregarHomeCanalPeriodo(
     lives: analytics.lives.length,
     horas,
     views,
+    uap_spin: 0,
+    uap_spin_rodadas: 0,
   };
 }

@@ -24,6 +24,7 @@ const secretsOk = (): PlatformHealthSnapshot["secrets"] => ({
   senhaPadraoValida: true,
   destinatariosRelatorioConfigurado: true,
   destinatariosAgendaConfigurado: true,
+  revenueSentinelConfigurado: true,
 });
 
 const baseSnapshot = (): PlatformHealthSnapshot => ({
@@ -62,6 +63,11 @@ describe("readPlatformHealthSecrets", () => {
     expect(s.resendFromSistemaConfigurado).toBe(true);
     expect(s.senhaPadraoValida).toBe(true);
     expect(s.destinatariosAgendaConfigurado).toBe(true);
+  });
+
+  it("detecta RS_API_KEY do Revenue Sentinel", () => {
+    const s = readPlatformHealthSecrets((key) => (key === "RS_API_KEY" ? "dsk_test" : undefined));
+    expect(s.revenueSentinelConfigurado).toBe(true);
   });
 
   it("aceita RESEND_FROM legado para crons", () => {

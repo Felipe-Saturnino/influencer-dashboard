@@ -1,10 +1,13 @@
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { ChevronDown, Package } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { FONT } from "../../../constants/theme";
 import { BarraPesquisaFiltroPainel } from "../../../components/BarraPesquisaFiltroPainel";
 import { useListboxKeyboardNavigation } from "../../../hooks/useListboxKeyboardNavigation";
+import { usePainelSelectPortal } from "../../../hooks/usePainelSelectPortal";
 import { placeholderPesquisaFiltro } from "../../../lib/searchBarConstants";
+import { estiloPainelPortalFixed } from "../../../lib/selectPainelPortal";
 import { textoContemBusca } from "../../../lib/searchText";
 import type { OsItemDisponivel } from "../../../lib/techOpsOrdemSaida";
 import { getOsInputStyle } from "./ordemSaidaUi";
@@ -27,8 +30,8 @@ function catalogoParaOpcoes(catalogo: OsItemDisponivel[]): Opt[] {
 }
 
 /**
- * Seletor único de item/equipamento/lote da OS — painel com busca e altura limitada
- * (substitui `<select>` nativo que estoura a tela com dezenas de EQP).
+ * Seletor único de item/equipamento/lote da OS — painel com busca, altura limitada
+ * e portal (`position:fixed`) para não cortar no overflow do modal.
  */
 export function SelectItemOs({
   value,
@@ -47,7 +50,13 @@ export function SelectItemOs({
   const inputStyle = getOsInputStyle(t);
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const ref = useRef<HTMLDivElement>(null);
+  const closePanel = useCallback(() => setOpen(false), []);
+  const { triggerRef, panelRef, pos: portalPos } = usePainelSelectPortal({
+    open,
+    onClose: closePanel,
+    minWidth: 240,
+    matchTriggerWidth: true,
+  });
   const uid = useId();
   const listboxId = `os-item-${(id ?? uid).replace(/:/g, "")}`;
 
@@ -70,14 +79,6 @@ export function SelectItemOs({
   }, [filtered]);
 
   useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
-
-  useEffect(() => {
     if (!open) setSearchQuery("");
   }, [open]);
 
@@ -87,80 +88,14 @@ export function SelectItemOs({
       onChange(opt.key);
       setOpen(false);
     },
-    onEscape: () => setOpen(false),
+    onEscape: closePanel,
   });
 
-  return (
-    <div ref={ref} style={{ position: "relative", width: "100%", minWidth: 0 }}>
-      <button
-        type="button"
-        id={id}
-        disabled={disabled}
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        aria-controls={listboxId}
-        aria-label={`Item da ordem — ${triggerLabel}`}
-        onClick={() => !disabled && setOpen((o) => !o)}
-        onKeyDown={(e) => {
-          if (disabled) return;
-          if (e.key === "Escape" && open) {
-            e.preventDefault();
-            e.stopPropagation();
-            setOpen(false);
-            return;
-          }
-          if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
-          e.preventDefault();
-          setOpen(true);
-        }}
-        style={{
-          ...inputStyle,
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          cursor: disabled ? "not-allowed" : "pointer",
-          textAlign: "left",
-          opacity: disabled ? 0.65 : 1,
-        }}
-      >
-        <Package size={15} aria-hidden style={{ flexShrink: 0, opacity: 0.75 }} />
-        <span
-          title={triggerLabel}
-          style={{
-            flex: 1,
-            minWidth: 0,
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-            color: selected ? t.text : t.textMuted,
-            fontFamily: FONT.body,
-            fontSize: 13,
-          }}
-        >
-          {triggerLabel}
-        </span>
-        <ChevronDown size={14} aria-hidden style={{ flexShrink: 0, opacity: 0.55 }} />
-      </button>
-
-      {open ? (
+  const panelNode =
+    open && portalPos ? (
         <div
-          style={{
-            position: "absolute",
-            top: "calc(100% + 6px)",
-            left: 0,
-            right: 0,
-            zIndex: 400,
-            background: t.cardBg,
-            border: `1px solid ${t.cardBorder}`,
-            borderRadius: 12,
-            padding: 8,
-            boxShadow: "0 8px 24px rgba(0,0,0,0.28)",
-            maxHeight: "min(280px, 42vh)",
-            display: "flex",
-            flexDirection: "column",
-            gap: 8,
-            boxSizing: "border-box",
-          }}
+          ref={panelRef}
+          style={estiloPainelPortalFixed(portalPos, { background: t.cardBg, border: t.cardBorder }, { gap: 8 })}
         >
           {enableSearch ? (
             <BarraPesquisaFiltroPainel
@@ -250,7 +185,61 @@ export function SelectItemOs({
             )}
           </div>
         </div>
-      ) : null}
+    ) : null;
+
+  return (
+    <div style={{ position: "relative", width: "100%", minWidth: 0 }}>
+      <button
+        ref={triggerRef}
+        type="button"
+        id={id}
+        disabled={disabled}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-controls={listboxId}
+        aria-label={`Item da ordem — ${triggerLabel}`}
+        onClick={() => !disabled && setOpen((o) => !o)}
+        onKeyDown={(e) => {
+          if (disabled) return;
+          if (e.key === "Escape" && open) {
+            e.preventDefault();
+            e.stopPropagation();
+            setOpen(false);
+            return;
+          }
+          if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+          e.preventDefault();
+          setOpen(true);
+        }}
+        style={{
+          ...inputStyle,
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          cursor: disabled ? "not-allowed" : "pointer",
+          textAlign: "left",
+          opacity: disabled ? 0.65 : 1,
+        }}
+      >
+        <Package size={15} aria-hidden style={{ flexShrink: 0, opacity: 0.75 }} />
+        <span
+          title={triggerLabel}
+          style={{
+            flex: 1,
+            minWidth: 0,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            color: selected ? t.text : t.textMuted,
+            fontFamily: FONT.body,
+            fontSize: 13,
+          }}
+        >
+          {triggerLabel}
+        </span>
+        <ChevronDown size={14} aria-hidden style={{ flexShrink: 0, opacity: 0.55 }} />
+      </button>
+      {panelNode ? createPortal(panelNode, document.body) : null}
     </div>
   );
 }

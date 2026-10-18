@@ -23,7 +23,7 @@ import {
   getPageContentBoxStyle,
   getPageFilterBoxStyle,
 } from "../../../lib/pageContentBoxStyles";
-import { BRAND, MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
+import { BRAND, MSG_SEM_DADOS_PERIODO } from "../../../lib/dashboardConstants";
 import {
   fmtBRL,
   getIdxMesCarrosselPadrao,
@@ -110,6 +110,9 @@ export default function DashboardOverviewAfiliado() {
 
   const {
     loading,
+    momPronto,
+    erroCarga,
+    recarregar,
     totais,
     totaisAnt,
     detalhe,
@@ -183,8 +186,10 @@ export default function DashboardOverviewAfiliado() {
           minHeight: "100vh",
           fontFamily: FONT.body,
           display: "flex",
+          flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
+          gap: 12,
         }}
       >
         <Loader2
@@ -193,6 +198,7 @@ export default function DashboardOverviewAfiliado() {
           color="var(--brand-action, #7c3aed)"
           aria-hidden="true"
         />
+        <span style={{ fontSize: 13, color: t.textMuted }}>Carregando…</span>
       </div>
     );
   }
@@ -296,6 +302,45 @@ export default function DashboardOverviewAfiliado() {
           </div>
         </div>
 
+        {erroCarga ? (
+          <div
+            role="alert"
+            aria-live="polite"
+            style={{
+              ...card,
+              color: "#e84025",
+              fontSize: 13,
+              fontFamily: FONT.body,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 12,
+              flexWrap: "wrap",
+            }}
+          >
+            <span>{erroCarga}</span>
+            <button
+              type="button"
+              onClick={() => recarregar()}
+              style={{
+                fontFamily: FONT.body,
+                fontSize: 13,
+                fontWeight: 700,
+                padding: "8px 14px",
+                borderRadius: 10,
+                border: "1px solid rgba(232,64,37,0.35)",
+                background: "transparent",
+                color: "#e84025",
+                cursor: "pointer",
+              }}
+            >
+              Tentar de novo
+            </button>
+          </div>
+        ) : null}
+
+        {!erroCarga ? (
+          <>
         <div style={card}>
           <SectionTitle
             sub={historico ? "acumulado" : "comparativo MTD vs mesmo período do mês anterior"}
@@ -327,7 +372,7 @@ export default function DashboardOverviewAfiliado() {
                   atual={totais.ggr}
                   anterior={totaisAnt.ggr}
                   isBRL
-                  isHistorico={historico}
+                  isHistorico={historico || !momPronto}
                 />
                 <KpiCard
                   label="Investimento"
@@ -338,7 +383,7 @@ export default function DashboardOverviewAfiliado() {
                   atual={totais.investimento}
                   anterior={totaisAnt.investimento}
                   isBRL
-                  isHistorico={historico}
+                  isHistorico={historico || !momPronto}
                 />
                 <KpiCard
                   label="ROI"
@@ -357,7 +402,7 @@ export default function DashboardOverviewAfiliado() {
                   }
                   atual={totais.roi}
                   anterior={totaisAnt.roi}
-                  isHistorico={historico}
+                  isHistorico={historico || !momPronto}
                 />
               </div>
               <div className="app-grid-kpi-4">
@@ -369,7 +414,7 @@ export default function DashboardOverviewAfiliado() {
                   accentColor={BRAND.roxo}
                   atual={totais.registros}
                   anterior={totaisAnt.registros}
-                  isHistorico={historico}
+                  isHistorico={historico || !momPronto}
                 />
                 <KpiCard
                   label="FTDs"
@@ -379,7 +424,7 @@ export default function DashboardOverviewAfiliado() {
                   accentColor={BRAND.roxo}
                   atual={totais.ftds}
                   anterior={totaisAnt.ftds}
-                  isHistorico={historico}
+                  isHistorico={historico || !momPronto}
                   subValue={{ label: "valor", value: fmtBRL(totais.ftd_total) }}
                 />
                 <KpiCard
@@ -391,7 +436,7 @@ export default function DashboardOverviewAfiliado() {
                   atual={totais.depositos_valor}
                   anterior={totaisAnt.depositos_valor}
                   isBRL
-                  isHistorico={historico}
+                  isHistorico={historico || !momPronto}
                 />
                 <KpiCard
                   label="Saques"
@@ -401,7 +446,7 @@ export default function DashboardOverviewAfiliado() {
                   atual={totais.saques_valor}
                   anterior={totaisAnt.saques_valor}
                   isBRL
-                  isHistorico={historico}
+                  isHistorico={historico || !momPronto}
                   isInverso
                 />
               </div>
@@ -442,7 +487,7 @@ export default function DashboardOverviewAfiliado() {
                 fontFamily: FONT.body,
               }}
             >
-              {MSG_SEM_DADOS_FILTRO}
+              {MSG_SEM_DADOS_PERIODO}
             </div>
           ) : (
             <TabelaComPaginacao
@@ -512,6 +557,8 @@ export default function DashboardOverviewAfiliado() {
             </TabelaComPaginacao>
           )}
         </div>
+          </>
+        ) : null}
       </div>
     </div>
   );

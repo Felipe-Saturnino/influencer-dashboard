@@ -331,6 +331,10 @@ export default function EscalaMarketplaceTurnosPage() {
   });
   const [ofertas, setOfertas] = useState<LinhaOfertaMarketplace[]>([]);
   const [loadingOfertas, setLoadingOfertas] = useState(true);
+  const [erroOfertas, setErroOfertas] = useState<string | null>(null);
+  const [erroContexto, setErroContexto] = useState<string | null>(null);
+  const [erroGrade, setErroGrade] = useState<string | null>(null);
+  const [erroAceiteGrade, setErroAceiteGrade] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
 
   const [contexto, setContexto] = useState<MarketplaceMeuContexto | null>(null);
@@ -401,25 +405,31 @@ export default function EscalaMarketplaceTurnosPage() {
 
   useEffect(() => {
     let cancelled = false;
-    void carregarMeuContextoMarketplace(emailEfetivo).then((ctx) => {
-      if (!cancelled) setContexto(ctx);
+    setErroContexto(null);
+    void carregarMeuContextoMarketplace(emailEfetivo).then(({ contexto: ctx, error }) => {
+      if (cancelled) return;
+      setContexto(ctx);
+      setErroContexto(error);
     });
     return () => {
       cancelled = true;
     };
-  }, [emailEfetivo]);
+  }, [emailEfetivo, reloadKey]);
 
   useEffect(() => {
     let cancelled = false;
     setLoadingOfertas(true);
+    setErroOfertas(null);
     const refMes = historico
       ? null
       : mesSelecionado
         ? refMesIsoPrimeiroDia(mesSelecionado.ano, mesSelecionado.mes)
         : null;
     void carregarOfertasMarketplace(refMes)
-      .then((rows) => {
-        if (!cancelled) setOfertas(rows);
+      .then(({ rows, error }) => {
+        if (cancelled) return;
+        setOfertas(rows);
+        setErroOfertas(error);
       })
       .finally(() => {
         if (!cancelled) setLoadingOfertas(false);
@@ -431,8 +441,11 @@ export default function EscalaMarketplaceTurnosPage() {
 
   useEffect(() => {
     let cancelled = false;
-    void carregarMinhaGradeMarketplaceMeses(refsMesGradeOfertar).then((g) => {
-      if (!cancelled) setGradeMes(g);
+    setErroGrade(null);
+    void carregarMinhaGradeMarketplaceMeses(refsMesGradeOfertar).then(({ grade, error }) => {
+      if (cancelled) return;
+      setGradeMes(grade);
+      setErroGrade(error);
     });
     return () => {
       cancelled = true;
@@ -652,11 +665,11 @@ export default function EscalaMarketplaceTurnosPage() {
     );
   }, [linhasMes, compraSpinModo, filtroTimeTodas, busca]);
 
-  const mostrarNovaOferta = marketplaceMostrarNovaOferta(
-    perm,
-    contexto?.funcionarioId,
-    minhasNegociacoes,
-  );
+  const mostrarNovaOferta =
+    marketplaceMostrarNovaOferta(perm, contexto?.funcionarioId, minhasNegociacoes) ||
+    (!!erroContexto &&
+      perm.canCriarOk &&
+      (perm.canView === "proprios" || (perm.canView === "sim" && minhasNegociacoes)));
   const mostrarNovaOfertaSpin = marketplaceMostrarNovaOfertaSpin(perm) && aba === "spin";
   const podeProporNoMural = marketplacePodeProporNoMural(
     perm,
@@ -666,13 +679,19 @@ export default function EscalaMarketplaceTurnosPage() {
 
   const abrirAceite = useCallback(async (row: LinhaOfertaMarketplace) => {
     setPreparandoAceiteId(row.id);
-    const grade =
+    setErroAceiteGrade(null);
+    const res =
       row.tipo === "oferta_troca"
         ? await carregarMinhaGradeMarketplaceMeses(refsMesGradeOfertar)
         : await carregarMinhaGradeMarketplace(refMesIsoDaData(row.dataOfertaIso));
-    setGradeAceite(grade);
-    setOfertaAceitar(row);
     setPreparandoAceiteId(null);
+    if (res.error) {
+      setErroAceiteGrade(res.error);
+      setGradeAceite(GRADE_VAZIA);
+      return;
+    }
+    setGradeAceite(res.grade);
+    setOfertaAceitar(row);
   }, [refsMesGradeOfertar]);
 
   const filterBarSection = (withTopBorder: boolean): CSSProperties => ({
@@ -760,7 +779,21 @@ export default function EscalaMarketplaceTurnosPage() {
   const ctaOfertar = mostrarNovaOfertaSpin ? (
     <CtaCriarButton onClick={() => setOfertarSpinAberto(true)}>Nova Oferta</CtaCriarButton>
   ) : mostrarNovaOferta ? (
-    <CtaCriarButton onClick={() => setOfertarAberto(true)}>Nova Oferta</CtaCriarButton>
+    <CtaCriarButton
+      onClick={() => {
+        if (erroContexto || !contexto?.funcionarioId) {
+          recarregar();
+          return;
+        }
+        if (erroGrade) {
+          recarregar();
+          return;
+        }
+        setOfertarAberto(true);
+      }}
+    >
+      Nova Oferta
+    </CtaCriarButton>
   ) : null;
 
   const blocoFiltrosLinha1 = (
@@ -816,9 +849,52 @@ export default function EscalaMarketplaceTurnosPage() {
   const contentBox = getPageContentBoxStyle(brand, t);
 
   function celulaVazia() {
+    if (erroOfertas) return null;
     return (
       <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
         {MSG_VAZIO_OFERTAS}
+      </div>
+    );
+  }
+
+  function bannerErroCarga(mensagem: string, onRetry: () => void) {
+    return (
+      <div
+        role="alert"
+        aria-live="polite"
+        style={{
+          margin: "0 0 14px",
+          padding: "10px 14px",
+          borderRadius: 10,
+          fontSize: 13,
+          color: "#e84025",
+          border: "1px solid rgba(232,64,37,0.35)",
+          background: "rgba(232,64,37,0.08)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 12,
+          flexWrap: "wrap",
+          fontFamily: FONT.body,
+        }}
+      >
+        <span>{mensagem}</span>
+        <button
+          type="button"
+          onClick={onRetry}
+          style={{
+            padding: "8px 14px",
+            borderRadius: 10,
+            border: "1px solid rgba(232,64,37,0.35)",
+            background: "transparent",
+            color: "#e84025",
+            fontWeight: 700,
+            fontFamily: FONT.body,
+            cursor: "pointer",
+          }}
+        >
+          Tentar de novo
+        </button>
       </div>
     );
   }
@@ -1342,6 +1418,16 @@ export default function EscalaMarketplaceTurnosPage() {
         t={t}
       />
 
+      {erroOfertas ? bannerErroCarga(erroOfertas, recarregar) : null}
+      {erroContexto ? bannerErroCarga(erroContexto, recarregar) : null}
+      {erroGrade && !erroOfertas ? bannerErroCarga(erroGrade, recarregar) : null}
+      {erroAceiteGrade
+        ? bannerErroCarga(erroAceiteGrade, () => {
+            setErroAceiteGrade(null);
+            recarregar();
+          })
+        : null}
+
       <div style={getFilterBarWrapperStyle(brand, t)}>
         <div style={filterBarSection(false)} role="group" aria-label="Período, tipo de ação e time">
           {blocoFiltrosLinha1}
@@ -1647,6 +1733,8 @@ export default function EscalaMarketplaceTurnosPage() {
         onCriada={recarregar}
         contexto={contexto}
         grade={gradeMes}
+        gradeError={erroGrade}
+        onRetryGrade={recarregar}
         diasReservados={diasReservadosUsuario}
       />
 

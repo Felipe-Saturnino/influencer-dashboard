@@ -108,6 +108,7 @@ import {
 import { aplicarEscopoCalendarioSimulado } from "../../../lib/rhCalendarioEscopoSimulado";
 import { carregarRhCalendarioGradeMes } from "../../../lib/rhCalendarioGradeMes";
 import { buscarRhFuncionarioAtivoPorEmailLogin } from "../../../lib/rhFuncionarioLoginMatch";
+import { fetchAllPages } from "../../../lib/supabasePaginate";
 import {
   baixarCalendarioCompromissosPdf,
   diaSemanaCurtoPdf,
@@ -176,6 +177,8 @@ import {
 } from "../../../lib/rhCalendarioPresencaGestao";
 import {
   carregarPresencaGestaoMes,
+  carregarPresencaGestaoMesLote,
+  carregarPontoRegistrosMesLote,
 } from "../../../lib/rhCalendarioPresencaGestaoDb";
 import {
   carregarAprovacaoPresencaMes,
@@ -802,10 +805,12 @@ export default function RhCalendarioPage() {
   const [pontoMesTick, setPontoMesTick] = useState(0);
   const [reunioesMesRaw, setReunioesMesRaw] = useState<RpcReuniaoMesRow[]>([]);
   const [reunioesMesTick, setReunioesMesTick] = useState(0);
+  const [erroReunioes, setErroReunioes] = useState<string | null>(null);
   const [presencaGestaoPorChave, setPresencaGestaoPorChave] = useState<Map<string, PresencaDiaGestao>>(
     () => new Map(),
   );
   const [loadingPresencaGestao, setLoadingPresencaGestao] = useState(false);
+  const [erroPresencaGestao, setErroPresencaGestao] = useState<string | null>(null);
   const [presencaGestaoTick, setPresencaGestaoTick] = useState(0);
   /**
    * Snapshot Marketplace do staff filtrado no mês — usado só nos KPIs para contar
@@ -814,8 +819,15 @@ export default function RhCalendarioPage() {
   const [movimentacoesPresencaPorChave, setMovimentacoesPresencaPorChave] = useState<
     Map<string, OverviewPrestadorMovimentacaoCelula>
   >(() => new Map());
+  const [erroMovimentacoes, setErroMovimentacoes] = useState<string | null>(null);
+  const [movimentacoesTick, setMovimentacoesTick] = useState(0);
   const [aprovacaoPresencaMes, setAprovacaoPresencaMes] = useState<PresencaAprovacaoMes | null>(null);
   const [loadingAprovacaoPresencaMes, setLoadingAprovacaoPresencaMes] = useState(false);
+  const [erroAprovacaoPresencaMes, setErroAprovacaoPresencaMes] = useState<string | null>(null);
+  const [aprovacaoPresencaMesTick, setAprovacaoPresencaMesTick] = useState(0);
+  const [erroCtOverlay, setErroCtOverlay] = useState<string | null>(null);
+  const [ctOverlayTick, setCtOverlayTick] = useState(0);
+  const [erroPersistenciaPresenca, setErroPersistenciaPresenca] = useState<string | null>(null);
   const [modalAprovarPresencaMesAberto, setModalAprovarPresencaMesAberto] = useState(false);
   const [presencaAlvoModal, setPresencaAlvoModal] = useState<PresencaTurnoAlvo | null>(null);
   const [presencaHistoricoAlvo, setPresencaHistoricoAlvo] = useState<{
@@ -1134,6 +1146,8 @@ export default function RhCalendarioPage() {
       /** Só o mês do carrossel dispara o banner; o mês anterior é auxiliar (virada de turno). */
       const refMesAtual = mesesRefISOConsulta[0] ?? null;
       let erroMesAtual = false;
+      const staffIdsFiltro =
+        funcionarioIdsGrade && funcionarioIdsGrade.length > 0 ? new Set(funcionarioIdsGrade) : null;
       try {
         const resultados = await Promise.all(
           mesesRefISOConsulta.map(async (refIso) => {
@@ -1151,7 +1165,12 @@ export default function RhCalendarioPage() {
             else console.warn("rh_calendario_grade_mes (mês anterior)", refIso, error.message);
             continue;
           }
+          if (turnoRes.error) {
+            if (refIso === refMesAtual) erroMesAtual = true;
+            else console.warn("rh_gestao_escala_turno_mes_listar (mês anterior)", refIso, turnoRes.error.message);
+          }
           merged.push(...rows);
+          if (turnoRes.error) continue;
           for (const row of (turnoRes.data ?? []) as {
             area_key: string;
             funcionario_id: string;
@@ -1162,6 +1181,7 @@ export default function RhCalendarioPage() {
             const fid = (row.funcionario_id ?? "").trim();
             const turno = (row.staff_turno ?? "").trim();
             if (!area || !fid || !turno) continue;
+            if (staffIdsFiltro && !staffIdsFiltro.has(fid)) continue;
             turnoMapMerged[chaveTurnoMes(area, fid)] = {
               staff_turno: turno,
               staff_horario_turno: row.staff_horario_turno?.trim() || null,
@@ -1317,20 +1337,22 @@ export default function RhCalendarioPage() {
     const refIsos = [refMesPrimeiroDiaISO(current), refMesPrimeiroDiaISO(mesAnteriorPresencaRef)];
     void (async () => {
       const merged: RpcPontoMesRow[] = [];
-      let hadError = false;
+      let erroMesCarrossel = false;
+      const refMesAtual = refIsos[0]!;
       // Mês do carrossel + mês anterior (virada de turno) em paralelo.
       const respostas = await Promise.all(
-        refIsos.map((refIso) =>
-          supabase.rpc("rh_calendario_ponto_registros_mes", {
+        refIsos.map(async (refIso) => {
+          const res = await supabase.rpc("rh_calendario_ponto_registros_mes", {
             p_funcionario_id: fid,
             p_ref_mes: refIso,
-          }),
-        ),
+          });
+          return { refIso, ...res };
+        }),
       );
       if (cancelled) return;
-      for (const { data, error } of respostas) {
+      for (const { refIso, data, error } of respostas) {
         if (error) {
-          hadError = true;
+          if (refIso === refMesAtual) erroMesCarrossel = true;
           continue;
         }
         const rows = (data ?? []) as { dia_sp: string | Date; check_in_at: string | null; check_out_at: string | null }[];
@@ -1344,13 +1366,14 @@ export default function RhCalendarioPage() {
       }
       if (cancelled) return;
       setLoadingPontoMes(false);
-      if (hadError && merged.length === 0) {
+      if (erroMesCarrossel) {
         setPontoMesLinhas([]);
         setErroPontoMes(
           "Não foi possível carregar os registros de ponto do mês. Se o problema persistir, entre em contato com o suporte.",
         );
         return;
       }
+      setErroPontoMes(null);
       // Merge otimista só no mesmo Staff (ex.: pós check-in se a RPC ainda vier sem horário).
       // Nunca reaproveitar check-in/out de outro prestador ao trocar o filtro.
       setPontoMesLinhas((prev) => {
@@ -1377,12 +1400,14 @@ export default function RhCalendarioPage() {
     if (perm.loading || perm.canView === "nao" || abaPrincipal !== "presenca") {
       movimentacoesPresencaStaffIdRef.current = null;
       setMovimentacoesPresencaPorChave(new Map());
+      setErroMovimentacoes(null);
       return;
     }
     const fid = filterStaffIds[0];
     if (!fid) {
       movimentacoesPresencaStaffIdRef.current = null;
       setMovimentacoesPresencaPorChave(new Map());
+      setErroMovimentacoes(null);
       return;
     }
     if (movimentacoesPresencaStaffIdRef.current !== fid) {
@@ -1390,6 +1415,7 @@ export default function RhCalendarioPage() {
       setMovimentacoesPresencaPorChave(new Map());
     }
     let cancelled = false;
+    setErroMovimentacoes(null);
     void (async () => {
       const { data, error } = await supabase.rpc("dash_overview_prestador_movimentacoes_mes", {
         p_funcionario_id: fid,
@@ -1399,19 +1425,24 @@ export default function RhCalendarioPage() {
       if (error) {
         console.error("[calendario-presenca-movimentacoes]", error);
         setMovimentacoesPresencaPorChave(new Map());
+        setErroMovimentacoes(
+          "Não foi possível carregar as trocas do mês. Se o problema persistir, entre em contato com o suporte.",
+        );
         return;
       }
+      setErroMovimentacoes(null);
       setMovimentacoesPresencaPorChave(mapOverviewPrestadorMovimentacoes(data));
     })();
     return () => {
       cancelled = true;
     };
-  }, [perm.loading, perm.canView, abaPrincipal, filterStaffIds, current, presencaGestaoTick]);
+  }, [perm.loading, perm.canView, abaPrincipal, filterStaffIds, current, movimentacoesTick]);
 
   useEffect(() => {
     if (perm.loading || perm.canView === "nao") {
       presencaGestaoStaffIdRef.current = null;
       setPresencaGestaoPorChave(new Map());
+      setErroPresencaGestao(null);
       return;
     }
     if (abaPrincipal !== "presenca") return;
@@ -1419,6 +1450,7 @@ export default function RhCalendarioPage() {
     if (!fid) {
       presencaGestaoStaffIdRef.current = null;
       setPresencaGestaoPorChave(new Map());
+      setErroPresencaGestao(null);
       return;
     }
     if (presencaGestaoStaffIdRef.current !== fid) {
@@ -1427,25 +1459,38 @@ export default function RhCalendarioPage() {
     }
     let cancelled = false;
     setLoadingPresencaGestao(true);
+    setErroPresencaGestao(null);
     const refIsos = [refMesPrimeiroDiaISO(current), refMesPrimeiroDiaISO(mesAnteriorPresencaRef)];
+    const refMesAtual = refIsos[0]!;
     void (async () => {
       const merged = new Map<string, PresencaDiaGestao>();
-      let hadError = false;
+      let erroMesCarrossel = false;
       // Mês do carrossel + mês anterior (virada de turno) em paralelo.
       const respostas = await Promise.all(
-        refIsos.map((refIso) => carregarPresencaGestaoMes(supabase, fid, refIso)),
+        refIsos.map(async (refIso) => {
+          const r = await carregarPresencaGestaoMes(supabase, fid, refIso);
+          return { refIso, ...r };
+        }),
       );
       if (cancelled) return;
-      for (const { mapa, error } of respostas) {
+      for (const { refIso, mapa, error } of respostas) {
         if (error) {
-          hadError = true;
+          if (refIso === refMesAtual) erroMesCarrossel = true;
           continue;
         }
         for (const [k, v] of mapa) merged.set(k, v);
       }
       if (cancelled) return;
       setLoadingPresencaGestao(false);
-      if (!hadError || merged.size > 0) setPresencaGestaoPorChave(merged);
+      if (erroMesCarrossel) {
+        setPresencaGestaoPorChave(new Map());
+        setErroPresencaGestao(
+          "Não foi possível carregar a gestão de presença do mês. Se o problema persistir, entre em contato com o suporte.",
+        );
+        return;
+      }
+      setErroPresencaGestao(null);
+      setPresencaGestaoPorChave(merged);
     })();
     return () => {
       cancelled = true;
@@ -1455,20 +1500,31 @@ export default function RhCalendarioPage() {
   useEffect(() => {
     if (perm.loading || perm.canView === "nao" || abaPrincipal !== "presenca") {
       setAprovacaoPresencaMes(null);
+      setErroAprovacaoPresencaMes(null);
       return;
     }
     const fid = filterStaffIds[0];
     if (!fid || !mesCalendarioPresencaFechado(current)) {
       setAprovacaoPresencaMes(null);
+      setErroAprovacaoPresencaMes(null);
       return;
     }
     let cancelled = false;
     setLoadingAprovacaoPresencaMes(true);
+    setErroAprovacaoPresencaMes(null);
     void (async () => {
       const { aprovacao, error } = await carregarAprovacaoPresencaMes(supabase, fid, current);
       if (cancelled) return;
       setLoadingAprovacaoPresencaMes(false);
-      if (!error) setAprovacaoPresencaMes(aprovacao);
+      if (error) {
+        setAprovacaoPresencaMes(null);
+        setErroAprovacaoPresencaMes(
+          "Não foi possível carregar a aprovação mensal de presença. Se o problema persistir, entre em contato com o suporte.",
+        );
+        return;
+      }
+      setErroAprovacaoPresencaMes(null);
+      setAprovacaoPresencaMes(aprovacao);
     })();
     return () => {
       cancelled = true;
@@ -1479,6 +1535,7 @@ export default function RhCalendarioPage() {
     abaPrincipal,
     filterStaffIds,
     current,
+    aprovacaoPresencaMesTick,
   ]);
 
   useEffect(() => {
@@ -1505,24 +1562,17 @@ export default function RhCalendarioPage() {
     setErroRelatorioPresenca(null);
     const refIso = refMesPrimeiroDiaISO(current);
     void (async () => {
-      const [gestaoResults, pontoResults] = await Promise.all([
-        Promise.all(fids.map((fid) => carregarPresencaGestaoMes(supabase, fid, refIso))),
-        Promise.all(
-          fids.map(async (fid) => {
-            const { data, error } = await supabase.rpc("rh_calendario_ponto_registros_mes", {
-              p_funcionario_id: fid,
-              p_ref_mes: refIso,
-            });
-            return { fid, data, error };
-          }),
-        ),
+      const [gestaoRes, pontoRes] = await Promise.all([
+        carregarPresencaGestaoMesLote(supabase, fids, refIso),
+        carregarPontoRegistrosMesLote(supabase, fids, refIso),
       ]);
       if (cancelled) return;
       setLoadingRelatorioPresenca(false);
-      const gestaoErro = gestaoResults.some((r) => r.error);
-      const pontoErro = pontoResults.some((r) => r.error);
-      if (gestaoErro || pontoErro) {
-        console.error("[calendario-relatorio-justificativas]", { gestaoErro, pontoErro });
+      if (gestaoRes.error || pontoRes.error) {
+        console.error("[calendario-relatorio-justificativas]", {
+          gestaoErro: gestaoRes.error,
+          pontoErro: pontoRes.error,
+        });
         setPontoRelatorioPorChave(new Map());
         setGestaoRelatorioPorChave(new Map());
         setErroRelatorioPresenca(
@@ -1530,29 +1580,8 @@ export default function RhCalendarioPage() {
         );
         return;
       }
-      const gestaoMap = new Map<string, PresencaDiaGestao>();
-      for (const r of gestaoResults) {
-        for (const [k, v] of r.mapa) gestaoMap.set(k, v);
-      }
-      const pontoMap = new Map<string, { check_in_at: string | null; check_out_at: string | null }>();
-      for (const { fid, data } of pontoResults) {
-        const rows = (data ?? []) as {
-          dia_sp: string | Date;
-          check_in_at: string | null;
-          check_out_at: string | null;
-        }[];
-        for (const row of rows) {
-          const raw = row.dia_sp;
-          const ds =
-            typeof raw === "string" ? String(raw).slice(0, 10) : toISO(new Date(raw as Date));
-          pontoMap.set(chavePresencaGestao(fid, ds), {
-            check_in_at: row.check_in_at,
-            check_out_at: row.check_out_at,
-          });
-        }
-      }
-      setGestaoRelatorioPorChave(gestaoMap);
-      setPontoRelatorioPorChave(pontoMap);
+      setGestaoRelatorioPorChave(gestaoRes.mapa);
+      setPontoRelatorioPorChave(pontoRes.mapa);
     })();
     return () => {
       cancelled = true;
@@ -1576,6 +1605,7 @@ export default function RhCalendarioPage() {
     if (perm.loading || perm.canView === "nao") {
       setCtOverlayPorDia(new Map());
       setHaEfetivoPorDia(new Map());
+      setErroCtOverlay(null);
       return;
     }
     let fids: string[] =
@@ -1595,6 +1625,7 @@ export default function RhCalendarioPage() {
     if (fids.length === 0) {
       setCtOverlayPorDia(new Map());
       setHaEfetivoPorDia(new Map());
+      setErroCtOverlay(null);
       return;
     }
     let cancelled = false;
@@ -1602,63 +1633,74 @@ export default function RhCalendarioPage() {
     const m = current.getMonth();
     const inicio = `${y}-${String(m + 1).padStart(2, "0")}-01`;
     const fim = toISO(new Date(y, m + 1, 0));
+    setErroCtOverlay(null);
     void (async () => {
-      const { data, error } = await supabase
-        .from("escala_ct_presenca_registro")
-        .select(
-          "prestador_id, data, entrada_hhmm, saida_hhmm, aprovado, status_presenca, tipo, created_at",
-        )
-        .in("prestador_id", fids)
-        .gte("data", inicio)
-        .lte("data", fim)
-        .order("created_at", { ascending: false });
-      if (cancelled) return;
-      if (error) {
-        console.error("[calendario-ct-overlay]", error);
-        setCtOverlayPorDia(new Map());
-        setHaEfetivoPorDia(new Map());
-        return;
-      }
-      const nextOverlay = new Map<string, { entrada: string; saida: string; comentario: string }>();
-      const nextHa = new Map<string, { entrada: string; saida: string }>();
-      for (const row of (data ?? []) as {
-        prestador_id: string;
-        data: string;
-        entrada_hhmm: string | null;
-        saida_hhmm: string | null;
-        aprovado: boolean | null;
-        status_presenca: string | null;
-        tipo: string | null;
-        created_at: string | null;
-      }[]) {
-        const fid = String(row.prestador_id ?? "");
-        const diaIso = String(row.data ?? "").slice(0, 10);
-        if (!fid || !diaIso) continue;
-        const chave = chavePresencaGestao(fid, diaIso);
-        const entradaCt = String(row.entrada_hhmm ?? "").trim().slice(0, 5);
-        const saidaCt = String(row.saida_hhmm ?? "").trim().slice(0, 5);
-        const st = String(row.status_presenca ?? "").toLowerCase();
-        const tipo = String(row.tipo ?? "").toLowerCase();
-        const ehHa = st === "hora_adicional" || tipo === "hora_adicional";
-        if (ehHa && !nextHa.has(chave) && entradaCt && saidaCt) {
-          const turnoHa = resolverTurnoEfetivoHhmm("—", "—", {
-            entrada: entradaCt,
-            saida: saidaCt,
-          });
-          if (turnoHa?.origem === "hora_adicional") {
-            nextHa.set(chave, { entrada: turnoHa.entrada, saida: turnoHa.saida });
+      try {
+        const data = await fetchAllPages<{
+          prestador_id: string;
+          data: string;
+          entrada_hhmm: string | null;
+          saida_hhmm: string | null;
+          aprovado: boolean | null;
+          status_presenca: string | null;
+          tipo: string | null;
+          created_at: string | null;
+        }>(async (from, to) => {
+          const { data: page, error } = await supabase
+            .from("escala_ct_presenca_registro")
+            .select(
+              "prestador_id, data, entrada_hhmm, saida_hhmm, aprovado, status_presenca, tipo, created_at",
+            )
+            .in("prestador_id", fids)
+            .gte("data", inicio)
+            .lte("data", fim)
+            .order("created_at", { ascending: false })
+            .order("prestador_id", { ascending: true })
+            .range(from, to);
+          return { data: page, error };
+        });
+        if (cancelled) return;
+        const nextOverlay = new Map<string, { entrada: string; saida: string; comentario: string }>();
+        const nextHa = new Map<string, { entrada: string; saida: string }>();
+        for (const row of data) {
+          const fid = String(row.prestador_id ?? "");
+          const diaIso = String(row.data ?? "").slice(0, 10);
+          if (!fid || !diaIso) continue;
+          const chave = chavePresencaGestao(fid, diaIso);
+          const entradaCt = String(row.entrada_hhmm ?? "").trim().slice(0, 5);
+          const saidaCt = String(row.saida_hhmm ?? "").trim().slice(0, 5);
+          const st = String(row.status_presenca ?? "").toLowerCase();
+          const tipo = String(row.tipo ?? "").toLowerCase();
+          const ehHa = st === "hora_adicional" || tipo === "hora_adicional";
+          if (ehHa && !nextHa.has(chave) && entradaCt && saidaCt) {
+            const turnoHa = resolverTurnoEfetivoHhmm("—", "—", {
+              entrada: entradaCt,
+              saida: saidaCt,
+            });
+            if (turnoHa?.origem === "hora_adicional") {
+              nextHa.set(chave, { entrada: turnoHa.entrada, saida: turnoHa.saida });
+            }
+          }
+          if (row.aprovado === true && !nextOverlay.has(chave)) {
+            nextOverlay.set(chave, {
+              entrada: entradaCt || "—",
+              saida: saidaCt || "—",
+              comentario: "", // preenchido no useMemo com ponto
+            });
           }
         }
-        if (row.aprovado === true && !nextOverlay.has(chave)) {
-          nextOverlay.set(chave, {
-            entrada: entradaCt || "—",
-            saida: saidaCt || "—",
-            comentario: "", // preenchido no useMemo com ponto
-          });
-        }
+        setErroCtOverlay(null);
+        setCtOverlayPorDia(nextOverlay);
+        setHaEfetivoPorDia(nextHa);
+      } catch (e) {
+        console.error("[calendario-ct-overlay]", e);
+        if (cancelled) return;
+        setCtOverlayPorDia(new Map());
+        setHaEfetivoPorDia(new Map());
+        setErroCtOverlay(
+          "Não foi possível carregar o overlay do Controle de Turno. Se o problema persistir, entre em contato com o suporte.",
+        );
       }
-      setCtOverlayPorDia(nextOverlay);
-      setHaEfetivoPorDia(nextHa);
     })();
     return () => {
       cancelled = true;
@@ -1675,6 +1717,7 @@ export default function RhCalendarioPage() {
     pontoMesTick,
     relatorioReloadTick,
     meuRhFuncionarioId,
+    ctOverlayTick,
   ]);
 
   const ctOverlayPorDiaComComentario = useMemo(() => {
@@ -1759,16 +1802,21 @@ export default function RhCalendarioPage() {
   useEffect(() => {
     if (perm.loading || perm.canView === "nao") {
       setReunioesMesRaw([]);
+      setErroReunioes(null);
       return;
     }
     let cancelled = false;
     const refIso = refMesPrimeiroDiaISO(current);
+    setErroReunioes(null);
     void supabase.rpc("rh_calendario_reunioes_mes", { p_ref_mes: refIso }).then(({ data, error }) => {
       if (cancelled) return;
       if (error) {
-        setReunioesMesRaw([]);
+        setErroReunioes(
+          "Não foi possível carregar as reuniões do mês. Se o problema persistir, entre em contato com o suporte.",
+        );
         return;
       }
+      setErroReunioes(null);
       setReunioesMesRaw((data ?? []) as RpcReuniaoMesRow[]);
     });
     return () => {
@@ -3236,6 +3284,7 @@ export default function RhCalendarioPage() {
     setPresencaAlvoModal,
     presencaJustificarAlvo,
     setPresencaJustificarAlvo,
+    setErroPersistenciaPresenca,
   });
 
   if (perm.canView === "nao") {
@@ -3324,9 +3373,7 @@ export default function RhCalendarioPage() {
                   <Clock size={12} aria-hidden="true" />
                   Carregando…
                 </span>
-              ) : erroStaff ? (
-                <span style={{ color: BRAND.vermelho, fontSize: 12, fontFamily: FONT.body }}>{erroStaff}</span>
-              ) : abaPrincipal === "compromissos" ? (
+              ) : erroStaff ? null : abaPrincipal === "compromissos" ? (
                 <>
                   {mostrarBotaoMeuCalendario ? (
                     <FiltroMeuCalendarioButton
@@ -3516,7 +3563,8 @@ export default function RhCalendarioPage() {
               mesPresencaFechado &&
               filterStaffIds.length === 1 &&
               podeAprovarPresencaMes &&
-              !aprovacaoPresencaMes ? (
+              !aprovacaoPresencaMes &&
+              !erroAprovacaoPresencaMes ? (
                 <button
                   type="button"
                   onClick={() => setModalAprovarPresencaMesAberto(true)}
@@ -3529,6 +3577,46 @@ export default function RhCalendarioPage() {
                 >
                   Aprovar Presença
                 </button>
+              ) : null}
+              {abaPrincipal === "presenca" &&
+              mesPresencaFechado &&
+              filterStaffIds.length === 1 &&
+              erroAprovacaoPresencaMes ? (
+                <span
+                  role="alert"
+                  style={{
+                    fontSize: 12,
+                    fontFamily: FONT.body,
+                    color: "#e84025",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 8,
+                    flexWrap: "wrap",
+                    maxWidth: 420,
+                  }}
+                >
+                  <span>{erroAprovacaoPresencaMes}</span>
+                  <button
+                    type="button"
+                    onClick={() => setAprovacaoPresencaMesTick((x) => x + 1)}
+                    disabled={loadingAprovacaoPresencaMes}
+                    style={{
+                      padding: "6px 14px",
+                      borderRadius: 999,
+                      border: "1px solid rgba(232,64,37,0.45)",
+                      background: "transparent",
+                      color: "#e84025",
+                      fontSize: 12,
+                      fontWeight: 700,
+                      fontFamily: FONT.body,
+                      cursor: loadingAprovacaoPresencaMes ? "not-allowed" : "pointer",
+                      opacity: loadingAprovacaoPresencaMes ? 0.6 : 1,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    Tentar de novo
+                  </button>
+                </span>
               ) : null}
               {abaPrincipal === "presenca" &&
               mesPresencaFechado &&
@@ -3559,9 +3647,22 @@ export default function RhCalendarioPage() {
                 color: "#e84025",
                 fontSize: 12,
                 fontFamily: FONT.body,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 12,
+                flexWrap: "wrap",
               }}
             >
-              {erroCalendarioPdf}
+              <span>{erroCalendarioPdf}</span>
+              <button
+                type="button"
+                disabled={baixandoCalendarioPdf}
+                onClick={() => void onBaixarCalendarioPdf()}
+                style={botaoTentarDeNovoStyle(baixandoCalendarioPdf)}
+              >
+                Tentar de novo
+              </button>
             </div>
           ) : null}
 
@@ -3678,6 +3779,20 @@ export default function RhCalendarioPage() {
         </div>
       )}
 
+      {erroStaff ? (
+        <div role="alert" aria-live="polite" style={bannerErroCalendarioStyle}>
+          <span>{erroStaff}</span>
+          <button
+            type="button"
+            onClick={() => setEscopoRefreshTick((x) => x + 1)}
+            disabled={loadingStaff}
+            style={botaoTentarDeNovoStyle(loadingStaff)}
+          >
+            Tentar de novo
+          </button>
+        </div>
+      ) : null}
+
       {erroEscala ? (
         <div role="alert" aria-live="polite" style={bannerErroCalendarioStyle}>
           <span>{erroEscala}</span>
@@ -3692,6 +3807,19 @@ export default function RhCalendarioPage() {
         </div>
       ) : null}
 
+      {abaPrincipal === "compromissos" && erroReunioes ? (
+        <div role="alert" aria-live="polite" style={bannerErroCalendarioStyle}>
+          <span>{erroReunioes}</span>
+          <button
+            type="button"
+            onClick={() => setReunioesMesTick((x) => x + 1)}
+            style={botaoTentarDeNovoStyle(false)}
+          >
+            Tentar de novo
+          </button>
+        </div>
+      ) : null}
+
       {abaPrincipal === "presenca" && erroPontoMes ? (
         <div role="alert" aria-live="polite" style={bannerErroCalendarioStyle}>
           <span>{erroPontoMes}</span>
@@ -3700,6 +3828,62 @@ export default function RhCalendarioPage() {
             onClick={() => setPontoMesTick((x) => x + 1)}
             disabled={loadingPontoMes}
             style={botaoTentarDeNovoStyle(loadingPontoMes)}
+          >
+            Tentar de novo
+          </button>
+        </div>
+      ) : null}
+
+      {abaPrincipal === "presenca" && erroPresencaGestao ? (
+        <div role="alert" aria-live="polite" style={bannerErroCalendarioStyle}>
+          <span>{erroPresencaGestao}</span>
+          <button
+            type="button"
+            onClick={() => setPresencaGestaoTick((x) => x + 1)}
+            disabled={loadingPresencaGestao}
+            style={botaoTentarDeNovoStyle(loadingPresencaGestao)}
+          >
+            Tentar de novo
+          </button>
+        </div>
+      ) : null}
+
+      {abaPrincipal === "presenca" && erroMovimentacoes ? (
+        <div role="alert" aria-live="polite" style={bannerErroCalendarioStyle}>
+          <span>{erroMovimentacoes}</span>
+          <button
+            type="button"
+            onClick={() => setMovimentacoesTick((x) => x + 1)}
+            style={botaoTentarDeNovoStyle(false)}
+          >
+            Tentar de novo
+          </button>
+        </div>
+      ) : null}
+
+      {(abaPrincipal === "presenca" || abaPrincipal === "compromissos") && erroCtOverlay ? (
+        <div role="alert" aria-live="polite" style={bannerErroCalendarioStyle}>
+          <span>{erroCtOverlay}</span>
+          <button
+            type="button"
+            onClick={() => setCtOverlayTick((x) => x + 1)}
+            style={botaoTentarDeNovoStyle(false)}
+          >
+            Tentar de novo
+          </button>
+        </div>
+      ) : null}
+
+      {(abaPrincipal === "presenca" || abaPrincipal === "relatorio") && erroPersistenciaPresenca ? (
+        <div role="alert" aria-live="polite" style={bannerErroCalendarioStyle}>
+          <span>{erroPersistenciaPresenca}</span>
+          <button
+            type="button"
+            onClick={() => {
+              setErroPersistenciaPresenca(null);
+              setPresencaGestaoTick((x) => x + 1);
+            }}
+            style={botaoTentarDeNovoStyle(false)}
           >
             Tentar de novo
           </button>
@@ -3746,6 +3930,7 @@ export default function RhCalendarioPage() {
           contentBox={contentBox}
           linhas={linhasRelatorioPresencaOrdenadas}
           loading={loadingRelatorioPresenca || loadingEscala}
+          loadError={!!erroRelatorioPresenca}
           semTime={!filtroTimeAtivo && !filtroStaffAtivo}
           sortDir={sortRelatorioNomeDir}
           onToggleSortNome={() =>
@@ -3823,7 +4008,7 @@ export default function RhCalendarioPage() {
               <Loader2 size={16} className="app-lucide-spin" aria-hidden="true" color="var(--brand-primary, #7c3aed)" />
               Carregando…
             </div>
-          ) : funcionarioIdsGrade === null && !soPropriosCal ? (
+          ) : erroEscala ? null : funcionarioIdsGrade === null && !soPropriosCal ? (
             <div
               role="status"
               style={{

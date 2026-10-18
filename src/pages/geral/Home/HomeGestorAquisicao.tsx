@@ -19,7 +19,7 @@ import {
 } from "../../../lib/homePerfisCopy";
 import { BoasVindasPerfilHome } from "./shared/BoasVindasPerfilHome";
 import { AtalhosCuradosHome } from "./shared/AtalhosCuradosHome";
-import { InformativosHome } from "./shared/InformativosHome";
+import { InformacoesStaffHome } from "./shared/InformacoesStaffHome";
 import { HomePageLoading } from "./shared/HomePageLoading";
 import { useHomeGestorAquisicaoData } from "./hooks/useHomeGestorAquisicaoData";
 import { AlertasGestorAquisicao } from "./gestorAquisicao/AlertasGestorAquisicao";
@@ -73,7 +73,7 @@ export default function HomeGestorAquisicao() {
       />
       <AlertasGestorAquisicao alertas={alertas} />
       <KpisGestorAquisicao kpis={kpis} erro={erro} sectionIdPrefix={PREFIX} />
-      <InformativosHome perfil="gestor_aquisicao" sectionIdPrefix={PREFIX} />
+      <InformacoesStaffHome perfil="gestor_aquisicao" sectionIdPrefix={PREFIX} />
       <AtalhosCuradosHome sectionIdPrefix={PREFIX} atalhos={ATALHOS} />
     </div>
   );

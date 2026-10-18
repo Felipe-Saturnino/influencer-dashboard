@@ -1,12 +1,15 @@
 import { useState, useEffect, useRef, useCallback, type CSSProperties, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { useIdentidadeEfetiva } from "../../../hooks/useIdentidadeEfetiva";
+import { usePainelSelectPortal } from "../../../hooks/usePainelSelectPortal";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE, BRAND } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
+import { fetchAllPages, fetchInBatched } from "../../../lib/supabasePaginate";
 import type { Operadora, InfluencerOperadora, Role } from "../../../types";
 import { Eye, EyeOff, Pencil, X, ChevronDown, Loader2, Users, AlertCircle, CheckCircle, Building2, Contact, Briefcase, Coins, History } from "lucide-react";
 import { FiltroBarTabButton, FILTRO_BAR_TAB_ICON_PROPS, onFiltroBarTabsKeyDown } from "../../../components/dashboard";
@@ -15,17 +18,29 @@ import { isAfiliadoPerfilIncompleto } from "../../../lib/afiliadoPerfilCompleto"
 import { influencerElegivelQuadroPerfilIncompleto } from "../../../lib/influencerPerfilCompleto";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
+import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
+import { TabelaComPaginacao } from "../../../components/TabelaPaginacaoBar";
 import { DashboardPageHeader, FiltroOperadoraSelect, FiltroStatusSemanticoPill } from "../../../components/dashboard";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { textoContemBuscaEmAlgum } from "../../../lib/searchText";
+import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
+import { estiloPainelPortalFixed } from "../../../lib/selectPainelPortal";
 import { ROLES_STAFF_OPERACOES_LIVES } from "../../../lib/staffRoles";
 import {
   getPageFilterBoxStyle,
   getPageKpiSectionGapStyle,
 } from "../../../lib/pageContentBoxStyles";
+
+const OPERADORA_COLS =
+  "slug, nome, ativo, brand_action, brand_contrast, brand_bg, brand_text, logo_url, font_url";
+const PERFIL_COLS =
+  "id, nome_artistico, nome_completo, status, telefone, cpf, operacao, cache_hora, banco, agencia, conta, chave_pix, created_at, updated_at, status_alterado_em";
+const INF_OP_COLS = "influencer_id, operadora_slug, id_operadora, ativo, criado_em, atualizado_em";
+/** Lote seguro para `.in` de perfil / operadoras. */
+const AFILIADO_IN_CHUNK = 150;
 
 function SensitiveField({
   value, label, labelStyle, textStyle, editMode = false,
@@ -99,22 +114,68 @@ const emptyPerfil = (id: string): Perfil => ({
 function StatusBadge({ value, onChange, readonly }: { value: StatusAfiliado; onChange: (v: StatusAfiliado) => void; readonly?: boolean }) {
   const { theme: t } = useApp();
   const [open, setOpen] = useState(false);
+  const closePanel = useCallback(() => setOpen(false), []);
+  const { triggerRef, panelRef, pos } = usePainelSelectPortal({
+    open: open && !readonly,
+    onClose: closePanel,
+    minWidth: 140,
+    matchTriggerWidth: false,
+  });
   const color = STATUS_COLOR[value] ?? "#888";
+  const menuNode =
+    open && !readonly && pos ? (
+      <div
+        ref={panelRef}
+        role="menu"
+        style={estiloPainelPortalFixed(pos, { background: t.cardBg, border: t.cardBorder }, {
+          padding: 0,
+          minWidth: 140,
+          overflow: "hidden",
+          borderRadius: 10,
+        })}
+      >
+        {STATUS_OPTS.map((s) => (
+          <button
+            key={s}
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              onChange(s);
+              closePanel();
+            }}
+            style={{
+              display: "block",
+              width: "100%",
+              padding: "9px 14px",
+              border: "none",
+              background: s === value ? `${STATUS_COLOR[s]}18` : "transparent",
+              color: STATUS_COLOR[s],
+              fontSize: 12,
+              fontWeight: 700,
+              cursor: "pointer",
+              textAlign: "left",
+              fontFamily: FONT.body,
+            }}
+          >
+            {STATUS_LABEL[s]}
+          </button>
+        ))}
+      </div>
+    ) : null;
   return (
     <div style={{ position: "relative", display: "inline-block" }}>
-      <button type="button" onClick={() => { if (!readonly) setOpen((o) => !o); }} {...(!readonly ? { "aria-haspopup": "menu" as const, "aria-expanded": open } : {})} aria-label={`Status: ${STATUS_LABEL[value]}`} style={{ padding: "4px 12px", borderRadius: 20, border: `1.5px solid ${color}`, background: `${color}18`, color, fontSize: 12, fontWeight: 700, fontFamily: FONT.body, cursor: readonly ? "default" : "pointer", display: "flex", alignItems: "center", gap: 5 }}>
+      <button
+        ref={triggerRef}
+        type="button"
+        onClick={() => { if (!readonly) setOpen((o) => !o); }}
+        {...(!readonly ? { "aria-haspopup": "menu" as const, "aria-expanded": open } : {})}
+        aria-label={`Status: ${STATUS_LABEL[value]}`}
+        style={{ padding: "4px 12px", borderRadius: 20, border: `1.5px solid ${color}`, background: `${color}18`, color, fontSize: 12, fontWeight: 700, fontFamily: FONT.body, cursor: readonly ? "default" : "pointer", display: "flex", alignItems: "center", gap: 5 }}
+      >
         {STATUS_LABEL[value]}
         {!readonly && <ChevronDown size={9} style={{ opacity: 0.7 }} aria-hidden="true" />}
       </button>
-      {open && (
-        <div role="menu" style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.3)", zIndex: 200, minWidth: 140, overflow: "hidden" }}>
-          {STATUS_OPTS.map((s) => (
-            <button key={s} type="button" role="menuitem" onClick={() => { onChange(s); setOpen(false); }} style={{ display: "block", width: "100%", padding: "9px 14px", border: "none", background: s === value ? `${STATUS_COLOR[s]}18` : "transparent", color: STATUS_COLOR[s], fontSize: 12, fontWeight: 700, cursor: "pointer", textAlign: "left", fontFamily: FONT.body }}>
-              {STATUS_LABEL[s]}
-            </button>
-          ))}
-        </div>
-      )}
+      {menuNode ? createPortal(menuNode, document.body) : null}
     </div>
   );
 }
@@ -191,33 +252,53 @@ export default function Afiliados() {
   const [filterStatus, setFilterStatus] = useState<string>("todos");
   const [filterOp, setFilterOp] = useState<string>("todas");
   const [statusError, setStatusError] = useState("");
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const loadGenRef = useRef(0);
 
   const loadData = useCallback(async () => {
+    const gen = ++loadGenRef.current;
     setLoading(true);
-    const { data: opsList } = await supabase.from("operadoras").select("*").order("nome");
-    setOperadorasList(opsList ?? []);
-    const opsMap = Object.fromEntries((opsList ?? []).map((o: Operadora) => [o.slug, o.nome]));
+    setLoadError(null);
+    try {
+      const { data: opsList, error: opsErr } = await supabase.from("operadoras").select(OPERADORA_COLS).order("nome");
+      if (opsErr) throw new Error(opsErr.message);
+      if (gen !== loadGenRef.current) return;
+      setOperadorasList((opsList ?? []) as Operadora[]);
+      const opsMap = Object.fromEntries(((opsList ?? []) as Operadora[]).map((o) => [o.slug, o.nome]));
 
-    if (showManagementUI) {
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("id, name, email, ativo")
-        .eq("role", "afiliado")
-        .order("name");
-      if (profiles) {
-        const ids = profiles.map((p: { id: string }) => p.id);
-        const [perfisRes, opsRes] = await Promise.all([
-          ids.length > 0 ? supabase.from("influencer_perfil").select("*").in("id", ids) : { data: [] as Perfil[] },
-          ids.length > 0 ? supabase.from("influencer_operadoras").select("*").in("influencer_id", ids) : { data: [] as InfluencerOperadora[] },
+      if (showManagementUI) {
+        type ProfileRow = { id: string; name?: string | null; email?: string | null; ativo?: boolean | null };
+        const profiles = await fetchAllPages<ProfileRow>(async (from, to) =>
+          await supabase
+            .from("profiles")
+            .select("id, name, email, ativo")
+            .eq("role", "afiliado")
+            .order("name")
+            .range(from, to),
+        );
+        if (gen !== loadGenRef.current) return;
+        const ids = profiles.map((p) => p.id);
+        const [perfisRows, opsRows] = await Promise.all([
+          fetchInBatched<Perfil>(ids, AFILIADO_IN_CHUNK, async (slice) => {
+            const { data, error } = await supabase.from("influencer_perfil").select(PERFIL_COLS).in("id", slice);
+            if (error) throw new Error(error.message);
+            return (data ?? []) as Perfil[];
+          }),
+          fetchInBatched<InfluencerOperadora>(ids, AFILIADO_IN_CHUNK, async (slice) => {
+            const { data, error } = await supabase.from("influencer_operadoras").select(INF_OP_COLS).in("influencer_id", slice);
+            if (error) throw new Error(error.message);
+            return (data ?? []) as InfluencerOperadora[];
+          }),
         ]);
+        if (gen !== loadGenRef.current) return;
         const perfisMap: Record<string, Perfil> = {};
-        (perfisRes.data ?? []).forEach((p: Perfil) => { perfisMap[p.id] = p; });
+        perfisRows.forEach((p) => { perfisMap[p.id] = p; });
         const opsPor: Record<string, InfluencerOperadora[]> = {};
-        (opsRes.data ?? []).forEach((o: InfluencerOperadora) => {
+        opsRows.forEach((o) => {
           if (!opsPor[o.influencer_id]) opsPor[o.influencer_id] = [];
           opsPor[o.influencer_id].push({ ...o, operadora_nome: opsMap[o.operadora_slug] ?? o.operadora_nome });
         });
-        setList(profiles.map((p: { id: string; name?: string | null; email?: string | null; ativo?: boolean | null }) => ({
+        setList(profiles.map((p) => ({
           id: p.id,
           name: p.name ?? p.email ?? "",
           email: p.email ?? "",
@@ -225,22 +306,33 @@ export default function Afiliados() {
           perfil: perfisMap[p.id] ?? null,
           operadoras: opsPor[p.id] ?? [],
         })));
+      } else if (userIdEfetivo) {
+        const [perfilRes, opsRes] = await Promise.all([
+          supabase.from("influencer_perfil").select(PERFIL_COLS).eq("id", userIdEfetivo).single(),
+          supabase.from("influencer_operadoras").select(INF_OP_COLS).eq("influencer_id", userIdEfetivo),
+        ]);
+        if (perfilRes.error) throw new Error(perfilRes.error.message);
+        if (opsRes.error) throw new Error(opsRes.error.message);
+        if (gen !== loadGenRef.current) return;
+        const operadoras = ((opsRes.data ?? []) as InfluencerOperadora[]).map((o) => ({ ...o, operadora_nome: opsMap[o.operadora_slug] ?? o.operadora_nome }));
+        setList([{
+          id: userIdEfetivo,
+          name: nomeEfetivo || user?.name || "",
+          email: emailEfetivo || user?.email || "",
+          perfil: (perfilRes.data ?? null) as Perfil | null,
+          operadoras,
+        }]);
       }
-    } else if (userIdEfetivo) {
-      const [perfilRes, opsRes] = await Promise.all([
-        supabase.from("influencer_perfil").select("*").eq("id", userIdEfetivo).single(),
-        supabase.from("influencer_operadoras").select("*").eq("influencer_id", userIdEfetivo),
-      ]);
-      const operadoras = ((opsRes.data ?? []) as InfluencerOperadora[]).map((o) => ({ ...o, operadora_nome: opsMap[o.operadora_slug] ?? o.operadora_nome }));
-      setList([{
-        id: userIdEfetivo,
-        name: nomeEfetivo || user?.name || "",
-        email: emailEfetivo || user?.email || "",
-        perfil: perfilRes.data ?? null,
-        operadoras,
-      }]);
+    } catch (err) {
+      console.error("Afiliados loadData:", err);
+      if (gen !== loadGenRef.current) return;
+      setList([]);
+      setLoadError(
+        "Não foi possível carregar os afiliados. Se o problema persistir, entre em contato com o suporte.",
+      );
+    } finally {
+      if (gen === loadGenRef.current) setLoading(false);
     }
-    setLoading(false);
   }, [showManagementUI, user, userIdEfetivo, nomeEfetivo, emailEfetivo]);
 
   useEffect(() => { void loadData(); }, [loadData]);
@@ -269,7 +361,7 @@ export default function Afiliados() {
     const { error } = await supabase.from("influencer_perfil").upsert(upsertPatch, { onConflict: "id" });
     if (error) {
       setList((prev) => prev.map((i) => (i.id === id ? { ...i, perfil: { ...(i.perfil ?? emptyPerfil(id)), status: previousStatus ?? "ativo" } } : i)));
-      setStatusError("Erro ao salvar status. Tente novamente.");
+      setStatusError("Não foi possível salvar o status. Se o problema persistir, entre em contato com o suporte.");
     }
   }
 
@@ -421,14 +513,26 @@ export default function Afiliados() {
         </div>
       )}
 
-      {loading ? (
-        <div style={{ textAlign: "center", padding: 60, color: t.textMuted, fontFamily: FONT.body, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <Loader2 size={16} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-label="Carregando…" />
+      {loadError ? (
+        <div role="alert" aria-live="polite" style={{ ...cardStyle, justifyContent: "center", padding: 48, textAlign: "center", color: BRAND.vermelho, fontSize: 13, fontFamily: FONT.body }}>
+          {loadError}
+        </div>
+      ) : loading ? (
+        <div role="status" aria-label="Carregando afiliados" style={{ textAlign: "center", padding: 60, color: t.textMuted, fontFamily: FONT.body, display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+          <Loader2 size={16} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden="true" />
+          <span style={{ fontSize: 13 }}>Carregando…</span>
         </div>
       ) : filtered.length === 0 ? (
         <div style={{ ...cardStyle, justifyContent: "center", padding: 48 }}>Nenhum afiliado encontrado.</div>
       ) : (
-        filtered.map((inf) => {
+        <TabelaComPaginacao
+          items={filtered}
+          t={t}
+          resetKey={`${filterStatus}|${filterOp}|${search}`}
+        >
+          {(linhas) => (
+            <>
+              {linhas.map((inf) => {
           const p = inf.perfil;
           const status: StatusAfiliado = p?.status ?? "ativo";
           const opsAtivas = (inf.operadoras ?? []).filter((o) => o.ativo);
@@ -466,18 +570,21 @@ export default function Afiliados() {
                 </div>
               </div>
               <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-                <button type="button" onClick={() => setModal({ mode: "visualizar", row: inf })} aria-label={`Ver ${p?.nome_artistico || inf.name}`} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: t.inputBg ?? t.cardBg, color: t.textMuted, fontSize: 12, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer" }}>
-                  <Eye size={13} aria-hidden="true" /> Ver
-                </button>
+                <BtnIconeAcaoLinha label={tooltipAcao("Ver perfil")} onClick={() => setModal({ mode: "visualizar", row: inf })}>
+                  <Eye size={13} aria-hidden="true" />
+                </BtnIconeAcaoLinha>
                 {podeEditarAf(inf.id) && (
-                  <button type="button" onClick={() => setModal({ mode: "editar", row: inf })} aria-label={`Editar ${p?.nome_artistico || inf.name}`} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10, border: "none", cursor: "pointer", background: ctaGradient, color: "#fff", fontSize: 12, fontWeight: 700, fontFamily: FONT.body }}>
-                    <Pencil size={13} aria-hidden="true" /> Editar
-                  </button>
+                  <BtnIconeAcaoLinha label={tooltipAcao("Editar perfil")} onClick={() => setModal({ mode: "editar", row: inf })}>
+                    <Pencil size={13} aria-hidden="true" />
+                  </BtnIconeAcaoLinha>
                 )}
               </div>
             </div>
           );
-        })
+              })}
+            </>
+          )}
+        </TabelaComPaginacao>
       )}
 
       {modal?.mode === "visualizar" && modal.row && (

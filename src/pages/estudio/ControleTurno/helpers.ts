@@ -1,5 +1,19 @@
+import { FONT } from "../../../constants/theme";
 import { shiftDiaIso } from "../../../lib/escalaRotacao";
 import type { ControleTurnoTurno } from "./types";
+
+/** Botão de retry em alertas de carga (Escala / Relatório / Notificações / Rotação). */
+export const BTN_RETRY_CT_STYLE = {
+  fontFamily: FONT.body,
+  fontSize: 13,
+  fontWeight: 700,
+  padding: "8px 14px",
+  borderRadius: 10,
+  border: "1px solid rgba(232,64,37,0.35)",
+  background: "transparent",
+  color: "#e84025",
+  cursor: "pointer",
+} as const;
 
 export function labelTurnoCurto(turno: ControleTurnoTurno): string {
   if (turno === "manha") return "Manhã";

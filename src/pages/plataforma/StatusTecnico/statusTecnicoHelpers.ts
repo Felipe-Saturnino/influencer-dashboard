@@ -14,6 +14,8 @@ export const HORARIO_AGENDADO_BR = {
   comercialDominio: 8,
   /** Enriquecimento cidade/UF — cron 8h30 BRT; checagem após 9h para evitar falso positivo antes do job. */
   comercialCnpj: 9,
+  /** Revenue Sentinel — cron ~4h20 BRT; checagem após 8h. */
+  revenueSentinel: 8,
   emailDiretoria: 6,
   emailAgenda: 6,
 } as const;
@@ -30,6 +32,7 @@ export const SYNC_LOG_SLUGS_GARANTIDOS = [
   "comercial_spa_lista",
   "comercial_dominio_validacao",
   "comercial_cnpj_enriquecimento",
+  "revenue_sentinel",
   "lobby_blaze",
   "lobby_cda",
   "lobby_esportiva",
@@ -39,6 +42,7 @@ export const SYNC_LOG_SLUGS_GARANTIDOS = [
   "lobby_brx",
   "lobby_donald",
   "lobby_betponto",
+  "lobby_goldebet",
   "cs_atendimento_outlook",
 ] as const;
 
@@ -96,11 +100,13 @@ export const LABEL_UI_LOBBY_RICO = "Lobby Rico Bet";
 export const LABEL_UI_LOBBY_BRX = "Lobby BRX Bet";
 export const LABEL_UI_LOBBY_DONALD = "Lobby Donald Bet";
 export const LABEL_UI_LOBBY_BETPONTO = "Lobby BetPontoBet";
+export const LABEL_UI_LOBBY_GOLDEBET = "Lobby Goldebet";
 
 export function nomeIntegracaoStatusTecnicoUi(slug: string, nome: string): string {
   if (slug === "comercial_spa_lista") return LABEL_UI_COMERCIAL_SPA_LISTA;
   if (slug === "comercial_dominio_validacao") return LABEL_UI_COMERCIAL_DOMINIO_VALIDACAO;
   if (slug === "comercial_cnpj_enriquecimento") return LABEL_UI_COMERCIAL_CNPJ_ESTADO_CIDADE;
+  if (slug === "revenue_sentinel") return LABEL_UI_REVENUE_SENTINEL;
   if (slug === "cs_atendimento_outlook") return LABEL_UI_CS_ATENDIMENTO_OUTLOOK;
   if (slug === "lobby_esportiva") return LABEL_UI_LOBBY_ESPORTIVA;
   if (slug === "lobby_jonbet") return LABEL_UI_LOBBY_JONBET;
@@ -109,6 +115,7 @@ export function nomeIntegracaoStatusTecnicoUi(slug: string, nome: string): strin
   if (slug === "lobby_brx") return LABEL_UI_LOBBY_BRX;
   if (slug === "lobby_donald") return LABEL_UI_LOBBY_DONALD;
   if (slug === "lobby_betponto") return LABEL_UI_LOBBY_BETPONTO;
+  if (slug === "lobby_goldebet") return LABEL_UI_LOBBY_GOLDEBET;
   return nome;
 }
 
@@ -147,6 +154,9 @@ export const ERRO_SYNC_COMERCIAL_DOMINIO =
   "Não foi possível validar os domínios do Pipeline B2B. Verifique a Edge Function e tente novamente.";
 export const ERRO_SYNC_COMERCIAL_CNPJ =
   "Não foi possível enriquecer cidade/UF dos CNPJs do Pipeline B2B. Verifique a Edge Function e tente novamente.";
+export const ERRO_SYNC_REVENUE_SENTINEL =
+  "Não foi possível sincronizar Jogadores Spin no Revenue Sentinel. Verifique a Edge Function e os secrets RS_API_URL / RS_API_KEY.";
+export const LABEL_UI_REVENUE_SENTINEL = "Revenue Sentinel — Jogadores Spin";
 export const ERRO_SYNC_LOBBY_BLAZE =
   "Não foi possível executar o monitor Lobby Blaze. Verifique a Edge Function e tente novamente.";
 export const ERRO_EMAIL_DIRETORIA =
@@ -186,6 +196,7 @@ export const LOBBY_OPERADORA_POR_INTEGRACAO: Record<string, string> = {
   lobby_brx: "brx_bet",
   lobby_donald: "donald_bet",
   lobby_betponto: "betponto_bet",
+  lobby_goldebet: "goldebet",
 };
 
 export const LOBBY_INTEGRACAO_SLUGS = Object.keys(LOBBY_OPERADORA_POR_INTEGRACAO);

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Globe, Loader2, Pencil, Shield, Users } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -37,6 +37,8 @@ export function ModalVerMarca({
   onOpenMarca,
   canEditar,
   onSavedDominio,
+  licencaHeaders = ["Marca", "Status", "Dedicada", "Network"],
+  renderLicencaCelulas,
 }: {
   marca: PipelineMarcaRow;
   allMarcas: PipelineMarcaRow[];
@@ -44,6 +46,8 @@ export function ModalVerMarca({
   onOpenMarca: (m: PipelineMarcaRow) => void;
   canEditar: boolean;
   onSavedDominio: (marcaId: string, dominio: string | null) => Promise<boolean>;
+  licencaHeaders?: [string, string, string, string];
+  renderLicencaCelulas?: (m: PipelineMarcaRow) => [ReactNode, ReactNode];
 }) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
@@ -149,7 +153,8 @@ export function ModalVerMarca({
           lineHeight: 1.45,
         }}
       >
-        {marca.empresa.razao_social} · CNPJ {marca.empresa.cnpj}
+        {marca.empresa.razao_social} · CNPJ{" "}
+        {marca.empresa.cnpj.startsWith("__solo:") ? "—" : marca.empresa.cnpj}
       </p>
       <div
         role="tablist"
@@ -388,7 +393,7 @@ export function ModalVerMarca({
               <caption style={{ display: "none" }}>Marcas com a mesma licença</caption>
               <thead>
                 <tr>
-                  {["Marca", "Status", "Dedicada", "Network"].map((h) => (
+                  {licencaHeaders.map((h) => (
                     <th
                       key={h}
                       scope="col"
@@ -411,6 +416,7 @@ export function ModalVerMarca({
                 {licencaRows.map((m) => {
                   const ded = produtoStatus(m, "mesa_dedicada");
                   const net = produtoStatus(m, "mesa_network");
+                  const extras = renderLicencaCelulas?.(m);
                   return (
                     <tr key={m.id}>
                       <td style={{ padding: "9px 12px", textAlign: "center", borderBottom: `1px solid ${t.cardBorder}` }}>
@@ -439,14 +445,18 @@ export function ModalVerMarca({
                         </span>
                       </td>
                       <td style={{ padding: "9px 12px", textAlign: "center", borderBottom: `1px solid ${t.cardBorder}` }}>
-                        {ded ? (
+                        {extras ? (
+                          extras[0]
+                        ) : ded ? (
                           <span style={badgeProdutoStyle(ded)}>{STATUS_PRODUTO_LABEL[ded]}</span>
                         ) : (
                           "—"
                         )}
                       </td>
                       <td style={{ padding: "9px 12px", textAlign: "center", borderBottom: `1px solid ${t.cardBorder}` }}>
-                        {net ? (
+                        {extras ? (
+                          extras[1]
+                        ) : net ? (
                           <span style={badgeProdutoStyle(net)}>{STATUS_PRODUTO_LABEL[net]}</span>
                         ) : (
                           "—"

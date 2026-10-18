@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Mockup — Overview Prestador (completo · Escala · Mesa/OCR · Performance)</title>
+<title>Mockup — Overview Prestador (Ver=Próprios · Prestador)</title>
 <style>
   :root {
     --brand-action: #7c3aed;
@@ -260,6 +260,30 @@
     border: 1px solid var(--card-border); border-radius: 12px;
     padding: 12px 14px; background: var(--input-bg);
   }
+  .kpi--ok {
+    border-color: color-mix(in srgb, #22c55e 45%, var(--card-border));
+    background: color-mix(in srgb, #22c55e 10%, var(--input-bg));
+  }
+  .kpi--ok .kpi__label { color: #22c55e; }
+  .kpi--ok .kpi__value { color: #22c55e; }
+  .kpi--wait {
+    border-color: color-mix(in srgb, #f59e0b 45%, var(--card-border));
+    background: color-mix(in srgb, #f59e0b 10%, var(--input-bg));
+  }
+  .kpi--wait .kpi__label { color: #f59e0b; }
+  .kpi--wait .kpi__value { color: #f59e0b; }
+  .kpi--neutral {
+    border-color: color-mix(in srgb, #6b7280 45%, var(--card-border));
+    background: color-mix(in srgb, #6b7280 10%, var(--input-bg));
+  }
+  .kpi--neutral .kpi__label { color: #6b7280; }
+  .kpi--neutral .kpi__value { color: #6b7280; }
+  .kpi--total {
+    border-color: color-mix(in srgb, var(--brand-contrast) 40%, var(--card-border));
+    background: color-mix(in srgb, var(--brand-contrast) 8%, var(--input-bg));
+  }
+  .kpi--total .kpi__label { color: var(--brand-contrast); }
+  .kpi--total .kpi__value { color: var(--brand-contrast); }
   .kpi__label {
     font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
     color: var(--text-muted); margin-bottom: 6px;
@@ -312,6 +336,53 @@
     background: color-mix(in srgb, var(--brand-action) 6%, transparent);
     border: 1px dashed color-mix(in srgb, var(--brand-action) 25%, transparent);
   }
+  .note--proposta {
+    margin-top: 0; margin-bottom: 14px;
+    border-style: solid;
+    border-color: color-mix(in srgb, var(--brand-action) 40%, transparent);
+    background: color-mix(in srgb, var(--brand-action) 10%, transparent);
+  }
+  .note--proposta b { color: var(--brand-action); }
+  .tag-new {
+    display: inline-block; font-size: 9px; font-weight: 800; letter-spacing: .08em;
+    text-transform: uppercase; padding: 2px 6px; border-radius: 4px; margin-left: 4px;
+    vertical-align: middle;
+    background: color-mix(in srgb, var(--brand-action) 18%, transparent);
+    color: var(--brand-action);
+  }
+  .action-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+  .action-list li {
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+    padding: 12px 14px; border-radius: 10px;
+    background: var(--input-bg); border: 1px solid var(--card-border); font-size: 13px;
+  }
+  .action-list .meta { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+  .prog {
+    height: 8px; border-radius: 999px; background: color-mix(in srgb, var(--neutral) 20%, transparent);
+    overflow: hidden; margin-top: 8px;
+  }
+  .prog > i { display: block; height: 100%; background: var(--brand-contrast); border-radius: 999px; }
+  .spark {
+    display: flex; align-items: flex-end; gap: 3px; height: 28px; margin-top: 8px;
+  }
+  .spark span {
+    flex: 1; border-radius: 3px 3px 0 0; min-height: 4px;
+    background: color-mix(in srgb, var(--brand-contrast) 55%, transparent);
+  }
+  .mini-cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+  .mini-cal .d {
+    text-align: center; padding: 8px 4px; border-radius: 8px; font-size: 11px;
+    border: 1px solid var(--card-border); background: var(--input-bg);
+  }
+  .mini-cal .d strong { display: block; font-size: 13px; font-weight: 700; margin-bottom: 2px; }
+  .mini-cal .d--on {
+    border-color: var(--brand-contrast);
+    background: color-mix(in srgb, var(--brand-contrast) 12%, transparent);
+  }
+  .mini-cal .d--off { opacity: .4; }
+  .compare-hint {
+    font-size: 11px; color: var(--text-muted); margin-top: 8px; font-style: italic;
+  }
   .note--warn {
     background: color-mix(in srgb, var(--warn) 10%, transparent);
     border-color: color-mix(in srgb, var(--warn) 35%, transparent);
@@ -328,22 +399,36 @@
 </head>
 <body data-theme="light">
 
-<!-- ══ Barra do mockup (não é produto) ═══════════════════════════ -->
-<div class="mock-bar">
-  <span class="mock-bar__label">Escopo</span>
-  <button type="button" class="mock-btn" data-visao="time" aria-pressed="true">Visão de time (líder)</button>
-  <button type="button" class="mock-btn" data-visao="ind" aria-pressed="false">Visão individual (Próprios)</button>
-  <span class="mock-sep" aria-hidden="true"></span>
-  <span class="mock-bar__label">Time</span>
-  <button type="button" class="mock-btn" data-time="gp" aria-pressed="true">Game Presenter</button>
-  <button type="button" class="mock-btn" data-time="shuf" aria-pressed="false">Shuffler</button>
-  <button type="button" class="mock-btn" data-time="sl" aria-pressed="false">Shift Leader</button>
-  <button type="button" class="mock-btn" data-time="sm" aria-pressed="false">Service Manager</button>
-  <span class="mock-sep" aria-hidden="true"></span>
-  <span class="mock-bar__label">Indiv.</span>
-  <button type="button" class="mock-btn" id="btn-mock-atestado" aria-pressed="true" title="Simula card Atestados no Absenteísmo">Atestados &gt; 0</button>
-  <span class="mock-sep" aria-hidden="true"></span>
-  <button type="button" class="mock-btn" id="btn-theme" aria-pressed="false">Dark</button>
+<!-- ══ Barra do mockup (não é produto) — escopo: Ver=Próprios · Prestador ══ -->
+<div class="mock-bar" style="flex-direction:column;align-items:stretch;gap:8px">
+  <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px">
+    <span class="mock-bar__label">Persona</span>
+    <button type="button" class="mock-btn" aria-pressed="true" disabled style="opacity:1;cursor:default">Prestador (Ver = Próprios)</button>
+    <span class="mock-sep" aria-hidden="true"></span>
+    <span class="mock-bar__label">Absenteísmo</span>
+    <button type="button" class="mock-btn" id="btn-mock-atestado" aria-pressed="true" title="Simula card Atestados no Absenteísmo">Atestados &gt; 0</button>
+    <button type="button" class="mock-btn" id="btn-mock-talks" aria-pressed="true" title="Simula RH Talks aplicáveis">RH Talks &gt; 0</button>
+    <span class="mock-sep" aria-hidden="true"></span>
+    <button type="button" class="mock-btn" id="btn-theme" aria-pressed="false">Dark</button>
+  </div>
+  <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px">
+    <span class="mock-bar__label">Canónicos</span>
+    <button type="button" class="mock-btn" data-time="gp" aria-pressed="true">Game Presenter</button>
+    <button type="button" class="mock-btn" data-time="gp2" aria-pressed="false" title="Proposta enriquecida para comparação">Game Presenter 2</button>
+    <button type="button" class="mock-btn" data-time="shuf" aria-pressed="false">Shuffler</button>
+    <button type="button" class="mock-btn" data-time="sl" aria-pressed="false">Shift Leader</button>
+    <button type="button" class="mock-btn" data-time="sm" aria-pressed="false">Service Manager</button>
+  </div>
+  <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px">
+    <span class="mock-bar__label">Outros</span>
+    <button type="button" class="mock-btn" data-time="academy" aria-pressed="false">Academy</button>
+    <button type="button" class="mock-btn" data-time="people" aria-pressed="false">People</button>
+    <button type="button" class="mock-btn" data-time="comercial" aria-pressed="false">Comercial</button>
+    <button type="button" class="mock-btn" data-time="financeiro" aria-pressed="false">Financeiro</button>
+    <button type="button" class="mock-btn" data-time="di" aria-pressed="false">Data Intelligence</button>
+    <button type="button" class="mock-btn" data-time="marketing" aria-pressed="false">Marketing</button>
+    <button type="button" class="mock-btn" data-time="outro" aria-pressed="false">Outro time</button>
+  </div>
 </div>
 
 <div class="shell">
@@ -368,17 +453,23 @@
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
       </button>
       <span class="pill">Histórico</span>
-      <span class="pill pill--on" id="pill-time">
+      <!-- Prestador Ver=Próprios: Time/Staff ocultos (produto) -->
+      <span class="pill pill--on hidden" id="pill-time">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 21a6 6 0 0 0-12 0"/><circle cx="12" cy="8" r="4"/></svg>
         <span id="pill-time-label">Game Presenter</span>
       </span>
-      <span class="pill" id="pill-staff">
+      <span class="pill hidden" id="pill-staff">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><circle cx="8" cy="12" r="2.2"/><path d="M14 10h4M14 14h4"/></svg>
         <span id="pill-staff-label">Todo o time</span>
       </span>
     </div>
     <div class="filter-row">
       <div class="tabs" role="tablist" aria-label="Abas do Overview Prestador">
+        <button type="button" class="tab hidden" role="tab" data-aba="resumo" aria-selected="false" id="tab-resumo">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l3-9 4 18 3-9h4"/></svg>
+          Meu resumo
+          <span class="tag-new">novo</span>
+        </button>
         <button type="button" class="tab tab--on" role="tab" data-aba="escala" aria-selected="true">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
           Escala
@@ -389,16 +480,63 @@
         </button>
         <button type="button" class="tab" role="tab" data-aba="perf" aria-selected="false" id="tab-perf">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg>
-          KPIs de Performance
+          <span id="tab-perf-label">KPIs de Performance</span>
+        </button>
+        <button type="button" class="tab hidden" role="tab" data-aba="ciencia" aria-selected="false" id="tab-ciencia">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
+          Materiais
         </button>
       </div>
     </div>
   </div>
 
   <div class="scope">
-    <span class="scope__kind" id="scope-kind">Visão de time</span>
-    <span class="scope__name" id="scope-name">Game Presenter · consolidado</span>
-    <span id="scope-meta">18 prestadores · Agosto 2026</span>
+    <span class="scope__kind" id="scope-kind">Próprios</span>
+    <span class="scope__name" id="scope-name">Ana Souza · Game Presenter</span>
+    <span id="scope-meta">Agosto 2026 · sem filtros Time/Staff</span>
+  </div>
+
+  <div class="note note--proposta hidden" id="banner-gp2">
+    <b>Proposta · Game Presenter 2</b> — versão enriquecida para comparar com o GP atual.
+    Itens com <span class="tag-new">novo</span> vêm do benchmark (ESS / casino ops / people analytics).
+    Compare aba a aba e marque o que vale levar para o produto.
+  </div>
+
+  <!-- ═══════════════ ABA MEU RESUMO (só GP2) ═══════════════ -->
+  <div class="panel hidden" id="panel-resumo" role="tabpanel">
+    <section class="box">
+      <div class="section-title">
+        <strong>Snapshot do mês</strong><span class="dash">—</span>
+        <span class="sub">o que o prestador vê ao abrir · prioridade de ação</span>
+      </div>
+      <div class="grid-4" id="grid-resumo-snap"></div>
+      <p class="compare-hint">Benchmark: home do ESS (Dynamics, Keka, Avani) — status, pendências e KPIs no primeiro olhar.</p>
+    </section>
+    <section class="box">
+      <div class="section-title">
+        <strong>Pendências para você</strong><span class="dash">—</span>
+        <span class="sub">ciência, leitura, avaliações e solicitações</span>
+      </div>
+      <ul class="action-list" id="list-resumo-acoes"></ul>
+    </section>
+    <div class="grid-2">
+      <section class="box" style="margin-bottom:14px">
+        <div class="section-title">
+          <strong>Próximos turnos</strong><span class="dash">—</span>
+          <span class="sub">7 dias · calendário pessoal</span>
+        </div>
+        <div class="mini-cal" id="mini-cal-resumo"></div>
+        <p class="compare-hint">Dynamics ESS · Team calendar / próximos turnos.</p>
+      </section>
+      <section class="box" style="margin-bottom:14px">
+        <div class="section-title">
+          <strong>Metas do mês</strong><span class="dash">—</span>
+          <span class="sub">progresso vs combinado com a liderança</span>
+        </div>
+        <div id="metas-resumo"></div>
+        <p class="compare-hint">We360 / Avani — goals &amp; target vs actual.</p>
+      </section>
+    </div>
   </div>
 
   <!-- ═══════════════ ABA ESCALA ═══════════════ -->
@@ -417,6 +555,52 @@
       </div>
       <div class="grid-4" id="grid-aderencia"></div>
     </section>
+
+    <!-- GP2 extras Escala -->
+    <div id="gp2-escala-extra" class="hidden">
+      <section class="box">
+        <div class="section-title">
+          <strong>Confiabilidade &amp; banco<span class="tag-new">novo</span></strong><span class="dash">—</span>
+          <span class="sub">além de presença bruta · casino ops + ESS</span>
+        </div>
+        <div class="grid-4" id="grid-gp2-escala-extra"></div>
+        <p class="compare-hint">Chips &amp; Truths: reliability = attendance + lateness + call-outs. ESS: leave balance / regularization.</p>
+      </section>
+      <section class="box">
+        <div class="section-title">
+          <strong>Solicitações em aberto<span class="tag-new">novo</span></strong><span class="dash">—</span>
+          <span class="sub">trocas, regularização, atestado em análise</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <caption>Solicitações abertas</caption>
+            <thead>
+              <tr>
+                <th scope="col">Aberta em</th>
+                <th class="left" scope="col">Tipo</th>
+                <th scope="col">Status</th>
+                <th class="left" scope="col">Detalhe</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>14/08</td>
+                <td class="left">Troca de turno</td>
+                <td><span class="badge b-wait">Em análise</span></td>
+                <td class="left">18/08 noite ↔ 19/08 manhã · com Bruno Lima</td>
+              </tr>
+              <tr>
+                <td>12/08</td>
+                <td class="left">Regularização de ponto</td>
+                <td><span class="badge b-wait">Pendente SL</span></td>
+                <td class="left">Entrada 10/08 — biometria falhou 14:02</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
     <section class="box" id="box-atencao-escala">
       <div class="section-title">
         <strong>Pontos de atenção</strong><span class="dash">—</span>
@@ -445,7 +629,7 @@
           <span class="sub" id="sub-det-escala">ocorrências do período</span>
         </div>
         <div class="subtabs hidden" id="subtabs-det-escala" role="tablist" aria-label="Tipo de detalhamento">
-          <button type="button" class="subtab subtab--on" role="tab" data-det-aba="negociacoes" aria-selected="true">
+          <button type="button" class="subtab subtab--on" role="tab" data-det-aba="negociacoes" aria-selected="true" id="subtab-negociacoes">
             Negociações
           </button>
           <button type="button" class="subtab" role="tab" data-det-aba="turno" aria-selected="false">
@@ -478,6 +662,26 @@
         </div>
         <div class="grid-5" id="grid-kpis-gp"></div>
       </section>
+
+      <!-- GP2 extras Mesa -->
+      <div id="gp2-kpis-extra" class="hidden">
+        <section class="box">
+          <div class="section-title">
+            <strong>Qualidade &amp; ritmo<span class="tag-new">novo</span></strong><span class="dash">—</span>
+            <span class="sub">taxas normalizadas · não só contagem bruta</span>
+          </div>
+          <div class="grid-4" id="grid-gp2-kpis-extra"></div>
+          <p class="compare-hint">Casino ops: hands/h + error rate. Live QA (Vivo): scorecard amostral de postura/procedimento — sem ranking público.</p>
+        </section>
+        <section class="box">
+          <div class="section-title">
+            <strong>Incidentes do mês<span class="tag-new">novo</span></strong><span class="dash">—</span>
+            <span class="sub">composição · o prestador entende o “7”</span>
+          </div>
+          <div class="grid-3" id="grid-gp2-incidentes"></div>
+        </section>
+      </div>
+
       <section class="box">
         <div class="section-title">
           <strong>Por Jogo</strong><span class="dash">—</span>
@@ -636,10 +840,60 @@
         <div class="grid-4" id="grid-perf-linha2" style="margin-top:12px"></div>
       </section>
 
+      <!-- GP2 extras Performance -->
+      <div id="gp2-perf-extra" class="hidden">
+        <section class="box">
+          <div class="section-title">
+            <strong>Evolução da nota<span class="tag-new">novo</span></strong><span class="dash">—</span>
+            <span class="sub">últimas 6 avaliações publicadas · tendência</span>
+          </div>
+          <div class="grid-2">
+            <div>
+              <div class="kpi__label" style="font-size:11px;color:var(--text-muted);font-weight:700;letter-spacing:.06em;text-transform:uppercase">Nota Total</div>
+              <div class="spark" id="spark-nota" aria-hidden="true"></div>
+              <p class="compare-hint">8,1 → 8,4 → 8,5 → 8,6 → 8,5 → 8,7</p>
+            </div>
+            <div id="grid-gp2-perf-trend"></div>
+          </div>
+        </section>
+        <section class="box">
+          <div class="section-title">
+            <strong>Desenvolvimento &amp; reconhecimento<span class="tag-new">novo</span></strong><span class="dash">—</span>
+            <span class="sub">Academy + feedback positivo · não só disciplinar</span>
+          </div>
+          <div class="grid-3" id="grid-gp2-dev"></div>
+          <div class="table-wrap" style="margin-top:14px">
+            <table>
+              <caption>Reconhecimentos</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Data</th>
+                  <th class="left" scope="col">De</th>
+                  <th class="left" scope="col">Motivo</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>08/08</td>
+                  <td class="left">Carla Mendes (SL)</td>
+                  <td class="left">Recuperação impecável após falha de stream — jogadores elogiaram no chat.</td>
+                </tr>
+                <tr>
+                  <td>22/07</td>
+                  <td class="left">OCR · Sofia Prado</td>
+                  <td class="left">Procedimento de tipagem Roleta acima da meta por 3 turnos seguidos.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="compare-hint">Workhuman / Keka: recognition coverage. Dynamics: next course / overdue training.</p>
+        </section>
+      </div>
+
       <section class="box">
         <div class="section-title">
           <strong>KPIs de Feedback</strong><span class="dash">—</span>
-          <span class="sub">Solicitações RH · só status Aprovado</span>
+          <span class="sub" id="s-perf-fb">Solicitações RH · só status Aprovado</span>
         </div>
         <div class="table-wrap">
           <table>
@@ -656,6 +910,85 @@
         </div>
       </section>
     </div>
+  </div>
+
+  <!-- ═══════════════ ABA MATERIAIS ═══════════════ -->
+  <div class="panel hidden" id="panel-ciencia" role="tabpanel">
+    <div class="note" style="margin-bottom:14px" id="note-materiais-padrao">
+      Aba <b>Materiais</b> em todos os times — lista só o que é <b>aplicável</b> ao prestador
+      (time/gerência ou «Todos os prestadores» / perfis em Informativos).
+      Sub-abas: <b>Manuais</b> (Academy · ciência),
+      <b>Comunicados</b> (Portal RH Lido + Informativos),
+      <b>Políticas</b> (Portal RH · ciência),
+      <b>RH Talks</b> (Portal RH · aplicável a).
+      Botão da origem <b>some</b> se não houver nenhum item aplicável.
+    </div>
+
+    <div id="gp2-ciencia-extra" class="hidden">
+      <section class="box">
+        <div class="section-title">
+          <strong>Prioridade de ciência<span class="tag-new">novo</span></strong><span class="dash">—</span>
+          <span class="sub">o que bloqueia ou está perto do prazo</span>
+        </div>
+        <ul class="action-list">
+          <li>
+            <div>
+              <div><b>Política de Assiduidade</b> · POL-RH-012</div>
+              <div class="meta">Pendente há 6 dias · aplicável a Game Presenter</div>
+            </div>
+            <span class="badge b-wait">Pendente</span>
+          </li>
+          <li>
+            <div>
+              <div><b>Manual abertura BJ</b> · MAN-BJ-01</div>
+              <div class="meta">Publicado 10/08 · ciência formal exigida</div>
+            </div>
+            <span class="badge b-wait">Pendente</span>
+          </li>
+          <li>
+            <div>
+              <div><b>Informativo VPN</b></div>
+              <div class="meta">Não lido · Informativos</div>
+            </div>
+            <span class="badge b-wait">Não lido</span>
+          </li>
+        </ul>
+        <p class="compare-hint">Dynamics: questionnaires / courses overdue. Evita “lista longa” sem prioridade.</p>
+      </section>
+    </div>
+
+    <section class="box">
+      <div class="section-title">
+        <strong>Resumo de Materiais</strong><span class="dash">—</span>
+        <span class="sub">itens aplicáveis ao prestador · status atual</span>
+      </div>
+      <div class="grid-4" id="grid-ciencia-kpi"></div>
+    </section>
+
+    <section class="box">
+      <div class="section-title section-title--row">
+        <div class="section-title__left">
+          <strong>Detalhamento</strong><span class="dash">—</span>
+          <span class="sub" id="sub-ciencia-det">por origem</span>
+        </div>
+        <div class="subtabs" id="subtabs-ciencia" role="tablist" aria-label="Origem dos materiais">
+          <button type="button" class="subtab subtab--on" role="tab" data-ciencia-aba="manuais" aria-selected="true" id="subtab-mat-manuais">Manuais</button>
+          <button type="button" class="subtab" role="tab" data-ciencia-aba="comunicados" aria-selected="false" id="subtab-mat-comunicados">Comunicados</button>
+          <button type="button" class="subtab" role="tab" data-ciencia-aba="politicas" aria-selected="false" id="subtab-mat-politicas">Políticas</button>
+          <button type="button" class="subtab" role="tab" data-ciencia-aba="rhtalks" aria-selected="false" id="subtab-mat-rhtalks">RH Talks</button>
+        </div>
+      </div>
+      <div class="table-wrap" id="wrap-ciencia-table">
+        <table>
+          <caption>Materiais do prestador</caption>
+          <thead id="th-ciencia"></thead>
+          <tbody id="tb-ciencia"></tbody>
+        </table>
+      </div>
+      <div id="ciencia-vazio" class="hidden" style="padding:32px 0;text-align:center;color:var(--text-muted);font-size:13px">
+        Nenhum material aplicável ao seu time neste momento.
+      </div>
+    </section>
   </div>
 </div>
 
@@ -692,10 +1025,51 @@
 <script>
 const TIME_LABEL = {
   gp: "Game Presenter",
+  gp2: "Game Presenter 2",
   shuf: "Shuffler",
   sl: "Shift Leader",
   sm: "Service Manager",
+  academy: "Academy",
+  people: "People",
+  comercial: "Comercial",
+  financeiro: "Financeiro",
+  di: "Data Intelligence",
+  marketing: "Marketing",
+  outro: "Outro time",
 };
+
+const PRESTADOR_NOME = {
+  gp: "Ana Souza",
+  gp2: "Ana Souza",
+  shuf: "Bruno Lima",
+  sl: "Diego Alves",
+  sm: "Carla Nunes",
+  academy: "Fernanda Rocha",
+  people: "Patricia Alves",
+  comercial: "Ricardo Mota",
+  financeiro: "Helena Costa",
+  di: "Lucas Pires",
+  marketing: "Beatriz Ramos",
+  outro: "João Silveira",
+};
+
+/** Caps alinhados a `overviewPrestadorTeamConfig` (canónicos vs CAPS_GENERICO). */
+function capsDoTime(key) {
+  const base = key === "gp2" ? "gp" : key;
+  const canon = base === "gp" || base === "shuf" || base === "sl" || base === "sm";
+  return {
+    canonico: canon,
+    proposta: key === "gp2",
+    negocia: canon,
+    kpisMesa: base === "gp" || base === "shuf",
+    kpisOcr: base === "sm",
+    kpisPerf: base === "gp" || base === "shuf",
+    showAbaKpis: base === "gp" || base === "shuf" || base === "sm",
+    /** Materiais: todos os times (canónicos e genéricos). */
+    ciencia: true,
+    resumo: key === "gp2",
+  };
+}
 
 const ICO = {
   check: '<svg class="icon-status" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.25"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4 12 14.01l-3-3"/></svg>',
@@ -704,19 +1078,296 @@ const ICO = {
   x: '<svg class="icon-status" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2.25"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/></svg>',
 };
 
-let visao = "time"; // time | ind
-let timeKey = "gp"; // gp | shuf | sl | sm
-let aba = "escala"; // escala | kpis | perf
-let detEscalaAba = "negociacoes"; // negociacoes | turno | atestado — só visão individual
-/** Mock: dias/atestados no card Absenteísmo (individual). Tab Atestado só se > 0. */
+let visao = "ind"; // travado: Prestador Ver=Próprios (não líder)
+let timeKey = "gp";
+let aba = "escala"; // resumo | escala | kpis | perf | ciencia
+let detEscalaAba = "negociacoes"; // negociacoes | turno | atestado
+let cienciaAba = "manuais"; // manuais | comunicados | politicas | rhtalks
+/** Mock: dias/atestados no card Absenteísmo. Tab Atestado só se > 0. */
 let mockAtestadosInd = 3;
+/** Mock: zerar RH Talks para ver o botão sumir. */
+let mockRhTalksCount = 2;
+
+/**
+ * Itens já filtrados por Aplicável a / perfis do prestador (por time).
+ * Origens vazias = botão da sub-aba some (ex.: Outro time sem manuais; DI sem RH Talks de floor).
+ */
+function materiaisDoPrestador() {
+  const matKey = timeKey === "gp2" ? "gp" : timeKey;
+  const time = TIME_LABEL[matKey] ?? "Outro time";
+  const floor = matKey === "gp" || matKey === "shuf" || matKey === "sl" || matKey === "sm";
+
+  const manuaisPorTime = {
+    gp: [
+      { pub: "10/08/2026", titulo: "Procedimento de abertura de mesa — Blackjack", codigo: "MAN-BJ-01", status: "pendente", quando: "—", aplicavel: "Game Presenter" },
+      { pub: "20/07/2026", titulo: "Roleta — ritmo e tipagem", codigo: "MAN-ROU-02", status: "nao_exigido", quando: "—", aplicavel: "Game Presenter" },
+    ],
+    shuf: [
+      { pub: "09/08/2026", titulo: "Embaralhamento — sequência e higiene de baralho", codigo: "MAN-SH-01", status: "pendente", quando: "—", aplicavel: "Shuffler" },
+      { pub: "18/07/2026", titulo: "Troca de sapato e postura em pé", codigo: "MAN-SH-03", status: "ciente", quando: "19/07/2026 08:15", aplicavel: "Shuffler" },
+    ],
+    sl: [
+      { pub: "07/08/2026", titulo: "Checklist de abertura de turno — Shift Leader", codigo: "MAN-SL-01", status: "pendente", quando: "—", aplicavel: "Shift Leader" },
+      { pub: "12/07/2026", titulo: "Escalonamento de ocorrências em mesa", codigo: "MAN-SL-02", status: "ciente", quando: "13/07/2026 11:40", aplicavel: "Shift Leader" },
+    ],
+    sm: [
+      { pub: "06/08/2026", titulo: "OCR — rotina de qualidade e feedback", codigo: "MAN-SM-01", status: "pendente", quando: "—", aplicavel: "Service Manager" },
+      { pub: "01/07/2026", titulo: "Acompanhamento de prestadores em mesa", codigo: "MAN-SM-02", status: "ciente", quando: "02/07/2026 09:00", aplicavel: "Service Manager" },
+    ],
+    academy: [
+      { pub: "11/08/2026", titulo: "Facilitação de trilhas — Academy", codigo: "MAN-AC-01", status: "pendente", quando: "—", aplicavel: "Academy" },
+      { pub: "25/07/2026", titulo: "Registro de ciência em manuais publicados", codigo: "MAN-AC-02", status: "ciente", quando: "26/07/2026 15:20", aplicavel: "Academy" },
+    ],
+    people: [
+      { pub: "04/08/2026", titulo: "Atendimento a prestadores — People", codigo: "MAN-PE-01", status: "ciente", quando: "05/08/2026 10:10", aplicavel: "People" },
+    ],
+    comercial: [
+      { pub: "03/08/2026", titulo: "Briefing de parceiros e NDAs", codigo: "MAN-COM-01", status: "pendente", quando: "—", aplicavel: "Comercial" },
+    ],
+    financeiro: [
+      { pub: "02/08/2026", titulo: "Fluxo de reembolsos e prestadores PJ", codigo: "MAN-FIN-01", status: "ciente", quando: "03/08/2026 14:00", aplicavel: "Financeiro" },
+    ],
+    di: [
+      { pub: "08/08/2026", titulo: "Governança de dados e acessos — DI", codigo: "MAN-DI-01", status: "pendente", quando: "—", aplicavel: "Data Intelligence" },
+    ],
+    marketing: [
+      { pub: "05/08/2026", titulo: "Uso de imagem de prestadores em campanhas", codigo: "MAN-MKT-01", status: "ciente", quando: "06/08/2026 12:30", aplicavel: "Marketing" },
+    ],
+    /** Outro time: sem manuais aplicáveis → botão Manuais some. */
+    outro: [],
+  };
+
+  const manuaisComuns = [
+    { pub: "02/08/2026", titulo: "Código de conduta em câmera", codigo: "MAN-GER-04", status: "ciente", quando: "03/08/2026 14:22", aplicavel: "Todos os prestadores" },
+  ];
+  /** Genéricos (exceto outro) recebem o comum; floor/academy/people idem. Outro = vazio de propósito. */
+  const manuais =
+    matKey === "outro"
+      ? []
+      : [...(manuaisPorTime[matKey] ?? [{ pub: "01/08/2026", titulo: `Manual operacional — ${time}`, codigo: "MAN-GEN-01", status: "pendente", quando: "—", aplicavel: time }]), ...manuaisComuns];
+
+  const comunicados = [
+    { pub: "12/08/2026", titulo: "Atualização do estacionamento — vagas visitantes", fonte: "Portal RH", status: "nao_lido", quando: "—" },
+    { pub: "11/08/2026", titulo: "Manutenção programada — VPN estúdio", fonte: "Informativos", status: "nao_lido", quando: "—" },
+    { pub: "05/08/2026", titulo: "Recesso de Corpus Christi — escala", fonte: "Portal RH", status: "lido", quando: "05/08/2026 09:10" },
+    { pub: "01/08/2026", titulo: "Campanha interna — indicação de talentos", fonte: "Informativos", status: "lido", quando: "01/08/2026 11:05" },
+  ];
+
+  const politicas = [
+    ...(matKey === "outro"
+      ? []
+      : [
+          {
+            pub: "08/08/2026",
+            titulo: floor ? "Política de Assiduidade e Pontualidade" : `Política operacional — ${time}`,
+            codigo: floor ? "POL-RH-012" : "POL-GEN-01",
+            status: "pendente",
+            quando: "—",
+            aplicavel: time,
+          },
+        ]),
+    { pub: "15/07/2026", titulo: "Código de Ética Spin Gaming", codigo: "COD-001", status: "ciente", quando: "16/07/2026 10:02", aplicavel: "Todos os prestadores" },
+  ];
+
+  /** Floor: Talks de Game Floor + Todos. DI/Marketing: só Todos. Outro: nenhum (botão some). Toggle mock zera para todos. */
+  let rhtalks = [];
+  if (mockRhTalksCount > 0 && matKey !== "outro") {
+    const todos = {
+      pub: "22/07/2026",
+      titulo: "RH Talk — Benefícios 2026",
+      numero: "RT-2026-07",
+      status: "ciente",
+      quando: "23/07/2026 16:40",
+      aplicavel: "Todos os prestadores",
+    };
+    const floorTalk = {
+      pub: "09/08/2026",
+      titulo: "RH Talk — Saúde mental no estúdio",
+      numero: "RT-2026-08",
+      status: "pendente",
+      quando: "—",
+      aplicavel: "Game Floor",
+    };
+    rhtalks = floor
+      ? [floorTalk, todos].slice(0, mockRhTalksCount)
+      : matKey === "di" || matKey === "marketing"
+        ? [] /* sem Talks aplicáveis neste mock → botão some */
+        : [todos];
+  }
+
+  return { manuais, comunicados, politicas, rhtalks };
+}
+
+function badgeStatusMateriais(status) {
+  if (status === "pendente" || status === "nao_lido") return `<span class="badge b-wait">${status === "nao_lido" ? "Não lido" : "Pendente"}</span>`;
+  if (status === "ciente" || status === "lido") return `<span class="badge b-ok">${status === "lido" ? "Lido" : "Ciente"}</span>`;
+  return `<span class="badge b-neutral">Não exigido</span>`;
+}
+
+function resumoMateriais(bags) {
+  const all = [...bags.manuais, ...bags.comunicados, ...bags.politicas, ...bags.rhtalks];
+  let pend = 0;
+  let ok = 0;
+  let neutro = 0;
+  for (const it of all) {
+    if (it.status === "pendente" || it.status === "nao_lido") pend += 1;
+    else if (it.status === "ciente" || it.status === "lido") ok += 1;
+    else neutro += 1;
+  }
+  return { pend, ok, neutro, total: all.length };
+}
+
+function renderCiencia() {
+  const bags = materiaisDoPrestador();
+  const resumo = resumoMateriais(bags);
+  document.getElementById("grid-ciencia-kpi").innerHTML = [
+    kpi("Pendentes", String(resumo.pend), "", "wait"),
+    kpi("Em dia", String(resumo.ok), "", "ok"),
+    kpi("Não exigidos", String(resumo.neutro), "", "neutral"),
+    kpi("Total aplicáveis", String(resumo.total), "", "total"),
+  ].join("");
+
+  const visivel = {
+    manuais: bags.manuais.length > 0,
+    comunicados: bags.comunicados.length > 0,
+    politicas: bags.politicas.length > 0,
+    rhtalks: bags.rhtalks.length > 0,
+  };
+  const ordem = ["manuais", "comunicados", "politicas", "rhtalks"];
+  const ids = {
+    manuais: "subtab-mat-manuais",
+    comunicados: "subtab-mat-comunicados",
+    politicas: "subtab-mat-politicas",
+    rhtalks: "subtab-mat-rhtalks",
+  };
+  for (const key of ordem) {
+    document.getElementById(ids[key]).classList.toggle("hidden", !visivel[key]);
+  }
+  if (!visivel[cienciaAba]) {
+    cienciaAba = ordem.find((k) => visivel[k]) ?? "manuais";
+  }
+
+  const alguma = ordem.some((k) => visivel[k]);
+  document.getElementById("wrap-ciencia-table").classList.toggle("hidden", !alguma);
+  document.getElementById("ciencia-vazio").classList.toggle("hidden", alguma);
+  document.getElementById("subtabs-ciencia").classList.toggle("hidden", !alguma);
+
+  document.querySelectorAll("[data-ciencia-aba]").forEach((b) => {
+    const on = b.dataset.cienciaAba === cienciaAba;
+    b.classList.toggle("subtab--on", on);
+    b.setAttribute("aria-selected", on ? "true" : "false");
+  });
+
+  if (!alguma) return;
+
+  const th = document.getElementById("th-ciencia");
+  const tb = document.getElementById("tb-ciencia");
+  const sub = document.getElementById("sub-ciencia-det");
+
+  if (cienciaAba === "manuais") {
+    sub.textContent = "Portal Academy · aplicável ao time · ciência formal";
+    th.innerHTML = `
+      <tr>
+        <th scope="col">Publicado em</th>
+        <th class="left" scope="col">Manual</th>
+        <th scope="col">Código</th>
+        <th scope="col">Aplicável a</th>
+        <th scope="col">Status</th>
+        <th scope="col">Data da ciência</th>
+      </tr>`;
+    tb.innerHTML = bags.manuais
+      .map(
+        (r) => `
+      <tr>
+        <td>${r.pub}</td>
+        <td class="left">${r.titulo}</td>
+        <td>${r.codigo}</td>
+        <td>${r.aplicavel}</td>
+        <td>${badgeStatusMateriais(r.status)}</td>
+        <td>${r.quando}</td>
+      </tr>`,
+      )
+      .join("");
+  } else if (cienciaAba === "comunicados") {
+    sub.textContent = "Portal RH (Lido) + Informativos · unificados";
+    th.innerHTML = `
+      <tr>
+        <th scope="col">Publicado em</th>
+        <th class="left" scope="col">Título</th>
+        <th scope="col">Fonte</th>
+        <th scope="col">Status</th>
+        <th scope="col">Lido em</th>
+      </tr>`;
+    tb.innerHTML = bags.comunicados
+      .map(
+        (r) => `
+      <tr>
+        <td>${r.pub}</td>
+        <td class="left">${r.titulo}</td>
+        <td>${r.fonte}</td>
+        <td>${badgeStatusMateriais(r.status)}</td>
+        <td>${r.quando}</td>
+      </tr>`,
+      )
+      .join("");
+  } else if (cienciaAba === "politicas") {
+    sub.textContent = "Portal RH · Políticas e normativas · Aplicável a";
+    th.innerHTML = `
+      <tr>
+        <th scope="col">Publicado em</th>
+        <th class="left" scope="col">Política</th>
+        <th scope="col">Código</th>
+        <th scope="col">Aplicável a</th>
+        <th scope="col">Status</th>
+        <th scope="col">Data da ciência</th>
+      </tr>`;
+    tb.innerHTML = bags.politicas
+      .map(
+        (r) => `
+      <tr>
+        <td>${r.pub}</td>
+        <td class="left">${r.titulo}</td>
+        <td>${r.codigo}</td>
+        <td>${r.aplicavel}</td>
+        <td>${badgeStatusMateriais(r.status)}</td>
+        <td>${r.quando}</td>
+      </tr>`,
+      )
+      .join("");
+  } else {
+    sub.textContent = "Portal RH · RH Talks · Aplicável a";
+    th.innerHTML = `
+      <tr>
+        <th scope="col">Publicado em</th>
+        <th class="left" scope="col">RH Talk</th>
+        <th scope="col">Número</th>
+        <th scope="col">Aplicável a</th>
+        <th scope="col">Status</th>
+        <th scope="col">Data da ciência</th>
+      </tr>`;
+    tb.innerHTML = bags.rhtalks
+      .map(
+        (r) => `
+      <tr>
+        <td>${r.pub}</td>
+        <td class="left">${r.titulo}</td>
+        <td>${r.numero}</td>
+        <td>${r.aplicavel}</td>
+        <td>${badgeStatusMateriais(r.status)}</td>
+        <td>${r.quando}</td>
+      </tr>`,
+      )
+      .join("");
+  }
+}
 
 function mom(pct, dir, inv = false) {
   const cls = `${inv ? "inv " : ""}${dir}`;
   return `<div class="kpi__mom"><span class="${cls}">${dir === "up" ? "↑" : dir === "down" ? "↓" : "→"} ${pct}</span><span>vs mês ant.</span></div>`;
 }
-function kpi(label, value, momHtml = "") {
-  return `<div class="kpi"><div class="kpi__label">${label}</div><div class="kpi__value">${value}</div>${momHtml}</div>`;
+function kpi(label, value, momHtml = "", tone = "") {
+  const cls = tone ? ` kpi--${tone}` : "";
+  return `<div class="kpi${cls}"><div class="kpi__label">${label}</div><div class="kpi__value">${value}</div>${momHtml}</div>`;
 }
 /** Feedbacks Aprovados — Solicitações RH. Orientação = data solicitação; demais = data atendimento. */
 const FEEDBACKS_MOCK = [
@@ -772,61 +1423,153 @@ function fmtNota(n) {
 }
 
 function render() {
-  const isTime = visao === "time";
-  const nome = TIME_LABEL[timeKey];
+  const isTime = false; // Prestador: sempre visão individual
+  const caps = capsDoTime(timeKey);
+  const nome = TIME_LABEL[timeKey] ?? "Outro time";
+  const pessoa = PRESTADOR_NOME[timeKey] ?? "Prestador";
+  const isGpLike = timeKey === "gp" || timeKey === "gp2";
 
-  // filtros
   document.getElementById("pill-time-label").textContent = nome;
-  const staffPill = document.getElementById("pill-staff");
-  const timePill = document.getElementById("pill-time");
-  if (isTime) {
-    staffPill.classList.remove("hidden");
-    timePill.classList.remove("hidden");
-    document.getElementById("pill-staff-label").textContent = "Todo o time";
-    document.getElementById("scope-kind").textContent = "Visão de time";
-    document.getElementById("scope-name").textContent = `${nome} · consolidado`;
-    document.getElementById("scope-meta").textContent = timeKey === "gp" ? "18 prestadores · Agosto 2026" : "12 prestadores · Agosto 2026";
-  } else {
-    staffPill.classList.add("hidden");
-    timePill.classList.add("hidden");
-    document.getElementById("scope-kind").textContent = "Próprios";
-    document.getElementById("scope-name").textContent = timeKey === "gp" ? "Ana Souza · Game Presenter" : timeKey === "shuf" ? "Bruno Lima · Shuffler" : timeKey === "sm" ? "Carla Nunes · Service Manager" : "Diego Alves · Shift Leader";
-    document.getElementById("scope-meta").textContent = "Agosto 2026";
-  }
+  document.getElementById("pill-time").classList.add("hidden");
+  document.getElementById("pill-staff").classList.add("hidden");
+  document.getElementById("scope-kind").textContent = "Próprios";
+  document.getElementById("scope-name").textContent = `${pessoa} · ${nome}`;
+  document.getElementById("scope-meta").textContent = caps.proposta
+    ? "Agosto 2026 · proposta enriquecida · compare com Game Presenter"
+    : caps.canonico
+      ? "Agosto 2026 · time canónico"
+      : "Agosto 2026 · time genérico · Escala + Materiais (sem Mesa/OCR/Performance · sem Marketplace)";
 
-  // abas produto
+  document.getElementById("banner-gp2").classList.toggle("hidden", !caps.proposta);
+
+  const tabResumo = document.getElementById("tab-resumo");
   const tabKpis = document.getElementById("tab-kpis");
   const tabPerf = document.getElementById("tab-perf");
-  const temPerf = timeKey === "gp" || timeKey === "shuf";
+  const tabCiencia = document.getElementById("tab-ciencia");
 
-  if (timeKey === "sl") {
-    tabKpis.hidden = true;
-    if (aba === "kpis") aba = "escala";
-  } else {
-    tabKpis.hidden = false;
-    document.getElementById("tab-kpis-label").textContent = timeKey === "sm" ? "KPIs de OCR" : "KPIs de Mesa";
+  tabResumo.hidden = !caps.resumo;
+  tabResumo.classList.toggle("hidden", !caps.resumo);
+  if (!caps.resumo && aba === "resumo") aba = "escala";
+
+  tabKpis.hidden = !caps.showAbaKpis;
+  if (!caps.showAbaKpis && aba === "kpis") aba = "escala";
+  if (caps.showAbaKpis) {
+    document.getElementById("tab-kpis-label").textContent = caps.kpisOcr
+      ? "KPIs de OCR"
+      : caps.proposta
+        ? "Operação de Mesa"
+        : "KPIs de Mesa";
   }
 
-  // KPIs de Performance só GP / Shuffler
-  tabPerf.hidden = !temPerf;
-  if (!temPerf && aba === "perf") aba = "escala";
+  tabPerf.hidden = !caps.kpisPerf;
+  if (!caps.kpisPerf && aba === "perf") aba = "escala";
+  if (caps.kpisPerf) {
+    document.getElementById("tab-perf-label").textContent = caps.proposta
+      ? "Desenvolvimento"
+      : "KPIs de Performance";
+  }
 
-  // panels
+  tabCiencia.hidden = !caps.ciencia;
+  tabCiencia.classList.toggle("hidden", !caps.ciencia);
+  if (!caps.ciencia && aba === "ciencia") aba = "escala";
+
+  document.getElementById("panel-resumo").classList.toggle("hidden", aba !== "resumo" || !caps.resumo);
   document.getElementById("panel-escala").classList.toggle("hidden", aba !== "escala");
-  document.getElementById("panel-kpis").classList.toggle("hidden", aba !== "kpis");
-  document.getElementById("panel-perf").classList.toggle("hidden", aba !== "perf" || !temPerf);
+  document.getElementById("panel-kpis").classList.toggle("hidden", aba !== "kpis" || !caps.showAbaKpis);
+  document.getElementById("panel-perf").classList.toggle("hidden", aba !== "perf" || !caps.kpisPerf);
+  document.getElementById("panel-ciencia").classList.toggle("hidden", aba !== "ciencia" || !caps.ciencia);
   document.querySelectorAll(".tab").forEach((t) => {
     const on = t.dataset.aba === aba;
     t.classList.toggle("tab--on", on);
     t.setAttribute("aria-selected", on ? "true" : "false");
   });
 
-  renderEscala(isTime);
-  renderKpis(isTime);
-  if (temPerf) renderPerf(isTime);
+  document.getElementById("gp2-escala-extra").classList.toggle("hidden", !caps.proposta);
+  document.getElementById("gp2-kpis-extra").classList.toggle("hidden", !caps.proposta || !isGpLike);
+  document.getElementById("gp2-perf-extra").classList.toggle("hidden", !caps.proposta);
+  document.getElementById("gp2-ciencia-extra").classList.toggle("hidden", !caps.proposta);
+  document.getElementById("note-materiais-padrao").classList.toggle("hidden", caps.proposta);
+
+  renderEscala(isTime, caps);
+  if (caps.resumo) renderResumo();
+  if (caps.showAbaKpis) renderKpis(isTime);
+  if (caps.kpisPerf) renderPerf(isTime);
+  if (caps.ciencia) renderCiencia();
 }
 
-function renderEscala(isTime) {
+function renderResumo() {
+  document.getElementById("grid-resumo-snap").innerHTML = [
+    kpi("Pendências", "5", "", "wait"),
+    kpi("Nota Total", "8,70", "", "ok"),
+    kpi("Incidentes / 1k", "2,5", "", "total"),
+    kpi("Horas vs meta", "91%", "", "ok"),
+  ].join("");
+
+  document.getElementById("list-resumo-acoes").innerHTML = `
+    <li>
+      <div>
+        <div><b>Ciência</b> — Política de Assiduidade</div>
+        <div class="meta">Pendente · Materiais → Políticas</div>
+      </div>
+      <span class="badge b-wait">Fazer</span>
+    </li>
+    <li>
+      <div>
+        <div><b>Avaliação</b> — aguardando seu feedback</div>
+        <div class="meta">Performance Hub · 1 item</div>
+      </div>
+      <span class="badge b-wait">Responder</span>
+    </li>
+    <li>
+      <div>
+        <div><b>Troca de turno</b> — em análise pelo SL</div>
+        <div class="meta">18/08 ↔ 19/08</div>
+      </div>
+      <span class="badge b-neutral">Acompanhar</span>
+    </li>
+    <li>
+      <div>
+        <div><b>Trilha Academy</b> — Roleta avançada (módulo 2/4)</div>
+        <div class="meta">Prazo sugerido 30/08</div>
+      </div>
+      <span class="badge b-wait">Continuar</span>
+    </li>`;
+
+  const dias = [
+    { n: "Seg", d: "18", on: true, t: "14–22" },
+    { n: "Ter", d: "19", on: true, t: "06–14" },
+    { n: "Qua", d: "20", on: false, t: "—" },
+    { n: "Qui", d: "21", on: true, t: "14–22" },
+    { n: "Sex", d: "22", on: true, t: "14–22" },
+    { n: "Sáb", d: "23", on: false, t: "—" },
+    { n: "Dom", d: "24", on: true, t: "06–14" },
+  ];
+  document.getElementById("mini-cal-resumo").innerHTML = dias
+    .map(
+      (x) => `
+    <div class="d ${x.on ? "d--on" : "d--off"}">
+      <strong>${x.n} ${x.d}</strong>
+      ${x.t}
+    </div>`,
+    )
+    .join("");
+
+  document.getElementById("metas-resumo").innerHTML = `
+    <div style="margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;font-size:13px"><span>Pontualidade ≥ 97%</span><b>96,2%</b></div>
+      <div class="prog"><i style="width:96%"></i></div>
+    </div>
+    <div style="margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;font-size:13px"><span>Incidentes / 1k ≤ 3,0</span><b>2,5</b></div>
+      <div class="prog"><i style="width:83%;background:#22c55e"></i></div>
+    </div>
+    <div>
+      <div style="display:flex;justify-content:space-between;font-size:13px"><span>Nota Total ≥ 8,5</span><b>8,70</b></div>
+      <div class="prog"><i style="width:100%;background:#22c55e"></i></div>
+    </div>`;
+}
+
+function renderEscala(isTime, caps = capsDoTime(timeKey)) {
   document.getElementById("t-resumo").textContent = isTime ? "Resumo operacional" : "KPIs Consolidados";
   document.getElementById("t-aderencia").textContent = isTime ? "Aderência à escala" : "Absenteísmo";
   document.getElementById("grid-resumo").innerHTML = [
@@ -842,6 +1585,15 @@ function renderEscala(isTime) {
     kpi("Atestados", isTime ? "6" : String(mockAtestadosInd), mom(isTime ? "2" : "1", "down", true)),
   ].join("");
 
+  if (caps.proposta) {
+    document.getElementById("grid-gp2-escala-extra").innerHTML = [
+      kpi("Atrasos no mês", "2", mom("1", "down", true)),
+      kpi("Faltas injustificadas", "0", "", "ok"),
+      kpi("Banco de horas", "+4,5 h"),
+      kpi("Horas vs meta", "120 / 132 h", "", "total"),
+    ].join("");
+  }
+
   const boxAt = document.getElementById("box-atencao-escala");
   boxAt.classList.toggle("hidden", !isTime);
   if (isTime) {
@@ -856,11 +1608,15 @@ function renderEscala(isTime) {
   const th = document.getElementById("th-det-escala");
   const tb = document.getElementById("tb-det-escala");
   const tabAtestado = document.getElementById("subtab-atestado");
+  const tabNegociacoes = document.getElementById("subtab-negociacoes");
   const temAtestado = !isTime && mockAtestadosInd > 0;
+  const temNegocia = !isTime && caps.negocia;
 
   subtabs.classList.toggle("hidden", isTime);
+  tabNegociacoes.classList.toggle("hidden", !temNegocia);
   tabAtestado.classList.toggle("hidden", !temAtestado);
-  if (!temAtestado && detEscalaAba === "atestado") detEscalaAba = "negociacoes";
+  if (!temNegocia && detEscalaAba === "negociacoes") detEscalaAba = "turno";
+  if (!temAtestado && detEscalaAba === "atestado") detEscalaAba = temNegocia ? "negociacoes" : "turno";
 
   document.querySelectorAll("[data-det-aba]").forEach((b) => {
     const on = b.dataset.detAba === detEscalaAba;
@@ -884,8 +1640,8 @@ function renderEscala(isTime) {
     return;
   }
 
-  // Visão individual — Negociações | Turno | Atestado (condicional)
-  if (detEscalaAba === "negociacoes") {
+  // Prestador — Negociações (só se negocia) | Turno | Atestado (condicional)
+  if (detEscalaAba === "negociacoes" && temNegocia) {
     subLabel.textContent = "Marketplace · compras, vendas e trocas do período";
     th.innerHTML = `
       <tr>
@@ -960,7 +1716,6 @@ function renderEscala(isTime) {
         <td class="left">Justificado</td>
       </tr>`;
   } else {
-    // Atestado — 1 linha por dia civil coberto (mesmo pedido multi-dia)
     subLabel.textContent = "Solicitações RH · 1 linha por dia do atestado";
     th.innerHTML = `
       <tr>
@@ -968,7 +1723,6 @@ function renderEscala(isTime) {
         <th scope="col">Status do Atestado</th>
         <th class="left" scope="col">Detalhe</th>
       </tr>`;
-    // Ex.: 1 atestado 18–20/08 (Aprovado) = 3 linhas; outro dia Em análise
     tb.innerHTML = `
       <tr>
         <td>20/08</td>
@@ -989,12 +1743,14 @@ function renderEscala(isTime) {
 }
 
 function renderKpis(isTime) {
-  document.getElementById("kpis-gp").classList.toggle("hidden", timeKey !== "gp");
+  const gpLike = timeKey === "gp" || timeKey === "gp2";
+  const proposta = timeKey === "gp2";
+  document.getElementById("kpis-gp").classList.toggle("hidden", !gpLike);
   document.getElementById("kpis-shuf").classList.toggle("hidden", timeKey !== "shuf");
   document.getElementById("kpis-sm").classList.toggle("hidden", timeKey !== "sm");
   document.getElementById("box-det-kpis").classList.toggle("hidden", timeKey === "sl");
 
-  if (timeKey === "gp") {
+  if (gpLike) {
     document.getElementById("s-kpis-gp").textContent = isTime
       ? "consolidado do time · D-1 · vs mês anterior"
       : "Ana Souza · D-1 · vs mês anterior";
@@ -1008,6 +1764,21 @@ function renderKpis(isTime) {
       kpi("Bola (Roleta)", "82,4%", mom("1,2%", "up")),
       kpi("Incidentes", isTime ? "126" : "7", mom("8%", "down", true)),
     ].join("");
+
+    if (proposta) {
+      document.getElementById("grid-gp2-kpis-extra").innerHTML = [
+        kpi("Rodadas / hora", "48,2", mom("2,1", "up")),
+        kpi("Incidentes / 1.000", "2,46", mom("0,3", "down", true)),
+        kpi("Score QA amostral", "8,4", mom("0,2", "up")),
+        kpi("Erros de procedimento", "3", mom("1", "down", true)),
+      ].join("");
+      document.getElementById("grid-gp2-incidentes").innerHTML = [
+        kpi("Casos", "2", "", "wait"),
+        kpi("Erros", "4", "", "wait"),
+        kpi("Outros", "1", "", "neutral"),
+      ].join("");
+    }
+
     const icons = !isTime;
     document.getElementById("tb-por-jogo-gp").innerHTML = `
       <tr>
@@ -1099,10 +1870,18 @@ function renderKpis(isTime) {
 }
 
 function renderPerf(isTime) {
-  const techLabel = timeKey === "gp" ? "Mesa" : "Procedimentos";
+  const gpLike = timeKey === "gp" || timeKey === "gp2";
+  const proposta = timeKey === "gp2";
+  const techLabel = gpLike ? "Mesa" : "Procedimentos";
   document.getElementById("s-perf-kpi").textContent = isTime
     ? "avaliações publicadas do time · Performance Hub"
     : "avaliações publicadas · Performance Hub";
+  const sFb = document.getElementById("s-perf-fb");
+  if (sFb) {
+    sFb.textContent = proposta
+      ? "Solicitações RH · Aprovados · balancear com reconhecimento acima"
+      : "Solicitações RH · só status Aprovado";
+  }
 
   document.getElementById("grid-perf-linha1").innerHTML = [
     kpi("Avaliações", isTime ? "36" : "4"),
@@ -1112,15 +1891,31 @@ function renderPerf(isTime) {
   ].join("");
 
   const notaTotal = isTime ? 8.42 : 8.7;
-  const imagem = isTime ? (timeKey === "gp" ? 8.55 : 8.2) : timeKey === "gp" ? 8.9 : 8.4;
-  const comunicacao = isTime ? (timeKey === "gp" ? 8.3 : 8.05) : timeKey === "gp" ? 8.6 : 8.3;
-  const tech = isTime ? (timeKey === "gp" ? 8.4 : 8.55) : timeKey === "gp" ? 8.7 : 8.7;
+  const imagem = isTime ? (gpLike ? 8.55 : 8.2) : gpLike ? 8.9 : 8.4;
+  const comunicacao = isTime ? (gpLike ? 8.3 : 8.05) : gpLike ? 8.6 : 8.3;
+  const tech = isTime ? (gpLike ? 8.4 : 8.55) : gpLike ? 8.7 : 8.7;
   document.getElementById("grid-perf-linha2").innerHTML = [
     kpi("Nota Total", fmtNota(notaTotal)),
     kpi("Imagem", fmtNota(imagem)),
     kpi("Comunicação", fmtNota(comunicacao)),
     kpi(techLabel, fmtNota(tech)),
   ].join("");
+
+  if (proposta) {
+    const heights = [40, 55, 62, 70, 65, 82];
+    document.getElementById("spark-nota").innerHTML = heights
+      .map((h) => `<span style="height:${h}%"></span>`)
+      .join("");
+    document.getElementById("grid-gp2-perf-trend").innerHTML = [
+      kpi("Δ vs média do time", "+0,28", "", "ok"),
+      kpi("Melhor dimensão", "Imagem · 8,9", "", "ok"),
+    ].join("");
+    document.getElementById("grid-gp2-dev").innerHTML = [
+      kpi("Trilhas ativas", "1"),
+      kpi("Módulos concluídos", "2 / 4"),
+      kpi("Reconhecimentos", "2"),
+    ].join("");
+  }
 
   const rows = isTime
     ? FEEDBACKS_MOCK
@@ -1167,17 +1962,12 @@ function setAba(next) {
   render();
 }
 
-document.querySelectorAll("[data-visao]").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    visao = btn.dataset.visao;
-    document.querySelectorAll("[data-visao]").forEach((b) => b.setAttribute("aria-pressed", b === btn ? "true" : "false"));
-    render();
-  });
-});
 document.querySelectorAll("[data-time]").forEach((btn) => {
   btn.addEventListener("click", () => {
     timeKey = btn.dataset.time;
     document.querySelectorAll("[data-time]").forEach((b) => b.setAttribute("aria-pressed", b === btn ? "true" : "false"));
+    if (timeKey === "gp2") aba = "resumo";
+    else if (aba === "resumo") aba = "escala";
     render();
   });
 });
@@ -1194,12 +1984,28 @@ document.querySelectorAll("[data-det-aba]").forEach((btn) => {
     render();
   });
 });
+document.querySelectorAll("[data-ciencia-aba]").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    if (btn.classList.contains("hidden")) return;
+    cienciaAba = btn.dataset.cienciaAba;
+    render();
+  });
+});
 document.getElementById("btn-mock-atestado").addEventListener("click", () => {
   mockAtestadosInd = mockAtestadosInd > 0 ? 0 : 3;
   const on = mockAtestadosInd > 0;
   const b = document.getElementById("btn-mock-atestado");
   b.setAttribute("aria-pressed", on ? "true" : "false");
   b.textContent = on ? "Atestados > 0" : "Atestados = 0";
+  render();
+});
+document.getElementById("btn-mock-talks").addEventListener("click", () => {
+  mockRhTalksCount = mockRhTalksCount > 0 ? 0 : 2;
+  const on = mockRhTalksCount > 0;
+  const b = document.getElementById("btn-mock-talks");
+  b.setAttribute("aria-pressed", on ? "true" : "false");
+  b.textContent = on ? "RH Talks > 0" : "RH Talks = 0";
+  if (!on && cienciaAba === "rhtalks") cienciaAba = "manuais";
   render();
 });
 document.getElementById("btn-theme").addEventListener("click", () => {

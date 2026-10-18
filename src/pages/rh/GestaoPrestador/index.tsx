@@ -14,6 +14,7 @@ import {
   X,
 } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
+import { fetchAllPages } from "../../../lib/supabasePaginate";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
@@ -251,6 +252,8 @@ export default function RhPrestadoresPage() {
     loading,
     carregar,
     erroCarregar,
+    erroOrganograma,
+    recarregarOrganograma,
     opcoesTimes,
     organogramaGrupos,
     opcoesVinculoFlat,
@@ -301,6 +304,8 @@ export default function RhPrestadoresPage() {
   const [rtTalkId, setRtTalkId] = useState("");
   const [rtTalksOpcoes, setRtTalksOpcoes] = useState<RhPortalRhTalkOpcao[]>([]);
   const [rtTalksCarregando, setRtTalksCarregando] = useState(false);
+  const [rtTalksErro, setRtTalksErro] = useState<string | null>(null);
+  const [rtTalksReloadKey, setRtTalksReloadKey] = useState(0);
   const [rtData, setRtData] = useState("");
   const [rtBusca, setRtBusca] = useState("");
   const [rtParticipantes, setRtParticipantes] = useState<RhFuncionario[]>([]);
@@ -331,6 +336,7 @@ export default function RhPrestadoresPage() {
     if (!rhTalksOpen) return;
     let cancel = false;
     setRtTalksCarregando(true);
+    setRtTalksErro(null);
     void (async () => {
       const { data, error } = await supabase
         .from("rh_portal_rh_talk")
@@ -341,7 +347,9 @@ export default function RhPrestadoresPage() {
       if (error) {
         console.error("[GestaoPrestador] carregar RH Talks portal:", error);
         setRtTalksOpcoes([]);
-        setErroGlobal("Não foi possível carregar os RH Talks do Portal de RH. Se o problema persistir, entre em contato com o suporte.");
+        setRtTalksErro(
+          "Não foi possível carregar os RH Talks do Portal de RH. Se o problema persistir, entre em contato com o suporte.",
+        );
       } else {
         setRtTalksOpcoes(
           ((data ?? []) as RhPortalRhTalkOpcao[]).filter((t) => String(t.titulo ?? "").trim().length > 0),
@@ -352,7 +360,7 @@ export default function RhPrestadoresPage() {
     return () => {
       cancel = true;
     };
-  }, [rhTalksOpen]);
+  }, [rhTalksOpen, rtTalksReloadKey]);
 
   useEffect(() => {
     if (!histModalRow) {
@@ -362,18 +370,27 @@ export default function RhPrestadoresPage() {
     }
     setHistModalLoading(true);
     setHistModalErro(null);
+    const fidHist = histModalRow.id;
     void (async () => {
-      const { data, error } = await supabase
-        .from("rh_funcionario_historico")
-        .select(PRESTADOR_HISTORICO_SELECT)
-        .eq("rh_funcionario_id", histModalRow.id)
-        .order("created_at", { ascending: false });
-      if (error) {
-        console.error("[GestaoPrestador] histórico:", error);
+      try {
+        const items = await fetchAllPages<RhFuncionarioHistorico>(async (from, to) => {
+          const res = await supabase
+            .from("rh_funcionario_historico")
+            .select(PRESTADOR_HISTORICO_SELECT)
+            .eq("rh_funcionario_id", fidHist)
+            .order("created_at", { ascending: false })
+            .order("id", { ascending: false })
+            .range(from, to);
+          return {
+            data: (res.data ?? null) as RhFuncionarioHistorico[] | null,
+            error: res.error,
+          };
+        });
+        setHistModalItems(items);
+      } catch (e) {
+        console.error("[GestaoPrestador] histórico:", e);
         setHistModalItems([]);
         setHistModalErro(ERRO_PRESTADOR_HISTORICO);
-      } else {
-        setHistModalItems((data ?? []) as RhFuncionarioHistorico[]);
       }
       setHistModalLoading(false);
     })();
@@ -614,6 +631,7 @@ export default function RhPrestadoresPage() {
     setRhTalksOpen(false);
     setRtTalkId("");
     setRtTalksOpcoes([]);
+    setRtTalksErro(null);
     setRtData("");
     setRtBusca("");
     setRtParticipantes([]);
@@ -624,6 +642,7 @@ export default function RhPrestadoresPage() {
     setSucessoMsg(null);
     setRhTalksOpen(true);
     setRtTalkId("");
+    setRtTalksErro(null);
     setRtData("");
     setRtBusca("");
     setRtParticipantes([]);
@@ -1090,6 +1109,7 @@ export default function RhPrestadoresPage() {
     }
     const fmtSal = (c: string) => fmtBRL(numeroDeCentavosStr(c));
     let rowPosAcao: RhFuncionario | null = null;
+    let avisoGaleriaTermino = false;
     const persistirAcao = async (
       patch: Record<string, unknown>,
       tipo: string,
@@ -1274,9 +1294,11 @@ export default function RhPrestadoresPage() {
             const limpeza = await excluirMarketingFotosDoPrestador(fid);
             if (!limpeza.ok) {
               console.error("Não foi possível remover as fotos da Galeria ao encerrar o prestador.");
+              avisoGaleriaTermino = true;
             }
           } catch (e) {
             console.error("Falha ao limpar fotos da Galeria ao encerrar o prestador", e);
+            avisoGaleriaTermino = true;
           }
           const det: Record<string, unknown> = {
             data_termino: acaoDtTermino,
@@ -1400,14 +1422,17 @@ export default function RhPrestadoresPage() {
           return;
         }
       }
+      let dealerFalhou = false;
       try {
         if (rowPosAcao) {
           await syncGamePresenterDealerFromRhFuncionario(rowPosAcao);
         }
       } catch (e) {
         console.error("[GestaoPrestador] sync dealer após ação RH:", e);
+        dealerFalhou = true;
         setErroGlobal(ERRO_PRESTADOR_SYNC_DEALER);
       }
+      let syncFalhou = false;
       let resSync: Awaited<ReturnType<typeof syncUsuarioPrestadorAposSalvarRh>> | null = null;
       try {
         const spinAcao = acaoForm.email_spin.trim().toLowerCase();
@@ -1417,15 +1442,27 @@ export default function RhPrestadoresPage() {
           emailPessoal: emailAcao && validarEmail(emailAcao) ? emailAcao : undefined,
         });
         const m = mensagemFeedbackSyncPrestador(resSync);
-        if (m) setErroGlobal(m);
+        if (m) {
+          syncFalhou = true;
+          setErroGlobal(m);
+        }
       } catch (e) {
         console.error("[GestaoPrestador] sync usuário após ação RH:", e);
+        syncFalhou = true;
         setErroGlobal(ERRO_PRESTADOR_SYNC);
+      }
+      if (dealerFalhou || syncFalhou) {
+        await carregar();
+        return;
       }
       const extraDesativacao = mensagemSucessoDesativacaoPrestadorEncerrado(resSync);
       const extraAtualizacao = mensagemSucessoSyncPrestadorAtualizado(resSync);
       const extra = extraDesativacao ?? extraAtualizacao;
-      setSucessoMsg(extra ? `Ação registrada. ${extra}` : "Ação registrada.");
+      let msgSucesso = extra ? `Ação registrada. ${extra}` : "Ação registrada.";
+      if (avisoGaleriaTermino) {
+        msgSucesso += " Não foi possível remover as fotos da Galeria — verifique com Marketing.";
+      }
+      setSucessoMsg(msgSucesso);
       fecharModalRegistrarAcao();
       await carregar();
     } catch (e: unknown) {
@@ -1658,12 +1695,55 @@ export default function RhPrestadoresPage() {
         </div>
       ) : null}
 
-      <PrestadorKpiResumo
-        resumo={resumoPrestadoresCards}
-        filtroStatus={filtroStatus}
-        podeEditar={perm.canEditarOk}
-        onEditarPrestador={abrirEditar}
-      />
+      {erroOrganograma && permOrg.canView !== "nao" && !permOrg.loading ? (
+        <div
+          role="alert"
+          style={{
+            padding: "10px 14px",
+            borderRadius: 10,
+            marginBottom: 12,
+            background: "rgba(232,64,37,0.12)",
+            border: "1px solid rgba(232,64,37,0.35)",
+            color: "#e84025",
+            fontSize: 13,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 8,
+            flexWrap: "wrap",
+          }}
+        >
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+            <AlertCircle size={14} color="#e84025" aria-hidden />
+            {erroOrganograma}
+          </span>
+          <button
+            type="button"
+            onClick={() => recarregarOrganograma()}
+            style={{
+              padding: "8px 14px",
+              borderRadius: 10,
+              border: "1px solid rgba(232,64,37,0.35)",
+              background: "transparent",
+              color: "#e84025",
+              fontWeight: 700,
+              fontFamily: FONT.body,
+              cursor: "pointer",
+            }}
+          >
+            Tentar de novo
+          </button>
+        </div>
+      ) : null}
+
+      {!erroCarregar ? (
+        <PrestadorKpiResumo
+          resumo={resumoPrestadoresCards}
+          filtroStatus={filtroStatus}
+          podeEditar={perm.canEditarOk}
+          onEditarPrestador={abrirEditar}
+        />
+      ) : null}
 
       <PrestadorFiltroBar
         brand={brand}
@@ -1705,6 +1785,7 @@ export default function RhPrestadoresPage() {
         tabelaAcoesRh={tabelaAcoesRh}
         tabelaAnotacoesRh={tabelaAnotacoesRh}
         loading={loading}
+        erroCarregarLista={Boolean(erroCarregar)}
         filtrada={filtrada}
         filtradaOrdenada={filtradaOrdenada}
         sortPrestadores={sortPrestadores}
@@ -2716,6 +2797,7 @@ export default function RhPrestadoresPage() {
                 loading={acessoPlataformaLoading}
                 erro={acessoPlataformaErro}
                 dados={acessoPlataforma}
+                onTentarDeNovo={editId ? () => void carregarAcessoPlataforma(editId) : undefined}
               />
             ) : null}
           </div>
@@ -3331,6 +3413,39 @@ export default function RhPrestadoresPage() {
                   <Loader2 size={14} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden />
                   Carregando…
                 </div>
+              ) : rtTalksErro ? (
+                <div
+                  role="alert"
+                  style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 10,
+                    padding: "10px 0",
+                    color: "#e84025",
+                    fontSize: 13,
+                    fontFamily: FONT.body,
+                  }}
+                >
+                  <span>{rtTalksErro}</span>
+                  <button
+                    type="button"
+                    onClick={() => setRtTalksReloadKey((k) => k + 1)}
+                    style={{
+                      padding: "8px 14px",
+                      borderRadius: 10,
+                      border: "1px solid rgba(232,64,37,0.35)",
+                      background: "transparent",
+                      color: "#e84025",
+                      fontWeight: 700,
+                      fontFamily: FONT.body,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Tentar de novo
+                  </button>
+                </div>
               ) : rtTalksOpcoes.length === 0 ? (
                 <div style={{ fontSize: 13, color: t.textMuted, padding: "8px 0", fontFamily: FONT.body }}>
                   Nenhum RH Talks publicado no Portal de RH. Cadastre e publique em Portal de RH antes de registrar participantes.
@@ -3460,7 +3575,7 @@ export default function RhPrestadoresPage() {
               
               <button
                 type="button"
-                disabled={rtSalvando || rtTalksCarregando || rtTalksOpcoes.length === 0}
+                disabled={rtSalvando || rtTalksCarregando || Boolean(rtTalksErro) || rtTalksOpcoes.length === 0}
                 onClick={() => void salvarRhTalks()}
                 style={{
                   padding: "10px 18px",

@@ -67,6 +67,10 @@ import {
   derivarStatusPipelinePorProdutos,
   folhaDerivadaPorPipelineEProdutos,
 } from "./helpers";
+import { fetchAllPages } from "../../../lib/supabasePaginate";
+
+const MSG_ERRO_CARREGAR =
+  "Não foi possível carregar o pipeline. Se o problema persistir, entre em contato com o suporte.";
 
 const TAB_ICONS = {
   todos: <LayoutList {...FILTRO_BAR_TAB_ICON_PROPS} />,
@@ -89,6 +93,7 @@ export default function PipelineB2B() {
   const [comerciais, setComerciais] = useState<ComercialOpcao[]>([]);
   const [agregadoraOpcoes, setAgregadoraOpcoes] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [sort, setSort] = useState<{ col: TableCol; dir: SortDir }>({ col: "razao", dir: "asc" });
 
   const [registroMarca, setRegistroMarca] = useState<PipelineMarcaRow | null>(null);
@@ -126,39 +131,55 @@ export default function PipelineB2B() {
   const loadData = useCallback(async (opts?: { showLoading?: boolean }) => {
     const showLoading = opts?.showLoading !== false;
     if (showLoading) setLoading(true);
-    const [marcasRes, gestoresRes, agregadorasRes] = await Promise.all([
-      supabase
-        .from("comercial_marcas")
-        .select(PIPELINE_MARCA_SELECT_EMBED)
-        .order("nome"),
-      supabase
-        .from("profiles")
-        .select("id, name")
-        .in("name", [...PIPELINE_COMERCIAL_NOMES])
-        .or("ativo.is.null,ativo.eq.true"),
-      supabase.from("comercial_agregadoras").select("nome").order("nome"),
-    ]);
+    setLoadError(null);
+    try {
+      const [marcasRows, gestoresRes, agregadorasRows] = await Promise.all([
+        fetchAllPages<Record<string, unknown>>(async (from, to) =>
+          supabase
+            .from("comercial_marcas")
+            .select(PIPELINE_MARCA_SELECT_EMBED)
+            .order("nome")
+            .order("id")
+            .range(from, to),
+        ),
+        supabase
+          .from("profiles")
+          .select("id, name")
+          .in("name", [...PIPELINE_COMERCIAL_NOMES])
+          .or("ativo.is.null,ativo.eq.true"),
+        fetchAllPages<{ nome: string }>(async (from, to) =>
+          supabase
+            .from("comercial_agregadoras")
+            .select("id, nome")
+            .order("nome")
+            .order("id")
+            .range(from, to),
+        ),
+      ]);
 
-    if (marcasRes.error) console.error(marcasRes.error);
-    if (gestoresRes.error) console.error(gestoresRes.error);
-    if (agregadorasRes.error) console.error(agregadorasRes.error);
+      if (gestoresRes.error) throw new Error(gestoresRes.error.message);
 
-    const comercialList = buildPipelineComerciais(gestoresRes.data ?? []);
-    setComerciais(comercialList);
-    setAgregadoraOpcoes(
-      (agregadorasRes.data ?? [])
-        .map((r) => String((r as { nome?: string }).nome ?? "").trim())
-        .filter(Boolean),
-    );
+      const comercialList = buildPipelineComerciais(gestoresRes.data ?? []);
+      setComerciais(comercialList);
+      setAgregadoraOpcoes(
+        agregadorasRows
+          .map((r) => String(r.nome ?? "").trim())
+          .filter(Boolean),
+      );
 
-    const names = Object.fromEntries(
-      comercialList.flatMap((c) => (c.id ? [[c.id, c.name] as const] : [])),
-    );
-    const mapped = (marcasRes.data ?? []).map((r) =>
-      mapPipelineMarcaFromDb(r as Record<string, unknown>, names),
-    );
-    setRows(mapped);
-    if (showLoading) setLoading(false);
+      const names = Object.fromEntries(
+        comercialList.flatMap((c) => (c.id ? [[c.id, c.name] as const] : [])),
+      );
+      setRows(marcasRows.map((r) => mapPipelineMarcaFromDb(r, names)));
+    } catch (e: unknown) {
+      console.error("[PipelineB2B] loadData:", e);
+      setRows([]);
+      setComerciais([]);
+      setAgregadoraOpcoes([]);
+      setLoadError(MSG_ERRO_CARREGAR);
+    } finally {
+      if (showLoading) setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -474,6 +495,37 @@ export default function PipelineB2B() {
         </div>
       </div>
 
+      <div
+        id={`panel-pipeline-${tab}`}
+        role="tabpanel"
+        aria-labelledby={`tab-pipeline-${tab}`}
+        tabIndex={0}
+      >
+      {loadError ? (
+        <div role="alert" aria-live="polite" style={pageBox}>
+          <div style={{ padding: "40px 0", textAlign: "center", fontFamily: FONT.body }}>
+            <p style={{ color: "#e84025", fontSize: 13, marginBottom: 12 }}>{loadError}</p>
+            <button
+              type="button"
+              onClick={() => void loadData()}
+              style={{
+                padding: "10px 20px",
+                borderRadius: 10,
+                border: `1px solid ${t.cardBorder}`,
+                background: t.inputBg,
+                color: t.text,
+                fontSize: 13,
+                fontWeight: 700,
+                fontFamily: FONT.body,
+                cursor: "pointer",
+              }}
+            >
+              Tentar novamente
+            </button>
+          </div>
+        </div>
+      ) : (
+        <>
       <div style={pageBox}>
         {loading ? (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "32px 0", color: t.textMuted, fontSize: 13, fontFamily: FONT.body, gap: 8 }}>
@@ -557,6 +609,9 @@ export default function PipelineB2B() {
             )}
           </TabelaComPaginacao>
         )}
+      </div>
+        </>
+      )}
       </div>
 
       {registroMarca ? (

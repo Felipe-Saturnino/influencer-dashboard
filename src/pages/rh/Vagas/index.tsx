@@ -42,9 +42,37 @@ import { ModalAtualizarVaga } from "../../../components/rh/vagas/ModalAtualizarV
 import { ModalCompartilharVaga } from "../../../components/rh/vagas/ModalCompartilharVaga";
 import { formatTagsVagaLabel } from "../../../lib/rhVagaTags";
 import { buscarVagaIdsComCandidaturaDoLogin } from "../../../lib/rhVagaCandidaturaInscricao";
+import { TabelaComPaginacao } from "../../../components/TabelaPaginacaoBar";
+
+const ERRO_CARGA_VAGAS =
+  "Não foi possível carregar as vagas. Se o problema persistir, entre em contato com o suporte.";
+const ERRO_CARGA_INSCRICOES =
+  "Não foi possível verificar as suas candidaturas. Se o problema persistir, entre em contato com o suporte.";
+const ERRO_EXCLUIR_VAGA =
+  "Não foi possível excluir a vaga. Se o problema persistir, entre em contato com o suporte.";
 
 const RH_VAGAS_SELECT = `
-  *,
+  id,
+  codigo_vaga,
+  titulo,
+  tipo_vaga,
+  org_time_id,
+  org_gerencia_id,
+  org_diretoria_id,
+  repasse_inicial_centavos,
+  data_abertura,
+  data_fim_inscricoes,
+  descricao,
+  responsabilidades,
+  tags,
+  necessario_video_apresentacao,
+  necessario_turno,
+  status,
+  data_encerramento,
+  candidato_selecionado_funcionario_id,
+  motivo_cancelamento,
+  created_at,
+  updated_at,
   org_time:rh_org_times (
     id,
     nome,
@@ -105,6 +133,7 @@ export default function RhVagasPage() {
   const [vagaExcluirConfirm, setVagaExcluirConfirm] = useState<RhVagaRow | null>(null);
   const [excluindoVaga, setExcluindoVaga] = useState(false);
   const [vagasInscritasIds, setVagasInscritasIds] = useState<Set<string>>(() => new Set());
+  const [erroInscricoes, setErroInscricoes] = useState<string | null>(null);
 
   const podeCriarVaga = perm.canCriarOk;
   const mostrarAbaGerenciamento = perm.canCriarOk || perm.canExcluirOk;
@@ -114,23 +143,36 @@ export default function RhVagasPage() {
   const carregar = useCallback(async (opts?: { silent?: boolean }) => {
     if (!opts?.silent) setLoading(true);
     setErro(null);
-    await supabase.rpc("rh_vagas_atualizar_status_inscricoes_encerradas");
-    const { data, error } = await supabase
-      .from("rh_vagas")
-      .select(RH_VAGAS_SELECT)
-      .order("data_abertura", { ascending: false })
-      .limit(200);
-    if (error) {
-      setErro(error.message);
+    try {
+      await supabase.rpc("rh_vagas_atualizar_status_inscricoes_encerradas");
+      const { data, error } = await supabase
+        .from("rh_vagas")
+        .select(RH_VAGAS_SELECT)
+        .order("data_abertura", { ascending: false })
+        .limit(200);
+      if (error) {
+        console.error("[rh_vagas] carregar", error);
+        setErro(ERRO_CARGA_VAGAS);
+        setVagas([]);
+      } else {
+        setVagas((data ?? []) as unknown as RhVagaRow[]);
+      }
+    } catch (e) {
+      console.error("[rh_vagas] carregar", e);
+      setErro(ERRO_CARGA_VAGAS);
       setVagas([]);
-    } else {
-      setVagas((data ?? []) as unknown as RhVagaRow[]);
     }
     if (!opts?.silent) setLoading(false);
   }, []);
 
   const recarregarInscricoes = useCallback(async () => {
+    setErroInscricoes(null);
     const ids = await buscarVagaIdsComCandidaturaDoLogin(emailEfetivo);
+    if (ids === null) {
+      setErroInscricoes(ERRO_CARGA_INSCRICOES);
+      setVagasInscritasIds(new Set());
+      return;
+    }
     setVagasInscritasIds(ids);
   }, [emailEfetivo]);
 
@@ -185,8 +227,8 @@ export default function RhVagasPage() {
       setSucessoMsg("Vaga excluída.");
       void carregar({ silent: true });
     } catch (e: unknown) {
-      const msg = e && typeof e === "object" && "message" in e ? String((e as { message: string }).message) : "Erro ao excluir.";
-      setErro(msg);
+      console.error("[rh_vagas] excluir", e);
+      setErro(ERRO_EXCLUIR_VAGA);
     } finally {
       setExcluindoVaga(false);
     }
@@ -231,8 +273,21 @@ export default function RhVagasPage() {
 
   if (perm.loading) {
     return (
-      <div className="app-page-shell" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 200 }}>
+      <div
+        className="app-page-shell"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 8,
+          minHeight: 200,
+          color: t.textMuted,
+          fontFamily: FONT.body,
+          fontSize: 13,
+        }}
+      >
         <Loader2 className="app-lucide-spin" size={22} color="var(--brand-primary, #7c3aed)" aria-hidden />
+        Carregando…
       </div>
     );
   }
@@ -359,9 +414,70 @@ export default function RhVagasPage() {
             border: "1px solid rgba(232,64,37,0.35)",
             color: "#e84025",
             fontSize: 13,
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            flexWrap: "wrap",
+            fontFamily: FONT.body,
           }}
         >
-          {erro}
+          <span>{erro}</span>
+          <button
+            type="button"
+            onClick={() => void carregar()}
+            style={{
+              fontFamily: FONT.body,
+              fontSize: 13,
+              fontWeight: 700,
+              padding: "8px 14px",
+              borderRadius: 10,
+              border: "1px solid rgba(232,64,37,0.35)",
+              background: "transparent",
+              color: "#e84025",
+              cursor: "pointer",
+            }}
+          >
+            Tentar de novo
+          </button>
+        </div>
+      ) : null}
+
+      {erroInscricoes ? (
+        <div
+          role="alert"
+          style={{
+            padding: "10px 14px",
+            borderRadius: 10,
+            marginBottom: 12,
+            background: "rgba(232,64,37,0.12)",
+            border: "1px solid rgba(232,64,37,0.35)",
+            color: "#e84025",
+            fontSize: 13,
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            flexWrap: "wrap",
+            fontFamily: FONT.body,
+          }}
+        >
+          <span>{erroInscricoes}</span>
+          <button
+            type="button"
+            onClick={() => void recarregarInscricoes()}
+            style={{
+              fontFamily: FONT.body,
+              fontSize: 13,
+              fontWeight: 700,
+              padding: "8px 14px",
+              borderRadius: 10,
+              border: "1px solid rgba(232,64,37,0.35)",
+              background: "transparent",
+              color: "#e84025",
+              cursor: "pointer",
+            }}
+          >
+            Tentar de novo
+          </button>
         </div>
       ) : null}
 
@@ -416,45 +532,7 @@ export default function RhVagasPage() {
         aria-labelledby={`tab-rh-vagas-${aba}`}
         style={{ ...getPageContentBoxStyle(brand, t), minHeight: 200 }}
       >
-        {loading ? (
-          <div style={{ textAlign: "center", padding: 40 }}>
-            <Loader2 className="app-lucide-spin" size={22} color="var(--brand-primary, #7c3aed)" aria-hidden />
-          </div>
-        ) : aba === "abertas" ? (
-          <>
-            {vagasAbertas.length === 0 ? (
-              <div style={{ padding: "32px 0", textAlign: "center", color: t.textMuted, fontSize: 13 }}>
-                Nenhuma vaga aberta para exibir.
-              </div>
-            ) : (
-              vagasAbertas.map((v) =>
-                renderCardBase(
-                  v,
-                  <div style={{ marginTop: 4 }}>
-                    {tipoInterna(v.tipo_vaga as RhVagaTipo)
-                      ? vagasInscritasIds.has(v.id)
-                        ? btnInscrito()
-                        : btnPrim("Candidatura", () => setVagaCandidatura(v))
-                      : null}
-                    {tipoExterna(v.tipo_vaga as RhVagaTipo)
-                      ? btnSec("Compartilhar", () => setVagaCompartilharTitulo(v.titulo))
-                      : null}
-                  </div>,
-                ),
-              )
-            )}
-          </>
-        ) : aba === "em_andamento" ? (
-          <>
-            {vagasEmAndamento.length === 0 ? (
-              <div style={{ padding: "32px 0", textAlign: "center", color: t.textMuted, fontSize: 13 }}>
-                Nenhuma vaga em andamento para exibir.
-              </div>
-            ) : (
-              vagasEmAndamento.map((v) => renderCardBase(v))
-            )}
-          </>
-        ) : aba === "candidaturas" ? (
+        {aba === "candidaturas" ? (
           <RhVagasCandidaturasPainel
             t={t}
             busca={busca}
@@ -465,6 +543,65 @@ export default function RhVagasPage() {
             onVagaIdFiltroReset={resetVagaIdFiltroCand}
             podeEditarEtapa={perm.canEditarOk}
           />
+        ) : loading ? (
+          <div
+            style={{
+              textAlign: "center",
+              padding: 40,
+              color: t.textMuted,
+              fontSize: 13,
+              fontFamily: FONT.body,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+            }}
+          >
+            <Loader2 className="app-lucide-spin" size={22} color="var(--brand-primary, #7c3aed)" aria-hidden />
+            Carregando…
+          </div>
+        ) : erro ? null : aba === "abertas" ? (
+          <>
+            {vagasAbertas.length === 0 ? (
+              <div style={{ padding: "32px 0", textAlign: "center", color: t.textMuted, fontSize: 13 }}>
+                Nenhuma vaga aberta para exibir.
+              </div>
+            ) : (
+              <TabelaComPaginacao items={vagasAbertas} t={t} resetKey={`abertas|${busca}`}>
+                {(linhas) =>
+                  linhas.map((v) =>
+                    renderCardBase(
+                      v,
+                      <div style={{ marginTop: 4 }}>
+                        {tipoInterna(v.tipo_vaga as RhVagaTipo)
+                          ? erroInscricoes
+                            ? null
+                            : vagasInscritasIds.has(v.id)
+                              ? btnInscrito()
+                              : btnPrim("Candidatura", () => setVagaCandidatura(v))
+                          : null}
+                        {tipoExterna(v.tipo_vaga as RhVagaTipo)
+                          ? btnSec("Compartilhar", () => setVagaCompartilharTitulo(v.titulo))
+                          : null}
+                      </div>,
+                    ),
+                  )
+                }
+              </TabelaComPaginacao>
+            )}
+          </>
+        ) : aba === "em_andamento" ? (
+          <>
+            {vagasEmAndamento.length === 0 ? (
+              <div style={{ padding: "32px 0", textAlign: "center", color: t.textMuted, fontSize: 13 }}>
+                Nenhuma vaga em andamento para exibir.
+              </div>
+            ) : (
+              <TabelaComPaginacao items={vagasEmAndamento} t={t} resetKey={`andamento|${busca}`}>
+                {(linhas) => linhas.map((v) => renderCardBase(v))}
+              </TabelaComPaginacao>
+            )}
+          </>
         ) : (
           <>
             {vagasGestaoLista.length === 0 ? (
@@ -472,51 +609,71 @@ export default function RhVagasPage() {
                 Nenhuma vaga para os filtros atuais.
               </div>
             ) : (
-              vagasGestaoLista.map((v) => {
-                const st = v.status as RhVagaStatus;
-                if (st === "concluida") {
-                  const nomeCand = v.candidato?.nome?.trim() || "—";
-                  return (
-                    <article
-                      key={v.id}
-                      style={vagaArticleStyle}
-                    >
-                      <h3 style={{ margin: "0 0 14px", fontSize: 16, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE }}>{v.titulo}</h3>
-                      <CampoVaga k="Código da vaga" v={v.codigo_vaga?.trim() || "—"} t={t} />
-                      <CampoVaga k="Tipo da vaga" v={labelTipoVaga(v.tipo_vaga as RhVagaTipo)} t={t} />
-                      <CampoVaga k="Status" v={labelStatusVaga(st)} t={t} />
-                      <CampoVaga k="Organograma" v={organogramaLabelDeVaga(v)} t={t} />
-                      <CampoVaga k="Data de abertura" v={fmtDataBR(v.data_abertura)} t={t} />
-                      <CampoVaga k="Data fim de inscrições" v={fmtDataBR(v.data_fim_inscricoes)} t={t} />
-                      <CampoVaga k="Data de encerramento" v={fmtDataBR(v.data_encerramento)} t={t} />
-                      <CampoVaga k="Candidato selecionado" v={nomeCand} t={t} />
-                      <div style={{ marginTop: 4 }}>
-                        {perm.canExcluirOk ? (
-                          <div style={{ marginTop: 12 }}>
-                            <BtnExcluirComTexto
-                              labelAcao={tooltipExcluir("vaga")}
-                              onClick={() => setVagaExcluirConfirm(v)}
-                            />
+              <TabelaComPaginacao
+                items={vagasGestaoLista}
+                t={t}
+                resetKey={`gestao|${busca}|${filtroStatusGestao}`}
+              >
+                {(linhas) =>
+                  linhas.map((v) => {
+                    const st = statusVagaEfetivo(v);
+                    if (st === "concluida") {
+                      const nomeCand = v.candidato?.nome?.trim() || "—";
+                      return (
+                        <article key={v.id} style={vagaArticleStyle}>
+                          <h3 style={{ margin: "0 0 14px", fontSize: 16, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE }}>
+                            {v.titulo}
+                          </h3>
+                          <CampoVaga k="Código da vaga" v={v.codigo_vaga?.trim() || "—"} t={t} />
+                          <CampoVaga k="Tipo da vaga" v={labelTipoVaga(v.tipo_vaga as RhVagaTipo)} t={t} />
+                          <CampoVaga k="Status" v={labelStatusVaga(st)} t={t} />
+                          <CampoVaga k="Organograma" v={organogramaLabelDeVaga(v)} t={t} />
+                          <CampoVaga k="Data de abertura" v={fmtDataBR(v.data_abertura)} t={t} />
+                          <CampoVaga k="Data fim de inscrições" v={fmtDataBR(v.data_fim_inscricoes)} t={t} />
+                          <CampoVaga k="Data de encerramento" v={fmtDataBR(v.data_encerramento)} t={t} />
+                          <CampoVaga k="Candidato selecionado" v={nomeCand} t={t} />
+                          <div style={{ marginTop: 4 }}>
+                            {perm.canExcluirOk ? (
+                              <div style={{ marginTop: 12 }}>
+                                <BtnExcluirComTexto
+                                  labelAcao={tooltipExcluir("vaga")}
+                                  onClick={() => setVagaExcluirConfirm(v)}
+                                />
+                              </div>
+                            ) : null}
                           </div>
-                        ) : null}
-                      </div>
-                    </article>
-                  );
-                }
-                if (st === "cancelada") {
-                  return (
-                    <article
-                      key={v.id}
-                      style={vagaArticleStyle}
-                    >
-                      <h3 style={{ margin: "0 0 14px", fontSize: 16, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE }}>{v.titulo}</h3>
-                      <CampoVaga k="Código da vaga" v={v.codigo_vaga?.trim() || "—"} t={t} />
-                      <CampoVaga k="Tipo da vaga" v={labelTipoVaga(v.tipo_vaga as RhVagaTipo)} t={t} />
-                      <CampoVaga k="Status" v={labelStatusVaga(st)} t={t} />
-                      <CampoVaga k="Organograma" v={organogramaLabelDeVaga(v)} t={t} />
-                      <CampoVaga k="Data de abertura" v={fmtDataBR(v.data_abertura)} t={t} />
-                      <CampoVaga k="Data de encerramento" v={fmtDataBR(v.data_encerramento)} t={t} />
-                      <CampoVaga k="Motivo do cancelamento" v={textoMultilinha(v.motivo_cancelamento ?? "")} t={t} />
+                        </article>
+                      );
+                    }
+                    if (st === "cancelada") {
+                      return (
+                        <article key={v.id} style={vagaArticleStyle}>
+                          <h3 style={{ margin: "0 0 14px", fontSize: 16, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE }}>
+                            {v.titulo}
+                          </h3>
+                          <CampoVaga k="Código da vaga" v={v.codigo_vaga?.trim() || "—"} t={t} />
+                          <CampoVaga k="Tipo da vaga" v={labelTipoVaga(v.tipo_vaga as RhVagaTipo)} t={t} />
+                          <CampoVaga k="Status" v={labelStatusVaga(st)} t={t} />
+                          <CampoVaga k="Organograma" v={organogramaLabelDeVaga(v)} t={t} />
+                          <CampoVaga k="Data de abertura" v={fmtDataBR(v.data_abertura)} t={t} />
+                          <CampoVaga k="Data de encerramento" v={fmtDataBR(v.data_encerramento)} t={t} />
+                          <CampoVaga k="Motivo do cancelamento" v={textoMultilinha(v.motivo_cancelamento ?? "")} t={t} />
+                          <div style={{ marginTop: 4 }}>
+                            {perm.canEditarOk ? btnPrim("Atualizar vaga", () => setVagaAtualizar(v)) : null}
+                            {perm.canExcluirOk ? (
+                              <div style={{ marginTop: 12 }}>
+                                <BtnExcluirComTexto
+                                  labelAcao={tooltipExcluir("vaga")}
+                                  onClick={() => setVagaExcluirConfirm(v)}
+                                />
+                              </div>
+                            ) : null}
+                          </div>
+                        </article>
+                      );
+                    }
+                    return renderCardBase(
+                      v,
                       <div style={{ marginTop: 4 }}>
                         {perm.canEditarOk ? btnPrim("Atualizar vaga", () => setVagaAtualizar(v)) : null}
                         {perm.canExcluirOk ? (
@@ -527,26 +684,12 @@ export default function RhVagasPage() {
                             />
                           </div>
                         ) : null}
-                      </div>
-                    </article>
-                  );
+                      </div>,
+                      { statusLabel: labelStatusVaga(st) },
+                    );
+                  })
                 }
-                return renderCardBase(
-                  v,
-                  <div style={{ marginTop: 4 }}>
-                    {perm.canEditarOk ? btnPrim("Atualizar vaga", () => setVagaAtualizar(v)) : null}
-                    {perm.canExcluirOk ? (
-                      <div style={{ marginTop: 12 }}>
-                        <BtnExcluirComTexto
-                          labelAcao={tooltipExcluir("vaga")}
-                          onClick={() => setVagaExcluirConfirm(v)}
-                        />
-                      </div>
-                    ) : null}
-                  </div>,
-                  { statusLabel: labelStatusVaga(st) },
-                );
-              })
+              </TabelaComPaginacao>
             )}
           </>
         )}

@@ -306,36 +306,41 @@ export function ordemVisivelNoMes(row: OrdemSaidaRow, mesKey: string, historico:
 
 /** Catálogo enxuto para o seletor de itens da OS (sem `select("*")` do estoque completo). */
 async function fetchCatalogoItensOsLean(): Promise<{
-  itens: EstoqueItemRow[];
-  equips: EstoqueEquipamentoRow[];
-  lotes: EstoqueJogoLoteRow[];
+  itens: Pick<EstoqueItemRow, "id" | "codigo_num" | "nome" | "quantidade_total" | "quantidade_em_uso" | "quantidade_manutencao">[];
+  equips: Pick<EstoqueEquipamentoRow, "id" | "codigo_num" | "nome" | "status">[];
+  lotes: Pick<EstoqueJogoLoteRow, "id" | "codigo_num" | "nome_lote" | "qtd_inicial" | "qtd_consumida" | "qtd_descartada">[];
 }> {
-  const [it, eq, jl] = await Promise.all([
-    supabase
-      .from("tech_ops_estoque_itens")
-      .select("id, codigo_num, nome, quantidade_total, quantidade_em_uso, quantidade_manutencao")
-      .eq("ativo", true)
-      .order("codigo_num", { ascending: true }),
-    supabase
-      .from("tech_ops_estoque_equipamentos")
-      .select("id, codigo_num, nome, status")
-      .eq("ativo", true)
-      .eq("status", "estoque")
-      .order("codigo_num", { ascending: true }),
-    supabase
-      .from("tech_ops_estoque_jogo_lotes")
-      .select("id, codigo_num, nome_lote, qtd_inicial, qtd_consumida, qtd_descartada")
-      .eq("ativo", true)
-      .order("codigo_num", { ascending: true }),
+  const [itens, equips, lotes] = await Promise.all([
+    fetchAllPages<Pick<EstoqueItemRow, "id" | "codigo_num" | "nome" | "quantidade_total" | "quantidade_em_uso" | "quantidade_manutencao">>(async (from, to) =>
+      supabase
+        .from("tech_ops_estoque_itens")
+        .select("id, codigo_num, nome, quantidade_total, quantidade_em_uso, quantidade_manutencao")
+        .eq("ativo", true)
+        .order("codigo_num", { ascending: true })
+        .order("id", { ascending: true })
+        .range(from, to),
+    ),
+    fetchAllPages<Pick<EstoqueEquipamentoRow, "id" | "codigo_num" | "nome" | "status">>(async (from, to) =>
+      supabase
+        .from("tech_ops_estoque_equipamentos")
+        .select("id, codigo_num, nome, status")
+        .eq("ativo", true)
+        .eq("status", "estoque")
+        .order("codigo_num", { ascending: true })
+        .order("id", { ascending: true })
+        .range(from, to),
+    ),
+    fetchAllPages<Pick<EstoqueJogoLoteRow, "id" | "codigo_num" | "nome_lote" | "qtd_inicial" | "qtd_consumida" | "qtd_descartada">>(async (from, to) =>
+      supabase
+        .from("tech_ops_estoque_jogo_lotes")
+        .select("id, codigo_num, nome_lote, qtd_inicial, qtd_consumida, qtd_descartada")
+        .eq("ativo", true)
+        .order("codigo_num", { ascending: true })
+        .order("id", { ascending: true })
+        .range(from, to),
+    ),
   ]);
-  if (it.error) throw it.error;
-  if (eq.error) throw eq.error;
-  if (jl.error) throw jl.error;
-  return {
-    itens: (it.data ?? []) as EstoqueItemRow[],
-    equips: (eq.data ?? []) as EstoqueEquipamentoRow[],
-    lotes: (jl.data ?? []) as EstoqueJogoLoteRow[],
-  };
+  return { itens, equips, lotes };
 }
 
 export async function fetchItensDisponiveisOs(): Promise<OsItemDisponivel[]> {
@@ -376,29 +381,35 @@ export async function fetchItensDisponiveisOs(): Promise<OsItemDisponivel[]> {
 
 /** Manutenção: lista linhas ativas; maxQtd = Estoque (itens) / Qtd Atual (jogo) — nunca inflar. */
 export async function fetchItensManutencaoOs(): Promise<OsItemDisponivel[]> {
-  const [it, eq, jl] = await Promise.all([
-    supabase
-      .from("tech_ops_estoque_itens")
-      .select("id, codigo_num, nome, quantidade_total, quantidade_em_uso, quantidade_manutencao")
-      .eq("ativo", true)
-      .order("codigo_num", { ascending: true }),
-    supabase
-      .from("tech_ops_estoque_equipamentos")
-      .select("id, codigo_num, nome, status")
-      .eq("ativo", true)
-      .order("codigo_num", { ascending: true }),
-    supabase
-      .from("tech_ops_estoque_jogo_lotes")
-      .select("id, codigo_num, nome_lote, qtd_inicial, qtd_consumida, qtd_descartada")
-      .eq("ativo", true)
-      .order("codigo_num", { ascending: true }),
+  const [itens, equips, lotes] = await Promise.all([
+    fetchAllPages<Pick<EstoqueItemRow, "id" | "codigo_num" | "nome" | "quantidade_total" | "quantidade_em_uso" | "quantidade_manutencao">>(async (from, to) =>
+      supabase
+        .from("tech_ops_estoque_itens")
+        .select("id, codigo_num, nome, quantidade_total, quantidade_em_uso, quantidade_manutencao")
+        .eq("ativo", true)
+        .order("codigo_num", { ascending: true })
+        .order("id", { ascending: true })
+        .range(from, to),
+    ),
+    fetchAllPages<Pick<EstoqueEquipamentoRow, "id" | "codigo_num" | "nome" | "status">>(async (from, to) =>
+      supabase
+        .from("tech_ops_estoque_equipamentos")
+        .select("id, codigo_num, nome, status")
+        .eq("ativo", true)
+        .order("codigo_num", { ascending: true })
+        .order("id", { ascending: true })
+        .range(from, to),
+    ),
+    fetchAllPages<Pick<EstoqueJogoLoteRow, "id" | "codigo_num" | "nome_lote" | "qtd_inicial" | "qtd_consumida" | "qtd_descartada">>(async (from, to) =>
+      supabase
+        .from("tech_ops_estoque_jogo_lotes")
+        .select("id, codigo_num, nome_lote, qtd_inicial, qtd_consumida, qtd_descartada")
+        .eq("ativo", true)
+        .order("codigo_num", { ascending: true })
+        .order("id", { ascending: true })
+        .range(from, to),
+    ),
   ]);
-  if (it.error) throw it.error;
-  if (eq.error) throw eq.error;
-  if (jl.error) throw jl.error;
-  const itens = (it.data ?? []) as EstoqueItemRow[];
-  const equips = (eq.data ?? []) as EstoqueEquipamentoRow[];
-  const lotes = (jl.data ?? []) as EstoqueJogoLoteRow[];
   const out: OsItemDisponivel[] = [];
   for (const r of itens) {
     const est = estoqueDisponivelItem(r);
@@ -515,31 +526,27 @@ export async function fetchOrdensSaida(tipo?: OrdemSaidaTipo): Promise<OrdemSaid
 export async function fetchHistoricoOrdemSaida(ordemId: string): Promise<
   { id: string; acao: string; detalhe: string | null; autor_nome: string; created_at: string }[]
 > {
-  const { data, error } = await supabase
-    .from("tech_ops_ordem_saida_historico")
-    .select("id, acao, detalhe, autor_nome, created_at")
-    .eq("ordem_id", ordemId)
-    .order("created_at", { ascending: false })
-    .limit(200);
-  if (error) throw error;
-  return (data ?? []) as {
-    id: string;
-    acao: string;
-    detalhe: string | null;
-    autor_nome: string;
-    created_at: string;
-  }[];
+  return fetchAllPages(async (from, to) =>
+    supabase
+      .from("tech_ops_ordem_saida_historico")
+      .select("id, acao, detalhe, autor_nome, created_at")
+      .eq("ordem_id", ordemId)
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
+      .range(from, to),
+  );
 }
 
 export async function fetchAnotacoesOrdemSaida(ordemId: string): Promise<OrdemSaidaAnotacaoRow[]> {
-  const { data, error } = await supabase
-    .from("tech_ops_ordem_saida_anotacoes")
-    .select("id, ordem_id, texto, autor_nome, created_at")
-    .eq("ordem_id", ordemId)
-    .order("created_at", { ascending: false })
-    .limit(200);
-  if (error) throw error;
-  return (data ?? []) as OrdemSaidaAnotacaoRow[];
+  return fetchAllPages<OrdemSaidaAnotacaoRow>(async (from, to) =>
+    supabase
+      .from("tech_ops_ordem_saida_anotacoes")
+      .select("id, ordem_id, texto, autor_nome, created_at")
+      .eq("ordem_id", ordemId)
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
+      .range(from, to),
+  );
 }
 
 export async function criarAnotacaoOrdemSaida(params: {

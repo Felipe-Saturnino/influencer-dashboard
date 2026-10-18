@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, type CSSProperties } from "react";
+import { useState, useEffect, useCallback, useRef, type CSSProperties } from "react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -7,6 +7,7 @@ import { useIdentidadeEfetiva } from "../../../hooks/useIdentidadeEfetiva";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE, BRAND } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
+import { fetchAllPages, fetchInBatched } from "../../../lib/supabasePaginate";
 import type { Operadora, InfluencerOperadora, Role } from "../../../types";
 import {
   Eye, Pencil, X, Loader2,
@@ -20,6 +21,8 @@ import {
 import { fmtBRL } from "../../../lib/dashboardHelpers";
 import { PlatLogo } from "../../../components/PlatLogo";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
+import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
+import { TabelaComPaginacao } from "../../../components/TabelaPaginacaoBar";
 import {
   DashboardPageHeader,
   FiltroOperadoraSelect,
@@ -31,12 +34,19 @@ import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { textoContemBuscaEmAlgum } from "../../../lib/searchText";
+import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
 import { ROLES_STAFF_OPERACOES_LIVES } from "../../../lib/staffRoles";
 import {
   getPageContentBoxStyle,
   getPageFilterBoxStyle,
   getPageKpiSectionGapStyle,
 } from "../../../lib/pageContentBoxStyles";
+
+const PERFIL_COLS =
+  "id, nome_artistico, nome_completo, status, telefone, cpf, canais, link_twitch, link_youtube, link_kick, link_instagram, link_tiktok, link_discord, link_whatsapp, link_telegram, cache_hora, horas_acordadas, horas_ciclo_iniciado_em, banco, agencia, conta, chave_pix, created_at, updated_at, status_alterado_em";
+const INF_OP_COLS = "influencer_id, operadora_slug, id_operadora, ativo, criado_em, atualizado_em";
+/** Lote seguro para `.in` de perfil / operadoras. */
+const INF_IN_CHUNK = 150;
 
 // ─── LOGOS SVG DAS PLATAFORMAS ────────────────────────────────────────────────
 import { PLATAFORMAS, PLAT_COLOR, type Plataforma } from "../../../constants/platforms";
@@ -90,37 +100,56 @@ export default function Influencers() {
   const [cacheMax,      setCacheMax]      = useState(5000);
   const [cacheLimit,    setCacheLimit]    = useState(5000);
   const [statusError,   setStatusError]   = useState("");
+  const [loadError,     setLoadError]     = useState<string | null>(null);
+  const loadGenRef = useRef(0);
 
   const loadData = useCallback(async () => {
+    const gen = ++loadGenRef.current;
     setLoading(true);
-    const { data: opsList } = await supabase
-      .from("operadoras")
-      .select("slug, nome, ativo, brand_action, brand_contrast, brand_bg, brand_text, logo_url, font_url")
-      .order("nome");
-    setOperadorasList(opsList ?? []);
-    const opsMap = Object.fromEntries((opsList ?? []).map((o: Operadora) => [o.slug, o.nome]));
+    setLoadError(null);
+    try {
+      const { data: opsList, error: opsErr } = await supabase
+        .from("operadoras")
+        .select("slug, nome, ativo, brand_action, brand_contrast, brand_bg, brand_text, logo_url, font_url")
+        .order("nome");
+      if (opsErr) throw new Error(opsErr.message);
+      if (gen !== loadGenRef.current) return;
+      setOperadorasList(opsList ?? []);
+      const opsMap = Object.fromEntries((opsList ?? []).map((o: Operadora) => [o.slug, o.nome]));
 
-    const PERFIL_COLS =
-      "id, nome_artistico, nome_completo, status, telefone, cpf, canais, link_twitch, link_youtube, link_kick, link_instagram, link_tiktok, link_discord, link_whatsapp, link_telegram, cache_hora, horas_acordadas, horas_ciclo_iniciado_em, banco, agencia, conta, chave_pix, created_at, updated_at, status_alterado_em";
-    const INF_OP_COLS = "influencer_id, operadora_slug, id_operadora, ativo, criado_em, atualizado_em";
-
-    if (showManagementUI) {
-      const { data: profiles } = await supabase
-        .from("profiles").select("id, name, email, ativo").eq("role", "influencer").order("name");
-      if (profiles) {
-        const ids = profiles.map((p: { id: string }) => p.id);
-        const [perfisRes, opsRes] = await Promise.all([
-          ids.length > 0 ? supabase.from("influencer_perfil").select(PERFIL_COLS).in("id", ids) : { data: [] },
-          ids.length > 0 ? supabase.from("influencer_operadoras").select(INF_OP_COLS).in("influencer_id", ids) : { data: [] },
+      if (showManagementUI) {
+        type ProfileRow = { id: string; name?: string | null; email?: string | null; ativo?: boolean | null };
+        const profiles = await fetchAllPages<ProfileRow>(async (from, to) =>
+          await supabase
+            .from("profiles")
+            .select("id, name, email, ativo")
+            .eq("role", "influencer")
+            .order("name")
+            .range(from, to),
+        );
+        if (gen !== loadGenRef.current) return;
+        const ids = profiles.map((p) => p.id);
+        const [perfisRows, opsRows] = await Promise.all([
+          fetchInBatched<Perfil>(ids, INF_IN_CHUNK, async (slice) => {
+            const { data, error } = await supabase.from("influencer_perfil").select(PERFIL_COLS).in("id", slice);
+            if (error) throw new Error(error.message);
+            return (data ?? []) as Perfil[];
+          }),
+          fetchInBatched<InfluencerOperadora>(ids, INF_IN_CHUNK, async (slice) => {
+            const { data, error } = await supabase.from("influencer_operadoras").select(INF_OP_COLS).in("influencer_id", slice);
+            if (error) throw new Error(error.message);
+            return (data ?? []) as InfluencerOperadora[];
+          }),
         ]);
+        if (gen !== loadGenRef.current) return;
         const perfisMap: Record<string, Perfil> = {};
-        (perfisRes.data ?? []).forEach((p: Perfil) => { perfisMap[p.id] = p; });
+        perfisRows.forEach((p) => { perfisMap[p.id] = p; });
         const opsPorInf: Record<string, InfluencerOperadora[]> = {};
-        (opsRes.data ?? []).forEach((o: InfluencerOperadora) => {
+        opsRows.forEach((o) => {
           if (!opsPorInf[o.influencer_id]) opsPorInf[o.influencer_id] = [];
           opsPorInf[o.influencer_id].push({ ...o, operadora_nome: opsMap[o.operadora_slug] ?? o.operadora_nome });
         });
-        const mapped = profiles.map((p: { id: string; name?: string | null; email?: string | null; ativo?: boolean | null }) => ({
+        const mapped = profiles.map((p) => ({
           id: p.id,
           name: p.name ?? p.email ?? "",
           email: p.email ?? "",
@@ -131,8 +160,8 @@ export default function Influencers() {
         setList(mapped);
 
         const caches = mapped
-          .map((i: Influencer) => i.perfil?.cache_hora ?? 0)
-          .filter((v: number) => v > 0);
+          .map((i) => i.perfil?.cache_hora ?? 0)
+          .filter((v) => v > 0);
         if (caches.length > 0) {
           const mx = Math.max(...caches);
           setCacheMax(mx);
@@ -141,27 +170,41 @@ export default function Influencers() {
           setCacheMax(5000);
           setCacheLimit(5000);
         }
+      } else {
+        if (!userIdEfetivo) {
+          setList([]);
+          return;
+        }
+        const [perfilRes, opsRes] = await Promise.all([
+          supabase.from("influencer_perfil").select(PERFIL_COLS).eq("id", userIdEfetivo).single(),
+          supabase.from("influencer_operadoras").select(INF_OP_COLS).eq("influencer_id", userIdEfetivo),
+        ]);
+        if (perfilRes.error) throw new Error(perfilRes.error.message);
+        if (opsRes.error) throw new Error(opsRes.error.message);
+        if (gen !== loadGenRef.current) return;
+        const perfil = perfilRes.data ?? null;
+        const operadoras = ((opsRes.data ?? []) as InfluencerOperadora[]).map((o) => ({
+          ...o,
+          operadora_nome: opsMap[o.operadora_slug] ?? o.operadora_nome,
+        }));
+        setList([{
+          id: userIdEfetivo,
+          name: nomeEfetivo || user?.name || "",
+          email: emailEfetivo || user?.email || "",
+          perfil,
+          operadoras,
+        }]);
       }
-    } else {
-      if (!userIdEfetivo) return;
-      const [perfilRes, opsRes] = await Promise.all([
-        supabase.from("influencer_perfil").select(PERFIL_COLS).eq("id", userIdEfetivo).single(),
-        supabase.from("influencer_operadoras").select(INF_OP_COLS).eq("influencer_id", userIdEfetivo),
-      ]);
-      const perfil = perfilRes.data ?? null;
-      const operadoras = ((opsRes.data ?? []) as InfluencerOperadora[]).map((o) => ({
-        ...o,
-        operadora_nome: opsMap[o.operadora_slug] ?? o.operadora_nome,
-      }));
-      setList([{
-        id: userIdEfetivo,
-        name: nomeEfetivo || user?.name || "",
-        email: emailEfetivo || user?.email || "",
-        perfil,
-        operadoras,
-      }]);
+    } catch (err) {
+      console.error("Influencers loadData:", err);
+      if (gen !== loadGenRef.current) return;
+      setList([]);
+      setLoadError(
+        "Não foi possível carregar os influencers. Se o problema persistir, entre em contato com o suporte.",
+      );
+    } finally {
+      if (gen === loadGenRef.current) setLoading(false);
     }
-    setLoading(false);
   }, [showManagementUI, user, userIdEfetivo, nomeEfetivo, emailEfetivo]);
 
   useEffect(() => { void loadData(); }, [loadData]);
@@ -508,20 +551,32 @@ export default function Influencers() {
       )}
 
       {/* Lista */}
-      {loading ? (
+      {loadError ? (
+        <div role="alert" aria-live="polite" style={{ ...getPageContentBoxStyle(brand, t, { padding: 48, textAlign: "center" }), color: "#e84025", fontFamily: FONT.body, fontSize: 13 }}>
+          {loadError}
+        </div>
+      ) : loading ? (
         <div
           role="status"
           aria-label="Carregando influencers"
-          style={{ textAlign: "center", padding: "60px", color: t.textMuted, fontFamily: FONT.body, display: "flex", alignItems: "center", justifyContent: "center" }}
+          style={{ textAlign: "center", padding: "60px", color: t.textMuted, fontFamily: FONT.body, display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}
         >
           <Loader2 size={20} className="app-lucide-spin" style={{ color: "var(--brand-primary, #7c3aed)" }} aria-hidden="true" />
+          <span style={{ fontSize: 13 }}>Carregando…</span>
         </div>
       ) : filtered.length === 0 ? (
         <div style={{ ...getPageContentBoxStyle(brand, t, { padding: 48, textAlign: "center" }), color: t.textMuted, fontFamily: FONT.body }}>
           Nenhum influencer encontrado.
         </div>
       ) : (
-        filtered.map((inf) => {
+        <TabelaComPaginacao
+          items={filtered}
+          t={t}
+          resetKey={`${filterStatus}|${filterPlat}|${filterOp}|${search}|${cacheLimit}`}
+        >
+          {(linhas) => (
+            <>
+              {linhas.map((inf) => {
           const p          = inf.perfil;
           const canais     = p?.canais ?? [];
           const opsAtivas  = (inf.operadoras ?? []).filter((o) => o.ativo);
@@ -606,42 +661,27 @@ export default function Influencers() {
                 </div>
               </div>
               <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-                <button
-                  type="button"
+                <BtnIconeAcaoLinha
+                  label={tooltipAcao("Ver perfil")}
                   onClick={() => setModal({ mode: "visualizar", inf })}
-                  aria-label={`Ver perfil de ${p?.nome_artistico || inf.name}`}
-                  style={{
-                    display: "inline-flex", alignItems: "center", gap: 6,
-                    padding: "8px 14px", borderRadius: 10,
-                    border: `1px solid ${t.cardBorder}`, background: t.inputBg ?? t.cardBg,
-                    color: t.textMuted, fontSize: 12, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer",
-                    lineHeight: 1,
-                  }}
                 >
-                  <span style={{ display: "inline-flex", alignItems: "center", lineHeight: 0 }}><Eye size={13} aria-hidden="true" /></span>
-                  <span style={{ display: "inline-flex", alignItems: "center" }}>Ver</span>
-                </button>
+                  <Eye size={13} aria-hidden="true" />
+                </BtnIconeAcaoLinha>
                 {podeEditarInf(inf.id) && (
-                  <button
-                    type="button"
+                  <BtnIconeAcaoLinha
+                    label={tooltipAcao("Editar perfil")}
                     onClick={() => setModal({ mode: "editar", inf })}
-                    aria-label={`Editar perfil de ${p?.nome_artistico || inf.name}`}
-                    style={{
-                      display: "inline-flex", alignItems: "center", gap: 6,
-                      padding: "8px 14px", borderRadius: 10, border: "none", cursor: "pointer",
-                      background: ctaGradient,
-                      color: "#fff", fontSize: 12, fontWeight: 700, fontFamily: FONT.body,
-                      lineHeight: 1,
-                    }}
                   >
-                    <span style={{ display: "inline-flex", alignItems: "center", lineHeight: 0 }}><Pencil size={13} aria-hidden="true" /></span>
-                    <span style={{ display: "inline-flex", alignItems: "center" }}>Editar</span>
-                  </button>
+                    <Pencil size={13} aria-hidden="true" />
+                  </BtnIconeAcaoLinha>
                 )}
               </div>
             </div>
           );
-        })
+              })}
+            </>
+          )}
+        </TabelaComPaginacao>
       )}
 
       {modal?.mode === "visualizar" && modal.inf && (

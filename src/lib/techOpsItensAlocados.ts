@@ -513,16 +513,26 @@ export async function fetchHistoricoChecklistItem(
   entidadeTipo: OrdemSaidaItemTipo,
   entidadeId: string,
 ): Promise<HistoricoChecklistEvento[]> {
-  const { data, error } = await supabase
-    .from("tech_ops_itens_alocados_historico")
-    .select("id, created_at, autor_nome, tipo_verificacao, status_anterior, status_novo, observacao")
-    .eq("entidade_tipo", entidadeTipo)
-    .eq("entidade_id", entidadeId)
-    .eq("tipo_evento", "checklist")
-    .order("created_at", { ascending: false })
-    .limit(100);
-  if (error) throw error;
-  return (data ?? []).map((h) => ({
+  const data = await fetchAllPages<{
+    id: string;
+    created_at: string;
+    autor_nome: string | null;
+    tipo_verificacao: TipoVerificacaoChecklist | null;
+    status_anterior: ItemAlocadoStatus | null;
+    status_novo: ItemAlocadoStatus | null;
+    observacao: string | null;
+  }>(async (from, to) =>
+    supabase
+      .from("tech_ops_itens_alocados_historico")
+      .select("id, created_at, autor_nome, tipo_verificacao, status_anterior, status_novo, observacao")
+      .eq("entidade_tipo", entidadeTipo)
+      .eq("entidade_id", entidadeId)
+      .eq("tipo_evento", "checklist")
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
+      .range(from, to),
+  );
+  return data.map((h) => ({
     id: h.id as string,
     data_hora: h.created_at as string,
     autor_nome: (h.autor_nome as string) || "—",
@@ -538,21 +548,6 @@ export async function fetchHistoricoMovimentacaoItem(
   entidadeId: string,
   estudioNomePorSlug: Record<string, string>,
 ): Promise<HistoricoMovimentacaoEvento[]> {
-  const { data, error } = await supabase
-    .from("tech_ops_ordem_saida_itens")
-    .select(
-      `
-      quantidade,
-      tech_ops_ordem_saida!inner(
-        id, tipo, competencia, codigo_num, origem_chave, observacao, solicitante_nome, created_at, status
-      )
-    `,
-    )
-    .eq("entidade_tipo", entidadeTipo)
-    .eq("entidade_id", entidadeId)
-    .limit(100);
-  if (error) throw error;
-
   type Emb = {
     id: string;
     tipo: OrdemSaidaRow["tipo"];
@@ -564,8 +559,29 @@ export async function fetchHistoricoMovimentacaoItem(
     created_at: string;
   };
 
+  const data = await fetchAllPages<{
+    quantidade: number;
+    tech_ops_ordem_saida: Emb | Emb[];
+  }>(async (from, to) =>
+    supabase
+      .from("tech_ops_ordem_saida_itens")
+      .select(
+        `
+      id, quantidade,
+      tech_ops_ordem_saida!inner(
+        id, tipo, competencia, codigo_num, origem_chave, observacao, solicitante_nome, created_at, status
+      )
+    `,
+      )
+      .eq("entidade_tipo", entidadeTipo)
+      .eq("entidade_id", entidadeId)
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
+      .range(from, to),
+  );
+
   const out: HistoricoMovimentacaoEvento[] = [];
-  for (const row of data ?? []) {
+  for (const row of data) {
     const osRaw = (row as { tech_ops_ordem_saida: Emb | Emb[] }).tech_ops_ordem_saida;
     const os = Array.isArray(osRaw) ? osRaw[0] : osRaw;
     if (!os) continue;
@@ -908,6 +924,3 @@ export async function fetchManutencoesItensAlocados(params: {
     mesa_label: r.mesa_id ? (mesaMap.get(r.mesa_id as string) ?? "—") : "—",
   }));
 }
-
-/** Evita warning unused fetchAllPages se volume crescer — export reexport. */
-export { fetchAllPages };

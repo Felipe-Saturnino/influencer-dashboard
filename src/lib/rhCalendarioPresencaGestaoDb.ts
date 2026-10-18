@@ -106,6 +106,81 @@ export async function carregarPontoRegistrosDiaLote(
   return { mapa, error: false };
 }
 
+/** Dias civis `YYYY-MM-DD` do mês de `refMesIso` (`YYYY-MM-01`). */
+function diasIsoDoMes(refMesIso: string): string[] {
+  const y = Number(refMesIso.slice(0, 4));
+  const m = Number(refMesIso.slice(5, 7));
+  if (!Number.isFinite(y) || !Number.isFinite(m) || m < 1 || m > 12) return [];
+  const last = new Date(y, m, 0).getDate();
+  const out: string[] = [];
+  const mm = String(m).padStart(2, "0");
+  for (let d = 1; d <= last; d++) {
+    out.push(`${y}-${mm}-${String(d).padStart(2, "0")}`);
+  }
+  return out;
+}
+
+const MES_LOTE_DIA_CONCURRENCY = 8;
+
+/**
+ * Relatório mensal: gestão de vários funcionários via `*_dia_lote` (sem N+1 por fid).
+ * Chaves: `funcionarioId:diaIso`.
+ */
+export async function carregarPresencaGestaoMesLote(
+  supabase: SupabaseClient,
+  funcionarioIds: string[],
+  refMesIso: string,
+): Promise<{ mapa: Map<string, PresencaDiaGestao>; error: boolean }> {
+  const mapa = new Map<string, PresencaDiaGestao>();
+  if (funcionarioIds.length === 0) return { mapa, error: false };
+  const dias = diasIsoDoMes(refMesIso);
+  let hadError = false;
+  for (let i = 0; i < dias.length; i += MES_LOTE_DIA_CONCURRENCY) {
+    const slice = dias.slice(i, i + MES_LOTE_DIA_CONCURRENCY);
+    const results = await Promise.all(
+      slice.map((dia) => carregarPresencaGestaoDiaLote(supabase, funcionarioIds, dia)),
+    );
+    for (const r of results) {
+      if (r.error) hadError = true;
+      for (const [k, v] of r.mapa) mapa.set(k, v);
+    }
+  }
+  return { mapa, error: hadError };
+}
+
+/**
+ * Relatório mensal: ponto de vários funcionários via `*_dia_lote` (sem N+1 por fid).
+ * Chaves: `funcionarioId:diaIso`.
+ */
+export async function carregarPontoRegistrosMesLote(
+  supabase: SupabaseClient,
+  funcionarioIds: string[],
+  refMesIso: string,
+): Promise<{
+  mapa: Map<string, { check_in_at: string | null; check_out_at: string | null }>;
+  error: boolean;
+}> {
+  const mapa = new Map<string, { check_in_at: string | null; check_out_at: string | null }>();
+  if (funcionarioIds.length === 0) return { mapa, error: false };
+  const dias = diasIsoDoMes(refMesIso);
+  let hadError = false;
+  for (let i = 0; i < dias.length; i += MES_LOTE_DIA_CONCURRENCY) {
+    const slice = dias.slice(i, i + MES_LOTE_DIA_CONCURRENCY);
+    const results = await Promise.all(
+      slice.map((dia) => carregarPontoRegistrosDiaLote(supabase, funcionarioIds, dia)),
+    );
+    for (let j = 0; j < results.length; j++) {
+      const r = results[j]!;
+      const dia = slice[j]!;
+      if (r.error) hadError = true;
+      for (const [fid, pt] of r.mapa) {
+        mapa.set(chavePresencaGestao(fid, dia), pt);
+      }
+    }
+  }
+  return { mapa, error: hadError };
+}
+
 export type SalvarPresencaGestaoResultado = {
   ok: boolean;
   /** true quando a RPC negou por escopo/permissão de Editar */

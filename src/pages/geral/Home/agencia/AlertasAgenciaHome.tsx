@@ -10,12 +10,16 @@ import {
 
 export function AlertasAgenciaHome({
   cadastrosIncompletosCount,
+  cadastrosIncompletosNomes,
   horasPendentesCount,
   horasPendentesTotal,
+  horasPendentesNomes,
 }: {
   cadastrosIncompletosCount: number;
+  cadastrosIncompletosNomes: string[];
   horasPendentesCount: number;
   horasPendentesTotal: number;
+  horasPendentesNomes: string[];
 }) {
   const { propsFor } = useAppPageNav();
   const showCadastro = cadastrosIncompletosCount > 0;
@@ -27,7 +31,9 @@ export function AlertasAgenciaHome({
     <>
       {showCadastro ? (
         <HomeAlertaBox variante="acao">
-          <p style={{ margin: "0 0 12px" }}>{mensagemCadastrosIncompletosAgencia(cadastrosIncompletosCount)}</p>
+          <p style={{ margin: "0 0 12px" }}>
+            {mensagemCadastrosIncompletosAgencia(cadastrosIncompletosCount, cadastrosIncompletosNomes)}
+          </p>
           <a {...propsFor("influencers")} style={homeAlertaCtaStyle("acao")}>
             {AGENCIA_HOME_CADASTRO_INCOMPLETO_CTA}
           </a>
@@ -36,7 +42,11 @@ export function AlertasAgenciaHome({
       {showHoras ? (
         <HomeAlertaBox variante="acao">
           <p style={{ margin: "0 0 12px" }}>
-            {mensagemHorasPendentesAgencia(horasPendentesCount, horasPendentesTotal)}
+            {mensagemHorasPendentesAgencia(
+              horasPendentesCount,
+              horasPendentesTotal,
+              horasPendentesNomes,
+            )}
           </p>
           <a {...propsFor("agenda")} style={homeAlertaCtaStyle("acao")}>
             {AGENCIA_HOME_HORAS_PENDENTES_CTA}

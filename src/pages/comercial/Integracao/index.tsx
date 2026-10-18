@@ -62,6 +62,10 @@ import {
 } from "./constants";
 import type { IntegracaoRow, MarcaFechadaOpcao } from "./types";
 import { filterIntegracoes, sortIntegracoes } from "./helpers";
+import { fetchAllPages } from "../../../lib/supabasePaginate";
+
+const MSG_ERRO_CARREGAR =
+  "Não foi possível carregar as integrações. Se o problema persistir, entre em contato com o suporte.";
 
 const TAB_ICONS: Record<IntegracaoTab, ReactNode> = {
   todos: <LayoutList {...FILTRO_BAR_TAB_ICON_PROPS} />,
@@ -98,6 +102,7 @@ export default function Integracao() {
   const [agregadoraOpcoes, setAgregadoraOpcoes] = useState<string[]>([]);
   const [marcasFechadas, setMarcasFechadas] = useState<MarcaFechadaOpcao[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [sort, setSort] = useState<{ col: TableColIntegracao; dir: SortDir }>({
     col: "status",
     dir: "asc",
@@ -116,50 +121,69 @@ export default function Integracao() {
   const loadData = useCallback(async (opts?: { showLoading?: boolean }) => {
     const showLoading = opts?.showLoading !== false;
     if (showLoading) setLoading(true);
+    setLoadError(null);
 
-    const [intRes, aggRes, prodRes] = await Promise.all([
-      supabase
-        .from("comercial_integracoes")
-        .select(
-          "id, marca_id, operador_nome, prioridade, tipo, caminho, pam, agregadora, status, comentario",
-        )
-        .order("operador_nome")
-        .limit(2000),
-      supabase.from("comercial_agregadoras").select("nome").order("nome").limit(500),
-      supabase
-        .from("comercial_marca_produtos")
-        .select("marca_id, produto, status_produto, marca:comercial_marcas(id, nome)")
-        .in("status_produto", ["contrato_assinado", "ativo"])
-        .limit(5000),
-    ]);
+    try {
+      const [intRows, aggRows, prodRows] = await Promise.all([
+        fetchAllPages<Record<string, unknown>>(async (from, to) =>
+          supabase
+            .from("comercial_integracoes")
+            .select(
+              "id, marca_id, operador_nome, prioridade, tipo, caminho, pam, agregadora, status, comentario",
+            )
+            .order("operador_nome")
+            .order("id")
+            .range(from, to),
+        ),
+        fetchAllPages<{ nome: string }>(async (from, to) =>
+          supabase
+            .from("comercial_agregadoras")
+            .select("id, nome")
+            .order("nome")
+            .order("id")
+            .range(from, to),
+        ),
+        fetchAllPages<Record<string, unknown>>(async (from, to) =>
+          supabase
+            .from("comercial_marca_produtos")
+            .select("marca_id, produto, status_produto, marca:comercial_marcas(id, nome)")
+            .in("status_produto", ["contrato_assinado", "ativo"])
+            .order("marca_id")
+            .order("produto")
+            .range(from, to),
+        ),
+      ]);
 
-    if (intRes.error) console.error(intRes.error);
-    if (aggRes.error) console.error(aggRes.error);
-    if (prodRes.error) console.error(prodRes.error);
+      setRows(intRows.map((r) => mapRow(r)));
+      setAgregadoraOpcoes(
+        aggRows
+          .map((r) => String(r.nome ?? "").trim())
+          .filter(Boolean),
+      );
 
-    setRows((intRes.data ?? []).map((r) => mapRow(r as Record<string, unknown>)));
-    setAgregadoraOpcoes(
-      (aggRes.data ?? [])
-        .map((r) => String((r as { nome?: string }).nome ?? "").trim())
-        .filter(Boolean),
-    );
-
-    const byMarca = new Map<string, MarcaFechadaOpcao>();
-    for (const raw of prodRes.data ?? []) {
-      const marcaEmbed = (raw as { marca?: unknown }).marca;
-      const marcaObj = Array.isArray(marcaEmbed) ? marcaEmbed[0] : marcaEmbed;
-      if (!marcaObj || typeof marcaObj !== "object") continue;
-      const m = marcaObj as { id?: string; nome?: string };
-      const id = String(m.id ?? raw.marca_id ?? "");
-      const nome = String(m.nome ?? "").trim();
-      if (!id || !nome) continue;
-      if (!byMarca.has(id)) byMarca.set(id, { id, nome });
+      const byMarca = new Map<string, MarcaFechadaOpcao>();
+      for (const raw of prodRows) {
+        const marcaEmbed = (raw as { marca?: unknown }).marca;
+        const marcaObj = Array.isArray(marcaEmbed) ? marcaEmbed[0] : marcaEmbed;
+        if (!marcaObj || typeof marcaObj !== "object") continue;
+        const m = marcaObj as { id?: string; nome?: string };
+        const id = String(m.id ?? raw.marca_id ?? "");
+        const nome = String(m.nome ?? "").trim();
+        if (!id || !nome) continue;
+        if (!byMarca.has(id)) byMarca.set(id, { id, nome });
+      }
+      setMarcasFechadas(
+        [...byMarca.values()].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")),
+      );
+    } catch (e: unknown) {
+      console.error("[Integracao] loadData:", e);
+      setRows([]);
+      setAgregadoraOpcoes([]);
+      setMarcasFechadas([]);
+      setLoadError(MSG_ERRO_CARREGAR);
+    } finally {
+      if (showLoading) setLoading(false);
     }
-    setMarcasFechadas(
-      [...byMarca.values()].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")),
-    );
-
-    if (showLoading) setLoading(false);
   }, []);
 
   useEffect(() => {
@@ -220,9 +244,11 @@ export default function Integracao() {
       return "Não foi possível criar a integração. Se o problema persistir, entre em contato com o suporte.";
     }
 
-    await insertHistorico(data.id, "criado", null, "Não Iniciado");
-    await insertHistorico(data.id, "prioridade", null, PRIORIDADE_LABEL[payload.prioridade]);
-    await insertHistorico(data.id, "tipo", null, TIPO_INTEGRACAO_LABEL[payload.tipo]);
+    await Promise.all([
+      insertHistorico(data.id, "criado", null, "Não Iniciado"),
+      insertHistorico(data.id, "prioridade", null, PRIORIDADE_LABEL[payload.prioridade]),
+      insertHistorico(data.id, "tipo", null, TIPO_INTEGRACAO_LABEL[payload.tipo]),
+    ]);
     await loadData({ showLoading: false });
     setTab("nao_iniciados");
     return null;
@@ -337,25 +363,45 @@ export default function Integracao() {
   async function openVerOperador(row: IntegracaoRow) {
     if (carregandoVer) return;
     const cached = marcasVerCache.find((m) => m.id === row.marca_id);
-    if (cached && marcasVerCache.length > 0) {
+    if (cached) {
       setVerMarca(cached);
       return;
     }
     setCarregandoVer(true);
-    const { data, error } = await supabase
-      .from("comercial_marcas")
-      .select(PIPELINE_MARCA_SELECT_EMBED)
-      .order("nome")
-      .limit(5000);
-    setCarregandoVer(false);
-    if (error) {
-      console.error(error);
-      return;
+    try {
+      const { data: alvoRaw, error: alvoErr } = await supabase
+        .from("comercial_marcas")
+        .select(PIPELINE_MARCA_SELECT_EMBED)
+        .eq("id", row.marca_id)
+        .maybeSingle();
+      if (alvoErr) throw alvoErr;
+      if (!alvoRaw) {
+        setVerMarca(null);
+        return;
+      }
+      const alvo = mapPipelineMarcaFromDb(alvoRaw as Record<string, unknown>);
+      const empresaId = alvo.empresa.id;
+      let siblings: PipelineMarcaRow[] = [alvo];
+      if (empresaId) {
+        const { data: sibRaw, error: sibErr } = await supabase
+          .from("comercial_marcas")
+          .select(PIPELINE_MARCA_SELECT_EMBED)
+          .eq("empresa_id", empresaId)
+          .order("nome");
+        if (sibErr) throw sibErr;
+        siblings = (sibRaw ?? []).map((r) => mapPipelineMarcaFromDb(r as Record<string, unknown>));
+      }
+      setMarcasVerCache((prev) => {
+        const byId = new Map(prev.map((m) => [m.id, m]));
+        for (const m of siblings) byId.set(m.id, m);
+        return [...byId.values()];
+      });
+      setVerMarca(siblings.find((m) => m.id === row.marca_id) ?? alvo);
+    } catch (e: unknown) {
+      console.error("[Integracao] openVerOperador:", e);
+    } finally {
+      setCarregandoVer(false);
     }
-    const mapped = (data ?? []).map((r) => mapPipelineMarcaFromDb(r as Record<string, unknown>));
-    setMarcasVerCache(mapped);
-    const alvo = mapped.find((m) => m.id === row.marca_id) ?? null;
-    setVerMarca(alvo);
   }
 
   function toggleSort(col: TableColIntegracao) {
@@ -458,6 +504,41 @@ export default function Integracao() {
         </div>
       </div>
 
+      <div
+        id={`panel-integracao-${tab}`}
+        role="tabpanel"
+        aria-labelledby={`tab-integracao-${tab}`}
+        tabIndex={0}
+      >
+      {loadError ? (
+        <div
+          role="alert"
+          aria-live="polite"
+          style={pageBox}
+        >
+          <div style={{ padding: "40px 0", textAlign: "center", fontFamily: FONT.body }}>
+            <p style={{ color: "#e84025", fontSize: 13, marginBottom: 12 }}>{loadError}</p>
+            <button
+              type="button"
+              onClick={() => void loadData()}
+              style={{
+                padding: "10px 20px",
+                borderRadius: 10,
+                border: `1px solid ${t.cardBorder}`,
+                background: t.inputBg,
+                color: t.text,
+                fontSize: 13,
+                fontWeight: 700,
+                fontFamily: FONT.body,
+                cursor: "pointer",
+              }}
+            >
+              Tentar novamente
+            </button>
+          </div>
+        </div>
+      ) : (
+        <>
       <div style={pageBox}>
         <SectionTitle sub="Totais por status da integração">KPIs Consolidados</SectionTitle>
         {loading ? (
@@ -542,6 +623,9 @@ export default function Integracao() {
             )}
           </TabelaComPaginacao>
         )}
+      </div>
+        </>
+      )}
       </div>
 
       {mostrarNova ? (

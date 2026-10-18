@@ -41,12 +41,12 @@ export function KpisGestorMarketing({
           <HomeKpiCard label="GGR" value={kpis?.resultado.ggrFmt ?? "—"} icon={<TrendingUp size={16} aria-hidden />} />
           <HomeKpiCard
             label="Registros"
-            value={kpis ? String(kpis.resultado.registros) : "—"}
+            value={kpis?.resultado.registrosFmt ?? "—"}
             icon={<UserPlus size={16} aria-hidden />}
           />
           <HomeKpiCard
             label="FTDs"
-            value={kpis ? kpis.resultado.ftds.toLocaleString("pt-BR") : "—"}
+            value={kpis?.resultado.ftdsFmt ?? "—"}
             icon={<Trophy size={16} aria-hidden />}
           />
           <HomeKpiCard
@@ -76,14 +76,10 @@ export function KpisGestorMarketing({
         <HomeKpiCard label="GGR" value={kpis.resultado.ggrFmt} icon={<TrendingUp size={16} aria-hidden />} />
         <HomeKpiCard
           label="Registros"
-          value={kpis.resultado.registros.toLocaleString("pt-BR")}
+          value={kpis.resultado.registrosFmt}
           icon={<UserPlus size={16} aria-hidden />}
         />
-        <HomeKpiCard
-          label="FTDs"
-          value={kpis.resultado.ftds.toLocaleString("pt-BR")}
-          icon={<Trophy size={16} aria-hidden />}
-        />
+        <HomeKpiCard label="FTDs" value={kpis.resultado.ftdsFmt} icon={<Trophy size={16} aria-hidden />} />
         <HomeKpiCard
           label="Depósitos"
           value={kpis.resultado.depositosFmt}
@@ -96,17 +92,17 @@ export function KpisGestorMarketing({
       <div className="app-grid-kpi-4" style={{ gap: 12 }}>
         <HomeKpiCard
           label="Postagens"
-          value={kpis.acoes.postagens.toLocaleString("pt-BR")}
+          value={kpis.acoes.postagensFmt}
           icon={<Bookmark size={16} aria-hidden />}
         />
         <HomeKpiCard
           label="Novos Seguidores"
-          value={kpis.acoes.novosSeguidores.toLocaleString("pt-BR")}
+          value={kpis.acoes.novosSeguidoresFmt}
           icon={<Mic size={16} aria-hidden />}
         />
         <HomeKpiCard
           label="Impressões Totais"
-          value={kpis.acoes.impressoes.toLocaleString("pt-BR")}
+          value={kpis.acoes.impressoesFmt}
           icon={<Sparkles size={16} aria-hidden />}
         />
         <HomeKpiCard
@@ -116,7 +112,7 @@ export function KpisGestorMarketing({
         />
       </div>
       <p style={{ ...HOME_BODY_MUTED, color: t.textMuted, marginTop: 14, fontSize: 12 }}>
-        Quer saber mais? Acessa o{" "}
+        Quer saber mais? Acesse o{" "}
         <a {...propsFor("dash_midias_sociais")} style={HOME_LINK_BUTTON}>
           Mídias Sociais
         </a>

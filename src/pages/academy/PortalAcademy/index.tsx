@@ -144,6 +144,20 @@ const SUBTAB_ICONS: Record<string, ReactNode> = {
 
 const ERRO_CARREGAR =
   "Não foi possível carregar o portal. Se o problema persistir, entre em contato com o suporte.";
+const ERRO_SETORES =
+  "Não foi possível carregar os setores do colaborador. A ciência dos manuais pode ficar incompleta.";
+
+const BTN_RETRY_STYLE = {
+  fontFamily: FONT.body,
+  fontSize: 13,
+  fontWeight: 700,
+  padding: "8px 14px",
+  borderRadius: 10,
+  border: "1px solid rgba(232,64,37,0.35)",
+  background: "transparent",
+  color: "#e84025",
+  cursor: "pointer",
+} as const;
 
 function tabsPortalKeys(canEditarOk: boolean): AbaPortal[] {
   const keys: AbaPortal[] = ["comunicados", "dicas", "manuais"];
@@ -308,8 +322,8 @@ function filtrarManuaisPortal(
 }
 
 export default function PortalAcademyPage() {
-  const { theme: t, user } = useApp();
-  const { email: emailEfetivo, userId: userIdEfetivo } = useIdentidadeEfetiva();
+  const { theme: t } = useApp();
+  const { email: emailEfetivo, userId: userIdEfetivo, somenteLeitura } = useIdentidadeEfetiva();
   const brand = useDashboardBrand();
   const perm = usePermission("academy_portal");
 
@@ -348,6 +362,7 @@ export default function PortalAcademyPage() {
   const [modalManual, setModalManual] = useState<ManualRow | null>(null);
   const [modalCiencia, setModalCiencia] = useState<{ id: string; titulo: string } | null>(null);
   const [setoresUsuarioAplicavel, setSetoresUsuarioAplicavel] = useState<string[]>([]);
+  const [erroSetores, setErroSetores] = useState<string | null>(null);
 
   const cardShadow = getPageContentBoxShadow(t.isDark);
   const pageBox = getPageContentBoxStyle(brand, t);
@@ -357,25 +372,30 @@ export default function PortalAcademyPage() {
     return () => window.clearTimeout(id);
   }, [busca]);
 
-  useEffect(() => {
+  const carregarSetores = useCallback(async () => {
     if (!emailEfetivo?.trim()) {
       setSetoresUsuarioAplicavel([]);
+      setErroSetores(null);
       return;
     }
-    let cancel = false;
-    void (async () => {
+    setErroSetores(null);
+    try {
       const [funcionario, org] = await Promise.all([
         buscarRhFuncionarioAtivoPorEmailLogin(emailEfetivo),
         carregarOpcoesTimesOrganograma(),
       ]);
-      if (cancel) return;
       const vinculos = flattenVinculosDeGrupos(org.grupos);
       setSetoresUsuarioAplicavel(setoresAplicavelDoUsuario(funcionario, vinculos));
-    })();
-    return () => {
-      cancel = true;
-    };
+    } catch (e) {
+      console.error("[PortalAcademy] setores:", e);
+      setSetoresUsuarioAplicavel([]);
+      setErroSetores(ERRO_SETORES);
+    }
   }, [emailEfetivo]);
+
+  useEffect(() => {
+    void carregarSetores();
+  }, [carregarSetores]);
 
   const carregar = useCallback(async () => {
     if (!userIdEfetivo) return;
@@ -476,6 +496,11 @@ export default function PortalAcademyPage() {
     setMetaAutores(meta);
     } catch (error) {
       console.error("[PortalAcademy] carregar:", error);
+      setComunicados([]);
+      setDicas([]);
+      setManuais([]);
+      setReceipts(new Map());
+      setMetaAutores({});
       setErro(ERRO_CARREGAR);
     } finally {
       setLoading(false);
@@ -612,7 +637,7 @@ export default function PortalAcademyPage() {
   }, [manuaisFiltrados, receipts]);
 
   async function marcarLidoECienteManual(contentId: string) {
-    if (!user?.id) return;
+    if (!userIdEfetivo || somenteLeitura) return;
     const key = academyManualReceiptKey(contentId);
     const now = new Date().toISOString();
     const existing = receipts.get(key);
@@ -622,7 +647,7 @@ export default function PortalAcademyPage() {
         .from("academy_portal_read_receipt")
         .update({ read_at: existing.read_at ?? now, acknowledged_at: now })
         .eq("content_id", contentId)
-        .eq("user_id", user.id);
+        .eq("user_id", userIdEfetivo);
       if (!error) {
         setReceipts((prev) => {
           const n = new Map(prev);
@@ -633,7 +658,7 @@ export default function PortalAcademyPage() {
     } else {
       const { error } = await supabase.from("academy_portal_read_receipt").insert({
         content_id: contentId,
-        user_id: user.id,
+        user_id: userIdEfetivo,
         read_at: now,
         acknowledged_at: now,
       });
@@ -664,6 +689,7 @@ export default function PortalAcademyPage() {
         id="tab-academy-portal-comunicados"
         active={aba === "comunicados"}
         onClick={() => setAba("comunicados")}
+        aria-controls="panel-academy-portal-comunicados"
         icon={<Megaphone {...FILTRO_BAR_TAB_ICON_PROPS} />}
       >
         Comunicados
@@ -672,6 +698,7 @@ export default function PortalAcademyPage() {
         id="tab-academy-portal-dicas"
         active={aba === "dicas"}
         onClick={() => setAba("dicas")}
+        aria-controls="panel-academy-portal-dicas"
         icon={<Newspaper {...FILTRO_BAR_TAB_ICON_PROPS} />}
       >
         Dicas
@@ -680,6 +707,7 @@ export default function PortalAcademyPage() {
         id="tab-academy-portal-manuais"
         active={aba === "manuais"}
         onClick={() => setAba("manuais")}
+        aria-controls="panel-academy-portal-manuais"
         icon={<BookOpen {...FILTRO_BAR_TAB_ICON_PROPS} />}
       >
         Manuais
@@ -689,6 +717,7 @@ export default function PortalAcademyPage() {
           id="tab-academy-portal-gerenciamento"
           active={aba === "gerenciamento"}
           onClick={() => setAba("gerenciamento")}
+          aria-controls="panel-academy-portal-gerenciamento"
           icon={<Settings2 {...FILTRO_BAR_TAB_ICON_PROPS} />}
         >
           Gerenciamento
@@ -768,9 +797,11 @@ export default function PortalAcademyPage() {
     );
   }
 
-  const renderListaVazia = () => (
+  const renderListaVazia = (filtroCat: string) => (
     <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
-      {modoHistorico || buscaDeb ? "Nenhuma postagem encontrada." : "Sem dados para o período selecionado."}
+      {buscaDeb || filtroCat !== "todos"
+        ? "Nenhuma postagem encontrada."
+        : "Sem dados para o período selecionado."}
     </div>
   );
 
@@ -813,28 +844,68 @@ export default function PortalAcademyPage() {
       />
 
       {erro ? (
-        <div role="alert" style={{ color: "#e84025", fontSize: 13, fontFamily: FONT.body, marginBottom: 14 }}>
-          {erro}
+        <div
+          role="alert"
+          aria-live="polite"
+          style={{
+            color: "#e84025",
+            fontSize: 13,
+            fontFamily: FONT.body,
+            marginBottom: 14,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 12,
+            flexWrap: "wrap",
+          }}
+        >
+          <span>{erro}</span>
+          <button type="button" onClick={() => void carregar()} style={BTN_RETRY_STYLE}>
+            Tentar novamente
+          </button>
+        </div>
+      ) : null}
+
+      {erroSetores ? (
+        <div
+          role="alert"
+          aria-live="polite"
+          style={{
+            color: "#e84025",
+            fontSize: 13,
+            fontFamily: FONT.body,
+            marginBottom: 14,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 12,
+            flexWrap: "wrap",
+          }}
+        >
+          <span>{erroSetores}</span>
+          <button type="button" onClick={() => void carregarSetores()} style={BTN_RETRY_STYLE}>
+            Tentar novamente
+          </button>
         </div>
       ) : null}
 
       <div
         role="tabpanel"
-        id={`panel-academy-portal-${aba}`}
-        aria-labelledby={`tab-academy-portal-${aba}`}
+        id="panel-academy-portal-comunicados"
+        aria-labelledby="tab-academy-portal-comunicados"
+        hidden={aba !== "comunicados"}
         tabIndex={0}
-        style={pageBox}
+        style={aba === "comunicados" ? pageBox : undefined}
       >
-        {loading && aba !== "gerenciamento" ? (
+        {aba === "comunicados" && loading ? (
           <div style={{ textAlign: "center", padding: 40, color: t.textMuted, fontFamily: FONT.body }}>
             <Loader2 size={24} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden style={{ marginBottom: 12 }} />
             Carregando…
           </div>
         ) : null}
-
-        {!loading && aba === "comunicados" ? (
+        {!loading && !erro && aba === "comunicados" ? (
           comunicadosLista.length === 0 ? (
-            renderListaVazia()
+            renderListaVazia(filtroCatCom)
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               {comunicadosLista.map((c) => (
@@ -862,10 +933,25 @@ export default function PortalAcademyPage() {
             </div>
           )
         ) : null}
+      </div>
 
-        {!loading && aba === "dicas" ? (
+      <div
+        role="tabpanel"
+        id="panel-academy-portal-dicas"
+        aria-labelledby="tab-academy-portal-dicas"
+        hidden={aba !== "dicas"}
+        tabIndex={0}
+        style={aba === "dicas" ? pageBox : undefined}
+      >
+        {aba === "dicas" && loading ? (
+          <div style={{ textAlign: "center", padding: 40, color: t.textMuted, fontFamily: FONT.body }}>
+            <Loader2 size={24} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden style={{ marginBottom: 12 }} />
+            Carregando…
+          </div>
+        ) : null}
+        {!loading && !erro && aba === "dicas" ? (
           dicasLista.length === 0 ? (
-            renderListaVazia()
+            renderListaVazia(filtroCatDica)
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               {dicasLista.map((d) => (
@@ -894,10 +980,25 @@ export default function PortalAcademyPage() {
             </div>
           )
         ) : null}
+      </div>
 
-        {!loading && aba === "manuais" ? (
+      <div
+        role="tabpanel"
+        id="panel-academy-portal-manuais"
+        aria-labelledby="tab-academy-portal-manuais"
+        hidden={aba !== "manuais"}
+        tabIndex={0}
+        style={aba === "manuais" ? pageBox : undefined}
+      >
+        {aba === "manuais" && loading ? (
+          <div style={{ textAlign: "center", padding: 40, color: t.textMuted, fontFamily: FONT.body }}>
+            <Loader2 size={24} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden style={{ marginBottom: 12 }} />
+            Carregando…
+          </div>
+        ) : null}
+        {!loading && !erro && aba === "manuais" ? (
           manuaisFiltrados.length === 0 ? (
-            renderListaVazia()
+            renderListaVazia(filtroCatManual)
           ) : (
             <AcademyPortalManuaisCards
               rows={manuaisFiltrados.map((m) => ({
@@ -923,26 +1024,37 @@ export default function PortalAcademyPage() {
             />
           )
         ) : null}
-
-        {aba === "gerenciamento" && perm.canEditarOk ? (
-          <GerenciamentoPostagens
-            categoriasCom={categoriasCom}
-            categoriasDica={categoriasDica}
-            categoriasManual={categoriasManual}
-            onDadosAlterados={() => void carregar()}
-            buscaDeb={buscaDeb}
-            modoHistorico={modoHistorico}
-            idxMes={idxMesGer}
-            mesesDisponiveis={mesesGer}
-            filtroTipo={filtroTipoGer}
-            filtroStatus={filtroStatusGer}
-            onMesesCarrosselChange={setMesesGer}
-            onRegisterAbrirCriar={(fn) => {
-              abrirCriarGerenciamentoRef.current = fn;
-            }}
-          />
-        ) : null}
       </div>
+
+      {perm.canEditarOk ? (
+        <div
+          role="tabpanel"
+          id="panel-academy-portal-gerenciamento"
+          aria-labelledby="tab-academy-portal-gerenciamento"
+          hidden={aba !== "gerenciamento"}
+          tabIndex={0}
+          style={aba === "gerenciamento" ? pageBox : undefined}
+        >
+          {aba === "gerenciamento" ? (
+            <GerenciamentoPostagens
+              categoriasCom={categoriasCom}
+              categoriasDica={categoriasDica}
+              categoriasManual={categoriasManual}
+              onDadosAlterados={() => void carregar()}
+              buscaDeb={buscaDeb}
+              modoHistorico={modoHistorico}
+              idxMes={idxMesGer}
+              mesesDisponiveis={mesesGer}
+              filtroTipo={filtroTipoGer}
+              filtroStatus={filtroStatusGer}
+              onMesesCarrosselChange={setMesesGer}
+              onRegisterAbrirCriar={(fn) => {
+                abrirCriarGerenciamentoRef.current = fn;
+              }}
+            />
+          ) : null}
+        </div>
+      ) : null}
 
       {modalManual ? (
         <ModalLerConteudo
@@ -952,7 +1064,9 @@ export default function PortalAcademyPage() {
           corpo={modalManual.corpo}
           imagemStoragePaths={normalizarImagensAcademyPortal(modalManual)}
           anexos={normalizarAnexosAcademyPortal(modalManual)}
-          exigeCiencia={manualExigeCienciaDoUsuario(modalManual, setoresUsuarioAplicavel)}
+          exigeCiencia={
+            !somenteLeitura && manualExigeCienciaDoUsuario(modalManual, setoresUsuarioAplicavel)
+          }
           jaCiente={Boolean(receipts.get(academyManualReceiptKey(modalManual.id))?.acknowledged_at)}
           onClose={() => setModalManual(null)}
           onLidoECiente={() => void marcarLidoECienteManual(modalManual.id)}

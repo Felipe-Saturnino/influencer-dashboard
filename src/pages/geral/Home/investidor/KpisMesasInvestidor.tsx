@@ -46,9 +46,9 @@ export function KpisMesasInvestidor({ sectionIdPrefix = "home-investidor" }: { s
               label="GGR"
               value={fmtBRL(data.totals.ggr)}
               icon={<TrendingUp size={16} aria-hidden />}
-              breakdown={data.porOperadora.map((o) => ({
-                label: o.nome,
-                value: fmtBRL(o.ggr),
+              breakdown={data.porCanal.map((c) => ({
+                label: c.label,
+                value: fmtBRL(c.ggr),
               }))}
             />
             <HomeKpiCard
@@ -56,9 +56,9 @@ export function KpisMesasInvestidor({ sectionIdPrefix = "home-investidor" }: { s
               value={fmtBRL(data.totals.turnover)}
               icon={<ArrowUpDown size={16} aria-hidden />}
               accentVar="--brand-secondary"
-              breakdown={data.porOperadora.map((o) => ({
-                label: o.nome,
-                value: fmtBRL(o.turnover),
+              breakdown={data.porCanal.map((c) => ({
+                label: c.label,
+                value: fmtBRL(c.turnover),
               }))}
             />
             <HomeKpiCard
@@ -66,9 +66,9 @@ export function KpisMesasInvestidor({ sectionIdPrefix = "home-investidor" }: { s
               value={fmtApostas(data.totals.apostas)}
               icon={<Hash size={16} aria-hidden />}
               accentVar="--brand-accent"
-              breakdown={data.porOperadora.map((o) => ({
-                label: o.nome,
-                value: fmtApostas(o.apostas),
+              breakdown={data.porCanal.map((c) => ({
+                label: c.label,
+                value: fmtApostas(c.apostas),
               }))}
             />
           </div>

@@ -93,6 +93,24 @@ import { useIncidentesAbaSinais } from "./IncidentesAbaSinais";
 const ERRO_CARREGAR =
   "Não foi possível carregar os incidentes. Se o problema persistir, entre em contato com o suporte.";
 
+const ERRO_CARREGAR_MESAS =
+  "Não foi possível carregar as mesas. Se o problema persistir, entre em contato com o suporte.";
+
+const ERRO_CARREGAR_FILTROS =
+  "Não foi possível carregar os filtros. Se o problema persistir, entre em contato com o suporte.";
+
+const BTN_RETRY_STYLE = {
+  fontFamily: FONT.body,
+  fontSize: 13,
+  fontWeight: 700,
+  padding: "8px 14px",
+  borderRadius: 10,
+  border: "1px solid rgba(232,64,37,0.35)",
+  background: "transparent",
+  color: "#e84025",
+  cursor: "pointer",
+} as const;
+
 const INCIDENTES_PAGE_SUBTITLE_PROPRIOS =
   "Acompanhe os incidentes registrados sobre a sua operação em mesa.";
 
@@ -227,6 +245,10 @@ export default function Incidentes() {
   const [erro, setErro] = useState<string | null>(null);
   const [pagina, setPagina] = useState(0);
   const [ticketsReload, setTicketsReload] = useState(0);
+  const [loadingMesas, setLoadingMesas] = useState(false);
+  const [erroMesas, setErroMesas] = useState<string | null>(null);
+  const [erroFiltrosBoot, setErroFiltrosBoot] = useState<string | null>(null);
+  const [filtrosBootReload, setFiltrosBootReload] = useState(0);
 
   const [verIncidente, setVerIncidente] = useState<EstudioIncidenteRow | null>(null);
   const [novoOpen, setNovoOpen] = useState(false);
@@ -305,12 +327,20 @@ export default function Incidentes() {
   }, []);
 
   const garantirMesas = useCallback(async () => {
-    if (mesasRows.length > 0) return;
+    if (mesasRows.length > 0) {
+      setErroMesas(null);
+      return;
+    }
+    setLoadingMesas(true);
+    setErroMesas(null);
     try {
       const rows = await fetchMesasSpinCadastroRows();
       setMesasRows(rows);
     } catch (e) {
       console.error("Incidentes: falha ao carregar mesas", e);
+      setErroMesas(ERRO_CARREGAR_MESAS);
+    } finally {
+      setLoadingMesas(false);
     }
   }, [mesasRows.length]);
 
@@ -326,14 +356,16 @@ export default function Incidentes() {
         if (cancel) return;
         setEstudiosRows(estudiosRes);
         setStaffOptions(staffRes);
+        setErroFiltrosBoot(null);
       } catch (e) {
         console.error("Incidentes: falha ao carregar estúdios/staff", e);
+        if (!cancel) setErroFiltrosBoot(ERRO_CARREGAR_FILTROS);
       }
     })();
     return () => {
       cancel = true;
     };
-  }, [perm.loading, podeVer]);
+  }, [perm.loading, podeVer, filtrosBootReload]);
 
   useEffect(() => {
     if (perm.loading || !isProprios) return;
@@ -701,9 +733,7 @@ export default function Incidentes() {
         )}
       </div>
 
-      {aba === "sinais" ? (
-        sinaisAba.panel
-      ) : erro ? (
+      {erroFiltrosBoot ? (
         <div
           role="alert"
           aria-live="polite"
@@ -711,7 +741,7 @@ export default function Incidentes() {
             color: "#e84025",
             fontSize: 13,
             fontFamily: FONT.body,
-            padding: "20px 0",
+            padding: "12px 0 0",
             textAlign: "center",
             display: "flex",
             alignItems: "center",
@@ -720,27 +750,47 @@ export default function Incidentes() {
             flexWrap: "wrap",
           }}
         >
-          <span>{erro}</span>
+          <span>{erroFiltrosBoot}</span>
           <button
             type="button"
-            onClick={recarregarTickets}
-            style={{
-              fontFamily: FONT.body,
-              fontSize: 13,
-              fontWeight: 700,
-              padding: "8px 14px",
-              borderRadius: 10,
-              border: "1px solid rgba(232,64,37,0.35)",
-              background: "transparent",
-              color: "#e84025",
-              cursor: "pointer",
-            }}
+            onClick={() => setFiltrosBootReload((n) => n + 1)}
+            style={BTN_RETRY_STYLE}
           >
-            Tentar de novo
+            Tentar novamente
           </button>
         </div>
-      ) : (
-        <div id="panel-incidentes-tickets" role="tabpanel" aria-labelledby="tab-incidentes-tickets">
+      ) : null}
+
+      <div
+        id="panel-incidentes-tickets"
+        role="tabpanel"
+        aria-labelledby="tab-incidentes-tickets"
+        hidden={aba !== "tickets"}
+      >
+        {erro ? (
+          <div
+            role="alert"
+            aria-live="polite"
+            style={{
+              color: "#e84025",
+              fontSize: 13,
+              fontFamily: FONT.body,
+              padding: "20px 0",
+              textAlign: "center",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 12,
+              flexWrap: "wrap",
+            }}
+          >
+            <span>{erro}</span>
+            <button type="button" onClick={recarregarTickets} style={BTN_RETRY_STYLE}>
+              Tentar de novo
+            </button>
+          </div>
+        ) : (
+          <>
           <div style={getPageContentBoxStyle(brand, t)}>
             <SectionTitle>KPIs Consolidados</SectionTitle>
             <div className="app-grid-kpi-6">
@@ -901,8 +951,11 @@ export default function Incidentes() {
               />
             ) : null}
           </div>
-        </div>
-      )}
+          </>
+        )}
+      </div>
+
+      {sinaisAba.panel}
 
       {verIncidente ? (
         <ModalVerIncidente
@@ -917,6 +970,11 @@ export default function Incidentes() {
       {novoOpen ? (
         <ModalNovoIncidente
           mesas={mesasParaForm}
+          erroMesas={erroMesas}
+          loadingMesas={loadingMesas}
+          onRetryMesas={() => {
+            void garantirMesas();
+          }}
           onClose={() => setNovoOpen(false)}
           onSaved={(_protocolo, opts) => {
             recarregarTickets();
@@ -930,6 +988,11 @@ export default function Incidentes() {
         <ModalNovoIncidente
           mesas={mesasParaForm}
           editando={editarIncidente}
+          erroMesas={erroMesas}
+          loadingMesas={loadingMesas}
+          onRetryMesas={() => {
+            void garantirMesas();
+          }}
           onClose={() => setEditarIncidente(null)}
           onSaved={() => {
             setEditarIncidente(null);

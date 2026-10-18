@@ -25,6 +25,7 @@ import {
   CtaCriarButton,
   FiltroBarPillButton,
   FiltroBarTabButton,
+  FiltroCalendarioTimeSelect,
   FILTRO_BAR_TAB_ICON_PROPS,
   onFiltroBarTabsKeyDown,
   SortTableTh,
@@ -71,6 +72,20 @@ import { ModalAtenderSolicitacao, ModalVerSolicitacao } from "./ModalsVerAtender
 import { ModalAgendarReuniaoSolicitacoes } from "./ModalAgendarReuniaoSolicitacoes";
 import { ModalRegistrarFeedback } from "./ModalRegistrarFeedback";
 import { ModalSolicitarVaga } from "./ModalSolicitarVaga";
+import { useIdentidadeEfetiva } from "../../../hooks/useIdentidadeEfetiva";
+import { buscarRhFuncionarioAtivoPorEmailLogin } from "../../../lib/rhFuncionarioLoginMatch";
+import { normalizarSelecaoUnica } from "../../../lib/rhCalendarioStaffFiltroHelpers";
+import {
+  fetchRhLiderancaEscopoResult,
+  fetchUnidadesFiltroTimeEmpresa,
+  unidadesParaFiltroTime,
+} from "../../../lib/rhLiderancaEscopo";
+import { fetchAllPages } from "../../../lib/supabasePaginate";
+
+const ERRO_CARGA_SOLICITACOES =
+  "Não foi possível carregar as solicitações. Se o problema persistir, entre em contato com o suporte.";
+const ERRO_CARGA_TIMES =
+  "Não foi possível carregar o filtro de time. Se o problema persistir, entre em contato com o suporte.";
 
 const RH_SOLICITACOES_SELECT = `
   id,
@@ -97,7 +112,7 @@ const RH_SOLICITACOES_SELECT = `
   lideranca_nome,
   evidencias_storage_paths,
   calendario_acao:rh_calendario_acoes!rh_solicitacoes_rh_calendario_acao_id_fkey ( payload ),
-  solicitante:rh_funcionarios!rh_solicitacoes_rh_funcionario_id_fkey ( id, nome, org_time:rh_org_times!rh_funcionarios_org_time_id_fkey ( nome ) ),
+  solicitante:rh_funcionarios!rh_solicitacoes_rh_funcionario_id_fkey ( id, nome, org_time_id, org_gerencia_id, org_time:rh_org_times!rh_funcionarios_org_time_id_fkey ( nome ) ),
   atendente:profiles!rh_solicitacoes_atendido_por_fkey ( id, name ),
   vaga:rh_vagas!rh_solicitacoes_rh_vaga_id_fkey ( id, titulo )
 `.trim();
@@ -166,6 +181,15 @@ function nomeTimeSolicitante(row: RhSolicitacaoRow): string {
   return time?.nome?.trim() || "—";
 }
 
+function solicitantePassaFiltroTime(row: RhSolicitacaoRow, timeId: string | null): boolean {
+  if (!timeId) return true;
+  const s = unwrapEmbed(row.solicitante);
+  if (!s) return false;
+  if ((s.org_time_id ?? "").trim() === timeId) return true;
+  if (!(s.org_time_id ?? "").trim() && (s.org_gerencia_id ?? "").trim() === timeId) return true;
+  return false;
+}
+
 function nomeAtendente(row: RhSolicitacaoRow): string {
   return unwrapEmbed(row.atendente)?.name?.trim() || "—";
 }
@@ -196,13 +220,19 @@ export default function RhSolicitacoesPage() {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
   const perm = usePermission("rh_solicitacoes");
+  const { email: emailEfetivo } = useIdentidadeEfetiva();
   const dataTable = useDataTableBlock();
   const pageBox = getPageContentBoxStyle(brand, t);
 
   const [aba, setAba] = useState<RhSolicitacaoAba>("atestados");
   const [filtroStatus, setFiltroStatus] = useState<RhSolicitacaoFiltroStatus>(RH_SOLICITACAO_STATUS_DEFAULT);
+  const [filtroTimeIds, setFiltroTimeIds] = useState<string[]>([]);
+  const [timeItems, setTimeItems] = useState<{ id: string; name: string }[]>([]);
+  const [idsEscopo, setIdsEscopo] = useState<string[] | null>(null);
   const [lista, setLista] = useState<RhSolicitacaoRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [erro, setErro] = useState<string | null>(null);
+  const [erroTimes, setErroTimes] = useState<string | null>(null);
   const [sort, setSort] = useState<{ col: SortCol; dir: SortDir }>({ col: "data", dir: "desc" });
   const [modalVer, setModalVer] = useState<RhSolicitacaoRow | null>(null);
   const [modalAtender, setModalAtender] = useState<RhSolicitacaoRow | null>(null);
@@ -244,25 +274,31 @@ export default function RhSolicitacoesPage() {
 
   const fetchLista = useCallback(async () => {
     setLoading(true);
+    setErro(null);
     const tipos = RH_SOLICITACAO_ABA_TIPOS[aba];
-    let q = supabase
-      .from("rh_solicitacoes")
-      .select(RH_SOLICITACOES_SELECT)
-      .in("tipo", [...tipos])
-      .order("created_at", { ascending: false })
-      .limit(200);
-
     const statusValues = statusFiltroQueryValues(filtroStatus);
-    if (statusValues) {
-      q = statusValues.length === 1 ? q.eq("status", statusValues[0]!) : q.in("status", statusValues);
-    }
-
-    const { data, error } = await q;
-    if (error) {
-      console.error("[RhSolicitacoes]", error);
+    try {
+      const data = await fetchAllPages(async (from, to) => {
+        let q = supabase
+          .from("rh_solicitacoes")
+          .select(RH_SOLICITACOES_SELECT)
+          .in("tipo", [...tipos])
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: true })
+          .range(from, to);
+        if (statusValues) {
+          q =
+            statusValues.length === 1
+              ? q.eq("status", statusValues[0]!)
+              : q.in("status", statusValues);
+        }
+        return q;
+      });
+      setLista(data as unknown as RhSolicitacaoRow[]);
+    } catch (e) {
+      console.error("[RhSolicitacoes]", e);
+      setErro(ERRO_CARGA_SOLICITACOES);
       setLista([]);
-    } else {
-      setLista((data ?? []) as unknown as RhSolicitacaoRow[]);
     }
     setLoading(false);
   }, [filtroStatus, aba]);
@@ -272,6 +308,49 @@ export default function RhSolicitacoesPage() {
     void fetchLista();
   }, [fetchLista, perm.loading, perm.canView]);
 
+  const carregarTimes = useCallback(async () => {
+    if (perm.loading || perm.canView === "nao") return;
+    setErroTimes(null);
+    if (perm.canView === "proprios") {
+      try {
+        const me = emailEfetivo?.trim()
+          ? await buscarRhFuncionarioAtivoPorEmailLogin(emailEfetivo)
+          : null;
+        const escopoFetch = await fetchRhLiderancaEscopoResult(me?.id ?? null);
+        if (!escopoFetch.ok) {
+          setErroTimes(ERRO_CARGA_TIMES);
+          setTimeItems([]);
+          setIdsEscopo([]);
+          return;
+        }
+        const escopo = escopoFetch.escopo;
+        setTimeItems(escopo.ehLider ? unidadesParaFiltroTime(escopo.unidades) : []);
+        const ids = escopo.funcionarioIds.length > 0 ? escopo.funcionarioIds : me?.id ? [me.id] : [];
+        setIdsEscopo(ids);
+      } catch (err) {
+        console.error("[RhSolicitacoes] times proprios", err);
+        setErroTimes(ERRO_CARGA_TIMES);
+        setTimeItems([]);
+        setIdsEscopo([]);
+      }
+      return;
+    }
+    try {
+      const unidades = await fetchUnidadesFiltroTimeEmpresa();
+      setTimeItems(unidadesParaFiltroTime(unidades));
+      setIdsEscopo(null);
+    } catch (err) {
+      console.error("[RhSolicitacoes] times", err);
+      setErroTimes(ERRO_CARGA_TIMES);
+      setTimeItems([]);
+      setIdsEscopo(null);
+    }
+  }, [perm.loading, perm.canView, emailEfetivo]);
+
+  useEffect(() => {
+    void carregarTimes();
+  }, [carregarTimes]);
+
   useEffect(() => {
     setSort({
       col: aba === "reunioes" ? "dataReuniao" : "data",
@@ -279,8 +358,16 @@ export default function RhSolicitacoesPage() {
     });
   }, [aba]);
 
+  const filtroTimeId = filtroTimeIds[0] ?? null;
+  const showTimeFilter = timeItems.length > 0 && (perm.canView === "sim" || perm.canView === "proprios");
+
+  const listaFiltrada = useMemo(
+    () => lista.filter((row) => solicitantePassaFiltroTime(row, filtroTimeId)),
+    [lista, filtroTimeId],
+  );
+
   const listaOrdenada = useMemo(() => {
-    const rows = [...lista];
+    const rows = [...listaFiltrada];
     const { col, dir } = sort;
     rows.sort((a, b) => {
       switch (col) {
@@ -323,7 +410,7 @@ export default function RhSolicitacoesPage() {
       }
     });
     return rows;
-  }, [lista, sort]);
+  }, [listaFiltrada, sort]);
 
   const exibirColunaStatus = todosStatusAtivo;
   const exibirColunasAtendimento =
@@ -375,7 +462,7 @@ export default function RhSolicitacoesPage() {
 
   function renderTabelaFeedback() {
     return (
-      <TabelaComPaginacao items={listaOrdenada} t={t} resetKey={`${aba}-${sort.col}-${sort.dir}-${filtroStatus}`}>
+      <TabelaComPaginacao items={listaOrdenada} t={t} resetKey={`${aba}-${sort.col}-${sort.dir}-${filtroStatus}-${filtroTimeId ?? ""}`}>
         {(linhas, zebraIdx) => (
       <div className="app-table-wrap app-table-wrap--sticky-col" style={getDataTableWrapStyle()}>
         <table style={getDataTableStyle({ minWidth: 860 })}>
@@ -431,7 +518,7 @@ export default function RhSolicitacoesPage() {
     const isVagas = aba === "vagas";
 
     return (
-      <TabelaComPaginacao items={listaOrdenada} t={t} resetKey={`${aba}-${sort.col}-${sort.dir}-${filtroStatus}`}>
+      <TabelaComPaginacao items={listaOrdenada} t={t} resetKey={`${aba}-${sort.col}-${sort.dir}-${filtroStatus}-${filtroTimeId ?? ""}`}>
         {(linhas, zebraIdx) => (
       <div className="app-table-wrap app-table-wrap--sticky-col" style={getDataTableWrapStyle()}>
         <table style={getDataTableStyle({ minWidth: 720 })}>
@@ -576,6 +663,15 @@ export default function RhSolicitacoesPage() {
               {RH_SOLICITACAO_TODOS_STATUS_LABEL}
             </FiltroBarPillButton>
 
+            {showTimeFilter ? (
+              <FiltroCalendarioTimeSelect
+                mode="single"
+                selected={filtroTimeIds}
+                onChange={(ids) => setFiltroTimeIds(normalizarSelecaoUnica(filtroTimeIds, ids))}
+                items={timeItems}
+              />
+            ) : null}
+
             {loading ? (
               <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, color: t.textMuted }}>
                 <Loader2 size={12} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden />
@@ -675,12 +771,82 @@ export default function RhSolicitacoesPage() {
           ) : null}
         </div>
 
+        {erro ? (
+          <div
+            role="alert"
+            style={{
+              marginBottom: 12,
+              fontSize: 13,
+              color: "#e84025",
+              fontFamily: FONT.body,
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              flexWrap: "wrap",
+            }}
+          >
+            <span>{erro}</span>
+            <button
+              type="button"
+              onClick={() => void fetchLista()}
+              style={{
+                fontFamily: FONT.body,
+                fontSize: 13,
+                fontWeight: 700,
+                padding: "8px 14px",
+                borderRadius: 10,
+                border: "1px solid rgba(232,64,37,0.35)",
+                background: "transparent",
+                color: "#e84025",
+                cursor: "pointer",
+              }}
+            >
+              Tentar de novo
+            </button>
+          </div>
+        ) : null}
+
+        {erroTimes ? (
+          <div
+            role="alert"
+            style={{
+              marginBottom: 12,
+              fontSize: 13,
+              color: "#e84025",
+              fontFamily: FONT.body,
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              flexWrap: "wrap",
+            }}
+          >
+            <span>{erroTimes}</span>
+            <button
+              type="button"
+              onClick={() => void carregarTimes()}
+              style={{
+                fontFamily: FONT.body,
+                fontSize: 13,
+                fontWeight: 700,
+                padding: "8px 14px",
+                borderRadius: 10,
+                border: "1px solid rgba(232,64,37,0.35)",
+                background: "transparent",
+                color: "#e84025",
+                cursor: "pointer",
+              }}
+            >
+              Tentar de novo
+            </button>
+          </div>
+        ) : null}
+
         {loading ? (
           <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
             <Loader2 className="app-lucide-spin" size={22} color="var(--brand-primary, #7c3aed)" aria-hidden style={{ marginBottom: 12 }} />
             <div style={{ fontSize: 13 }}>Carregando…</div>
           </div>
-        ) : listaOrdenada.length === 0 ? (
+        ) : erro ? null : listaOrdenada.length === 0 ? (
           <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
             Nenhuma solicitação encontrada.
           </div>
@@ -706,6 +872,7 @@ export default function RhSolicitacoesPage() {
         onSaved={() => void fetchLista()}
         t={t}
         brand={brand}
+        prestadorIdsPermitidos={idsEscopo}
       />
       <ModalRegistrarFeedback
         open={modalFeedback}
@@ -713,6 +880,7 @@ export default function RhSolicitacoesPage() {
         onSaved={() => void fetchLista()}
         t={t}
         brand={brand}
+        prestadorIdsPermitidos={idsEscopo}
       />
       <ModalSolicitarVaga
         open={modalVaga}

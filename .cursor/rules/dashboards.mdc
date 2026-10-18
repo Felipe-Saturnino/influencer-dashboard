@@ -16,7 +16,7 @@ alwaysApply: false
 
 | Área | Caminho principal |
 |---|---|
-| Streamers (3 abas) | `src/pages/dashboards/Streamers/index.tsx` — container, FilterBar partilhada e tabs; conteúdo lazy em `Streamers/DashboardOverview`, `Streamers/DashboardConversao`, `Streamers/DashboardFinanceiro`; estado partilhado em `Streamers/StreamersFiltrosContext.tsx` |
+| Streamers (4 abas) | `src/pages/dashboards/Streamers/index.tsx` — container, FilterBar partilhada e tabs; conteúdo lazy em `Streamers/DashboardOverview`, `Streamers/DashboardConversao`, `Streamers/DashboardJogadores`, `Streamers/DashboardFinanceiro`; estado partilhado em `Streamers/StreamersFiltrosContext.tsx`. Cadastro TAP por jogador: `jogadores` + `jogadores_metricas_diarias` (`src/lib/jogadores.ts`). Métricas da aba Jogadores: `src/lib/jogadoresAbaMetrics.ts` + `src/lib/jogadoresAbaQuery.ts`. |
 | Afiliados (3 abas) | `src/pages/dashboards/AfiliadosDash/index.tsx` — métricas CDA conta afiliados; `FiltroAfiliadoSelect` com cadastro `role=afiliado`; funil 3 etapas (sem Views) |
 | Overview Influencer | `src/pages/dashboards/DashboardOverviewInfluencer/index.tsx` |
 | Overview Afiliado | `src/pages/dashboards/DashboardOverviewAfiliado/index.tsx` — métricas CDA afiliados; sem Lives/Views; catálogo + `useAfiliadosDashboardData` |
@@ -38,8 +38,13 @@ alwaysApply: false
 
 ## Streamers — página unificada
 
-- Uma permissão/rota; **três abas** (Overview, Conversão, Financeiro) com **filtros partilhados** (mês, Histórico, influencer, operadora). Alterações nos filtros aplicam-se à aba visível e mantêm-se ao mudar de aba.
-- **Catálogos e analytics:** `useDashboardCatalogos` partilha perfis, operadoras ativas e vínculos; `fetchInfluencerAnalyticsPeriodoCached` partilha métricas, lives e resultados por período/escopo entre Overview, Conversão, Financeiro e Overview Influencer. A chave deve incluir período, operadoras e influencers efetivamente permitidos.
+- **Empty de período:** `MSG_SEM_DADOS_PERIODO` nos KPIs/Funil/Ranking quando não há linhas no período; `MSG_SEM_DADOS_FILTRO` só quando chip de status/ação zera a vista.
+- **Fetch fase 1:** `Promise.all` analytics ∥ investimento; IDs do filtro de influencers via cache `fetchInfluencerAnalyticsPeriodoCached` (sem fetchAllPages duplicado).
+- **Filtro operadora:** fonte da verdade = SQL (`operadora_slug`); sem refiltro cliente pela junction `influencer_operadoras`.
+
+
+- Uma permissão/rota; **quatro abas** (Overview, Conversão, Jogadores, Financeiro) com **filtros partilhados** (mês, Histórico, influencer, operadora). Alterações nos filtros aplicam-se à aba visível e mantêm-se ao mudar de aba. Aba **Jogadores** (mockup `docs/mockups/streamers-aba-jogadores-mockup.html`) lê `jogadores_metricas_diarias` (TAP + colunas Spin do Revenue Sentinel).
+- **Catálogos e analytics:** `useDashboardCatalogos` partilha **só** `profiles.role = influencer` (+ `influencer_perfil` / vínculos desses IDs), operadoras ativas; afiliados usam `useDashboardAfiliadosCatalogo`. `fetchInfluencerAnalyticsPeriodoCached` partilha métricas, lives e resultados por período/escopo entre Overview, Conversão, Financeiro e Overview Influencer. **Todos Influencers** passa os IDs do catálogo (nunca `null` = tabela inteira com afiliados). A chave deve incluir período, operadoras e influencers efetivamente permitidos.
 - **Loading na FilterBar (modo embed):** cada aba chama `setIsLoading(true/false)` no `StreamersFiltrosContext` durante o fetch; o container (`Streamers/index.tsx`) mostra o indicador quando `sf.isLoading`.
 - **Tabs:** `role="tablist"` / `role="tab"` / `aria-selected`; `tabIndex={ativo ? 0 : -1}` nas abas inativas; **setas ← →** mudam de aba e devolvem foco ao botão da aba destino.
 - **Imports:** ficheiros dentro de `Streamers/*` usam caminhos `../../../../` para `lib/`, `context/`, `components/`, etc.
@@ -54,6 +59,7 @@ alwaysApply: false
 | Streamers → Overview | Gestor / Executivo; Operador; Agência; Influencer (próprios dados) | KPIs Executivos (GGR, Investimento, ROI) |
 | Streamers → Conversão | Idem | Comparativo de Funil |
 | Streamers → Financeiro | Idem | KPIs Financeiros |
+| Streamers → Jogadores | Idem | Ativação em mesa Spin |
 | Social Media | Gestor de Marketing | KPIs Consolidados (GGR, Registros, GGR por Jogador) |
 | Overview Spin (`mesas_spin`) | Gerente de Operações; Operador (escopo mesa) | KPIs Consolidados das Mesas |
 | Overview Influencer | Influencer; Agência; Executivo (escopo); Admin / Gestor | KPIs Executivos (GGR, Investimento, ROI) |
@@ -115,9 +121,9 @@ Alinhado ao **Global** § Hierarquia visual da página. Rollout **página a pág
 - **Comparativo de Jogo / Dados por mesa — jogos ativos:** união do catálogo (`mesas_spin_cadastro` filtrado pelo escopo) **e** jogos presentes no relatório do período (`jogoComparativoKeysFromPorTabelaRows`). Necessário porque mesas network frequentemente têm `operadora_slug` null no cadastro — sem a união, Futebol Brasileiro some para o operador (ex.: Blaze na aba Network).
 - **Gráficos:** o chunk Recharts de Detalhamento e Comparativo de Jogo é carregado somente quando o usuário alterna para **Gráfico**; a visualização padrão em tabela não deve importar Recharts.
 - **Blocos abaixo da dobra:** conteúdo interativo pesado usa `RenderWhenVisible` com margem antecipada para preservar a rolagem sem montar DOM distante da viewport.
-- **Aba Posicionamento:** desabilita navegação de mês (botões ← → ocultos/placeholder), exibe data do dia civil **Brasília** (`hojeIsoBrasil` + `periodoDiaBrasil`), não tem botão Histórico. Dados vêm de `useLobbyPosicionamentoData` (`lobby_monitor_*`), nunca do mesmo fetch do Overview; posições carregadas em lotes (`fetchInBatched`) por volume horário. Consolidados: **Blaze**, **Casa de Apostas**, **Esportiva Bet**, **Jonbet**, **Bateu Bet**, **Rico Bet**, **BRX Bet**, **Donald Bet** e **BetPontoBet** (`LOBBY_POS_SLUGS_CONSOLIDADOS`); monitors `lobby_blaze` / `lobby_cda` / `lobby_esportiva` / `lobby_jonbet` / `lobby_bateu` / `lobby_rico` / `lobby_brx` / `lobby_donald` / `lobby_betponto` (Telecom).
+- **Aba Posicionamento:** desabilita navegação de mês (botões ← → ocultos/placeholder), exibe data do dia civil **Brasília** (`hojeIsoBrasil` + `periodoDiaBrasil`), não tem botão Histórico. Dados vêm de `useLobbyPosicionamentoData` (`lobby_monitor_*`), nunca do mesmo fetch do Overview; posições carregadas em lotes (`fetchInBatched`) por volume horário. Consolidados: **Blaze**, **Casa de Apostas**, **Esportiva Bet**, **Jonbet**, **Bateu Bet**, **Rico Bet**, **BRX Bet**, **Donald Bet**, **BetPontoBet** e **Goldebet** (`LOBBY_POS_SLUGS_CONSOLIDADOS`); monitors `lobby_blaze` / `lobby_cda` / `lobby_esportiva` / `lobby_jonbet` / `lobby_bateu` / `lobby_rico` / `lobby_brx` / `lobby_donald` / `lobby_betponto` / `lobby_goldebet` (Telecom).
 - **Posicionamento — operadora com Dedicado e Network:** nos blocos **Posição atual das mesas**, **Concorrentes à frente**, **Ranking de concorrentes** e **Visibilidade por categoria**, exibir toggle **`Dedicado` / `Network`** (`FiltroBarTabButton`, ícones `Building2` / `Network`) na mesma linha do título — **somente** quando o catálogo Gestão de Estúdios (`operadoraTemCanaisDedicadoENetwork`) indicar os dois canais para a operadora selecionada. Filtro por `canal_estudio` em `LobbyPosicaoRow` (via `mesas_spin_cadastro` + `estudios_spin.tipo`). KPIs consolidados, heatmap e alertas permanecem sem filtro de canal.
-- **Posicionamento — Todas Operadoras:** cards por operadora em **mini-tabela** (colunas **Atual** | **Estúdio** | **Mesa** | **Anterior**). Layout **`app-grid-pos-operadoras`**: 2 colunas no desktop (≥640px → grade 2×N com as nove parceiras), 1 coluna no mobile; cards em altura natural (sem scroll horizontal forçado na mini-tabela). Atual/Anterior usam badge colorido (`posicaoBgColor` / `posicaoTextColor`). **Anterior** = última posição ≠ atual nos últimos **7 dias civis** (`ultimaPosicaoDiferenteNaJanela` / `POS_COMPARACAO_DIFERENTE_DIAS`). **Alertas do período** listam a **alteração mais recente por mesa** nessa janela (`gerarAlertasAlteracoesJanela` — se a mesma mesa mudou várias vezes na mesma operadora, mantém só a linha com maior `sortTs` / data mais nova), com prefixo da operadora — não o recorte automático P1/top3/queda brusca da vista por operadora. Copy canónica por linha: **`{Operadora} — Mesa Dedicada/Network ({Jogo}) — {dd/mm} — {posição anterior} → {posição atual}`** (`labelMesaAlertaPeriodoPosicionamento` + `canal_estudio`/`tipo_jogo` da mesa). Fase 2 histórico enriquece posições via `mesas_spin_cadastro`/`estudios_spin` (cache TanStack `["overview-spin","mesas-spin-metadados"]`, `staleTime` 10 min — compartilhado entre os 9 hooks); se canal ou jogo ainda faltarem, fallback **`Mesa ({mesa_identificacao})`** — nunca «Outros» genérico.
+- **Posicionamento — Todas Operadoras:** cards por operadora em **mini-tabela** (colunas **Atual** | **Estúdio** | **Mesa** | **Anterior**). Layout **`app-grid-pos-operadoras`**: 2 colunas no desktop (≥640px → grade 2×N com as dez parceiras), 1 coluna no mobile; cards em altura natural (sem scroll horizontal forçado na mini-tabela). Atual/Anterior usam badge colorido (`posicaoBgColor` / `posicaoTextColor`). **Anterior** = última posição ≠ atual nos últimos **7 dias civis** (`ultimaPosicaoDiferenteNaJanela` / `POS_COMPARACAO_DIFERENTE_DIAS`). **Alertas do período** listam a **alteração mais recente por mesa** nessa janela (`gerarAlertasAlteracoesJanela` — se a mesma mesa mudou várias vezes na mesma operadora, mantém só a linha com maior `sortTs` / data mais nova), com prefixo da operadora — não o recorte automático P1/top3/queda brusca da vista por operadora. Copy canónica por linha: **`{Operadora} — Mesa Dedicada/Network ({Jogo}) — {dd/mm} — {posição anterior} → {posição atual}`** (`labelMesaAlertaPeriodoPosicionamento` + `canal_estudio`/`tipo_jogo` da mesa). Fase 2 histórico enriquece posições via `mesas_spin_cadastro`/`estudios_spin` (cache TanStack `["overview-spin","mesas-spin-metadados"]`, `staleTime` 10 min — compartilhado entre os 10 hooks); se canal ou jogo ainda faltarem, fallback **`Mesa ({mesa_identificacao})`** — nunca «Outros» genérico.
 - **Posicionamento — carga em duas fases (obrigatório):** fase 1 busca só **hoje + ontem** (colunas completas — KPIs, snapshot, alertas, heatmap **Dia**) e libera `loading`; se não houver snapshot de hoje, usa o **último horário** válido (ontem ou a última execução ok/parcial) e o comparativo dos KPIs passa a **«vs último horário»**. Fase 2 busca a janela do heatmap 7d/30d em **background** (`loadingHistorico`) com **colunas mínimas** (`execucao_id, mesa_identificacao, posicao` — sem `concorrentes_a_frente`). A janela histórica é **exatamente `refDate − 29` dias** (`POS_HISTORICO_DIAS` — as 30 colunas incluem o dia de referência); **sem margem extra**. Visão consolidada («todas») usa `{ historico: true, historicoDias: 6 }` — 7 dias civis para Anterior e Alertas. **Proibido** voltar a bloquear o primeiro paint com a janela histórica ou buscar JSON de concorrentes no histórico. Troca de operadora/`refDate`: ignorar respostas stale (geração). Erro de fetch ≠ vazio — **Tentar de novo** (fase 1: `erro`; fase 2: `erroHistorico` no heatmap/alertas). Zoom de UI (`useDisableAppUiZoom`) **não** se força na página logada — só ambiente QA.
 - **Concorrentes à frente / Ranking de concorrentes:** mesma fonte (`concorrentes_a_frente` por mesa no snapshot). Contagens por tipo vs lista única ordenada por posição — **não** usar só `jogos_a_frente_pior_mesa` no Ranking.
 - **KpiPosCard** é componente local aceito nesta página (delta vs ontem, não MoM). Não replicar noutras páginas — usar `KpiCard` com adaptações.
@@ -169,8 +175,8 @@ Nenhuma exceção documentada. Comparativo de Jogo, Comparativo de mesa e Dados 
 - **Aba KPIs de OCR (Service Manager):** mesma regra de escopo Staff (**Todo o time** / vazio = consolidado do time SM; Staff/próprios = só aquele SM). Fontes: **Sinais** = `sm_sinais` filtrados **no servidor** por `resolver_funcionario_id` / `resolver_id` (`staff_id_tos`); **Tickets** = `estudio_incidentes` cujo **relator** é um SM do escopo (`relator_user_id` / `relator_nome`) — `fetchEstudioIncidentesPorRelatores`. Cards: Sinais, TMA Total, TMA de Atendimento, TMA de Resolução, Tickets (`isInverso` nos TMAs e Tickets; `formatAnterior` em relógio nos TMAs). Tabelas: Por Jogo, Por Estúdio (drilldown mesa), **Equipe** (só visão de time — sinais/TMAs/tickets; **sem** coluna Performance), Detalhamento Diário. **Por Estúdio**, **Equipe** e Detalhamento paginam 20; **Por Jogo** não pagina. Período = mês civil completo capped em **hoje civil Brasília** (`hojeIsoBrasil`). Carga em duas fases: mês atual primeiro, MoM em background (falha do MoM **não** apaga o mês já pintado). Hook `useOverviewPrestadorSmOcr` + `lib/overviewPrestadorSmOcr.ts`. **RLS:** `sm_sinais` também com Ver em `dash_overview_prestador` (`20261106220000_overview_prestador_sm_sinais_rls.sql`).
 - **Carrossel de mês:** `getMesesDisponiveisEscalaCarrossel` (julho/2026+ — inclui piloto de KPIs; início oficial da escala continua agosto). Antes de julho, a lista contém só o mês mínimo.
 - **Histórico:** `FiltroHistoricoButton`; rótulo central **Todo o período**; janela de 13 competências inclusivas; MoM desligado nos KPIs.
-- **Filtros Time / Staff (gestores):** `FiltroCalendarioTimeSelect` + `FiltroCalendarioStaffSelect` (`mode="single"`, `triggerEmptyLabel="Todo o time"`). Times da v1: **Game Presenter** (default), **Shuffler**, **Shift Leader**, **Service Manager** — sem agregador «Todos os Times»; limpar Time restaura o default GP. Staff opcional: vazio = **Todo o time** (consolidado); com Staff = mesma visão que o prestador veria em Próprios. Lista Staff filtrada ao time selecionado.
-- **Escopo próprios (`canView === "proprios"`):** ocultar filtros Time/Staff; auto-vincular `meuRhFuncionarioId` via e-mail de login; caps do time inferidos pelo Organograma do prestador.
+- **Filtros Time / Staff (gestores):** `FiltroCalendarioTimeSelect` + `FiltroCalendarioStaffSelect` (`mode="single"`, `triggerEmptyLabel="Todo o time"`). **Filtro Time** = times ativos + **gerências sem times ativos** (mesma cascata do Calendário: gerência só entra se não tiver time abaixo). Sem agregador «Todos os Times»; default **Game Presenter** se existir, senão o primeiro; limpar Time restaura esse default. Staff opcional: vazio = **Todo o time** (consolidado); com Staff = mesma visão que o prestador veria em Próprios. Lista Staff filtrada ao time/gerência selecionado.
+- **Escopo próprios (`canView === "proprios"`):** se o login **não** for líder no Organograma, ocultar filtros Time/Staff e auto-vincular `meuRhFuncionarioId`. Se for **líder imediato** (time/gerência/diretoria), mostrar Time/Staff só das unidades da cascata (`rh_lideranca_escopo` — mesma regra gerência-sem-time / times-com-filhos); visão de time = consolidado da unidade selecionada. Caps de times não canónicos = sem KPIs de Mesa / sem cobertura de estúdio.
 - **Caps por time** (`lib/overviewPrestadorTeamConfig.ts`): todos os times exibem Movimentações de turno na Escala (`negocia`); só GP tem Cobertura/Distribuição por estúdio; SL/SM usam 2 turnos Diurno/Noturno (MRN/NGT); `kpisMesaMode` define a aba KPIs.
 - **Dados:** RPCs `rh_calendario_grade_mes` (fallback `rh_calendario_grade_escala_mes`), `rh_calendario_ponto_registros_mes`, presença gestão; movimentações Marketplace via `dash_overview_prestador_movimentacoes_mes` (só times que negociam); turnos via `fetchTurnosPorOperadoraSlugs`. **Carga em duas fases:** mês do carrossel primeiro (libera o paint); mês anterior / MoM em background (`loadingSecundario` + Clock na barra). Visão de time carrega ponto/presença/mov em paralelo (`mapPool`, concorrência 8). Falha da **fase 1**: mensagem canónica + **Tentar de novo** (`erroCarga` / `recarregar`). Falha da **fase 2** (MoM): **não** apagar o mês já pintado — só o comparativo fica vazio. Métricas em `lib/overviewPrestadorMetrics.ts` + cobertura em `lib/overviewPrestadorCobertura.ts`.
 - **Escopo da grade pelo time (obrigatório):** filtrar `rh_calendario_grade_mes` pela `area_key` do time selecionado — `areaKeyGradeDoTime` (`game_presenter` | `shuffler` | `shift_leader` | `service_manager`) ou `areaKeyGradeDoTimeId` (`t_<hex32>`), com fallback para a grade completa se nenhuma linha casar. Sem isso, células de outras áreas (Academy/treinamento, escritório, outros times) entram nas jornadas e na contagem de prestadores por turno.
@@ -179,7 +185,10 @@ Nenhuma exceção documentada. Comparativo de Jogo, Comparativo de mesa e Dados 
 - **Resumo / KPIs (aba Escala):** visão time = **Jornadas** escaladas/realizadas; individual = **Dias**. Horas em ambos. **Escalado** = mês civil publicado (`getPeriodoComparativoMesCompleto`) — bate com a Escala Estúdio. **Realizado / presença / pontualidade / controle** = até **hoje** no mês corrente (`capFimAderenciaMesCorrente` / `periodoFimAderencia`); competências fechadas e Histórico usam o fim do período. **Não** usar `getPeriodoComparativoMoM` / recorte MTD no card de escaladas. Histórico: MoM desligado.
 - **Aderência (time) / Absenteísmo (individual):** Presença % (só time) = realizadas ÷ `diasEscaladoAderencia` (`pctPresencaAderencia`). Denominador **0** (início do mês / ainda sem jornada até hoje) → **«—»** — **proibido** cair para `diasEscalado` / `jornadasEscaladas` do mês publicado (isso marca o time como 0% / alta). Pontualidade e **Controle de Presença** usam o mesmo denominador.
 - **Gráficos:** Recharts — Aproveitamento (barras: escalados/horas **até hoje** via `diasEscaladoAderencia` / `horasEscaladasAderenciaMin` vs realizados no mesmo recorte; KPIs de Escalado/Horas Escaladas continuam o mês publicado); Movimentações (donut, se `negocia`); Distribuição por estúdio (donut, só GP individual). Donut = `GraficoDonut` local (anel com total no centro + legenda em lista com valor e %) — **sem** `label` textual no `Pie` nem `Legend` do Recharts (rótulos longos saíam do bloco). **Movimentações:** fatias **Trocas realizadas**, **Turnos vendidos** (`venda_turno`) e **Folgas vendidas** (`venda_folga`) — **não** exibir Compra (espelha a Venda). Classificação via `tipo_oferta` da RPC `dash_overview_prestador_movimentacoes_mes`. Layout GP individual: Aproveitamento em linha cheia; Movimentações + Distribuição lado a lado.
-- **Blocos só visão time:** Pontos de atenção (coluna **Controle de Presença** = check-in/out não registrados; paginação 20 com `TabelaComPaginacao`); Cobertura por turno (**não** pagina — poucas linhas); Cobertura por estúdio (só GP) — paginação 20 nas linhas de estúdio (`TabelaComPaginacao`; linha Total no conjunto completo; barra oculta com uma só página).
+- **Blocos só visão time:** Pontos de atenção (coluna **Controle de Presença** = check-in/out não registrados; lista completa ordenada por severidade + paginação 20 com `TabelaComPaginacao` — **proibido** cortar com `slice` antes de paginar); Cobertura por turno (**não** pagina — poucas linhas); Cobertura por estúdio (só GP) — paginação 20 nas linhas de estúdio (`TabelaComPaginacao`; linha Total no conjunto completo; barra oculta com uma só página).
+- **FilterBar Clock:** `isLoading || loadingSecundario` — permanece na fase MoM (mês anterior) após o first paint.
+- **KPIs Escala — horas:** `formatAnterior={horasLabelFromMinutos}` nos cards Horas Escaladas / Realizadas (MoM em `HH:MM`, não minutos crus).
+- **Escopo próprios — falha RPC:** `fetchRhLiderancaEscopoResult` — erro → `erroCarga` + Tentar de novo (não degradar em silêncio para «não líder»).
 - **Cobertura — contagem:** coluna **Prestadores** conta distintos **com jornada** no bucket (Escalado ou turno adquirido); dia só de `Troca` entra em Movimentações, não aloca prestador. **Estúdio:** o snapshot Marketplace traz o **rótulo** e o cadastro do Staff o **slug** — resolver para slug único (`resolverSlugEstudio`) antes de agregar, senão a mesma unidade rende duas linhas.
 - **Detalhamento Diário (KPIs de Mesa / OCR):** uma linha por dia do período, inclusive dias sem evento (valores zerados / «—» em TMA). **KPIs de Mesa:** grade até **D-1**; Pontos de atenção + Detalhamento paginam 20. **KPIs de OCR:** grade até **hoje**; **Por Estúdio** (estúdios, mesas expandidas ficam na mesma página do pai), **Equipe** e Detalhamento paginam 20 (`TabelaComPaginacao`; barra oculta com uma só página) — **Por Jogo** não pagina. Nunca inclui o dia seguinte (futuro). Helper `preencherDetalhamentoDiarioZerado` (`dashboardHelpers.ts`).
 - **Detalhamento Diário (Escala):** tabela canónica — Data [, Prestador na visão time], Ocorrência, Detalhe; `SortTableTh` default **desc** em Data; paginação `TabelaPaginacaoBar` + `TABELA_PAGE_SIZE` (20). Troca/Compra/Venda enriquecidos pelo snapshot Marketplace.
@@ -191,28 +200,75 @@ Nenhuma exceção documentada. Comparativo de Jogo, Comparativo de mesa e Dados 
 | Contexto | String |
 |----------|--------|
 | Sem time (gestor, edge) | Selecione um time para visualizar os resultados. |
+| Próprios sem vínculo de prestador | Não encontramos o seu cadastro de prestador vinculado a este login. |
 | Time/staff com dados vazios | Sem dados para o período selecionado. |
 | KPIs de Mesa / OCR — sem linhas no período | Sem dados para o período selecionado. |
 | Sem permissão | Você não tem permissão para visualizar esta página. |
+| Falha escopo liderança (`rh_lideranca_escopo`) | Não foi possível carregar o escopo de liderança. Se o problema persistir, entre em contato com o suporte. + Tentar de novo |
+| OCR — catálogo de mesas falhou por completo | Não foi possível carregar o catálogo de mesas. Se o problema persistir, entre em contato com o suporte. + Tentar de novo |
 
 ---
 
-## Streamers — Arquitetura de 3 Abas
+## Streamers — Arquitetura de 4 Abas
 
 - **Container:** `Streamers/index.tsx` — header, FilterBar compartilhada, tabs ARIA, Suspense.
   Toda lógica de filtros vive em `StreamersFiltrosProvider` (`StreamersFiltrosContext.tsx`).
   **`FiltroInfluencerSelect` (`mode="single"`):** opções = influencers com **métrica ou live realizada no período** (IDs só — `streamersInfluencerFilterHelpers.ts`); **não** inclui UTM mapeado all-time. Reset para **Todos Influencers** se a seleção sair do período/operadora.
-- **Sub-páginas:** `DashboardOverview`, `DashboardConversao`, `DashboardFinanceiro`.
-  Cada uma recebe os filtros via `useStreamersFiltrosOptional()`.
+- **Sub-páginas:** `DashboardOverview`, `DashboardConversao`, `DashboardJogadores`, `DashboardFinanceiro`.
+  Cada uma recebe os filtros via `useStreamersFiltrosOptional()` (Jogadores usa `useStreamersFiltros()` — só existe no container).
   Quando `embed === true` (dentro do container), a FilterBar NÃO é renderizada pela sub-página.
   Quando `embed === false` (rota standalone legada), cada sub-página renderiza sua própria FilterBar.
 - **`sf.setIsLoading(loading)`**: cada sub-página sinaliza o loading ao contexto via `useEffect`.
   O indicador de carregamento (`Clock size={12}`) fica no container, não nas sub-páginas.
 - **Ícone do header:** `Tv` (Lucide) — nunca `GiTv` (react-icons/gi).
-- **Carga Overview / Financeiro:** fase 1 = período atual (libera paint); fase 2 = MoM em background. Falha do MoM **não** apaga o mês já pintado (`momPronto` / `isHistorico` até o comparativo chegar).
+- **Carga Overview / Financeiro:** fase 1 = período atual (libera paint); fase 2 = MoM em background. Falha do MoM **não** apaga o mês já pintado (`momPronto` / `isHistorico` até o comparativo chegar). No Histórico, `buscarMetricasDeAliases` entra no **mesmo** `Promise.all` da fase 1 (não serial após analytics).
+- **Clock na FilterBar:** `isLoading || (!historico && !momPronto)` — o indicador permanece na fase MoM; Conversão (sem MoM) fixa `momPronto=true`.
+- **Overview Influencer — escopo:** mesmos helpers Streamers (`streamersInfluencerIdsQuery` / `streamersOperadoraSlugsQuery` / `travarRecortePropriosStreamers`). Lista vazia = `[]` (vazio), nunca `null` global. KPI **Registros** = `fetchJogadoresRegistrosUnicos` (IDs Ext únicos TAP), alinhado ao Overview Streamers — **não** somar `registration_count` das métricas.
+- **Overview Influencer — UAP Spin:** card simples na linha operacional, após Média de Views. Fonte `jogadores_metricas_diarias`, TAP IDs mapeados com `rodadas_spin > 0`, deduplicados por `(operadora_slug, ext_customer_id)`. Respeita período, operadora e exatamente os `influencerIds` autorizados/selecionados; perfil Influencer consulta somente o próprio ID. Histórico deduplica na janela inteira de 13 competências. Não exibe Rodadas.
 - **Erro de carga:** mensagem canónica + **Tentar de novo** (`erroCarga` / `reloadTick`) — não tratar falha como vazio.
-- **Tabelas densas:** Ranking Overview, Comparativo de Taxas e Ranking Financeiro usam `TabelaPaginacaoBar` + `TABELA_PAGE_SIZE` (20); KPIs usam o conjunto completo. Em **Afiliados**: Ranking de Afiliados, Comparativo de Taxas (não o Funil), **Investimento por Afiliado** e Ranking Financeiro. Em **Overview Influencer**: Detalhamento Diário/Mensal. Em **Overview Afiliado**: Detalhamento por Afiliado.
-- **Conversão:** `influencerIds` do filtro da barra entra no fetch (igual Overview/Financeiro).
+- **Tabelas densas:** Ranking Overview, Comparativo de Taxas (Conversão e Jogadores) e Ranking Financeiro usam `TabelaPaginacaoBar` / `TabelaComPaginacao` + `TABELA_PAGE_SIZE` (20); KPIs usam o conjunto completo. **Rodadas por Mesa** (Jogadores) pagina a 20. Lista «resto» do Ranking FTD/Hora: 20 itens/página (`TABELA_PAGE_SIZE_STREAMERS`). Em **Afiliados**: Ranking de Afiliados, Comparativo de Taxas (não o Funil), **Investimento por Afiliado** e Ranking Financeiro. Em **Overview Influencer**: Detalhamento Diário/Mensal. Em **Overview Afiliado**: Detalhamento por Afiliado.
+- **Conversão:** `influencerIds` do filtro da barra entra no fetch (igual Overview/Financeiro). As quatro abas montam o recorte com os mesmos helpers de escopo; Ver **próprios** nunca vê o universo de admin.
+- **Re-varredura (Verificação 2.0):** Ciclos **45** (Streamers pós-feature) e **47** (Overview Influencer pós-feature) — fechar juntos a secção Dashboards antes do 46 (Mídias).
+
+### Streamers → Jogadores
+
+Mockup: `docs/mockups/streamers-aba-jogadores-mockup.html`. GGR desta aba = **GGR Spin**, nunca GGR TAP (`pl`). URL `/Streamers/Jogadores`.
+
+| Peça da UI | Fonte |
+|---|---|
+| Registros | IDs Ext únicos com `registration_count > 0` **e** `influencer_id` (UTM de influencer). Overview e Conversão usam a mesma conta (`fetchJogadoresRegistrosUnicos`). Sem `sem_utm` / UTM órfã. |
+| Jogaram Spin | desses registros, quem tem `rodadas_spin > 0` na competência |
+| Jogaram Outros | desses registros, quem tem `deposit_count > 0` e **não** jogou Spin na competência |
+| Não Jogaram | desses registros, quem não tem rodada Spin nem depósito na competência |
+| Jogaram | união Spin + Outros |
+| Taxa de ativação | Spin ÷ **Registros** |
+| Rodadas, média, GGR, Turnover | **só dos jogadores contados em Jogaram Spin** (`filtrarRowsJogaramSpin`); média = rodadas ÷ Jogaram Spin, **sem casas decimais**. Quem rodou no período mas cadastrou-se antes não entra |
+| Rodadas por mesa | mesmo conjunto de Jogaram Spin; detalhe do RS `operator-player-rounds`, cruzado por `external_id` e `game_table_id` com Gestão de Estúdios. Rótulo **`Dedicada — Blackjack 1`** / **`Network — Roleta`**; fallback “Mesa não informada”; cor via `gameIdentityFromTexto` |
+| Comparativo de Funil | três etapas: Registros → Jogaram (Outros + Spin) → Jogaram Spin |
+| Ranking de Influencers | top 10 por rodadas Spin; mês do carrossel ou acumulado no Histórico |
+| Comparativo de Taxas | colunas fixas: Influencer, Registros, Reg>Jogaram, Jogaram, Jogaram>Spin, Spin, Turnover Spin, GGR Spin. Volume só da coorte Spin; no carrossel mensal omite influencer com zero registro |
+
+- **Fetch:** `fetchJogadoresAbaDaily` / `fetchJogadoresUapSpin` / `fetchJogadoresRegistrosUnicos` — colunas explícitas, `cda_conta = influencers`, janela no SQL, `fetchAllPages` **com** `.order` pela PK `(data, operadora_slug, origem_tipo, origem, ext_customer_id)` + lotes `.in(influencer_id)`. Sem essa ordem o Histórico subconta ou duplica. **Todos Influencers / Todas Operadoras** = agregadores do **escopo**. KPIs **não** incluem ID Ext sem `influencer_id` (`incluirSemInfluencer: false`) — cadastro `sem_utm` / UTM pendente não entra. `influencerIds`/`operadoraSlugs` `null` = visão global; `[]` = escopo vazio. Ver **próprios**: `travarRecortePropriosStreamers`. Fase 1 = período atual; fase 2 = MoM. KPIs leem o **daily** do período. Deduplicação por `(operadora_slug, ext_customer_id)`. Partição: **Spin + Outros + Não Jogaram = Registros únicos**.
+- **Sync TAP:** mesma Edge `sync-metricas-cda` (v2.2.0). Após o `group_by=utm_source` (agregados), segunda chamada `group_by=utm_source,ext_customer_id`. Falha desta fase **não** aborta o sync de `influencer_metricas`. Flag `skip_jogadores` para pular. Sem PII (sem username/e-mail).
+- **Revenue Sentinel:** Edge `sync-revenue-sentinel` v1.5.0. Fonte principal: GET paginado `/v1/datasets/operator-player-rounds` (limite 10 mil), que entrega uma linha por `game_id`, com `round_date`, `external_id`, `game_table_id`, `table_name`, GGR, turnover e `bet_count`. Filtra em memória só os IDs TAP do canal; deduplica por jogador + `game_id`; agrega por jogador/dia/mesa. O catálogo `mesas_spin_cadastro` + `mesas_spin_operadora_identificacao` + `estudios_spin` resolve nome canónico e **Dedicada/Network**. POST `/v1/jogadores/spin` (lotes de 500) permanece para reconciliação e fallback se o dataset falhar ou não cruzar IDs. **Uma competência por chamada**; cron usa início do mês → D-1 e `atualizar_cadastro=false`; nunca D-0. Backfill executa mês a mês após limpar as colunas Spin antigas (`scripts/backfill-rs-competencias.mjs --gravar`). O `bko` é o backoffice do operador (todos os produtos) e nunca vira rodada Spin. Cron ~4h20 BRT após TAP; Status Técnico → Sync manda só a competência corrente. Secrets `RS_API_URL` / `RS_API_KEY`. Publicar juntos `index.ts`, `revenueSentinelJogadores.ts` e `revenueSentinelRounds.ts`.
+- **Overview — KPIs Executivos:** grids 3 + 3 + 3. Financeiro = GGR / Investimento / ROI. Operação = **Influencers** (Ativos + Inativos), **Lives** (Qtd + Horas), Depósitos (Qtd + Volume). Conversão = **Registros** (Qtd + Custo Médio), **FTDs** (Qtd + Custo Médio), **UAP Spin** (Qtd + Rodadas). Influencers considera somente quem teve live realizada no recorte; Ativos = `influencer_perfil.status` ativo (null legado = ativo), Inativos = inativo ou cancelado. O status é o cadastro atual, inclusive ao consultar mês passado/Histórico. UAP Spin não é coorte: TAP IDs mapeados a influencer com `rodadas_spin > 0` no recorte, deduplicados por `(operadora_slug, ext_customer_id)`; Histórico deduplica na janela inteira de 13 competências e soma as rodadas dessas linhas.
+- **Tabelas:** `jogadores` (dimensão, unique `(operadora_slug, ext_customer_id)`, first-touch em `origem`) e `jogadores_metricas_diarias` (fato TAP + colunas Spin nulas). Trigger preenche o cadastro. `aplicar_mapeamento_utm` também atualiza `influencer_id` nestas tabelas.
+- **Proibido:** inflar `influencer_metricas` com linha por jogador; gravar GGR TAP em `ggr_spin`; tratar `ext_customer_id` como `player_id` BKO.
+
+---
+
+## Afiliados (Dash) — Arquitetura de 3 Abas
+
+- **Container:** `AfiliadosDash/index.tsx` — header, FilterBar compartilhada, tabs ARIA, Suspense.
+  Filtros em `AfiliadosFiltrosProvider` (`AfiliadosFiltrosContext.tsx`). Dados: `useAfiliadosDashboardData`.
+- **URL:** `/DashAfiliados/{Overview|Conversao|Financeiro}` (não `/Afiliados/…` — conflita com o CRM).
+- **Carga:** fase 1 = período atual (`Promise.all` analytics ∥ investimento); fase 2 = MoM em background (`momPronto`). Falha do MoM **não** apaga o mês já pintado.
+- **Erro de carga:** `MSG_ERRO_AFILIADOS` + **Tentar de novo** no shell (não tratar falha como vazio).
+- **Operadora:** SQL `operadora_slug` é a fonte da verdade — **não** refiltrar IDs pela junction `operadoraInfluencers`.
+- **Detalhe série:** só com `detalhePorAfiliado: true` (Overview Afiliado). Nas 3 abas do Dash, não montar dia/mês.
+- **Empty:** período/tabela → `MSG_SEM_DADOS_PERIODO`. Comparativo de Funil A/B sem seleção → orientação («Selecione dois afiliados…»), não 0/0/0.
+- **Tabelas densas:** Ranking de Afiliados, Comparativo de Taxas, Investimento por Afiliado, Ranking Financeiro — `TabelaComPaginacao` + `TABELA_PAGE_SIZE` (20).
+
 ---
 
 ## Mídias Sociais — Padrões Específicos
@@ -222,6 +278,8 @@ Nenhuma exceção documentada. Comparativo de Jogo, Comparativo de mesa e Dados 
   **Impulsionamento** (KPIs Meta Ads + tabela por anúncio),
   Alcance (KPIs sociais orgânicos + Posts).
 - **Fetch por aba:** Overview e Conversão carregam somente RPCs de campanha; Impulsionamento carrega somente Meta Ads; Alcance carrega somente KPIs e posts orgânicos. Não voltar a executar os três grupos ao abrir a página.
+- **Duas fases (MoM):** período atual libera o first paint; MoM (`campanhasPerfPrev` / `kpiAntRows` / `metaAdsDailyPrev`) em background com `momPronto`. Falha do MoM não apaga o mês já pintado. Indicador secundário `Clock` + `Carregando…` na barra enquanto `!momPronto`.
+- **Carga resiliente:** `try/catch` + `erroCarga` canónico + «Tentar de novo» (`reloadTick`). Colunas explícitas (sem `select("*")`); posts/anúncios via `fetchAllPages` (sem `.limit(500)`).
 - **Filtro operadora:** `FiltroOperadoraSelect` + `useDashboardFiltros()` na barra (padrão Streamers).
   Afeta **Overview** e **Conversão** (RPCs `get_campanha_*` com `p_operadora_slug`).
   Perfil **operador:** escopo fixo via `operadoraSlugsForcado` — sem dropdown.
@@ -239,6 +297,7 @@ Nenhuma exceção documentada. Comparativo de Jogo, Comparativo de mesa e Dados 
 - **Campanhas inativas:** RPCs `get_campanhas_performance` / funil — no **mês** do carrossel, inativa só aparece (e entra nos totais) se gerou métricas no período; com **Histórico**, inativas **sempre** entram na listagem (`p_modo_historico`). Funil e série temporal somam UTMs mapeadas a campanhas ativas **ou** inativas.
 - **`getMesesDisponiveis`:** importar de `lib/dashboardHelpers` com `MES_INICIO` local (Jan/2026) — não declarar cópia local da função.
 - **Tabelas densas:** Detalhamento diário/mensal, Comparativo de campanha, Comparativo de taxas e Detalhamento por anúncio usam `TabelaComPaginacao` + `TABELA_PAGE_SIZE` (20); KPIs e Comparativo de funil no conjunto completo.
+- **Re-varredura (Verificação 2.0):** Ciclo **46** no mapa — após ajustes de integração Social Media; inclui UI das 4 abas **e** ETL/SYNC (`docs/ETL-SOCIAL-MEDIAS.md`, workflows `sync-social-kpis-daily` / backfill, consumo `kpi_daily` + posts + Meta Ads). Ciclo 10 permanece fechado até o 46 abrir.
 
 ---
 
@@ -425,7 +484,7 @@ Usar **exatamente** o ícone abaixo para cada conceito em **todas** as páginas 
 | **Investimento** | `Coins` | `import { Coins }` |
 | **Lives** | `Video` | `import { Video }` |
 | **Horas Realizadas** | `Clock` | `import { Clock }` |
-| **Influencers Ativos** | `Users` | — |
+| **Influencers / Influencers Ativos** | `Users` | — |
 | **Média de Views** | `Eye` | `import { Eye }` |
 | **Registros** | `UserPlus` | `import { UserPlus }` |
 | **Custo por Registro** | `Receipt` | `import { Receipt }` |
@@ -457,7 +516,8 @@ Usar **exatamente** estas strings no prop `label` de `KpiCard` e nos headers de 
 - `"R$ FTD"` — valor total dos primeiros depósitos
 - `"Lives"` — transmissões realizadas (nunca `"Qtd de Lives"`)
 - `"Horas Realizadas"` — tempo total de live
-- `"Influencers Ativos"` — influencers com ao menos 1 live
+- `"Influencers Ativos"` — influencers com ao menos 1 live (card simples legado)
+- `"Influencers"` — card duplo da Overview Streamers: Ativos / Inativos entre quem teve live realizada no período
 - `"Média de Views"` — média de espectadores por live
 - `"Registros"` — cadastros realizados
 - `"Custo por FTD"` — investimento ÷ FTDs
@@ -519,7 +579,7 @@ sub={historico ? "acumulado" : undefined}
 
 ### Checklist de migração — secção Dashboards
 
-Implementar **ficheiro a ficheiro** (remover `icon`, alinhar `sub`, apagar `<p>` subtítulo). Ordem sugerida: Overview Influencer → Streamers (3 abas) → Mídias Sociais → Overview Spin (+ Posicionamento).
+Implementar **ficheiro a ficheiro** (remover `icon`, alinhar `sub`, apagar `<p>` subtítulo). Ordem sugerida: Overview Influencer → Streamers (4 abas) → Mídias Sociais → Overview Spin (+ Posicionamento).
 
 | Ficheiro | Blocos `SectionTitle` | Notas |
 |----------|----------------------|--------|
@@ -708,12 +768,12 @@ Quando um handoff desta seção pedir atualização de Ajuda: **fundir** conteú
 - Nunca usar `width` fixo em px em SVGs de funil
 - Nunca colocar `<defs>` dentro de `.map()`
 - Nunca usar `"%"` para PVI
-- Nunca deixar estado vazio sem mensagem — usar `MSG_SEM_DADOS_FILTRO` de `dashboardConstants`
+- Nunca deixar estado vazio sem mensagem — período: `MSG_SEM_DADOS_PERIODO`; chip/status: `MSG_SEM_DADOS_FILTRO`
 - Nunca mostrar KPIs com zeros iniciais durante `loading` — usar `SkeletonKpiCard`
 - Nunca usar `Clock` como spinner em **seções de conteúdo** — usar `Loader2` + `app-lucide-spin`
 - Nunca esconder bloco silenciosamente em modo histórico
 - Nunca listas densas de tabela sem paginação de vista **20** (`TabelaComPaginacao` / Global § Eficiência de fetch §6). Virtualização (`react-virtual` etc.) **só** com pedido explícito de produto.
-- Nunca `"Nenhum dado encontrado"` / `"N/A"` / `"Loading..."` — mensagens canónicas e `MSG_SEM_DADOS_FILTRO`
+- Nunca `"Nenhum dado encontrado"` / `"N/A"` / `"Loading..."` — mensagens canónicas (`MSG_SEM_DADOS_PERIODO` / `MSG_SEM_DADOS_FILTRO`)
 - Nunca `rgba(124,58,237,0.15)` em estados ativos — usar `color-mix` com `var(--brand-action, #7c3aed)`
 - Nunca botão Histórico na FilterBar sem **`FiltroHistoricoButton`** (markup inline / `GiCalendar`)
 - Nunca `"Comparativo Diário"` / `"Comparativo Mensal"` para série temporal

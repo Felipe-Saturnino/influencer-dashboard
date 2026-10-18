@@ -4,17 +4,17 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "O dashboard de Streamers consolida a performance do canal de influencers em três dimensões: visão executiva (financeiro e operação), análise de conversão e ranking financeiro. Todas as abas compartilham os mesmos filtros de período, influencer e operadora.",
+          "O dashboard de Streamers consolida a performance do canal de influencers: visão executiva (financeiro e operação), análise de conversão, cadastros e mesas Spin na aba Jogadores, e ranking financeiro. Todas as abas compartilham os mesmos filtros de período, influencer e operadora.",
       },
       {
         subtitulo: "Filtros e Navegação",
         texto:
-          "Use as setas para navegar entre os meses disponíveis. O botão Histórico exibe o acumulado de 13 competências mensais — a atual e as 12 anteriores — permitindo comparar futuramente a competência atual com a mesma competência do ano anterior. Nesse modo a navegação de mês fica desativada e os subtítulos dos blocos principais passam a mostrar \"acumulado\" (o comparativo MoM do mês anterior deixa de aparecer nos KPIs Executivos).\n\nO filtro de influencer restringe todas as abas ao influencer selecionado. O filtro de operadora restringe aos influencers vinculados àquela operadora. Ambos os filtros são aplicados simultaneamente em todas as abas ao trocar de aba.\n\nEnquanto uma aba carrega dados, a barra de filtros pode exibir \"Carregando…\" — os filtros permanecem os mesmos ao mudar entre Overview, Conversão e Financeiro.\n\nCom o foco em uma aba, use as setas ← → do teclado para alternar entre Overview, Conversão e Financeiro (padrão de acessibilidade das abas).",
+          "Use as setas para navegar entre os meses disponíveis. O botão Histórico exibe o acumulado de 13 competências mensais — a atual e as 12 anteriores — permitindo comparar futuramente a competência atual com a mesma competência do ano anterior. Nesse modo a navegação de mês fica desativada e os subtítulos dos blocos principais passam a mostrar \"acumulado\" (o comparativo MoM do mês anterior deixa de aparecer nos KPIs Executivos).\n\nO filtro de influencer restringe todas as abas ao influencer selecionado. O filtro de operadora restringe aos influencers vinculados àquela operadora. Ambos os filtros são aplicados simultaneamente em todas as abas ao trocar de aba.\n\nEnquanto uma aba carrega dados, a barra de filtros pode exibir \"Carregando…\" — os filtros permanecem os mesmos ao mudar entre Overview, Conversão, Jogadores e Financeiro.\n\nCom o foco em uma aba, use as setas ← → do teclado para alternar entre Overview, Conversão, Jogadores e Financeiro (padrão de acessibilidade das abas).",
       },
       {
         subtitulo: "Aba Overview — KPIs e Ranking",
         texto:
-          "Apresenta os KPIs executivos agrupados em três blocos: Financeiro (GGR, Investimento, ROI), Operação (Lives, Horas Realizadas, Influencers Ativos, Depósitos) e Conversão (Registros, Custo por Registro, FTDs, Custo por FTD).\n\nO Funil de Conversão exibe as taxas de conversão do canal: de Views até FTDs.\n\nO Ranking de Influencers lista todos os influencers com dados no período com status de performance (Rentável, Atenção, Não Rentável, Bônus, Sem dados). Use os badges de status no canto superior direito para filtrar por categoria. Clique nos cabeçalhos das colunas para ordenar. Em listas longas (ex.: Histórico), a tabela pagina a vista — os totais dos KPIs continuam do conjunto completo.",
+          "Apresenta os KPIs executivos agrupados em três blocos: Financeiro (GGR, Investimento, ROI), Operação (Influencers — Ativos/Inativos, Lives — Quantidade/Horas, Depósitos — Quantidade/Volume) e Conversão (Registros — Quantidade/Custo Médio, FTDs — Quantidade/Custo Médio, UAP Spin — Quantidade/Rodadas).\n\nInfluencers considera somente quem fez live realizada no período. Ativos e Inativos usam o status atual do cadastro; Inativo inclui também Cancelado. Ao consultar um mês passado ou o Histórico, a classificação continua refletindo o status atual, pois não existe série histórica de status.\n\nUAP Spin é a quantidade de jogadores TAP únicos, mapeados ao canal de influencer, que tiveram rodada em mesa Spin no período. Rodadas soma o volume desses jogadores. No Histórico, o mesmo TAP ID é contado uma vez em toda a janela, ainda que tenha jogado em vários meses. Os Registros desta aba também são IDs Ext únicos das UTMs mapeadas a influencer — o mesmo número da aba Jogadores, sem somar o mesmo cadastro duas vezes.\n\nO Funil de Conversão exibe as taxas de conversão do canal: de Views até FTDs.\n\nO Ranking de Influencers lista todos os influencers com dados no período com status de performance (Rentável, Atenção, Não Rentável, Bônus, Sem dados). Use os badges de status no canto superior direito para filtrar por categoria. Clique nos cabeçalhos das colunas para ordenar. Em listas longas (ex.: Histórico), a tabela pagina a vista — os totais dos KPIs continuam do conjunto completo.",
       },
       {
         subtitulo: "Aba Conversão — Funil e Eficiência",
@@ -25,6 +25,11 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "Aba Financeiro — PVI e Ranking",
         texto:
           "Apresenta os KPIs financeiros detalhados: FTD (valor total e ticket médio), Depósitos, Saques, WD Ratio, GGR por Jogador e PVI (Player Value Index, escala 0–100 pts — exibido em pontos, não em percentual).\n\nO gráfico de Investimento por Influencer exibe a distribuição proporcional do investimento pago. Investimentos via agentes são agrupados em 'Outros' quando aplicável.\n\nO Ranking Financeiro lista todos os influencers com métricas financeiras e perfil de jogador (Whales, Core, Recreativos, Caçadores de Bônus). Clique nos cabeçalhos para ordenar por qualquer coluna. No modo Histórico, KPIs Financeiros, Investimento e Ranking usam o subtítulo \"acumulado\".",
+      },
+      {
+        subtitulo: "Aba Jogadores — cadastro e mesas Spin",
+        texto:
+          "Responde quem o canal cadastrou e quem de fato jogou nas mesas Spin. Os cadastros vêm da TAP (ID Ext da casa + UTM do influencer). Rodadas, GGR Spin, turnover e mesas vêm do cruzamento com o Revenue Sentinel.\n\nNo carrossel mensal, cadastros e atividade em mesa pertencem ao mês selecionado. No Histórico, as competências são somadas. A integração consulta uma competência por vez e usa a data real das rodadas enviada pelo RS.\n\nO primeiro bloco divide os registros únicos das UTMs mapeadas em três grupos sem sobreposição: Jogaram Spin (rodada Spin no mês), Jogaram Outros (depósito no mês e nenhuma rodada Spin) e Não Jogaram (sem depósito e sem rodada Spin). A soma dos três fecha o total de registros únicos. A taxa de ativação é Spin ÷ Registros. O GGR desta aba é o das mesas Spin, não o da TAP.\n\nO Comparativo de Funil coloca dois influencers lado a lado em três etapas (Registros → Jogaram → Jogaram Spin). Rodadas por Mesa cruza o ID da mesa no RS com a Gestão de Estúdios e exibe rótulos como **Dedicada — Blackjack 1** e **Network — Roleta**; somente mesas ainda não mapeadas aparecem como “Mesa não informada”. O Ranking mostra até os 10 influencers com mais rodadas no período. No Comparativo de Taxas mensal, influencers sem registros no mês não aparecem.\n\nOs filtros de período, influencer e operadora são os mesmos das outras abas. No modo Histórico o comparativo MoM some e os subtítulos passam a \"acumulado\".",
       },
     ],
   },
@@ -73,7 +78,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Aba Posicionamento",
         texto:
-          "Monitora a posição das mesas Spin no lobby das operadoras parceiras. A navegação por mês e o botão Histórico da barra não se aplicam nesta aba.\n\nSe ainda não houver coleta no dia de hoje, a aba mostra o **último horário** válido (em geral ontem) e os KPIs comparam **vs último horário**, em vez de vs ontem no mesmo horário.\n\nCom **Todas Operadoras**, cada card (Blaze, Casa de Apostas, Esportiva Bet, Jonbet, Bateu Bet, Rico Bet, BRX Bet, Donald Bet, BetPontoBet) é uma mini-tabela com colunas Atual (posição com cores), Estúdio, Mesa e Anterior (última posição diferente nos últimos 7 dias). O bloco **Alertas do período** mostra, por operadora, a **alteração mais recente de cada mesa** nessa janela de 7 dias (se a mesa mudou várias vezes, só a mudança mais nova aparece).\n\nCom uma operadora específica: os KPIs mostram Visibilidade na vitrine (% das mesas no top 20 do lobby), Mesas no top 10, Melhor posição registrada no dia e Maior queda de posição. A lista 'Posição atual das mesas' exibe a posição de cada mesa no último snapshot, com indicador de melhora (↑) ou piora (↓). O rótulo usa Estúdio - Mesa.\n\n'Concorrentes à frente' mostra, por tipo de jogo Spin, quantos jogos de outras plataformas estão à frente (máximo entre as mesas daquele tipo). O hover lista esses jogos.\n\n'Ranking de concorrentes' lista esses mesmos jogos únicos (posição e provedor), alinhado ao bloco Concorrentes à frente — **20 por página**.\n\nO Histórico de Posicionamento (operadora específica) exibe um heatmap das posições nos últimos dias — use os botões Dia / 7 dias / 30 dias para controlar o período. A tabela pagina **20 mesas** por vez. Posição atual das mesas e Alertas do período também paginam **20** quando a lista passa desse tamanho.",
+          "Monitora a posição das mesas Spin no lobby das operadoras parceiras. A navegação por mês e o botão Histórico da barra não se aplicam nesta aba.\n\nSe ainda não houver coleta no dia de hoje, a aba mostra o **último horário** válido (em geral ontem) e os KPIs comparam **vs último horário**, em vez de vs ontem no mesmo horário.\n\nCom **Todas Operadoras**, cada card (Blaze, Casa de Apostas, Esportiva Bet, Jonbet, Bateu Bet, Rico Bet, BRX Bet, Donald Bet, BetPontoBet, Goldebet) é uma mini-tabela com colunas Atual (posição com cores), Estúdio, Mesa e Anterior (última posição diferente nos últimos 7 dias). O bloco **Alertas do período** mostra, por operadora, a **alteração mais recente de cada mesa** nessa janela de 7 dias (se a mesa mudou várias vezes, só a mudança mais nova aparece).\n\nCom uma operadora específica: os KPIs mostram Visibilidade na vitrine (% das mesas no top 20 do lobby), Mesas no top 10, Melhor posição registrada no dia e Maior queda de posição. A lista 'Posição atual das mesas' exibe a posição de cada mesa no último snapshot, com indicador de melhora (↑) ou piora (↓). O rótulo usa Estúdio - Mesa.\n\n'Concorrentes à frente' mostra, por tipo de jogo Spin, quantos jogos de outras plataformas estão à frente (máximo entre as mesas daquele tipo). O hover lista esses jogos.\n\n'Ranking de concorrentes' lista esses mesmos jogos únicos (posição e provedor), alinhado ao bloco Concorrentes à frente — **20 por página**.\n\nO Histórico de Posicionamento (operadora específica) exibe um heatmap das posições nos últimos dias — use os botões Dia / 7 dias / 30 dias para controlar o período. A tabela pagina **20 mesas** por vez. Posição atual das mesas e Alertas do período também paginam **20** quando a lista passa desse tamanho.",
       },
       {
         subtitulo: "Navegação entre abas",
@@ -160,7 +165,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "KPIs Executivos",
         texto:
-          "O bloco de KPIs está organizado em três linhas:\n\n— Linha 1 (Financeiro): GGR, Investimento e ROI — com comparativo ao mesmo período do mês anterior (ou subtítulo \"acumulado\" no Histórico, sem MoM).\n\n— Linha 2 (Operação): Lives, Horas Realizadas e Média de Views — métricas de produção do canal.\n\n— Linha 3 (Conversão): Registros (com total de acessos e taxa de conversão), FTDs (com valor total), Depósitos e Saques — com comparativo MoM quando não está em Histórico.",
+          "O bloco de KPIs está organizado em três linhas:\n\n— Linha 1 (Financeiro): GGR, Investimento e ROI — com comparativo ao mesmo período do mês anterior (ou subtítulo \"acumulado\" no Histórico, sem MoM).\n\n— Linha 2 (Operação): Lives, Horas Realizadas, Média de Views e UAP Spin. UAP Spin conta jogadores TAP únicos do influencer que tiveram rodada em mesa Spin no período; respeita os filtros e, no Histórico, não duplica quem jogou em mais de um mês.\n\n— Linha 3 (Conversão): Registros (com total de acessos e taxa de conversão), FTDs (com valor total), Depósitos e Saques — com comparativo MoM quando não está em Histórico.",
       },
       {
         subtitulo: "Funil de Conversão",
@@ -1067,6 +1072,25 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       },
     ],
   },
+  academy_cronograma: {
+    titulo: "Cronograma",
+    blocos: [
+      {
+        texto:
+          "Catálogo do onboarding de Prestadores: **cronogramas**, **trilhas**, **materiais das aulas** e **provas**. O cronograma é o currículo — uma sequência de trilhas, sem datas. Datas, treinador e check-in ficam em **Gestão de Turmas** (página seguinte).\n\nNão mistura com o **Portal da Academy** (comunicados, dicas e manuais) nem com o **Performance Hub** (avaliação de desempenho). Os materiais desta página são lidos na turma.\n\nO acesso começa bloqueado para todos os perfis, exceto **Administrador**. Libere em **Gestão de Usuários → Permissões**.",
+      },
+      {
+        subtitulo: "Abas",
+        texto:
+          "**Cronogramas** — escolha um currículo, veja a ordem das trilhas, a duração prevista e quantas provas entram na sequência.\n\n**Trilhas** — módulos reutilizáveis (Institucional, Jogo, Operação ou Prática). Uma trilha pode entrar em vários cronogramas e também ser usada sozinha no retreinamento.\n\n**Materiais** — PDF, vídeo ou apresentação da aula, com introdução e arquivo.\n\n**Provas** — múltipla escolha, nota mínima e gabarito. A nota **não** libera o prestador para Live — isso continua com o treinador.",
+      },
+      {
+        subtitulo: "Filtros e ações",
+        texto:
+          "Na aba Cronogramas, o seletor escolhe o currículo e **Novo Cronograma** cria outro. Nas outras abas, a busca ignora acentos e o filtro **Status** começa em **Publicado** (troque para **Arquivado** quando precisar). **Ver** e **Editar** são ícones com tooltip, no padrão da plataforma.",
+      },
+    ],
+  },
   playbook_influencers: {
     titulo: "Playbook Influencers",
     blocos: [
@@ -1464,17 +1488,17 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "O **Overview Comercial** (menu **Dashboards**, abaixo de Overview Influencer) consolida a visão de **Operadoras** (Pipeline B2B), **Agregadoras** e **Integrações** em abas no topo. É **somente leitura** — a edição permanece nas páginas de pipeline e Integração na seção Comercial.",
+          "O **Overview Comercial** (menu **Dashboards**, abaixo de Overview Influencer) consolida a visão de **Operadoras** (Pipeline B2B), **Crypto** (Pipeline Crypto), **Agregadoras** e **Integrações** em abas no topo. É **somente leitura** — a edição permanece nas páginas de pipeline e Integração na seção Comercial.",
       },
       {
         subtitulo: "Abas e filtros",
         texto:
-          "No topo do bloco de filtros escolha **Operadoras**, **Agregadoras** ou **Integrações**.\n\n— **Operadoras:** filtro **Comercial** abaixo das abas (visão consolidada do funil completo).\n— **Agregadoras:** só o filtro **Comercial**.\n— **Integrações:** filtro **Prioridade** (**Todas Prioridades**, Baixo, Médio ou Alta).",
+          "No topo do bloco de filtros escolha **Operadoras**, **Crypto**, **Agregadoras** ou **Integrações**.\n\n— **Operadoras:** filtro **Comercial** abaixo das abas (visão consolidada do funil completo).\n— **Crypto:** o mesmo filtro **Comercial**, com a carteira do Pipeline Crypto (independente do B2B).\n— **Agregadoras:** só o filtro **Comercial**.\n— **Integrações:** filtro **Prioridade** (**Todas Prioridades**, Baixo, Médio ou Alta).",
       },
       {
         subtitulo: "Conteúdo por aba",
         texto:
-          "**Operadoras** mantém KPIs, funil, produto Dedicada/Network, mapa, carteira, novas marcas e movimentação.\n\n**Agregadoras** mostra KPIs do funil (sem legenda nos cards), funil em largura total, carteira por comercial e **Movimentação recente** lado a lado em grade 2×2 (→ Conexão, → Negociação, → Fechado, Alterações totais).\n\n**Integrações** mostra totais por status (sem legenda nos cards), **SLA por etapa** (tempo médio: criação → Em andamento; Em andamento → Concluído; criação → Concluído), volume por Tipo (Dedicada/Network), por Caminho e por Agregador.",
+          "**Operadoras** mantém KPIs, funil, produto Dedicada/Network, mapa, carteira, novas marcas e movimentação.\n\n**Crypto** repete esses blocos com os dados do Pipeline Crypto. O bloco **Interesse** mostra só o status da coluna **Retorno** (incluindo **Sem Status**). Os KPIs abrem o Pipeline Crypto. O mapa usa a UF da empresa da Lista SPA.\n\n**Agregadoras** mostra KPIs do funil (sem legenda nos cards), funil em largura total, carteira por comercial e **Movimentação recente** lado a lado em grade 2×2 (→ Conexão, → Negociação, → Fechado, Alterações totais).\n\n**Integrações** mostra totais por status (sem legenda nos cards), **SLA por etapa** (tempo médio: criação → Em andamento; Em andamento → Concluído; criação → Concluído), volume por Tipo (Dedicada/Network), por Caminho e por Agregador.",
       },
       {
         subtitulo: "Mapa e movimentação",
@@ -1523,6 +1547,25 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "Comunicar",
         texto:
           "O botão **Comunicar** na toolbar da tabela será usado para registrar comunicações com a marca (e-mail/mensagem) — fluxo em implementação posterior.",
+      },
+    ],
+  },
+  comercial_pipeline_crypto: {
+    titulo: "Pipeline Crypto",
+    blocos: [
+      {
+        texto:
+          "A página **Pipeline Crypto** (menu Comercial, abaixo de Pipeline B2B) organiza empresas, marcas e oportunidades no mercado crypto. O funil, o comercial e as datas são independentes do Pipeline B2B: a mesma marca pode ter um comercial no B2B e outro no Crypto. O acesso depende da permissão de Ver; **Nova Marca** exige Criar; edição da tabela exige Editar.",
+      },
+      {
+        subtitulo: "Empresas e marcas",
+        texto:
+          "As empresas da Lista SPA são as mesmas do Pipeline B2B. As marcas dessa lista entram no Crypto só com nome, domínio e vínculo da empresa — Status, Possui Crypto, Retorno, Comercial e Última Comunicação começam em branco e não são sobrescritos pela sincronização. **Nova Marca** grava só no Crypto. Se o CNPJ informado já existir na Lista SPA, a marca vincula essa empresa. Marca, domínio, nome e telefone do contato são obrigatórios; razão social, CNPJ e e-mail são opcionais.",
+      },
+      {
+        subtitulo: "Tabela e status",
+        texto:
+          "As abas são **Todos**, **Disponíveis**, **Conexão**, **Negociação** e **Fechado**. Colunas: Razão Social, Marca, Contato, Comercial, Status, Possui Crypto, Retorno, Última Comunicação e Ação.\n\n**Possui Crypto** aceita Sim, Não ou em branco e não muda o Status. **Retorno** usa os mesmos status de Network. Só a alteração de Retorno recalcula o Status, nesta ordem: (1) Contrato Assinado ou Ativo → **Fechado**; (2) Contrato enviado → **Negociação**; (3) Em negociação → **Conexão**. **Última Comunicação** é uma data editável com permissão de Editar.\n\nO comercial do Crypto não herda a carteira do B2B. Os nomes atribuíveis são os mesmos: Marcus Morin, Fred Ring, Nathan Yoles e Simcha Neumark.",
       },
     ],
   },
@@ -1603,7 +1646,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Painel de integrações",
         texto:
-          "Exibe o status de cada pipeline de dados (**CDA Influencers**, **CDA Afiliados**, Social Media, Spin na Rede RSS, **Painel de Notícias RSS**, automações do Pipeline B2B — **Lista SPA**, **Validação de domínios de Marcas** e **Estado / Cidade** por CNPJ — Lobby, e-mails agendados e transacionais) e a linha **Diagnóstico da Plataforma**, com horário da última execução, volume de verificações/envios e erros. **Estado / Cidade** consulta a Brasil API e preenche município e UF no cadastro da empresa (execução diária, por volta das 8h30). E-mails de **Relatório** e **Agenda** têm ação **Enviar**; **Boas-vindas** e **Reset de senha** são só acompanhamento (disparo automático ao criar conta ou redefinir senha). O diagnóstico manual fica **OK** quando a execução conclui; achados (avisos e falhas de credenciais ou integrações) aparecem na coluna Erros e em **Logs Recentes**. Com permissão de Editar, use **Executar** na linha de diagnóstico ou **Sync** nas integrações com botão.\n\nA TV do **Painel de Notícias** abre no endereço público `/painel-noticias` (sem login). O Sync do Painel de Notícias RSS atualiza as matérias dessa tela.",
+          "Exibe o status de cada pipeline de dados (**CDA Influencers**, **CDA Afiliados**, Social Media, Spin na Rede RSS, **Painel de Notícias RSS**, automações do Pipeline B2B — **Lista SPA**, **Validação de domínios de Marcas** e **Estado / Cidade** por CNPJ —, **Revenue Sentinel — Jogadores Spin**, Lobby, e-mails agendados e transacionais) e a linha **Diagnóstico da Plataforma**, com horário da última execução, volume de verificações/envios e erros. **Estado / Cidade** consulta a Brasil API e preenche município e UF no cadastro da empresa (execução diária, por volta das 8h30). **Revenue Sentinel** cruza os IDs TAP com as mesas Spin (execução diária, por volta das 4h20). E-mails de **Relatório** e **Agenda** têm ação **Enviar**; **Boas-vindas** e **Reset de senha** são só acompanhamento (disparo automático ao criar conta ou redefinir senha). O diagnóstico manual fica **OK** quando a execução conclui; achados (avisos e falhas de credenciais ou integrações) aparecem na coluna Erros e em **Logs Recentes**. Com permissão de Editar, use **Executar** na linha de diagnóstico ou **Sync** nas integrações com botão.\n\nA TV do **Painel de Notícias** abre no endereço público `/painel-noticias` (sem login). O Sync do Painel de Notícias RSS atualiza as matérias dessa tela.",
       },
       {
         subtitulo: "Logs Recentes",
@@ -1613,7 +1656,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Fluxo de dados",
         texto:
-          "Gráfico de barras empilhadas com os últimos 14 dias. Cada cor representa uma fonte de dados — incluindo **Estado / Cidade** (empresas do Pipeline B2B enriquecidas com município/UF por CNPJ). Passe o cursor sobre uma barra para ver o detalhamento por fonte naquele dia.",
+          "Gráfico de barras empilhadas com os últimos 14 dias. Cada cor representa uma fonte de dados — incluindo **Estado / Cidade** (empresas do Pipeline B2B enriquecidas com município/UF por CNPJ) e **Revenue Sentinel** (dias de Jogadores Spin gravados). Passe o cursor sobre uma barra para ver o detalhamento por fonte naquele dia.",
       },
       {
         subtitulo: "Alertas automáticos",

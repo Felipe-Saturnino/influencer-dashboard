@@ -52,7 +52,7 @@ import {
 } from "../../../lib/escalaRotacao";
 import { listPresencaDiaTurno, type CtPresencaRow } from "../../../lib/escalaControleTurno";
 import { ModalConfirmDelete } from "../../../components/OperacoesModal";
-import { formatDiaBr, labelTurnoCurto } from "./helpers";
+import { formatDiaBr, labelTurnoCurto, BTN_RETRY_CT_STYLE } from "./helpers";
 import type { ControleTurnoTurno } from "./types";
 
 type EstudioOpt = { slug: string; nome: string };
@@ -863,8 +863,25 @@ export function AbaRotacao({ diaIso, turno }: Props) {
   if (erroGeral) {
     return (
       <div style={pageBox}>
-        <div role="alert" aria-live="polite" style={{ color: "#e84025", fontSize: 12, fontFamily: FONT.body }}>
-          {erroGeral}
+        <div
+          role="alert"
+          aria-live="polite"
+          style={{
+            color: "#e84025",
+            fontSize: 13,
+            fontFamily: FONT.body,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 12,
+            flexWrap: "wrap",
+            padding: "24px 0",
+          }}
+        >
+          <span>{erroGeral}</span>
+          <button type="button" onClick={() => void carregarTudo()} style={BTN_RETRY_CT_STYLE}>
+            Tentar novamente
+          </button>
         </div>
       </div>
     );

@@ -160,30 +160,70 @@ function AfiliadosFiltrosEUAbas({
   );
 }
 
-function AfiliadosDashAutorizado() {
+function AfiliadosDashPainel({
+  aba,
+  setAba,
+}: {
+  aba: AfiliadosTab;
+  setAba: (t: AfiliadosTab) => void;
+}) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
-  const [aba, setAba] = useRouteTab("dash_afiliados", "overview", [
-    "overview",
-    "conversao",
-    "financeiro",
-  ] as const);
+  const sf = useAfiliadosFiltros();
 
   return (
-    <AfiliadosFiltrosProvider>
-      <div style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
-        <div className="app-page-shell" style={{ paddingBottom: 12 }}>
-          <DashboardPageHeader
-            icon={<PageMenuIcon pageKey="dash_afiliados" />}
-            title={getPageMenuLabel("dash_afiliados")}
-            subtitle={getPageCanonicalSubtitle("dash_afiliados")}
-            brand={brand}
-            t={t}
-          />
+    <div style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
+      <div className="app-page-shell" style={{ paddingBottom: 12 }}>
+        <DashboardPageHeader
+          icon={<PageMenuIcon pageKey="dash_afiliados" />}
+          title={getPageMenuLabel("dash_afiliados")}
+          subtitle={getPageCanonicalSubtitle("dash_afiliados")}
+          brand={brand}
+          t={t}
+        />
 
-          <AfiliadosFiltrosEUAbas aba={aba} setAba={setAba} />
+        <AfiliadosFiltrosEUAbas aba={aba} setAba={setAba} />
+      </div>
+
+      {sf.erroCarga ? (
+        <div className="app-page-shell" style={{ paddingTop: 0 }}>
+          <div
+            role="alert"
+            aria-live="polite"
+            style={{
+              ...getPageFilterBoxStyle(brand, t),
+              marginBottom: 14,
+              color: "#e84025",
+              fontSize: 13,
+              fontFamily: FONT.body,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 12,
+              flexWrap: "wrap",
+            }}
+          >
+            <span>{sf.erroCarga}</span>
+            <button
+              type="button"
+              onClick={() => sf.recarregar()}
+              style={{
+                fontFamily: FONT.body,
+                fontSize: 13,
+                fontWeight: 700,
+                padding: "8px 14px",
+                borderRadius: 10,
+                border: "1px solid rgba(232,64,37,0.35)",
+                background: "transparent",
+                color: "#e84025",
+                cursor: "pointer",
+              }}
+            >
+              Tentar de novo
+            </button>
+          </div>
         </div>
-
+      ) : (
         <div
           role="tabpanel"
           id={`panel-dash-afiliados-${aba}`}
@@ -218,7 +258,21 @@ function AfiliadosDashAutorizado() {
             {aba === "financeiro" && <DashboardFinanceiro />}
           </Suspense>
         </div>
-      </div>
+      )}
+    </div>
+  );
+}
+
+function AfiliadosDashAutorizado() {
+  const [aba, setAba] = useRouteTab("dash_afiliados", "overview", [
+    "overview",
+    "conversao",
+    "financeiro",
+  ] as const);
+
+  return (
+    <AfiliadosFiltrosProvider>
+      <AfiliadosDashPainel aba={aba} setAba={setAba} />
     </AfiliadosFiltrosProvider>
   );
 }
@@ -240,12 +294,16 @@ export default function AfiliadosDash() {
           justifyContent: "center",
         }}
       >
-        <Loader2
-          size={24}
-          className="app-lucide-spin"
-          color="var(--brand-action, #7c3aed)"
-          aria-hidden="true"
-        />
+        <div style={{ textAlign: "center", color: t.textMuted }}>
+          <Loader2
+            size={24}
+            className="app-lucide-spin"
+            color="var(--brand-action, #7c3aed)"
+            aria-hidden="true"
+            style={{ marginBottom: 12 }}
+          />
+          <div style={{ fontSize: 13 }}>Carregando…</div>
+        </div>
       </div>
     );
   }

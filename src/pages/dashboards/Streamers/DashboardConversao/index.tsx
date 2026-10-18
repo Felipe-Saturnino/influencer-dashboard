@@ -15,16 +15,17 @@ import {
   getPageContentBoxStyle,
   getPageFilterBoxStyle,
 } from "../../../../lib/pageContentBoxStyles";
-import { BRAND, FUNIL_COLORS, MSG_SEM_DADOS_FILTRO } from "../../../../lib/dashboardConstants";
+import { BRAND, FUNIL_COLORS, MSG_SEM_DADOS_FILTRO, MSG_SEM_DADOS_PERIODO } from "../../../../lib/dashboardConstants";
 import { FiltroHistoricoButton, FiltroInfluencerSelect, FiltroOperadoraSelect, SectionTitle, SortTableTh, type SortDir } from "../../../../components/dashboard";
 import { useDataTableBlock } from "../../../../hooks/useDataTableBlock";
 import { getDataTableWrapStyle, getDataTableStyle } from "../../../../lib/dataTableStyles";
 import { fetchInfluencerAnalyticsPeriodoCached } from "../../../../lib/influencerAnalyticsQuery";
+import { fetchJogadoresRegistrosUnicos } from "../../../../lib/jogadoresAbaQuery";
 import { TabelaPaginacaoBar } from "../../../../components/TabelaPaginacaoBar";
 import { SelectListaComBusca } from "../../../../components/SelectListaComBusca";
 import { placeholderPesquisaFiltro } from "../../../../lib/searchBarConstants";
 import { slicePage, TABELA_PAGE_SIZE_STREAMERS } from "../../../../lib/tablePagination";
-import { MSG_ERRO_STREAMERS } from "../streamersInfluencerFilterHelpers";
+import { MSG_ERRO_STREAMERS, streamersInfluencerIdsQuery, streamersOperadoraSlugsQuery, travarRecortePropriosStreamers } from "../streamersInfluencerFilterHelpers";
 import {
   Award,
   Check,
@@ -311,7 +312,7 @@ function PodioFTDHora({ ranking }: { ranking: ConversaoRow[] }) {
 
   if (!ranking.length) {
     return (
-      <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13 }}>{MSG_SEM_DADOS_FILTRO}</div>
+      <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13 }}>{MSG_SEM_DADOS_PERIODO}</div>
     );
   }
 
@@ -331,7 +332,7 @@ function PodioFTDHora({ ranking }: { ranking: ConversaoRow[] }) {
 
   const maxFtdH = ranking[0].ftdPorHora;
 
-  const PARES_POR_PAG = 6;
+  const PARES_POR_PAG = Math.ceil(TABELA_PAGE_SIZE_STREAMERS / 2);
   const pares: [ConversaoRow, ConversaoRow | null][] = [];
   for (let i = 0; i < resto.length; i += 2) pares.push([resto[i], resto[i + 1] ?? null]);
   const totalPags = Math.ceil(pares.length / PARES_POR_PAG);
@@ -435,7 +436,6 @@ export default function DashboardConversao() {
   const {
     perfis,
     operadoras,
-    operadoraInfluencers,
     isPending: catalogosPending,
     error: catalogosError,
   } = useDashboardCatalogos();
@@ -471,13 +471,17 @@ export default function DashboardConversao() {
   const filtroOperadora = embed ? sf.filtroOperadora : filtroOperadoraLocal;
   const setFiltroOperadora = embed ? sf.setFiltroOperadora : setFiltroOperadoraLocal;
   const operadorasList = embed ? sf.operadorasList : operadorasListStandalone;
-  const operadoraInfMap = embed ? sf.operadoraInfMap : operadoraInfluencers;
   const idxInicial = embed ? sf.idxInicial : idxStartLocal;
 
   useEffect(() => {
     if (!embed || !sf) return;
     sf.setIsLoading(loading);
   }, [embed, sf, loading]);
+
+  useEffect(() => {
+    if (!embed || !sf) return;
+    sf.setMomPronto(true);
+  }, [embed, sf]);
 
   const mesSelecionado = mesesDisponiveis[idxMes];
 
@@ -508,36 +512,51 @@ export default function DashboardConversao() {
       const { inicio, fim } = historico || !mesSelecionado
         ? getPeriodoHistoricoCompetencias()
         : getDatasDoMes(mesSelecionado.ano, mesSelecionado.mes);
-      const operadoraSlugsQuery = operadoraSlugsForcado?.length
-        ? operadoraSlugsForcado
-        : filtroOperadora !== "todas"
-          ? [filtroOperadora]
-          : escoposVisiveis.semRestricaoEscopo
-            ? null
-            : escoposVisiveis.operadorasVisiveis;
-      const influencerIdsQuery =
-        filtroInfluencer !== "todos"
-          ? [filtroInfluencer]
-          : escoposVisiveis.vêTodosInfluencers
-            ? null
-            : escoposVisiveis.influencersVisiveis;
+      let operadoraSlugsQuery = streamersOperadoraSlugsQuery(filtroOperadora, escoposVisiveis, operadoraSlugsForcado);
+      let influencerIdsQuery = streamersInfluencerIdsQuery(
+        filtroInfluencer,
+        escoposVisiveis,
+        perfisLista.map((p) => p.id),
+      );
+      if (perm.canView === "proprios") {
+        const travado = travarRecortePropriosStreamers(
+          { influencerIds: influencerIdsQuery, operadoraSlugs: operadoraSlugsQuery },
+          escoposVisiveis,
+        );
+        influencerIdsQuery = travado.influencerIds;
+        operadoraSlugsQuery = travado.operadoraSlugs;
+      }
 
       try {
-        const analytics = await fetchInfluencerAnalyticsPeriodoCached({
-          inicio,
-          fim,
-          operadoraSlugs: operadoraSlugsQuery,
-          influencerIds: influencerIdsQuery,
-        });
+        const aliasesPromise = historico
+          ? import("../../../../lib/metricasAliases").then(({ buscarMetricasDeAliases }) =>
+              buscarMetricasDeAliases({
+                operadora_slug: operadoraSlugsForcado?.[0] ?? (filtroOperadora !== "todas" ? filtroOperadora : undefined),
+                influencerIds: influencerIdsQuery,
+                dataInicio: inicio,
+                dataFim: fim,
+              }),
+            )
+          : Promise.resolve([]);
+
+        const [analytics, registrosUnicos, aliasesSinteticas] = await Promise.all([
+          fetchInfluencerAnalyticsPeriodoCached({
+            inicio,
+            fim,
+            operadoraSlugs: operadoraSlugsQuery,
+            influencerIds: influencerIdsQuery,
+          }),
+          fetchJogadoresRegistrosUnicos({
+            inicio,
+            fim,
+            operadoraSlugs: operadoraSlugsQuery,
+            influencerIds: influencerIdsQuery,
+          }),
+          aliasesPromise,
+        ]);
         let metricas = analytics.metricas;
         if (historico) {
-          const { buscarMetricasDeAliases, mesclarMetricasComAliases } = await import("../../../../lib/metricasAliases");
-          const aliasesSinteticas = await buscarMetricasDeAliases({
-            operadora_slug: operadoraSlugsForcado?.[0] ?? (filtroOperadora !== "todas" ? filtroOperadora : undefined),
-            influencerIds: influencerIdsQuery ?? undefined,
-            dataInicio: inicio,
-            dataFim: fim,
-          });
+          const { mesclarMetricasComAliases } = await import("../../../../lib/metricasAliases");
           metricas = mesclarMetricasComAliases(metricas, aliasesSinteticas, fim, podeVerInfluencer);
         }
 
@@ -582,6 +601,13 @@ export default function DashboardConversao() {
           resultado.push(row);
         });
 
+        for (const row of resultado) {
+          row.registros = registrosUnicos.porInfluencer.get(row.influencer_id) ?? 0;
+          row.pctAcessoReg = pct(row.registros, row.acessos);
+          row.pctRegFTD = pct(row.ftds, row.registros);
+          row.acaoLabel = getAcao(row).label;
+        }
+
         resultado.sort((a, b) => b.ftds - a.ftds);
         if (cancelled) return;
         const rowsVisiveis = resultado.filter((r) => podeVerInfluencer(r.influencer_id));
@@ -610,6 +636,7 @@ export default function DashboardConversao() {
     idxMes,
     mesSelecionado,
     podeVerInfluencer,
+    perm.canView,
     operadoraSlugsForcado,
     filtroOperadora,
     filtroInfluencer,
@@ -621,16 +648,9 @@ export default function DashboardConversao() {
   const rowsFiltradosEscopo = useMemo(() => {
     let r = rows;
     if (filtroInfluencer !== "todos") r = r.filter((row) => row.influencer_id === filtroInfluencer);
-    if (operadoraSlugsForcado?.length) {
-      const ids = new Set<string>();
-      operadoraSlugsForcado.forEach((slug) => (operadoraInfMap[slug] ?? []).forEach((id) => ids.add(id)));
-      r = r.filter((row) => ids.has(row.influencer_id));
-    } else if (filtroOperadora !== "todas") {
-      const ids = operadoraInfMap[filtroOperadora] ?? [];
-      r = r.filter((row) => ids.includes(row.influencer_id));
-    }
+    // SQL já filtra por operadora_slug — sem refiltro pela junction.
     return r;
-  }, [rows, filtroInfluencer, filtroOperadora, operadoraInfMap, operadoraSlugsForcado]);
+  }, [rows, filtroInfluencer]);
 
   const rowA = rowsFiltradosEscopo.find((r) => r.influencer_id === compA) || null;
   const rowB = rowsFiltradosEscopo.find((r) => r.influencer_id === compB) || null;
@@ -839,7 +859,7 @@ export default function DashboardConversao() {
       {/* ══ BLOCO 2: COMPARATIVO DE FUNIL ═══════════════════════════════════════ */}
       <div style={card}>
         <SectionTitle
-          sub={historico ? "acumulado" : "comparativo MTD vs mesmo período do mês anterior"}
+          sub={historico ? "acumulado" : "comparativo entre dois influencers no período"}
         >
           Comparativo de Funil
         </SectionTitle>
@@ -990,7 +1010,9 @@ export default function DashboardConversao() {
         {loading ? (
           <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted }}>Carregando…</div>
         ) : rowsFiltrados.length === 0 ? (
-          <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted }}>{MSG_SEM_DADOS_FILTRO}</div>
+          <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted }}>
+            {rowsFiltradosEscopo.length === 0 ? MSG_SEM_DADOS_PERIODO : MSG_SEM_DADOS_FILTRO}
+          </div>
         ) : (
           <>
           <div className="app-table-wrap" style={getDataTableWrapStyle()}>

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type CSSProperties } from "react";
 import { Loader2 } from "lucide-react";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { useApp } from "../../../context/AppContext";
@@ -14,6 +14,18 @@ type CienciaRow = {
 
 const ERRO_CIENCIA =
   "Não foi possível carregar quem registrou ciência. Se o problema persistir, entre em contato com o suporte.";
+
+const BTN_RETRY_STYLE: CSSProperties = {
+  fontFamily: FONT.body,
+  fontSize: 13,
+  fontWeight: 700,
+  padding: "8px 14px",
+  borderRadius: 10,
+  border: "1px solid rgba(232,64,37,0.35)",
+  background: "transparent",
+  color: "#e84025",
+  cursor: "pointer",
+};
 
 /** Lista quem registrou ciência no manual — só Editar = Sim (espelho Ver Lidos do Portal de RH). */
 export function ModalCienciaManualAcademy({
@@ -94,8 +106,25 @@ export function ModalCienciaManualAcademy({
           <span className="sr-only">Carregando…</span>
         </div>
       ) : erro ? (
-        <div role="alert" aria-live="polite" style={{ color: "#e84025", fontSize: 13, fontFamily: FONT.body }}>
-          {erro}
+        <div
+          role="alert"
+          aria-live="polite"
+          style={{
+            color: "#e84025",
+            fontSize: 13,
+            fontFamily: FONT.body,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 12,
+            flexWrap: "wrap",
+            padding: "16px 0",
+          }}
+        >
+          <span>{erro}</span>
+          <button type="button" onClick={() => void carregar()} style={BTN_RETRY_STYLE}>
+            Tentar de novo
+          </button>
         </div>
       ) : itens.length === 0 ? (
         <div style={{ padding: "24px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>

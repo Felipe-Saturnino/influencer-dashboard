@@ -6,7 +6,7 @@ import { PAGE_CONTENT_BOX_GAP } from "../../../lib/pageContentBoxStyles";
 import { HOME_GESTOR_TECH_OPS_ROLE, HOME_GESTOR_TECH_OPS_SUB } from "../../../lib/homePerfisCopy";
 import { BoasVindasPerfilHome } from "./shared/BoasVindasPerfilHome";
 import { AtalhosCuradosHome } from "./shared/AtalhosCuradosHome";
-import { InformativosHome } from "./shared/InformativosHome";
+import { InformacoesStaffHome } from "./shared/InformacoesStaffHome";
 import { HomePageLoading } from "./shared/HomePageLoading";
 import { useHomeGestorTechOpsData } from "./hooks/useHomeGestorTechOpsData";
 import { AlertasGestorTechOps } from "./gestorTechOps/AlertasGestorTechOps";
@@ -55,7 +55,7 @@ export default function HomeGestorTechOps() {
       />
       <AlertasGestorTechOps alertas={alertas} />
       <KpisGestorTechOps kpis={kpis} erro={erro} sectionIdPrefix={PREFIX} />
-      <InformativosHome perfil="gestor_tech_ops" sectionIdPrefix={PREFIX} />
+      <InformacoesStaffHome perfil="gestor_tech_ops" sectionIdPrefix={PREFIX} />
       <AtalhosCuradosHome sectionIdPrefix={PREFIX} atalhos={ATALHOS} />
     </div>
   );

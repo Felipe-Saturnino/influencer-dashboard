@@ -1,9 +1,12 @@
-import { useCallback, useEffect, useId, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useId, useMemo, useState, type CSSProperties } from "react";
+import { createPortal } from "react-dom";
 import { Check, ChevronDown, UsersRound } from "lucide-react";
 import { FONT } from "../../constants/theme";
 import { useApp } from "../../context/AppContext";
 import { useDashboardBrand } from "../../hooks/useDashboardBrand";
 import { useListboxKeyboardNavigation } from "../../hooks/useListboxKeyboardNavigation";
+import { usePainelSelectPortal } from "../../hooks/usePainelSelectPortal";
+import { estiloPainelPortalFixed } from "../../lib/selectPainelPortal";
 import { placeholderPesquisaFiltro } from "../../lib/searchBarConstants";
 import { textoContemBusca } from "../../lib/searchText";
 import { BarraPesquisaFiltroPainel } from "../BarraPesquisaFiltroPainel";
@@ -42,7 +45,12 @@ export function SelectOrganogramaMultiForm({
   const accentColor = brand.useBrand ? "var(--brand-action, #7c3aed)" : brand.accent;
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const ref = useRef<HTMLDivElement>(null);
+  const closePanel = useCallback(() => setOpen(false), []);
+  const { triggerRef, panelRef, pos } = usePainelSelectPortal({
+    open,
+    onClose: closePanel,
+    matchTriggerWidth: true,
+  });
   const uid = useId();
   const listboxId = `${id}-${uid.replace(/:/g, "")}`;
 
@@ -62,14 +70,6 @@ export function SelectOrganogramaMultiForm({
   }, [options, incluirTodosPrestadores]);
 
   const enableSearch = true;
-
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
 
   useEffect(() => {
     if (!open) setSearchQuery("");
@@ -103,14 +103,99 @@ export function SelectOrganogramaMultiForm({
   const listboxKeyboard = useListboxKeyboardNavigation({
     items: filtered,
     onSelect: (option) => toggleOption(option.id),
-    onEscape: () => setOpen(false),
+    onEscape: closePanel,
   });
 
   const borderColor = hasError ? "#e84025" : t.cardBorder;
 
+  const panelNode =
+    open && pos ? (
+      <div
+        ref={panelRef}
+        id={listboxId}
+        role="listbox"
+        aria-label={ariaLabel}
+        aria-multiselectable="true"
+        style={estiloPainelPortalFixed(pos, { background: t.cardBg, border: t.cardBorder })}
+      >
+        {enableSearch ? (
+          <div style={{ marginBottom: 8, flexShrink: 0 }}>
+            <BarraPesquisaFiltroPainel
+              value={searchQuery}
+              onChange={setSearchQuery}
+              placeholder={placeholderPesquisaFiltro("Organograma")}
+              aria-activedescendant={
+                filtered[listboxKeyboard.activeIndex]
+                  ? `${listboxId}-option-${listboxKeyboard.activeIndex}`
+                  : undefined
+              }
+              onKeyDown={listboxKeyboard.onKeyDown}
+            />
+          </div>
+        ) : null}
+        <div style={{ overflowY: "auto", flex: 1, minHeight: 0 }}>
+          {filtered.map((opt, index) => {
+            const selected = value.includes(opt.id);
+            const active = index === listboxKeyboard.activeIndex;
+            return (
+              <div
+                key={opt.id}
+                id={`${listboxId}-option-${index}`}
+                ref={(node) => {
+                  listboxKeyboard.optionRefs.current[index] = node;
+                }}
+                role="option"
+                aria-selected={selected}
+                tabIndex={-1}
+                onMouseEnter={() => listboxKeyboard.setActiveIndex(index)}
+                onClick={() => toggleOption(opt.id)}
+                style={{
+                  width: "100%",
+                  padding: "8px 12px",
+                  borderRadius: 8,
+                  border: "none",
+                  background: selected || active
+                    ? "color-mix(in srgb, var(--brand-accent, #1e36f8) 12%, transparent)"
+                    : "transparent",
+                  color: selected ? accentColor : t.text,
+                  fontSize: 12,
+                  fontFamily: FONT.body,
+                  cursor: "pointer",
+                  textAlign: "left",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  fontWeight: selected ? 700 : 400,
+                  boxSizing: "border-box",
+                }}
+              >
+                <span
+                  style={{
+                    width: 14,
+                    height: 14,
+                    borderRadius: 3,
+                    flexShrink: 0,
+                    border: `1.5px solid ${selected ? accentColor : t.cardBorder}`,
+                    background: selected ? accentColor : "transparent",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  {selected ? <Check size={9} color="#fff" strokeWidth={3} aria-hidden /> : null}
+                </span>
+                {opt.label}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    ) : null;
+
   return (
-    <div ref={ref} style={{ position: "relative", width: "100%" }}>
+    <div style={{ position: "relative", width: "100%" }}>
       <button
+        ref={triggerRef}
         type="button"
         id={`${listboxId}-trigger`}
         disabled={disabled}
@@ -169,99 +254,7 @@ export function SelectOrganogramaMultiForm({
         </span>
         <ChevronDown size={14} aria-hidden style={{ flexShrink: 0, opacity: 0.6, marginTop: 2 }} />
       </button>
-
-      {open ? (
-        <div
-          id={listboxId}
-          role="listbox"
-          aria-label={ariaLabel}
-          aria-multiselectable="true"
-          style={{
-            position: "absolute",
-            top: "calc(100% + 6px)",
-            left: 0,
-            right: 0,
-            zIndex: 200,
-            background: t.cardBg,
-            border: `1px solid ${t.cardBorder}`,
-            borderRadius: 12,
-            padding: 8,
-            boxShadow: "0 8px 24px rgba(0,0,0,0.3)",
-            maxHeight: enableSearch ? "min(320px, 55vh)" : 240,
-            overflowY: "auto",
-          }}
-        >
-          {enableSearch ? (
-            <div style={{ marginBottom: 8 }}>
-              <BarraPesquisaFiltroPainel
-                value={searchQuery}
-                onChange={setSearchQuery}
-                placeholder={placeholderPesquisaFiltro("Organograma")}
-                aria-activedescendant={
-                  filtered[listboxKeyboard.activeIndex]
-                    ? `${listboxId}-option-${listboxKeyboard.activeIndex}`
-                    : undefined
-                }
-                onKeyDown={listboxKeyboard.onKeyDown}
-              />
-            </div>
-          ) : null}
-          {filtered.map((opt, index) => {
-            const selected = value.includes(opt.id);
-            const active = index === listboxKeyboard.activeIndex;
-            return (
-              <div
-                key={opt.id}
-                id={`${listboxId}-option-${index}`}
-                ref={(node) => {
-                  listboxKeyboard.optionRefs.current[index] = node;
-                }}
-                role="option"
-                aria-selected={selected}
-                tabIndex={-1}
-                onMouseEnter={() => listboxKeyboard.setActiveIndex(index)}
-                onClick={() => toggleOption(opt.id)}
-                style={{
-                  width: "100%",
-                  padding: "8px 12px",
-                  borderRadius: 8,
-                  border: "none",
-                  background: selected || active
-                    ? "color-mix(in srgb, var(--brand-accent, #1e36f8) 12%, transparent)"
-                    : "transparent",
-                  color: selected ? accentColor : t.text,
-                  fontSize: 12,
-                  fontFamily: FONT.body,
-                  cursor: "pointer",
-                  textAlign: "left",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  fontWeight: selected ? 700 : 400,
-                  boxSizing: "border-box",
-                }}
-              >
-                <span
-                  style={{
-                    width: 14,
-                    height: 14,
-                    borderRadius: 3,
-                    flexShrink: 0,
-                    border: `1.5px solid ${selected ? accentColor : t.cardBorder}`,
-                    background: selected ? accentColor : "transparent",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  {selected ? <Check size={9} color="#fff" strokeWidth={3} aria-hidden /> : null}
-                </span>
-                {opt.label}
-              </div>
-            );
-          })}
-        </div>
-      ) : null}
+      {panelNode ? createPortal(panelNode, document.body) : null}
     </div>
   );
 }

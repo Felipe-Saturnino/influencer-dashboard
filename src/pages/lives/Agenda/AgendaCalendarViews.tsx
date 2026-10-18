@@ -83,10 +83,11 @@ function agendaDayNumberColor(date: Date, todayISO: string, isDark: boolean | un
 export interface LiveChipProps {
   live: Live;
   t: AgendaTheme;
+  isDark: boolean | undefined;
   onOpenLive: (live: Live) => void;
 }
 
-export function LiveChip({ live, t, onOpenLive }: LiveChipProps) {
+export function LiveChip({ live, t, isDark, onOpenLive }: LiveChipProps) {
   return (
     <button
       type="button"
@@ -116,6 +117,7 @@ export function LiveChip({ live, t, onOpenLive }: LiveChipProps) {
           flexShrink: 0,
         }}
       />
+      <PlatLogo plataforma={live.plataforma} size={11} isDark={isDark ?? false} />
       <span
         style={{
           fontSize: 12,
@@ -210,7 +212,7 @@ export function ViewMes({ current, livesForDay, t, brand, isDark, setCurrent, se
                 </button>
                 <div className="agenda-day-scroll" style={{ marginTop: 4, flex: 1, minHeight: 0, overflowY: "auto" }}>
                   {dayLives.slice(0, 8).map((l) => (
-                    <LiveChip key={l.id} live={l} t={t} onOpenLive={onOpenLive} />
+                    <LiveChip key={l.id} live={l} t={t} isDark={isDark} onOpenLive={onOpenLive} />
                   ))}
                   {dayLives.length > 8 && (
                     <button
@@ -281,7 +283,7 @@ export function ViewSemana({ current, livesForDay, t, brand, isDark, onOpenLive 
                   )}
                 </div>
                 {dayLives.map((l) => (
-                  <LiveChip key={l.id} live={l} t={t} onOpenLive={onOpenLive} />
+                  <LiveChip key={l.id} live={l} t={t} isDark={isDark} onOpenLive={onOpenLive} />
                 ))}
                 {dayLives.length === 0 && (
                   <div style={{ fontSize: 11, color: t.textMuted, textAlign: "center", marginTop: 12, fontFamily: FONT.body }}>—</div>

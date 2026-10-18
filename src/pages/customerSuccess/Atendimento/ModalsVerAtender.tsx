@@ -216,10 +216,21 @@ export interface ModalVerChamadoProps {
   row: CsChamadoRow | null;
   historico: CsChamadoHistoricoRow[];
   loadingHistorico: boolean;
+  erroHistorico?: string | null;
+  onRetryHistorico?: () => void;
   t: Theme;
 }
 
-export function ModalVerChamado({ open, onClose, row, historico, loadingHistorico, t }: ModalVerChamadoProps) {
+export function ModalVerChamado({
+  open,
+  onClose,
+  row,
+  historico,
+  loadingHistorico,
+  erroHistorico = null,
+  onRetryHistorico,
+  t,
+}: ModalVerChamadoProps) {
   const isDm = row?.origem === CS_ATENDIMENTO_ORIGEM_INSTAGRAM_DM;
   const isComent = row?.origem === CS_ATENDIMENTO_ORIGEM_INSTAGRAM_COMENTARIO;
   const isInstagram = isCsChamadoOrigemInstagram(row?.origem ?? CS_ATENDIMENTO_ORIGEM_EMAIL);
@@ -227,6 +238,7 @@ export function ModalVerChamado({ open, onClose, row, historico, loadingHistoric
   const [aba, setAba] = useState<"dados" | "historico" | "conversa" | "comentario">("dados");
   const [mensagens, setMensagens] = useState<CsChamadoMensagemRow[]>([]);
   const [loadingMensagens, setLoadingMensagens] = useState(false);
+  const [erroMensagens, setErroMensagens] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open || !row) return;
@@ -238,13 +250,24 @@ export function ModalVerChamado({ open, onClose, row, historico, loadingHistoric
   useEffect(() => {
     if (!open || !row || !isDm) {
       setMensagens([]);
+      setErroMensagens(null);
       return;
     }
     setLoadingMensagens(true);
-    void carregarMensagensChamado(row.id).then((rows) => {
-      setMensagens(rows);
-      setLoadingMensagens(false);
-    });
+    setErroMensagens(null);
+    void carregarMensagensChamado(row.id)
+      .then((rows) => {
+        setMensagens(rows);
+      })
+      .catch(() => {
+        setMensagens([]);
+        setErroMensagens(
+          "Não foi possível carregar as mensagens. Se o problema persistir, entre em contato com o suporte.",
+        );
+      })
+      .finally(() => {
+        setLoadingMensagens(false);
+      });
   }, [open, row, isDm]);
 
   if (!open || !row) return null;
@@ -328,7 +351,45 @@ export function ModalVerChamado({ open, onClose, row, historico, loadingHistoric
 
       {isDm ? (
         <ModalTabPanel active={abaAtiva === "conversa"} id="panel-ver-chamado-conversa" labelledBy="tab-ver-chamado-conversa">
-          <div style={{ padding: "0 20px 20px" }}>{corpoVerInstagramDm(row, t, mensagens, loadingMensagens)}</div>
+          <div style={{ padding: "0 20px 20px" }}>
+            {erroMensagens ? (
+              <div role="alert" aria-live="polite" style={{ padding: "16px 0", textAlign: "center", fontFamily: FONT.body }}>
+                <p style={{ color: "#e84025", fontSize: 13, marginBottom: 10 }}>{erroMensagens}</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!row) return;
+                    setLoadingMensagens(true);
+                    setErroMensagens(null);
+                    void carregarMensagensChamado(row.id)
+                      .then(setMensagens)
+                      .catch(() => {
+                        setMensagens([]);
+                        setErroMensagens(
+                          "Não foi possível carregar as mensagens. Se o problema persistir, entre em contato com o suporte.",
+                        );
+                      })
+                      .finally(() => setLoadingMensagens(false));
+                  }}
+                  style={{
+                    padding: "8px 14px",
+                    borderRadius: 10,
+                    border: `1px solid ${t.cardBorder}`,
+                    background: t.inputBg,
+                    color: t.text,
+                    fontSize: 12,
+                    fontWeight: 700,
+                    fontFamily: FONT.body,
+                    cursor: "pointer",
+                  }}
+                >
+                  Tentar novamente
+                </button>
+              </div>
+            ) : (
+              corpoVerInstagramDm(row, t, mensagens, loadingMensagens)
+            )}
+          </div>
         </ModalTabPanel>
       ) : isComent ? (
         <ModalTabPanel active={abaAtiva === "comentario"} id="panel-ver-chamado-comentario" labelledBy="tab-ver-chamado-comentario">
@@ -346,6 +407,29 @@ export function ModalVerChamado({ open, onClose, row, historico, loadingHistoric
             <div style={{ padding: "24px 0", textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
               <Loader2 className="app-lucide-spin" size={20} color="var(--brand-primary, #7c3aed)" aria-hidden />
               <div style={{ fontSize: 13, marginTop: 8 }}>Carregando…</div>
+            </div>
+          ) : erroHistorico ? (
+            <div role="alert" aria-live="polite" style={{ padding: "24px 0", textAlign: "center", fontFamily: FONT.body }}>
+              <p style={{ color: "#e84025", fontSize: 13, marginBottom: 10 }}>{erroHistorico}</p>
+              {onRetryHistorico ? (
+                <button
+                  type="button"
+                  onClick={onRetryHistorico}
+                  style={{
+                    padding: "8px 14px",
+                    borderRadius: 10,
+                    border: `1px solid ${t.cardBorder}`,
+                    background: t.inputBg,
+                    color: t.text,
+                    fontSize: 12,
+                    fontWeight: 700,
+                    fontFamily: FONT.body,
+                    cursor: "pointer",
+                  }}
+                >
+                  Tentar novamente
+                </button>
+              ) : null}
             </div>
           ) : historico.length === 0 ? (
             <div style={{ padding: "24px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
@@ -370,6 +454,8 @@ export interface ModalAtenderChamadoProps {
   row: CsChamadoRow | null;
   historico: CsChamadoHistoricoRow[];
   loadingHistorico: boolean;
+  erroHistorico?: string | null;
+  onRetryHistorico?: () => void;
   t: Theme;
   brand: Brand;
   onSaved: () => void;
@@ -381,6 +467,8 @@ export function ModalAtenderChamado({
   row,
   historico,
   loadingHistorico,
+  erroHistorico = null,
+  onRetryHistorico,
   t,
   brand,
   onSaved,
@@ -527,6 +615,29 @@ export function ModalAtenderChamado({
 
         {loadingHistorico ? (
           <div style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>Carregando…</div>
+        ) : erroHistorico ? (
+          <div role="alert" aria-live="polite" style={{ fontFamily: FONT.body }}>
+            <p style={{ color: "#e84025", fontSize: 13, marginBottom: 10 }}>{erroHistorico}</p>
+            {onRetryHistorico ? (
+              <button
+                type="button"
+                onClick={onRetryHistorico}
+                style={{
+                  padding: "8px 14px",
+                  borderRadius: 10,
+                  border: `1px solid ${t.cardBorder}`,
+                  background: t.inputBg,
+                  color: t.text,
+                  fontSize: 12,
+                  fontWeight: 700,
+                  fontFamily: FONT.body,
+                  cursor: "pointer",
+                }}
+              >
+                Tentar novamente
+              </button>
+            ) : null}
+          </div>
         ) : anotacoesHistorico.length === 0 ? (
           <div style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>Nenhuma anotação registrada.</div>
         ) : (

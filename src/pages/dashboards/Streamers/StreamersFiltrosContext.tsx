@@ -18,6 +18,7 @@ import {
   buildInfluencerFilterOptions,
   fetchInfluencerIdsComDadosNoPeriodo,
   periodoStreamersFiltro,
+  streamersInfluencerIdsQuery,
 } from "./streamersInfluencerFilterHelpers";
 
 export type MesRef = { ano: number; mes: number; label: string };
@@ -42,9 +43,15 @@ export type StreamersFiltrosContextValue = {
   irMesAnterior: () => void;
   irMesProximo: () => void;
   toggleHistorico: () => void;
-  /** True enquanto a aba ativa (Overview / Conversão / Financeiro) está a carregar dados. */
+  /** True enquanto a aba ativa (Overview / Conversão / Jogadores / Financeiro) está a carregar dados. */
   isLoading: boolean;
   setIsLoading: (v: boolean) => void;
+  /**
+   * Fase 2 MoM: false enquanto o comparativo do mês ainda corre.
+   * Conversão (sem MoM) e Histórico mantêm true.
+   */
+  momPronto: boolean;
+  setMomPronto: (v: boolean) => void;
 };
 
 const StreamersFiltrosCtx = createContext<StreamersFiltrosContextValue | null>(null);
@@ -73,6 +80,10 @@ export function StreamersFiltrosProvider({ children }: { children: ReactNode }) 
   const setIsLoading = useCallback((v: boolean) => {
     setIsLoadingState(v);
   }, []);
+  const [momPronto, setMomProntoState] = useState(true);
+  const setMomPronto = useCallback((v: boolean) => {
+    setMomProntoState(v);
+  }, []);
 
   const {
     perfis,
@@ -92,12 +103,14 @@ export function StreamersFiltrosProvider({ children }: { children: ReactNode }) 
 
     (async () => {
       try {
+        const catalogInfluencerIds = perfis.map((p) => p.id);
         const idsComDados = await fetchInfluencerIdsComDadosNoPeriodo({
           inicio: periodo.inicio,
           fim: periodo.fim,
           filtroOperadora,
           operadoraSlugsForcado,
           podeVerInfluencer,
+          influencerIds: streamersInfluencerIdsQuery("todos", escoposVisiveis, catalogInfluencerIds),
         });
         if (cancel) return;
         setInfluencerOptions(buildInfluencerFilterOptions(perfis, idsComDados, podeVerInfluencer));
@@ -117,7 +130,7 @@ export function StreamersFiltrosProvider({ children }: { children: ReactNode }) 
     filtroOperadora,
     operadoraSlugsForcado,
     podeVerInfluencer,
-    escoposVisiveis.influencersVisiveis,
+    escoposVisiveis,
   ]);
 
   useEffect(() => {
@@ -174,6 +187,8 @@ export function StreamersFiltrosProvider({ children }: { children: ReactNode }) 
       toggleHistorico,
       isLoading,
       setIsLoading,
+      momPronto,
+      setMomPronto,
     }),
     [
       mesesDisponiveis,
@@ -193,6 +208,8 @@ export function StreamersFiltrosProvider({ children }: { children: ReactNode }) 
       toggleHistorico,
       isLoading,
       setIsLoading,
+      momPronto,
+      setMomPronto,
     ],
   );
 

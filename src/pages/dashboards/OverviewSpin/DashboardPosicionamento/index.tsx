@@ -46,6 +46,7 @@ import {
   visibilidadePorCategoriaDia,
 } from "../../../../lib/lobbyMonitorHelpers";
 import { useLobbyPosicionamentoData, POS_COMPARACAO_DIFERENTE_DIAS } from "./useLobbyPosicionamentoData";
+import { RankingConcorrentesLista } from "./RankingConcorrentesLista";
 import {
   operadoraTemCanaisDedicadoENetwork,
   type OverviewSpinCatalogoCanais,
@@ -747,6 +748,7 @@ function DashboardPosicionamentoTodas({
   const brx = useLobbyPosicionamentoData("brx_bet", refDate, optsConsolidados);
   const donald = useLobbyPosicionamentoData("donald_bet", refDate, optsConsolidados);
   const betponto = useLobbyPosicionamentoData("betponto_bet", refDate, optsConsolidados);
+  const goldebet = useLobbyPosicionamentoData("goldebet", refDate, optsConsolidados);
 
   const loadingHistoricoAlertas =
     blaze.loadingHistorico ||
@@ -757,7 +759,8 @@ function DashboardPosicionamentoTodas({
     rico.loadingHistorico ||
     brx.loadingHistorico ||
     donald.loadingHistorico ||
-    betponto.loadingHistorico;
+    betponto.loadingHistorico ||
+    goldebet.loadingHistorico;
 
   const erroHistoricoAlertas =
     blaze.erroHistorico ||
@@ -768,7 +771,8 @@ function DashboardPosicionamentoTodas({
     rico.erroHistorico ||
     brx.erroHistorico ||
     donald.erroHistorico ||
-    betponto.erroHistorico;
+    betponto.erroHistorico ||
+    goldebet.erroHistorico;
 
   const recarregarHistoricoTodas = () => {
     void blaze.recarregar();
@@ -780,6 +784,7 @@ function DashboardPosicionamentoTodas({
     void brx.recarregar();
     void donald.recarregar();
     void betponto.recarregar();
+    void goldebet.recarregar();
   };
 
   const alertasConsolidados = useMemo(() => {
@@ -798,6 +803,7 @@ function DashboardPosicionamentoTodas({
       ...prefix("brx_bet", brx.alertasAlteracoes7d),
       ...prefix("donald_bet", donald.alertasAlteracoes7d),
       ...prefix("betponto_bet", betponto.alertasAlteracoes7d),
+      ...prefix("goldebet", goldebet.alertasAlteracoes7d),
     ].sort((a, b) => (b.sortTs ?? 0) - (a.sortTs ?? 0));
   }, [
     blaze.alertasAlteracoes7d,
@@ -809,6 +815,7 @@ function DashboardPosicionamentoTodas({
     brx.alertasAlteracoes7d,
     donald.alertasAlteracoes7d,
     betponto.alertasAlteracoes7d,
+    goldebet.alertasAlteracoes7d,
     slugToNome,
   ]);
 
@@ -930,6 +937,19 @@ function DashboardPosicionamentoTodas({
           prevDiferenteMap={betponto.prevDiferenteMap}
           layout="consolidado"
           ultimaExecutadoEm={betponto.snapshotExec?.executado_em}
+          cardStyle={{ ...card, marginBottom: 0 }}
+        />
+        <PosicaoAtualMesasBlock
+          titulo={`Mesas ${slugToNome("goldebet")}`}
+          loading={goldebet.loading}
+          semDados={goldebet.semDados}
+          erro={goldebet.erro}
+          onRetry={() => void goldebet.recarregar()}
+          mesasOrdenadas={goldebet.mesasOrdenadas}
+          prevMap={goldebet.prevMap}
+          prevDiferenteMap={goldebet.prevDiferenteMap}
+          layout="consolidado"
+          ultimaExecutadoEm={goldebet.snapshotExec?.executado_em}
           cardStyle={{ ...card, marginBottom: 0 }}
         />
       </div>
@@ -1464,63 +1484,11 @@ function DashboardPosicionamentoOperadora({
               Sem dados para o período selecionado.
             </p>
           ) : (
-            <TabelaComPaginacao
+            <RankingConcorrentesLista
               items={rankingJogosFiltrados}
               t={t}
               resetKey={`${canalFiltro}|${operadoraSlug}|${rankingJogosFiltrados.length}`}
-            >
-              {(jogosPagina) => (
-            <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
-              {jogosPagina.map((j) => (
-                <li
-                  key={j.game_id}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                    padding: "8px 0",
-                    borderBottom: `1px solid ${t.cardBorder}`,
-                    fontFamily: FONT.body,
-                    fontSize: 13,
-                  }}
-                >
-                  <span
-                    style={{
-                      minWidth: 40,
-                      padding: "4px 8px",
-                      borderRadius: 8,
-                      textAlign: "center",
-                      fontWeight: 700,
-                      fontSize: 12,
-                      background: posicaoBgColor(j.posicao),
-                      color: posicaoTextColor(j.posicao),
-                    }}
-                  >
-                    {fmtPosicao(j.posicao)}
-                  </span>
-                  <span
-                    style={{ flex: 1, color: t.text, overflow: "hidden", textOverflow: "ellipsis" }}
-                    title={j.name}
-                  >
-                    {j.name}
-                  </span>
-                  <span
-                    style={{
-                      color: t.textMuted,
-                      fontSize: 12,
-                      maxWidth: 120,
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                    }}
-                    title={j.provider_name}
-                  >
-                    {j.provider_name}
-                  </span>
-                </li>
-              ))}
-            </ul>
-              )}
-            </TabelaComPaginacao>
+            />
           )}
         </div>
 

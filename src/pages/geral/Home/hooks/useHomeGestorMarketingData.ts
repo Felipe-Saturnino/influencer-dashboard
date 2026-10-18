@@ -1,21 +1,17 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../../../lib/supabase";
 import { fetchAllPages } from "../../../../lib/supabasePaginate";
-import { getHomeKpiPeriodosComparativoMoM } from "../../../../lib/homeInvestidorMtd";
-import { fetchInfluencerAnalyticsPeriodoCached } from "../../../../lib/influencerAnalyticsQuery";
-import { fmtBRL } from "../../../../lib/dashboardHelpers";
-import { totaisFromKpiRows } from "../../../dashboards/SocialMediaDashboard/socialMediaBlocks";
-
-type KpiDailyRow = {
-  date: string;
-  channel: string;
-  followers?: number | null;
-  followers_gained?: number | null;
-  posts_published?: number | null;
-  impressions?: number | null;
-  engagements?: number | null;
-  link_clicks?: number | null;
-};
+import { fmtBRL, getPeriodoComparativoMoM } from "../../../../lib/dashboardHelpers";
+import { MESES_PT } from "../../../../lib/dashboardConstants";
+import {
+  fmtNum,
+  sumCampanhasPerf,
+  totaisFromKpiRows,
+  youtubeEngagementFromVideoSnapshots,
+  type CampanhaPerfRow,
+  type KpiDaily,
+  type YoutubeVideoRowLite,
+} from "../../../dashboards/SocialMediaDashboard/socialMediaBlocks";
 
 export type HomeGestorMarketingAlertas = {
   utmsPendentes: number;
@@ -23,10 +19,22 @@ export type HomeGestorMarketingAlertas = {
 
 export type HomeGestorMarketingKpis = {
   mesLabel: string;
-  resultado: { ggrFmt: string; registros: number; ftds: number; depositosFmt: string };
-  acoes: { postagens: number; novosSeguidores: number; impressoes: number; engajamentoFmt: string };
+  resultado: { ggrFmt: string; registrosFmt: string; ftdsFmt: string; depositosFmt: string };
+  acoes: {
+    postagensFmt: string;
+    novosSeguidoresFmt: string;
+    impressoesFmt: string;
+    engajamentoFmt: string;
+  };
   erroKpis: boolean;
 };
+
+function mesCivilAtual(): { ano: number; mes: number; label: string } {
+  const d = new Date();
+  const ano = d.getFullYear();
+  const mes = d.getMonth();
+  return { ano, mes, label: `${MESES_PT[mes]} ${ano}` };
+}
 
 export function useHomeGestorMarketingData() {
   const [ready, setReady] = useState(false);
@@ -38,67 +46,97 @@ export function useHomeGestorMarketingData() {
     void (async () => {
       setReady(false);
       try {
-        const { referencia, atual } = getHomeKpiPeriodosComparativoMoM();
+        const { ano, mes, label } = mesCivilAtual();
+        const { atual } = getPeriodoComparativoMoM(ano, mes);
 
-        const [utmRes, analytics, kpiRows] = await Promise.all([
+        const [utmRes, campRes, kpiRows, ytRes] = await Promise.all([
           supabase.from("utm_aliases").select("id", { count: "exact", head: true }).eq("status", "pendente"),
-          fetchInfluencerAnalyticsPeriodoCached({ inicio: atual.inicio, fim: atual.fim }),
-          fetchAllPages<KpiDailyRow>(async (from, to) =>
+          supabase.rpc("get_campanhas_performance", {
+            p_data_inicio: atual.inicio,
+            p_data_fim: atual.fim,
+            p_operadora_slug: null,
+            p_modo_historico: false,
+          }),
+          fetchAllPages<KpiDaily>(async (from, to) =>
             supabase
               .from("kpi_daily")
               .select(
-                "date, channel, followers, followers_gained, posts_published, impressions, engagements, link_clicks",
+                "channel, date, followers, impressions, reach, engagements, engagement_rate, posts_published, video_views, link_clicks",
               )
               .gte("date", atual.inicio)
               .lte("date", atual.fim)
-              .order("date")
+              .order("date", { ascending: true })
+              .order("channel", { ascending: true })
               .range(from, to),
-          ).catch(() => [] as KpiDailyRow[]),
+          ),
+          supabase
+            .from("youtube_videos")
+            .select("date, likes, comments, video_id")
+            .gte("date", atual.inicio)
+            .lte("date", atual.fim)
+            .order("date", { ascending: false })
+            .limit(500),
         ]);
 
         if (cancelled) return;
 
-        const ggr = analytics.metricas.reduce((a, m) => a + (Number(m.ggr) || 0), 0);
-        const registros = analytics.metricas.reduce((a, m) => a + (Number(m.registration_count) || 0), 0);
-        const ftds = analytics.metricas.reduce((a, m) => a + (Number(m.ftd_count) || 0), 0);
-        const depositos = analytics.metricas.reduce((a, m) => a + (Number(m.deposit_total) || 0), 0);
-
-        let erroKpis = false;
-        let acoes = { postagens: 0, novosSeguidores: 0, impressoes: 0, engajamentoFmt: "—" };
-        try {
-          const totais = totaisFromKpiRows(kpiRows as Parameters<typeof totaisFromKpiRows>[0]);
-          const novosSeg = kpiRows.reduce((a, r) => a + (Number(r.followers_gained) || 0), 0);
-          const eng = totais.impressoes > 0 ? (totais.engagements / totais.impressoes) * 100 : 0;
-          acoes = {
-            postagens: totais.postagens ?? 0,
-            novosSeguidores: novosSeg,
-            impressoes: totais.impressoes ?? 0,
-            engajamentoFmt: `${eng.toFixed(1)}%`,
-          };
-        } catch (e) {
-          console.error("[HomeGestorMarketing] KPIs ações:", e);
-          erroKpis = true;
+        if (campRes.error) {
+          console.error("[HomeGestorMarketing] get_campanhas_performance:", campRes.error);
+          throw campRes.error;
         }
+
+        const consolidado = sumCampanhasPerf((campRes.data as CampanhaPerfRow[]) ?? []);
+
+        const base = totaisFromKpiRows(kpiRows);
+        const ytRows: YoutubeVideoRowLite[] = ((ytRes.data ?? []) as YoutubeVideoRowLite[]).map((r) => ({
+          video_id: r.video_id,
+          date: r.date,
+          likes: r.likes,
+          comments: r.comments,
+        }));
+        const ytKpiEng = (base.byChannel["youtube"] ?? []).reduce(
+          (a, r) => a + (Number(r.engagements) || 0),
+          0,
+        );
+        const ytEng = Math.max(ytKpiEng, youtubeEngagementFromVideoSnapshots(ytRows));
+        const delta = ytEng - ytKpiEng;
+        const totais = delta > 0 ? { ...base, engagements: base.engagements + delta } : base;
+
+        const totalImpr = totais.impressoes || 1;
+        const engMedio =
+          totalImpr > 0 && totais.engagements != null
+            ? (totais.engagements / totalImpr) * 100
+            : null;
 
         setAlertas({ utmsPendentes: utmRes.count ?? 0 });
         setKpis({
-          mesLabel: referencia.label,
+          mesLabel: label,
           resultado: {
-            ggrFmt: fmtBRL(ggr),
-            registros,
-            ftds,
-            depositosFmt: fmtBRL(depositos),
+            ggrFmt: fmtBRL(consolidado.ggr),
+            registrosFmt: fmtNum(consolidado.registros),
+            ftdsFmt: consolidado.ftds.toLocaleString("pt-BR"),
+            depositosFmt: fmtBRL(consolidado.deposit_total),
           },
-          acoes,
-          erroKpis,
+          acoes: {
+            postagensFmt: fmtNum(totais.postagens),
+            novosSeguidoresFmt: fmtNum(totais.seguidores),
+            impressoesFmt: fmtNum(totais.impressoes),
+            engajamentoFmt: engMedio != null ? `${engMedio.toFixed(1)}%` : "—",
+          },
+          erroKpis: false,
         });
       } catch (e) {
         console.error("[HomeGestorMarketing] carga:", e);
         if (!cancelled) {
           setKpis({
             mesLabel: "",
-            resultado: { ggrFmt: "—", registros: 0, ftds: 0, depositosFmt: "—" },
-            acoes: { postagens: 0, novosSeguidores: 0, impressoes: 0, engajamentoFmt: "—" },
+            resultado: { ggrFmt: "—", registrosFmt: "—", ftdsFmt: "—", depositosFmt: "—" },
+            acoes: {
+              postagensFmt: "—",
+              novosSeguidoresFmt: "—",
+              impressoesFmt: "—",
+              engajamentoFmt: "—",
+            },
             erroKpis: true,
           });
         }

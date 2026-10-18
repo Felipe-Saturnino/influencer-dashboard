@@ -161,12 +161,14 @@ async function carregarCatalogoMesas(opts: {
   nomesPorId: Record<string, string>;
   tipoJogoPorMesaId: Record<string, string>;
   tipoJogoPorTableId: Record<string, string>;
+  falhouCompleto: boolean;
 }> {
   const nomesPorId: Record<string, string> = {};
   const tipoJogoPorMesaId: Record<string, string> = {};
   const tipoJogoPorTableId: Record<string, string> = {};
   const ids = [...new Set(opts.mesaIds.map((x) => x.trim()).filter(Boolean))];
   const tableIds = [...new Set(opts.tableIds.map((x) => x.trim()).filter(Boolean))];
+  let teveErro = false;
 
   const ingest = (rows: unknown[]) => {
     for (const raw of rows) {
@@ -199,6 +201,7 @@ async function carregarCatalogoMesas(opts: {
       .in("id", slice);
     if (error) {
       console.error("[Overview OCR] mesas por id:", error);
+      teveErro = true;
       continue;
     }
     ingest(data ?? []);
@@ -214,12 +217,23 @@ async function carregarCatalogoMesas(opts: {
       .in("mesa_identificacao", slice);
     if (error) {
       console.error("[Overview OCR] mesas por table_id:", error);
+      teveErro = true;
       continue;
     }
     ingest(data ?? []);
   }
 
-  return { nomesPorId, tipoJogoPorMesaId, tipoJogoPorTableId };
+  const tinhaPedido = ids.length > 0 || tableIds.length > 0;
+  const vazio =
+    Object.keys(nomesPorId).length === 0 &&
+    Object.keys(tipoJogoPorMesaId).length === 0 &&
+    Object.keys(tipoJogoPorTableId).length === 0;
+  return {
+    nomesPorId,
+    tipoJogoPorMesaId,
+    tipoJogoPorTableId,
+    falhouCompleto: tinhaPedido && teveErro && vazio,
+  };
 }
 
 export function useOverviewPrestadorSmOcr(opts: {
@@ -246,6 +260,7 @@ export function useOverviewPrestadorSmOcr(opts: {
   const [funcionarioIdPorTos, setFuncionarioIdPorTos] = useState(() => new Map<string, string>());
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const [reloadTick, setReloadTick] = useState(0);
 
   const idsKey = funcionarioIds.slice().sort().join("|");
 
@@ -320,6 +335,11 @@ export function useOverviewPrestadorSmOcr(opts: {
           setMesaNomes((prev) => ({ ...prev, ...cat.nomesPorId }));
           setTipoJogoPorMesaId((prev) => ({ ...prev, ...cat.tipoJogoPorMesaId }));
           setTipoJogoPorTableId((prev) => ({ ...prev, ...cat.tipoJogoPorTableId }));
+          if (cat.falhouCompleto) {
+            setErro(
+              "Não foi possível carregar o catálogo de mesas. Se o problema persistir, entre em contato com o suporte.",
+            );
+          }
         };
 
         if (historico) {
@@ -369,7 +389,7 @@ export function useOverviewPrestadorSmOcr(opts: {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- idsKey
-  }, [enabled, idsKey, mesSelecionado, historico]);
+  }, [enabled, idsKey, mesSelecionado, historico, reloadTick]);
 
   const sinaisEscopo = useMemo(
     () => filtrarSinaisPorResolvers(sinaisAtual, funcionarioIds, staffIdTosPorFuncionario),
@@ -471,6 +491,7 @@ export function useOverviewPrestadorSmOcr(opts: {
   return {
     loading,
     erro,
+    recarregar: () => setReloadTick((n) => n + 1),
     kpisAtual,
     kpisAnterior,
     porJogo,

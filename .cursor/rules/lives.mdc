@@ -250,7 +250,7 @@ Todos os ícones decorativos (dentro de badges, células) devem ter `aria-hidden
 ## Dropdowns de Status — ARIA Obrigatório
 
 Padrão para `StatusBadge` (Influencers), `StatusScoutBadge` (Scout) e qualquer
-dropdown de seleção inline:
+dropdown de seleção inline. Em **modal**, o menu usa portal `fixed` (Global § Lista pesquisável em modal) — `StatusBadge` de Influencers/Afiliados já segue esse contrato.
 
 ```tsx
 // Trigger:
@@ -441,6 +441,10 @@ const brand = useDashboardBrand(); // chamar dentro do modal
 
 ### Resultados
 
+**Carga:** `fetchAllPages` + colunas explícitas em `lives` (sem `select("*")`); catálogo do filtro Influencer também com `fetchAllPages`. Lista de cards pendentes pagina a vista com **`TabelaComPaginacao`** (`TABELA_PAGE_SIZE` = 20); o contador «X lives aguardando» usa o total filtrado.
+
+**Subtítulo:** `getPageCanonicalSubtitle("resultados")` — a janela de **5 h** fica na Ajuda / regra abaixo, não no header.
+
 **Janela de elegibilidade — não alterar sem validação de produto:**
 ```typescript
 // Só entram lives cujo horário agendado já passou há mais de 5 horas
@@ -472,6 +476,8 @@ const RESULTADOS_JANELA_MS = 5 * 60 * 60 * 1000;
 
 ### Feedback
 
+**Carga:** `fetchAllPages` + colunas explícitas; range da semana em **data local** (nunca `toISOString()`). Lista pagina com **`TabelaComPaginacao`** (20). KPIs usam o **mesmo** conjunto filtrado por Status que a lista. Modal Editar: `SelectListaComBusca` de operadora filtrada por `escoposVisiveis` (como Resultados).
+
 **Filtro de influencer na barra:** `FiltroInfluencerSelect` com `mode="multiple"` — Global § Filtro de influencer. Agregadora **Todos Influencers**; não declarar dropdown local.
 ```tsx
 import { FiltroInfluencerSelect } from "../../../components/dashboard";
@@ -480,7 +486,7 @@ import { FiltroInfluencerSelect } from "../../../components/dashboard";
 **`ModalFeedbackEdit` — usar `useDashboardBrand()` internamente:**
 ```tsx
 // O modal nunca recebe brand como prop
-function ModalFeedbackEdit({ live, res, operadorasList, t, isDark, onClose, onSalvo }) {
+function ModalFeedbackEdit({ live, res, operadorasList, escoposVisiveis, t, isDark, onClose, onSalvo }) {
   const brand = useDashboardBrand(); // ← interno ao modal
   // ...
 }
@@ -500,9 +506,11 @@ const [idxSemana, setIdxSemana] = useState(
 
 ### Influencers
 
-**Lista:** carregar `profiles` só com `role = influencer`. **Não** usar `ROLES_PARIDADE_INFLUENCER` nesta página — afiliados (Network / página Afiliados) compartilham `influencer_perfil`, mas **não** devem aparecer em Influencers. A constante de paridade permanece para Financeiro, Agenda, escopos, etc.
+**Lista:** carregar `profiles` só com `role = influencer` via **`fetchAllPages`** + colunas explícitas; `influencer_perfil` / `influencer_operadoras` com **`fetchInBatched`**. **Não** usar `ROLES_PARIDADE_INFLUENCER` nesta página — afiliados (Network / página Afiliados) compartilham `influencer_perfil`, mas **não** devem aparecer em Influencers. A constante de paridade permanece para Financeiro, Agenda, escopos, etc.
 
-**Reativação de acesso:** ao mudar `influencer_perfil.status` para **ativo** (badge ou modal), o trigger `trg_influencer_perfil_reativar_usuario` chama a Edge `admin-usuario-acao` (`ativar`): reativa a conta, redefine a senha para a padrão, exige troca no próximo login e envia o **e-mail de boas-vindas**. Conta desativada na plataforma aparece com pill **Desativado** no card.
+**Vista:** lista filtrada pagina com **`TabelaComPaginacao`** (20). Ações Ver/Editar: **`BtnIconeAcaoLinha`** + `tooltipAcao` (sem nome no tooltip). Falha de carga: alerta vermelho. Loading: «Carregando…».
+
+**Reativação de acesso:** ao mudar `influencer_perfil.status` para **ativo** (badge → `ModalAtivarHoras`, ou Afiliados), o trigger `trg_influencer_perfil_reativar_usuario` (1) libera **`profiles.ativo = true` na hora** (login/agenda não dependem de vault) e (2) tenta a Edge `admin-usuario-acao` (`ativar`, origem `ativacao_influencer_afiliado`) para senha padrão + troca no próximo login + e-mail de boas-vindas. Conta desativada aparece com pill **Desativado** no card.
 
 **Cota de horas (ciclo operacional, não financeiro):** Influencer **novo** (Scout Fechado e Gestão de Usuários) nasce **Inativo**, sem `horas_acordadas`. Ativar (só Inativo/Cancelado → Ativo) abre `ModalAtivarHoras` — **Horas Acordadas** obrigatório (> 0); grava `horas_ciclo_iniciado_em`. Inativo/Cancelado **limpa** a cota. Modal **Ver**: aba **Horas** após Cadastral — Pendentes = `max(0, acordadas − realizadas da cota)`; Realizadas = `live_resultados` de lives `realizada` com `data >=` início do ciclo (fuso SP). Cumprir a cota (validação em Resultados ou edição de duração no Feedback) → **Inativo** automático (`influencer_perfil_reavaliar_cota_horas`); reduzir duração **não** reativa. Ativos antigos **sem** cota **não** auto-inativam. Afiliado **não** usa esta regra. **Home Influencer:** se Ativo, saldo de Horas Pendentes &gt; 0 e **nenhuma** live futura agendada, alerta AÇÃO NECESSÁRIA abaixo do Playbook com CTA **Ir para Agenda**.
 
@@ -553,7 +561,7 @@ import { fmtBRL } from "../../../lib/dashboardHelpers";
 
 - CTA novo prospecto: **`CtaCriarButton`** na barra de filtros — rótulo **`Novo Influencer`** (`Plus` 14px no componente; Brand §3).
 - **Funil de Prospecção:** quatro cards no topo via **`FunilProspeccaoKpiGrid`** — clicáveis para filtrar por status (toggle); **sem** chips de Status na barra. Default `todos`: lista exclui **Fechados**; clique no card Fechado para visualizá-los. **`Limpar filtros`** reseta também o card ativo.
-- **Proteção de volume:** a listagem inicial consulta no máximo 500 prospectos, preservando a ordenação alfabética e evitando carga sem limite.
+- **Proteção de volume:** a listagem inicial consulta no máximo **500** prospectos (`SCOUT_LIST_LIMIT`), ordem alfabética; se atingir o teto, banner informativo. Lista filtrada pagina a vista com **`TabelaComPaginacao`** (20). Ações Ver/Editar: **`BtnIconeAcaoLinha`**. Falha de carga: alerta vermelho. Loading: «Carregando…».
 
 **`StatusScoutBadge` — ARIA completo (ver seção "Dropdowns de Status" acima).**
 

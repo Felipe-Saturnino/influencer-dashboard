@@ -283,10 +283,15 @@ export function urlPublicaFotoGeral(storagePath: string): string {
   return data.publicUrl;
 }
 
+/** TTL das URLs assinadas do bucket privado (segundos). Renovar no cliente antes de expirar. */
+export const MARKETING_FOTO_ASSINADA_TTL_SEC = 3600;
+/** Renovar URLs assinadas este tempo antes do TTL (ms). */
+export const MARKETING_FOTO_ASSINADA_RENOVAR_ANTES_MS = 15 * 60 * 1000;
+
 export async function urlAssinadaFotoPrestador(storagePath: string): Promise<string | null> {
   const { data, error } = await supabase.storage
     .from(MARKETING_FOTOS_PRESTADORES_BUCKET)
-    .createSignedUrl(storagePath, 3600);
+    .createSignedUrl(storagePath, MARKETING_FOTO_ASSINADA_TTL_SEC);
   if (error || !data?.signedUrl) return null;
   return data.signedUrl;
 }
@@ -302,7 +307,7 @@ export async function urlAssinadasFotosPrestador(
     .from(MARKETING_FOTOS_PRESTADORES_BUCKET)
     .createSignedUrls(
       pendentes.map((f) => f.storage_path),
-      3600,
+      MARKETING_FOTO_ASSINADA_TTL_SEC,
     );
 
   if (error || !data?.length) {

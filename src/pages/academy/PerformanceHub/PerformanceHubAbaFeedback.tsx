@@ -20,6 +20,7 @@ import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
 
 type Props = {
   avaliacoes: PerformanceHubAvaliacao[];
+  cargaComErro?: boolean;
   onVer: (row: PerformanceHubAvaliacao) => void;
   onAplicarFeedback: (row: PerformanceHubAvaliacao) => void;
   onHistorico: (row: PerformanceHubAvaliacao) => void;
@@ -73,6 +74,7 @@ function CelulaMensagem({ texto }: { texto: string | null | undefined }) {
 
 export function PerformanceHubAbaFeedback({
   avaliacoes,
+  cargaComErro = false,
   onVer,
   onAplicarFeedback,
   onHistorico,
@@ -146,7 +148,7 @@ export function PerformanceHubAbaFeedback({
     <>
       <div style={pageBox}>
         <SectionTitle sub="solicitações aguardando repasse do coach">Feedbacks Pendentes</SectionTitle>
-        {pendentes.length === 0 ? (
+        {cargaComErro ? null : pendentes.length === 0 ? (
           <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
             Nenhum feedback pendente para o período selecionado.
           </div>
@@ -242,7 +244,7 @@ export function PerformanceHubAbaFeedback({
 
       <div style={{ ...pageBox, marginTop: 14 }}>
         <SectionTitle sub="repasses já registrados pelo coach">Feedbacks Aplicados</SectionTitle>
-        {aplicados.length === 0 ? (
+        {cargaComErro ? null : aplicados.length === 0 ? (
           <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
             Nenhum feedback aplicado para o período selecionado.
           </div>

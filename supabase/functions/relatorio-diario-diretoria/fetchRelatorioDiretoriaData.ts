@@ -74,6 +74,7 @@ export interface PosicaoMesaNetworkRow {
   brx: number | null
   donald: number | null
   betponto: number | null
+  goldebet: number | null
 }
 
 export interface RelatorioDiretoriaData {
@@ -103,6 +104,7 @@ const LOBBY_SLUGS = [
   'brx_bet',
   'donald_bet',
   'betponto_bet',
+  'goldebet',
 ] as const
 
 /**
@@ -678,6 +680,7 @@ export async function fetchRelatorioDiretoriaData(
   const brxIdx = idxPorSlug.get('brx_bet')!
   const donaldIdx = idxPorSlug.get('donald_bet')!
   const betpontoIdx = idxPorSlug.get('betponto_bet')!
+  const goldebetIdx = idxPorSlug.get('goldebet')!
 
   const mesasDedicadas: PosicaoMesaDedicadaRow[] = [...dedicadasPorNome.entries()]
     .sort((a, b) => a[1].display.localeCompare(b[1].display, 'pt-BR'))
@@ -700,6 +703,7 @@ export async function fetchRelatorioDiretoriaData(
       brx: posicaoLobbyPorSpinIds(brxIdx, [id]),
       donald: posicaoLobbyPorSpinIds(donaldIdx, [id]),
       betponto: posicaoLobbyPorSpinIds(betpontoIdx, [id]),
+      goldebet: posicaoLobbyPorSpinIds(goldebetIdx, [id]),
     }))
 
   return {

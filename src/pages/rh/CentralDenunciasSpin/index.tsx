@@ -32,18 +32,30 @@ import { BtnExcluirComTexto } from "../../../components/BtnExcluirComTexto";
 import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
 import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
 import { ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal";
-import {descricaoModalExcluirItem, tooltipExcluir} from "../../../lib/excluirItemUi";
+import { descricaoModalExcluirItem, tooltipExcluir } from "../../../lib/excluirItemUi";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
+import { TabelaComPaginacao } from "../../../components/TabelaPaginacaoBar";
+import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
 
-function ctaGradient(brand: ReturnType<typeof useDashboardBrand>): string {
-  return brand.useBrand
-    ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
-    : "linear-gradient(135deg, var(--brand-action, #7c3aed), var(--brand-contrast, #1e36f8))";
-}
+const ERRO_CARGA_LISTA =
+  "Não foi possível carregar as denúncias. Se o problema persistir, entre em contato com o suporte.";
+const ERRO_CARGA_KPIS =
+  "Não foi possível carregar os indicadores. Se o problema persistir, entre em contato com o suporte.";
+const ERRO_DOWNLOAD_ANEXO =
+  "Não foi possível baixar o anexo. Se o problema persistir, entre em contato com o suporte.";
+const ERRO_EXCLUIR =
+  "Não foi possível excluir a denúncia. Se o problema persistir, entre em contato com o suporte.";
+const AVISO_TETO_200 =
+  "Exibindo as 200 denúncias mais recentes do filtro. Refine o período, status ou busca para ver o restante.";
+
+const ANEXOS_SELECT =
+  "id, denuncia_id, anotacao_id, storage_path, file_name, content_type, file_size";
+
+const LISTA_LIMIT = 200;
 
 type MesDenunciaEntry = { value: string; label: string };
 
@@ -103,6 +115,18 @@ function rangeForHistorico(): { start: string; end: string } {
   };
 }
 
+const btnRetryStyle: CSSProperties = {
+  fontFamily: FONT.body,
+  fontSize: 13,
+  fontWeight: 700,
+  padding: "8px 14px",
+  borderRadius: 10,
+  border: "1px solid rgba(232,64,37,0.35)",
+  background: "transparent",
+  color: "#e84025",
+  cursor: "pointer",
+};
+
 export default function CentralDenunciasSpin() {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
@@ -127,6 +151,11 @@ export default function CentralDenunciasSpin() {
   const [lista, setLista] = useState<DenunciaListRow[]>([]);
   const [anexosPorDenuncia, setAnexosPorDenuncia] = useState<Record<string, AnexoRow[]>>({});
   const [loading, setLoading] = useState(true);
+  const [loadingKpis, setLoadingKpis] = useState(true);
+  const [erro, setErro] = useState<string | null>(null);
+  const [erroKpis, setErroKpis] = useState<string | null>(null);
+  const [avisoTeto, setAvisoTeto] = useState(false);
+  const [toastAcao, setToastAcao] = useState<string | null>(null);
   const [kpis, setKpis] = useState<Record<DenunciaStatusDb, number>>({
     relatado: 0,
     em_avaliacao: 0,
@@ -152,32 +181,58 @@ export default function CentralDenunciasSpin() {
     });
   };
 
+  useEffect(() => {
+    if (!toastAcao) return;
+    const id = window.setTimeout(() => setToastAcao(null), 5000);
+    return () => window.clearTimeout(id);
+  }, [toastAcao]);
+
   const fetchKpis = useCallback(async () => {
+    setLoadingKpis(true);
+    setErroKpis(null);
     const stats: DenunciaStatusDb[] = ["relatado", "em_avaliacao", "procedente", "nao_procedente"];
-    const next: Record<DenunciaStatusDb, number> = {
-      relatado: 0,
-      em_avaliacao: 0,
-      procedente: 0,
-      nao_procedente: 0,
-    };
-    for (const s of stats) {
-      let q = supabase.from("canal_denuncias_spin").select("id", { count: "exact", head: true }).eq("status", s);
-      const { start, end } =
-        filtroPeriodoLista === "historico" ? rangeForHistorico() : rangeForMonth(filtroPeriodoLista);
-      q = q.gte("created_at", start).lte("created_at", end);
-      const { count } = await q;
-      next[s] = count ?? 0;
+    const { start, end } =
+      filtroPeriodoLista === "historico" ? rangeForHistorico() : rangeForMonth(filtroPeriodoLista);
+    try {
+      const results = await Promise.all(
+        stats.map(async (s) => {
+          const { count, error } = await supabase
+            .from("canal_denuncias_spin")
+            .select("id", { count: "exact", head: true })
+            .eq("status", s)
+            .gte("created_at", start)
+            .lte("created_at", end);
+          if (error) throw error;
+          return [s, count ?? 0] as const;
+        }),
+      );
+      const next: Record<DenunciaStatusDb, number> = {
+        relatado: 0,
+        em_avaliacao: 0,
+        procedente: 0,
+        nao_procedente: 0,
+      };
+      for (const [s, n] of results) next[s] = n;
+      setKpis(next);
+    } catch (e) {
+      console.error("[CentralDenuncias] kpis", e);
+      setErroKpis(ERRO_CARGA_KPIS);
+      setKpis({ relatado: 0, em_avaliacao: 0, procedente: 0, nao_procedente: 0 });
     }
-    setKpis(next);
+    setLoadingKpis(false);
   }, [filtroPeriodoLista]);
 
   const fetchLista = useCallback(async () => {
     setLoading(true);
+    setErro(null);
+    setAvisoTeto(false);
     let q = supabase
       .from("canal_denuncias_spin")
-      .select("id, protocolo, created_at, status, tipos_denuncia, tipo_outro_descricao, relato, deseja_identificar, nome, email, telefone, descricao_resolucao")
+      .select(
+        "id, protocolo, created_at, status, tipos_denuncia, tipo_outro_descricao, relato, deseja_identificar, nome, email, telefone, descricao_resolucao",
+      )
       .order("created_at", { ascending: false })
-      .limit(200);
+      .limit(LISTA_LIMIT);
 
     const { start, end } =
       filtroPeriodoLista === "historico" ? rangeForHistorico() : rangeForMonth(filtroPeriodoLista);
@@ -195,6 +250,8 @@ export default function CentralDenunciasSpin() {
 
     const { data, error } = await q;
     if (error) {
+      console.error("[CentralDenuncias] lista", error);
+      setErro(ERRO_CARGA_LISTA);
       setLista([]);
       setAnexosPorDenuncia({});
       setLoading(false);
@@ -202,13 +259,20 @@ export default function CentralDenunciasSpin() {
     }
     const rows = (data ?? []) as DenunciaListRow[];
     setLista(rows);
+    setAvisoTeto(rows.length >= LISTA_LIMIT);
     if (rows.length === 0) {
       setAnexosPorDenuncia({});
       setLoading(false);
       return;
     }
     const ids = rows.map((r) => r.id);
-    const { data: ax } = await supabase.from("canal_denuncia_anexos").select("*").in("denuncia_id", ids);
+    const { data: ax, error: axErr } = await supabase
+      .from("canal_denuncia_anexos")
+      .select(ANEXOS_SELECT)
+      .in("denuncia_id", ids);
+    if (axErr) {
+      console.error("[CentralDenuncias] anexos", axErr);
+    }
     const map: Record<string, AnexoRow[]> = {};
     for (const id of ids) map[id] = [];
     for (const a of (ax ?? []) as AnexoRow[]) {
@@ -229,7 +293,11 @@ export default function CentralDenunciasSpin() {
 
   async function downloadAnexo(a: AnexoRow) {
     const { data, error } = await supabase.storage.from(STORAGE_BUCKET).createSignedUrl(a.storage_path, 3600);
-    if (error || !data?.signedUrl) return;
+    if (error || !data?.signedUrl) {
+      console.error("[CentralDenuncias] download", error);
+      setToastAcao(ERRO_DOWNLOAD_ANEXO);
+      return;
+    }
     const link = document.createElement("a");
     link.href = data.signedUrl;
     link.download = a.file_name;
@@ -241,18 +309,25 @@ export default function CentralDenunciasSpin() {
   async function confirmarExclusao() {
     if (!delRow) return;
     setDelLoading(true);
-    const { data: ax } = await supabase.from("canal_denuncia_anexos").select("storage_path").eq("denuncia_id", delRow.id);
+    setToastAcao(null);
+    const { data: ax } = await supabase
+      .from("canal_denuncia_anexos")
+      .select("storage_path")
+      .eq("denuncia_id", delRow.id);
     const paths = (ax ?? []).map((r) => (r as { storage_path: string }).storage_path).filter(Boolean);
     if (paths.length) {
       await supabase.storage.from(STORAGE_BUCKET).remove(paths);
     }
     const { error } = await supabase.from("canal_denuncias_spin").delete().eq("id", delRow.id);
     setDelLoading(false);
-    if (!error) {
-      setDelRow(null);
-      void fetchLista();
-      void fetchKpis();
+    if (error) {
+      console.error("[CentralDenuncias] excluir", error);
+      setToastAcao(ERRO_EXCLUIR);
+      return;
     }
+    setDelRow(null);
+    void fetchLista();
+    void fetchKpis();
   }
 
   const filterBarSection = (withTopBorder: boolean): CSSProperties => ({
@@ -270,6 +345,77 @@ export default function CentralDenunciasSpin() {
     borderRadius: 8,
     background: t.isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)",
   };
+
+  function renderCard(row: DenunciaListRow) {
+    const ax = anexosPorDenuncia[row.id] ?? [];
+    const nForm = ax.filter((a) => !a.anotacao_id).length;
+    const relPreview = row.relato.length > 220 ? `${row.relato.slice(0, 220)}…` : row.relato;
+    return (
+      <div
+        key={row.id}
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr auto",
+          gap: 14,
+          padding: "16px 18px",
+          borderRadius: 14,
+          border: `1px solid ${t.cardBorder}`,
+          background: t.cardBg,
+          alignItems: "start",
+        }}
+      >
+        <div style={{ minWidth: 0 }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center", marginBottom: 8 }}>
+            <span style={{ fontWeight: 800, color: t.text, fontFamily: FONT.body }}>{row.protocolo}</span>
+            <span style={{ fontSize: 12, color: t.textMuted }}>{fmtDt(row.created_at)}</span>
+            <span
+              style={{
+                fontSize: 11,
+                fontWeight: 700,
+                padding: "4px 10px",
+                borderRadius: 999,
+                background: "rgba(124,58,237,0.15)",
+                color: "var(--brand-primary, #7c3aed)",
+              }}
+            >
+              {statusLabel(row.status)}
+            </span>
+          </div>
+          <div style={{ fontSize: 12, color: t.textMuted, marginBottom: 8 }}>
+            {row.tipos_denuncia.map((k) => tipoLabel(k)).join(" · ")}
+          </div>
+          <p style={{ margin: 0, fontSize: 14, color: t.text, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{relPreview}</p>
+          <div style={{ marginTop: 10, fontSize: 13, color: t.textMuted }}>
+            {nForm > 0 ? `Há ${nForm} arquivo(s) anexo(s)` : "Sem anexos no formulário"}
+          </div>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, flexShrink: 0 }}>
+          {perm.canEditarOk ? (
+            <BtnIconeAcaoLinha
+              label={tooltipAcao("Atender denúncia")}
+              onClick={() => setModalAtender(row)}
+              style={{
+                background: getCtaCriarGradient(brand),
+                border: "transparent",
+                color: "#fff",
+              }}
+            >
+              <Pencil size={16} aria-hidden />
+            </BtnIconeAcaoLinha>
+          ) : null}
+          <BtnIconeAcaoLinha label={tooltipAcao("Ver denúncia")} onClick={() => setModalVer(row)}>
+            <Eye size={16} aria-hidden />
+          </BtnIconeAcaoLinha>
+          <BtnIconeAcaoLinha label={tooltipAcao("Histórico da denúncia")} onClick={() => setModalHist(row)}>
+            <History size={16} aria-hidden />
+          </BtnIconeAcaoLinha>
+          {perm.canExcluirOk ? (
+            <BtnExcluirComTexto labelAcao={tooltipExcluir("denúncia")} onClick={() => setDelRow(row)} />
+          ) : null}
+        </div>
+      </div>
+    );
+  }
 
   if (perm.loading) {
     return (
@@ -297,68 +443,102 @@ export default function CentralDenunciasSpin() {
       />
 
       <div style={getFilterBarWrapperStyle(brand, t)}>
-          <div style={filterBarSection(false)}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
-              <button
-                type="button"
-                aria-label="Mês anterior"
-                disabled={carouselPrimeiro || modoHistorico}
-                onClick={() => setIdxMes((i) => Math.max(0, i - 1))}
-                style={getCarouselBtnNavStyle(t, carouselPrimeiro || modoHistorico)}
-              >
-                <ChevronLeft size={14} aria-hidden="true" />
-              </button>
-              <span style={getCarouselPeriodLabelStyle(t)}>{labelCarrossel}</span>
-              <button
-                type="button"
-                aria-label="Próximo mês"
-                disabled={carouselUltimo || modoHistorico}
-                onClick={() => setIdxMes((i) => Math.min(meses.length - 1, i + 1))}
-                style={getCarouselBtnNavStyle(t, carouselUltimo || modoHistorico)}
-              >
-                <ChevronRight size={14} aria-hidden="true" />
-              </button>
-            </div>
-
-            <FiltroHistoricoButton active={modoHistorico} onClick={toggleModoHistorico} />
-
-            <FiltroEntidadeBarSelect
-              selected={filtroTipos}
-              onChange={(ids) => setFiltroTipos(ids as TipoDenunciaKey[])}
-              items={DENUNCIA_TIPO_FILTRO_ITENS}
-              icon={<TriangleAlert size={15} strokeWidth={2} aria-hidden="true" />}
-              triggerEmptyLabel="Todos Tipos"
-              ariaFilterPrefix="Tipos de denúncia"
-              listboxAriaLabel="Tipos de denúncia"
-              enableSearch
-            />
-
-            <FiltroBarCampoSelect
-              id="filtro-status-denuncia"
-              value={filtroStatus}
-              onChange={setFiltroStatus}
-              options={STATUS_OPTIONS}
-              icon={FilterBarIcons.status}
-              ariaLabel="Status da denúncia"
-              todasValue="todos"
-              todasLabel="Todos Status"
-            />
+        <div style={filterBarSection(false)}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+            <button
+              type="button"
+              aria-label="Mês anterior"
+              disabled={carouselPrimeiro || modoHistorico}
+              onClick={() => setIdxMes((i) => Math.max(0, i - 1))}
+              style={getCarouselBtnNavStyle(t, carouselPrimeiro || modoHistorico)}
+            >
+              <ChevronLeft size={14} aria-hidden="true" />
+            </button>
+            <span style={getCarouselPeriodLabelStyle(t)}>{labelCarrossel}</span>
+            <button
+              type="button"
+              aria-label="Próximo mês"
+              disabled={carouselUltimo || modoHistorico}
+              onClick={() => setIdxMes((i) => Math.min(meses.length - 1, i + 1))}
+              style={getCarouselBtnNavStyle(t, carouselUltimo || modoHistorico)}
+            >
+              <ChevronRight size={14} aria-hidden="true" />
+            </button>
           </div>
 
-          <div style={filterBarSection(true)}>
-            <BarraPesquisaPagina
-              id="busca-relato"
-              value={busca}
-              onChange={setBusca}
-              placeholder={PAGE_SEARCH.denuncias}
-              aria-label="Pesquisar denúncias por palavras-chave no relato"
-              wrapperStyle={{ width: "100%", flex: "1 1 280px", maxWidth: "100%" }}
-            />
-            <AjudaContextualAcoes pageKey="rh_central_denuncias" />
-          </div>
+          <FiltroHistoricoButton active={modoHistorico} onClick={toggleModoHistorico} />
+
+          <FiltroEntidadeBarSelect
+            selected={filtroTipos}
+            onChange={(ids) => setFiltroTipos(ids as TipoDenunciaKey[])}
+            items={DENUNCIA_TIPO_FILTRO_ITENS}
+            icon={<TriangleAlert size={15} strokeWidth={2} aria-hidden="true" />}
+            triggerEmptyLabel="Todos Tipos"
+            ariaFilterPrefix="Tipos de denúncia"
+            listboxAriaLabel="Tipos de denúncia"
+            enableSearch
+          />
+
+          <FiltroBarCampoSelect
+            id="filtro-status-denuncia"
+            value={filtroStatus}
+            onChange={setFiltroStatus}
+            options={STATUS_OPTIONS}
+            icon={FilterBarIcons.status}
+            ariaLabel="Status da denúncia"
+            todasValue="todos"
+            todasLabel="Todos Status"
+          />
         </div>
 
-      {/* Bloco 2 — KPIs por status (mesmo período do filtro acima) */}
+        <div style={filterBarSection(true)}>
+          <BarraPesquisaPagina
+            id="busca-relato"
+            value={busca}
+            onChange={setBusca}
+            placeholder={PAGE_SEARCH.denuncias}
+            aria-label="Pesquisar denúncias por palavras-chave no relato"
+            wrapperStyle={{ width: "100%", flex: "1 1 280px", maxWidth: "100%" }}
+          />
+          <AjudaContextualAcoes pageKey="rh_central_denuncias" />
+        </div>
+      </div>
+
+      {toastAcao ? (
+        <div
+          role="alert"
+          style={{
+            marginBottom: 12,
+            fontSize: 13,
+            color: "#e84025",
+            fontFamily: FONT.body,
+          }}
+        >
+          {toastAcao}
+        </div>
+      ) : null}
+
+      {erroKpis ? (
+        <div
+          role="alert"
+          style={{
+            marginBottom: 12,
+            fontSize: 13,
+            color: "#e84025",
+            fontFamily: FONT.body,
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            flexWrap: "wrap",
+          }}
+        >
+          <span>{erroKpis}</span>
+          <button type="button" onClick={() => void fetchKpis()} style={btnRetryStyle}>
+            Tentar de novo
+          </button>
+        </div>
+      ) : null}
+
       <div className="app-grid-kpi-4" style={{ ...getPageKpiSectionGapStyle(), width: "100%", gap: 14 }}>
         {STATUS_OPTIONS.map((s) => {
           const color = KPI_STATUS_CORES[s.value];
@@ -367,7 +547,7 @@ export default function CentralDenunciasSpin() {
           return (
             <div
               key={s.value}
-              aria-label={loading ? labelKpi : `${labelKpi}: ${valor}`}
+              aria-label={loadingKpis || erroKpis ? labelKpi : `${labelKpi}: ${valor}`}
               style={{
                 borderRadius: 14,
                 border: `1px solid ${t.cardBorder}`,
@@ -375,6 +555,7 @@ export default function CentralDenunciasSpin() {
                 background: brand.blockBg,
                 padding: "16px 18px",
                 boxShadow: cardShadow,
+                opacity: erroKpis ? 0.55 : 1,
               }}
             >
               <div
@@ -402,98 +583,72 @@ export default function CentralDenunciasSpin() {
                   fontVariantNumeric: "tabular-nums",
                 }}
               >
-                {loading ? <div style={kpiSkeletonStyle} aria-hidden /> : valor}
+                {loadingKpis || erroKpis ? <div style={kpiSkeletonStyle} aria-hidden /> : valor}
               </div>
             </div>
           );
         })}
       </div>
 
-      {/* Bloco 3 — cards */}
+      {erro ? (
+        <div
+          role="alert"
+          style={{
+            marginTop: 14,
+            marginBottom: 12,
+            fontSize: 13,
+            color: "#e84025",
+            fontFamily: FONT.body,
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            flexWrap: "wrap",
+          }}
+        >
+          <span>{erro}</span>
+          <button type="button" onClick={() => void fetchLista()} style={btnRetryStyle}>
+            Tentar de novo
+          </button>
+        </div>
+      ) : null}
+
+      {avisoTeto && !erro ? (
+        <div
+          role="status"
+          style={{
+            marginTop: 14,
+            marginBottom: 12,
+            fontSize: 13,
+            color: t.textMuted,
+            fontFamily: FONT.body,
+            padding: "10px 14px",
+            borderRadius: 10,
+            border: `1px solid ${t.cardBorder}`,
+            background: t.cardBg,
+          }}
+        >
+          {AVISO_TETO_200}
+        </div>
+      ) : null}
+
       {loading ? (
         <div style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
           <Loader2 className="app-lucide-spin" size={22} color="var(--brand-primary, #7c3aed)" aria-hidden /> Carregando…
         </div>
-      ) : lista.length === 0 ? (
+      ) : erro ? null : lista.length === 0 ? (
         <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
-          Sem dados para o período selecionado.
+          Nenhuma denúncia para os filtros atuais.
         </div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          {lista.map((row) => {
-            const ax = anexosPorDenuncia[row.id] ?? [];
-            const nForm = ax.filter((a) => !a.anotacao_id).length;
-            const relPreview = row.relato.length > 220 ? `${row.relato.slice(0, 220)}…` : row.relato;
-            return (
-              <div
-                key={row.id}
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr auto",
-                  gap: 14,
-                  padding: "16px 18px",
-                  borderRadius: 14,
-                  border: `1px solid ${t.cardBorder}`,
-                  background: t.cardBg,
-                  alignItems: "start",
-                }}
-              >
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center", marginBottom: 8 }}>
-                    <span style={{ fontWeight: 800, color: t.text, fontFamily: FONT.body }}>{row.protocolo}</span>
-                    <span style={{ fontSize: 12, color: t.textMuted }}>{fmtDt(row.created_at)}</span>
-                    <span
-                      style={{
-                        fontSize: 11,
-                        fontWeight: 700,
-                        padding: "4px 10px",
-                        borderRadius: 999,
-                        background: "rgba(124,58,237,0.15)",
-                        color: "var(--brand-primary, #7c3aed)",
-                      }}
-                    >
-                      {statusLabel(row.status)}
-                    </span>
-                  </div>
-                  <div style={{ fontSize: 12, color: t.textMuted, marginBottom: 8 }}>
-                    {row.tipos_denuncia.map((k) => tipoLabel(k)).join(" · ")}
-                  </div>
-                  <p style={{ margin: 0, fontSize: 14, color: t.text, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{relPreview}</p>
-                  <div style={{ marginTop: 10, fontSize: 13, color: t.textMuted }}>
-                    {nForm > 0 ? `Há ${nForm} arquivo(s) anexo(s)` : "Sem anexos no formulário"}
-                  </div>
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 8, flexShrink: 0 }}>
-                  {perm.canEditarOk ? (
-                    <BtnIconeAcaoLinha
-                      label={tooltipAcao("Atender denúncia")}
-                      onClick={() => setModalAtender(row)}
-                      style={{
-                        background: ctaGradient(brand),
-                        border: "transparent",
-                        color: "#fff",
-                      }}
-                    >
-                      <Pencil size={16} aria-hidden />
-                    </BtnIconeAcaoLinha>
-                  ) : null}
-                  <BtnIconeAcaoLinha label={tooltipAcao("Ver denúncia")} onClick={() => setModalVer(row)}>
-                    <Eye size={16} aria-hidden />
-                  </BtnIconeAcaoLinha>
-                  <BtnIconeAcaoLinha label={tooltipAcao("Histórico da denúncia")} onClick={() => setModalHist(row)}>
-                    <History size={16} aria-hidden />
-                  </BtnIconeAcaoLinha>
-                  {perm.canExcluirOk ? (
-                    <BtnExcluirComTexto
-                      labelAcao={tooltipExcluir("denúncia")}
-                      onClick={() => setDelRow(row)}
-                    />
-                  ) : null}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+        <TabelaComPaginacao
+          items={lista}
+          t={t}
+          resetKey={`${filtroPeriodoLista}|${filtroStatus}|${filtroTipos.join(",")}|${busca}`}
+        >
+          {(linhas) => (
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>{linhas.map((row) => renderCard(row))}</div>
+          )}
+        </TabelaComPaginacao>
       )}
 
       <ModalVerDenuncia

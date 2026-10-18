@@ -20,7 +20,7 @@ export interface SelectComIconeProps {
 
 /**
  * Select da barra / formulário com painel pesquisável (padrão Staff/Time do Calendário).
- * Os filhos continuam a ser `<option>` / `<optgroup>` por compatibilidade.
+ * `pill={false}` → `variant="campo"` (portal em modal). Os filhos continuam a ser `<option>` / `<optgroup>`.
  */
 export function SelectComIcone({
   icon,

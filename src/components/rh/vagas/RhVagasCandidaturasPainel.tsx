@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
+import { fetchAllPages } from "../../../lib/supabasePaginate";
 import { FONT } from "../../../constants/theme";
 import {
   RH_VAGA_CANDIDATURA_ETAPAS,
   emailCandidaturaDisplay,
   labelVagaComCodigo,
-  normalizarBuscaVaga,
+  statusVagaEfetivo,
   vagaPassaFiltroTipoCandidaturas,
 } from "../../../lib/rhVagasFormat";
+import { textoContemBuscaEmAlgum } from "../../../lib/searchText";
 import { RH_CANDIDATURAS_SELECT } from "../../../lib/rhVagaCandidaturaQueries";
 import { VAGA_FILTRO_TODAS_VAGAS_VALUE } from "../../../lib/rhVagasFiltroConstants";
 import type { RhVagaRow, RhVagaStatus, RhVagaTipo } from "../../../types/rhVaga";
@@ -18,6 +20,9 @@ import { getVagasKanbanColBodyMaxHeightPx, VAGAS_KANBAN_MAX_CARDS_VISIVEIS } fro
 import { CandidaturaKanbanCard } from "./CandidaturaKanbanCard";
 import { ModalCandidaturaHistorico } from "./ModalCandidaturaHistorico";
 import { ModalCandidaturaVer } from "./ModalCandidaturaVer";
+
+const ERRO_CARGA_CANDIDATURAS =
+  "Não foi possível carregar as candidaturas. Se o problema persistir, entre em contato com o suporte.";
 
 type Theme = {
   text: string;
@@ -56,15 +61,19 @@ export function RhVagasCandidaturasPainel({
   const carregar = useCallback(async () => {
     setLoading(true);
     setErro(null);
-    const { data, error } = await supabase
-      .from("rh_vaga_candidaturas")
-      .select(RH_CANDIDATURAS_SELECT)
-      .order("created_at", { ascending: false });
-    if (error) {
-      setErro(error.message);
-      setCandidaturas([]);
-    } else {
+    try {
+      const data = await fetchAllPages(async (from, to) =>
+        supabase
+          .from("rh_vaga_candidaturas")
+          .select(RH_CANDIDATURAS_SELECT)
+          .order("created_at", { ascending: false })
+          .range(from, to),
+      );
       setCandidaturas((data ?? []) as unknown as RhVagaCandidaturaRow[]);
+    } catch (e) {
+      console.error("[rh_vaga_candidaturas] carregar", e);
+      setErro(ERRO_CARGA_CANDIDATURAS);
+      setCandidaturas([]);
     }
     setLoading(false);
   }, []);
@@ -74,19 +83,18 @@ export function RhVagasCandidaturasPainel({
   }, [carregar]);
 
   const candidaturasFiltradasBloco1 = useMemo(() => {
-    const q = normalizarBuscaVaga(busca);
     return candidaturas.filter((c) => {
       const vaga = c.vaga;
       if (!vaga) return false;
-      if (filtroStatusVaga !== "todos" && vaga.status !== filtroStatusVaga) return false;
+      if (filtroStatusVaga !== "todos" && statusVagaEfetivo(vaga) !== filtroStatusVaga) return false;
       if (!vagaPassaFiltroTipoCandidaturas(vaga.tipo_vaga as RhVagaTipo, filtroTipo)) return false;
-      if (!q) return true;
-      if (normalizarBuscaVaga(vaga.titulo).includes(q)) return true;
-      if (normalizarBuscaVaga(vaga.codigo_vaga ?? "").includes(q)) return true;
-      if (normalizarBuscaVaga(c.nome_completo).includes(q)) return true;
-      const em = emailCandidaturaDisplay(c);
-      if (em !== "—" && normalizarBuscaVaga(em).includes(q)) return true;
-      return false;
+      return textoContemBuscaEmAlgum(
+        busca,
+        vaga.titulo,
+        vaga.codigo_vaga,
+        c.nome_completo,
+        emailCandidaturaDisplay(c) !== "—" ? emailCandidaturaDisplay(c) : null,
+      );
     });
   }, [candidaturas, busca, filtroTipo, filtroStatusVaga]);
 
@@ -128,16 +136,58 @@ export function RhVagasCandidaturasPainel({
   return (
     <>
       {erro ? (
-        <div role="alert" style={{ marginBottom: 12, fontSize: 13, color: "#e84025", fontFamily: FONT.body }}>
-          {erro}
+        <div
+          role="alert"
+          style={{
+            marginBottom: 12,
+            fontSize: 13,
+            color: "#e84025",
+            fontFamily: FONT.body,
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            flexWrap: "wrap",
+          }}
+        >
+          <span>{erro}</span>
+          <button
+            type="button"
+            onClick={() => void carregar()}
+            style={{
+              fontFamily: FONT.body,
+              fontSize: 13,
+              fontWeight: 700,
+              padding: "8px 14px",
+              borderRadius: 10,
+              border: "1px solid rgba(232,64,37,0.35)",
+              background: "transparent",
+              color: "#e84025",
+              cursor: "pointer",
+            }}
+          >
+            Tentar de novo
+          </button>
         </div>
       ) : null}
 
       {loading ? (
-        <div style={{ textAlign: "center", padding: 40 }}>
+        <div
+          style={{
+            textAlign: "center",
+            padding: 40,
+            color: t.textMuted,
+            fontSize: 13,
+            fontFamily: FONT.body,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 8,
+          }}
+        >
           <Loader2 className="app-lucide-spin" size={22} color="var(--brand-primary, #7c3aed)" aria-hidden />
+          Carregando…
         </div>
-      ) : candidaturasKanban.length === 0 ? (
+      ) : erro ? null : candidaturasKanban.length === 0 ? (
         <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
           Nenhuma candidatura para os filtros atuais.
         </div>

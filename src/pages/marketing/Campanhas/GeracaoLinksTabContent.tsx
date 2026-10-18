@@ -24,6 +24,8 @@ interface GeracaoLinksTabContentProps {
   links: CampanhaLink[];
   operadoras: { slug: string; nome: string }[];
   loading: boolean;
+  loadError?: string | null;
+  onRecarregar?: () => void | Promise<void>;
   /** Abre o modal Novo Link. */
   onNovoLink?: () => void;
 }
@@ -40,6 +42,8 @@ export function GeracaoLinksTabContent({
   links,
   operadoras,
   loading,
+  loadError = null,
+  onRecarregar,
   onNovoLink,
 }: GeracaoLinksTabContentProps) {
   const { theme: t } = useApp();
@@ -177,6 +181,37 @@ export function GeracaoLinksTabContent({
           >
             <Loader2 size={22} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden />
             Carregando…
+          </div>
+        ) : loadError ? (
+          <div
+            role="alert"
+            aria-live="polite"
+            style={{
+              padding: "48px 0",
+              textAlign: "center",
+              fontFamily: FONT.body,
+            }}
+          >
+            <p style={{ color: "#e84025", fontSize: 13, marginBottom: 12 }}>{loadError}</p>
+            {onRecarregar ? (
+              <button
+                type="button"
+                onClick={() => void onRecarregar()}
+                style={{
+                  padding: "10px 20px",
+                  borderRadius: 10,
+                  border: `1px solid ${t.cardBorder}`,
+                  background: t.inputBg,
+                  color: t.text,
+                  fontSize: 13,
+                  fontWeight: 700,
+                  fontFamily: FONT.body,
+                  cursor: "pointer",
+                }}
+              >
+                Tentar novamente
+              </button>
+            ) : null}
           </div>
         ) : links.length === 0 ? (
           <div

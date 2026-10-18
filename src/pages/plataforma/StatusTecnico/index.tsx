@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo, type Dispatch, type SetStateAction } from "react";
 import { supabase, supabaseUrl, supabaseAnonKey } from "../../../lib/supabase";
+import { fetchAllPages } from "../../../lib/supabasePaginate";
 import { useApp } from "../../../context/AppContext";
 import { usePermission } from "../../../hooks/usePermission";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -15,6 +16,7 @@ import {
   RefreshCw,
   XCircle,
 } from "lucide-react";
+import { AlertaCargaComRetry } from "../../../components/AlertaCargaComRetry";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
@@ -47,9 +49,12 @@ import {
   LABEL_UI_LOBBY_BRX,
   LABEL_UI_LOBBY_DONALD,
   LABEL_UI_LOBBY_BETPONTO,
+  LABEL_UI_LOBBY_GOLDEBET,
   nomeIntegracaoStatusTecnicoUi,
   ERRO_SYNC_COMERCIAL_DOMINIO,
   ERRO_SYNC_COMERCIAL_CNPJ,
+  ERRO_SYNC_REVENUE_SENTINEL,
+  LABEL_UI_REVENUE_SENTINEL,
   ERRO_SYNC_LOBBY_BLAZE,
   ERRO_SYNC_SOCIAL,
   ERRO_SYNC_SPIN_RSS,
@@ -66,12 +71,14 @@ import {
   tableRowHoverBg,
   enriquecerStatusIntegracaoLobby,
   isLobbyIntegracaoSlug,
-  lobbyIntegracaoStatusOk,
   lobbyIntegracaoTemColetaComSucesso,
   ultimaColetaLobbyOkEm,
   mesclarLobbyFluxoPorData,
   type LobbyExecucaoMonitorRow,
 } from "./statusTecnicoHelpers";
+import {
+  computeIntegracoesAtivasCount,
+} from "./statusTecnicoIntegracoesAtivasKpi";
 import SectionTitle from "../../../components/dashboard/SectionTitle";
 import { AcaoCtaContent, StatusTecnicoLoadingBlock } from "./statusTecnicoUi";
 import { StatusIntegracaoTable } from "./statusTecnicoIntegracaoTable";
@@ -99,6 +106,8 @@ import type { CSSProperties } from "react";
 
 /** Upload OCR PLS removido do produto — ocultar mesmo se a linha ainda existir em `integrations`. */
 const SLUG_INTEGRACAO_PLS_UPLOAD_RETIRADA = "upload_pls_daily_commercial";
+const ERRO_CARREGAR_STATUS =
+  "Não foi possível carregar o status técnico. Se o problema persistir, entre em contato com o suporte.";
 
 // ─── TIPOS ────────────────────────────────────────────────────────────────────
 interface SyncLog {
@@ -163,8 +172,12 @@ interface FluxoDia {
   lobbyDonald: number;
   /** Mesas localizadas no lobby BetPonto (sync_logs lobby_betponto). */
   lobbyBetponto: number;
+  /** Mesas localizadas no lobby Goldebet (sync_logs lobby_goldebet). */
+  lobbyGoldebet: number;
   /** Empresas enriquecidas (cidade/UF) — sync_logs comercial_cnpj_enriquecimento. */
   comercialCnpj: number;
+  /** Jogadores Spin enriquecidos — sync_logs revenue_sentinel. */
+  revenueSentinel: number;
   emails: Record<string, number>; // tipo -> destinatarios_count
   total: number;
 }
@@ -181,6 +194,7 @@ export default function StatusTecnico() {
   const dashBrand = useDashboardBrand();
   const perm = usePermission("status_tecnico");
   const [loading, setLoading] = useState(true);
+  const [erroCarga, setErroCarga] = useState<string | null>(null);
   const [syncExecutando, setSyncExecutando] = useState(false);
   const [syncMensagem, setSyncMensagem] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
   const [syncAfiliadosExecutando, setSyncAfiliadosExecutando] = useState(false);
@@ -199,6 +213,8 @@ export default function StatusTecnico() {
   const [syncComercialDominioMensagem, setSyncComercialDominioMensagem] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
   const [syncComercialCnpjExecutando, setSyncComercialCnpjExecutando] = useState(false);
   const [syncComercialCnpjMensagem, setSyncComercialCnpjMensagem] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
+  const [syncRevenueSentinelExecutando, setSyncRevenueSentinelExecutando] = useState(false);
+  const [syncRevenueSentinelMensagem, setSyncRevenueSentinelMensagem] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
   const [syncLobbyBlazeExecutando, setSyncLobbyBlazeExecutando] = useState(false);
   const [syncLobbyBlazeMensagem, setSyncLobbyBlazeMensagem] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
   const [emailEnviando, setEmailEnviando] = useState(false);
@@ -233,7 +249,7 @@ export default function StatusTecnico() {
   type LogSortCol = "hora" | "integracao" | "tipo" | "descricao";
   const [sortLog, setSortLog] = useState<{ col: LogSortCol; dir: SortDir }>({ col: "hora", dir: "desc" });
   const [fluxoHover, setFluxoHover] = useState<string | null>(null);
-  const [confirmarSync, setConfirmarSync] = useState<"cda" | "cda_afiliados" | "social" | "spin_rss" | "painel_rss" | "cs_outlook" | "comercial_spa" | "comercial_dominio" | "comercial_cnpj" | "lobby_blaze" | null>(null);
+  const [confirmarSync, setConfirmarSync] = useState<"cda" | "cda_afiliados" | "social" | "spin_rss" | "painel_rss" | "cs_outlook" | "comercial_spa" | "comercial_dominio" | "comercial_cnpj" | "revenue_sentinel" | "lobby_blaze" | null>(null);
   const [confirmarDiagnostico, setConfirmarDiagnostico] = useState(false);
   const [diagnosticoExecutando, setDiagnosticoExecutando] = useState(false);
   const [diagnosticoMensagem, setDiagnosticoMensagem] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
@@ -256,12 +272,19 @@ export default function StatusTecnico() {
 
   const carregar = useCallback(async () => {
     setLoading(true);
+    setErroCarga(null);
+    try {
     const hoje = hojeIsoBrasil();
     const dataInicioStr = subDiasIso(hoje, 14);
     const syncDesdeUtc = inicioDiaBrasilUtcIso(dataInicioStr);
 
     // Integrações (sem upload PLS — descontinuado; pode sobrar linha no DB até migração)
-    const { data: intData } = await supabase.from("integrations").select("*").eq("ativo", true);
+    const { data: intData, error: intErr } = await supabase
+      .from("integrations")
+      .select("slug, nome, descricao, ativo")
+      .eq("ativo", true)
+      .order("slug", { ascending: true });
+    if (intErr) throw intErr;
     setIntegrations(
       (intData ?? []).filter((i) => i.slug !== SLUG_INTEGRACAO_PLS_UPLOAD_RETIRADA),
     );
@@ -298,11 +321,16 @@ export default function StatusTecnico() {
           "brx_bet",
           "donald_bet",
           "betponto_bet",
+          "goldebet",
         ])
         .gte("executado_em", syncDesdeUtc)
         .order("executado_em", { ascending: false })
         .limit(400),
     ]);
+    for (const r of syncBatch) {
+      if (r.error) throw r.error;
+    }
+    if (lobbyExecRes.error) throw lobbyExecRes.error;
     const [{ data: syncDataRaw }, ...slugSyncRes] = syncBatch;
     setSyncLogs(
       mesclarSyncLogsPorExecucao(
@@ -315,30 +343,35 @@ export default function StatusTecnico() {
     // Tech logs — sempre buscar 96h (maior faixa da UI); exibir conforme logFiltro
     const desde = new Date();
     desde.setHours(desde.getHours() - 96);
-    const { data: techData } = await supabase
-      .from("tech_logs")
-      .select("*")
-      .gte("created_at", desde.toISOString())
-      .order("created_at", { ascending: false })
-      .limit(200);
-    setTechLogs(techData ?? []);
+    const techData = await fetchAllPages<TechLog>(async (from, to) =>
+      supabase
+        .from("tech_logs")
+        .select("id, integracao_slug, tipo, descricao, created_at")
+        .gte("created_at", desde.toISOString())
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: false })
+        .range(from, to),
+    );
+    setTechLogs(techData);
 
     // Pipeline runs (Social Media) — últimos 7 dias
     const dataPipelineInicio = new Date();
     dataPipelineInicio.setDate(dataPipelineInicio.getDate() - 7);
-    const { data: pipelineData } = await supabase
+    const { data: pipelineData, error: pipelineErr } = await supabase
       .from("pipeline_runs")
       .select("id, run_date, channel, status, error_msg, created_at")
       .gte("run_date", dataPipelineInicio.toISOString().split("T")[0])
       .order("created_at", { ascending: false })
       .limit(100);
+    if (pipelineErr) throw pipelineErr;
     setPipelineRuns((pipelineData ?? []) as PipelineRun[]);
 
     // Registros hoje (influencer_metricas)
-    const { count } = await supabase
+    const { count, error: countErr } = await supabase
       .from("influencer_metricas")
       .select("*", { count: "exact", head: true })
       .eq("data", hoje);
+    if (countErr) throw countErr;
     setRegistrosHoje(count ?? 0);
 
     // Fluxo de dados (últimos 14 dias) — CDA, Social Media, E-mails (datas civis em SP)
@@ -356,7 +389,9 @@ export default function StatusTecnico() {
       resLobbyBrxSync,
       resLobbyDonaldSync,
       resLobbyBetpontoSync,
+      resLobbyGoldebetSync,
       resComercialCnpjSync,
+      resRevenueSentinelSync,
     ] = await Promise.all([
       supabase.from("influencer_metricas").select("data").gte("data", dataInicioStr),
       supabase.from("kpi_daily").select("date").gte("date", dataInicioStr),
@@ -433,12 +468,46 @@ export default function StatusTecnico() {
         .limit(500),
       supabase
         .from("sync_logs")
+        .select("executado_em, registros_inseridos, status")
+        .eq("integracao_slug", "lobby_goldebet")
+        .gte("executado_em", syncDesdeUtc)
+        .order("executado_em", { ascending: false })
+        .limit(500),
+      supabase
+        .from("sync_logs")
         .select("executado_em, registros_inseridos, registros_atualizados, status")
         .eq("integracao_slug", "comercial_cnpj_enriquecimento")
         .gte("executado_em", syncDesdeUtc)
         .order("executado_em", { ascending: false })
         .limit(500),
+      supabase
+        .from("sync_logs")
+        .select("executado_em, registros_inseridos, registros_atualizados, status")
+        .eq("integracao_slug", "revenue_sentinel")
+        .gte("executado_em", syncDesdeUtc)
+        .order("executado_em", { ascending: false })
+        .limit(500),
     ]);
+    for (const r of [
+      resCda,
+      resSocial,
+      resEmails,
+      resSpinSync,
+      resLobbyBlazeSync,
+      resLobbyCdaSync,
+      resLobbyEsportivaSync,
+      resLobbyJonbetSync,
+      resLobbyBateuSync,
+      resLobbyRicoSync,
+      resLobbyBrxSync,
+      resLobbyDonaldSync,
+      resLobbyBetpontoSync,
+      resLobbyGoldebetSync,
+      resComercialCnpjSync,
+      resRevenueSentinelSync,
+    ]) {
+      if (r.error) throw r.error;
+    }
 
     const agregarSyncPorData = (
       rows: { executado_em: string; registros_inseridos: number | null; registros_atualizados?: number | null; status?: string }[],
@@ -518,8 +587,23 @@ export default function StatusTecnico() {
       (lobbyExecRes.data ?? []) as LobbyExecucaoMonitorRow[],
       "betponto_bet",
     );
+    const lobbyGoldebetPorData = mesclarLobbyFluxoPorData(
+      agregarSyncPorData(
+        (resLobbyGoldebetSync.data ?? []) as { executado_em: string; registros_inseridos: number | null; status: string }[],
+      ),
+      (lobbyExecRes.data ?? []) as LobbyExecucaoMonitorRow[],
+      "goldebet",
+    );
     const comercialCnpjPorData = agregarSyncPorData(
       (resComercialCnpjSync.data ?? []) as {
+        executado_em: string;
+        registros_inseridos: number | null;
+        registros_atualizados: number | null;
+        status: string;
+      }[],
+    );
+    const revenueSentinelPorData = agregarSyncPorData(
+      (resRevenueSentinelSync.data ?? []) as {
         executado_em: string;
         registros_inseridos: number | null;
         registros_atualizados: number | null;
@@ -567,7 +651,9 @@ export default function StatusTecnico() {
       ...Object.keys(lobbyBrxPorData),
       ...Object.keys(lobbyDonaldPorData),
       ...Object.keys(lobbyBetpontoPorData),
+      ...Object.keys(lobbyGoldebetPorData),
       ...Object.keys(comercialCnpjPorData),
+      ...Object.keys(revenueSentinelPorData),
       ...Object.keys(emailsPorData),
       hoje,
     ]);
@@ -587,7 +673,9 @@ export default function StatusTecnico() {
         const lobbyBrx = lobbyBrxPorData[data] ?? 0;
         const lobbyDonald = lobbyDonaldPorData[data] ?? 0;
         const lobbyBetponto = lobbyBetpontoPorData[data] ?? 0;
+        const lobbyGoldebet = lobbyGoldebetPorData[data] ?? 0;
         const comercialCnpj = comercialCnpjPorData[data] ?? 0;
+        const revenueSentinel = revenueSentinelPorData[data] ?? 0;
         const emails = emailsPorData[data] ?? {};
         const emailTotal = Object.values(emails).reduce((s, n) => s + n, 0);
         return {
@@ -604,7 +692,9 @@ export default function StatusTecnico() {
           lobbyBrx,
           lobbyDonald,
           lobbyBetponto,
+          lobbyGoldebet,
           comercialCnpj,
+          revenueSentinel,
           emails,
           total:
             cda +
@@ -619,7 +709,9 @@ export default function StatusTecnico() {
             lobbyBrx +
             lobbyDonald +
             lobbyBetponto +
+            lobbyGoldebet +
             comercialCnpj +
+            revenueSentinel +
             emailTotal,
         };
       });
@@ -629,10 +721,14 @@ export default function StatusTecnico() {
       .from("prestador_ponto_cidr_allowlist")
       .select("id, cidr, rotulo, created_at")
       .order("created_at", { ascending: true });
-    if (cidrErr) setCidrRows([]);
-    else setCidrRows((cidrData ?? []) as PrestadorPontoCidrRow[]);
-
-    setLoading(false);
+    if (cidrErr) throw cidrErr;
+    setCidrRows((cidrData ?? []) as PrestadorPontoCidrRow[]);
+    } catch (e) {
+      console.error("Status Técnico: falha ao carregar", e);
+      setErroCarga(ERRO_CARREGAR_STATUS);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -1196,6 +1292,86 @@ export default function StatusTecnico() {
     }
   };
 
+  const executarSyncRevenueSentinel = async () => {
+    if (syncRevenueSentinelExecutando || !perm.canEditarOk) return;
+    setSyncRevenueSentinelExecutando(true);
+    setSyncRevenueSentinelMensagem(null);
+    try {
+      if (!supabaseUrl || !supabaseAnonKey) {
+        setSyncRevenueSentinelMensagem({
+          tipo: "erro",
+          texto: "Configuração do Supabase incompleta. Defina VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no .env.",
+        });
+        setSyncRevenueSentinelExecutando(false);
+        return;
+      }
+      // Uma competência por chamada (o RS não devolve quebra diária) e nunca D-0.
+      const dataFim = subDiasIso(hojeIsoBrasil(), 1);
+      const dataInicio = `${dataFim.slice(0, 7)}-01`;
+      const { data: resDataRaw, error: invokeError } = await supabase.functions.invoke(
+        "sync-revenue-sentinel",
+        {
+          body: {
+            data_inicio: dataInicio,
+            data_fim: dataFim,
+            cda_conta: "influencers",
+            atualizar_cadastro: false,
+          },
+        },
+      );
+      const resData = (resDataRaw ?? {}) as {
+        ok?: boolean;
+        erro?: string;
+        error?: string;
+        ids_enviados?: number;
+        diario_upsert?: number;
+        cadastro_upsert?: number;
+        jogaram_spin?: number;
+        jogaram_outros?: number;
+        missing?: number;
+        erros?: string[];
+      };
+
+      if (invokeError) {
+        const im = invokeError.message ?? "";
+        let texto =
+          typeof resData.erro === "string" && resData.erro.length > 0
+            ? resData.erro
+            : ERRO_SYNC_REVENUE_SENTINEL;
+        if (im.includes("404") || im.includes("not found")) {
+          texto =
+            "Edge Function sync-revenue-sentinel não encontrada. Execute: supabase functions deploy sync-revenue-sentinel";
+        } else if (im.includes("Failed to fetch") || im.includes("fetch")) {
+          texto = ERRO_REDE_EDGE;
+        }
+        setSyncRevenueSentinelMensagem({ tipo: "erro", texto });
+        setSyncRevenueSentinelExecutando(false);
+        return;
+      }
+
+      if (!resData?.ok) {
+        const extra = [resData?.erro ?? resData?.error, ...(resData?.erros ?? [])].filter(Boolean).join(" — ");
+        setSyncRevenueSentinelMensagem({
+          tipo: "erro",
+          texto: extra.length > 0 ? extra : ERRO_SYNC_REVENUE_SENTINEL,
+        });
+        setSyncRevenueSentinelExecutando(false);
+        return;
+      }
+
+      setSyncRevenueSentinelMensagem({
+        tipo: "ok",
+        texto: `${LABEL_UI_REVENUE_SENTINEL} (${dataInicio} a ${dataFim}): ${resData.ids_enviados ?? 0} IDs TAP, ${resData.diario_upsert ?? 0} dia(s) gravado(s), ${resData.jogaram_spin ?? 0} jogaram Spin, ${resData.jogaram_outros ?? 0} só em outros jogos${(resData.missing ?? 0) > 0 ? ` (${resData.missing} sem cruzamento)` : ""}. Meses anteriores: backfill mês a mês no SQL.`,
+      });
+      void carregar();
+    } catch (e) {
+      console.error(e);
+      setSyncRevenueSentinelMensagem({ tipo: "erro", texto: ERRO_SYNC_REVENUE_SENTINEL });
+    } finally {
+      setSyncRevenueSentinelExecutando(false);
+    }
+  };
+
   const executarSyncLobbyBlaze = async () => {
     if (syncLobbyBlazeExecutando || !perm.canEditarOk) return;
     setSyncLobbyBlazeExecutando(true);
@@ -1522,120 +1698,57 @@ export default function StatusTecnico() {
   const passouHorarioComercialSpa = passouHorarioAgendadoBr(HORARIO_AGENDADO_BR.comercialSpa);
   const passouHorarioComercialDominio = passouHorarioAgendadoBr(HORARIO_AGENDADO_BR.comercialDominio);
   const passouHorarioComercialCnpj = passouHorarioAgendadoBr(HORARIO_AGENDADO_BR.comercialCnpj);
+  const passouHorarioRevenueSentinel = passouHorarioAgendadoBr(HORARIO_AGENDADO_BR.revenueSentinel);
 
   // Integrações Ativas: jobs diários — OK se executou com sucesso hoje (SP); antes do horário, aceita último OK
   const syncLogsCdaKpi = syncLogs.filter((l) => l.integracao_slug === "casa_apostas");
   const ultimoSyncCdaLog = syncLogsCdaKpi[0];
   const cdaOkHoje = syncLogOkNoDia(syncLogsCdaKpi, hojeIsoKpi);
-  const cdaStatusOk =
-    cdaOkHoje || (!passouHorarioCda && ultimoSyncCdaLog?.status === "ok");
 
   const syncLogsCdaAfiliadosKpi = syncLogs.filter((l) => l.integracao_slug === "casa_apostas_afiliados");
   const ultimoSyncCdaAfiliadosLog = syncLogsCdaAfiliadosKpi[0];
   const cdaAfiliadosOkHoje = syncLogOkNoDia(syncLogsCdaAfiliadosKpi, hojeIsoKpi);
-  const cdaAfiliadosStatusOk =
-    cdaAfiliadosOkHoje || (!passouHorarioCda && ultimoSyncCdaAfiliadosLog?.status === "ok");
 
   const syncLogsSpinRssKpi = syncLogs.filter((l) => l.integracao_slug === "spin_na_rede_rss");
   const ultimoSyncSpinRssLog = syncLogsSpinRssKpi[0];
   const spinRssOkHoje = syncLogOkNoDia(syncLogsSpinRssKpi, hojeIsoKpi);
-  const spinNaRedeRssStatusOk =
-    spinRssOkHoje || (!passouHorarioSocial && ultimoSyncSpinRssLog?.status === "ok");
 
   const syncLogsComercialSpaKpi = syncLogs.filter((l) => l.integracao_slug === "comercial_spa_lista");
   const ultimoSyncComercialSpaLog = syncLogsComercialSpaKpi[0];
   const comercialSpaOkHoje = syncLogOkNoDia(syncLogsComercialSpaKpi, hojeIsoKpi);
-  const comercialSpaStatusOk =
-    comercialSpaOkHoje || (!passouHorarioComercialSpa && ultimoSyncComercialSpaLog?.status === "ok");
 
   const syncLogsComercialDominioKpi = syncLogs.filter(
     (l) => l.integracao_slug === "comercial_dominio_validacao",
   );
   const ultimoSyncComercialDominioLog = syncLogsComercialDominioKpi[0];
   const comercialDominioOkHoje = syncLogOkNoDia(syncLogsComercialDominioKpi, hojeIsoKpi);
-  const comercialDominioStatusOk =
-    comercialDominioOkHoje ||
-    (!passouHorarioComercialDominio && ultimoSyncComercialDominioLog?.status === "ok");
 
   const syncLogsComercialCnpjKpi = syncLogs.filter(
     (l) => l.integracao_slug === "comercial_cnpj_enriquecimento",
   );
   const ultimoSyncComercialCnpjLog = syncLogsComercialCnpjKpi[0];
   const comercialCnpjOkHoje = syncLogOkNoDia(syncLogsComercialCnpjKpi, hojeIsoKpi);
-  const comercialCnpjStatusOk =
-    comercialCnpjOkHoje ||
-    (!passouHorarioComercialCnpj && ultimoSyncComercialCnpjLog?.status === "ok");
+
+  const syncLogsRevenueSentinelKpi = syncLogs.filter((l) => l.integracao_slug === "revenue_sentinel");
+  const ultimoSyncRevenueSentinelLog = syncLogsRevenueSentinelKpi[0];
+  const revenueSentinelOkHoje = syncLogOkNoDia(syncLogsRevenueSentinelKpi, hojeIsoKpi);
 
   const ultimoSyncLobbyBlazeLog = syncLogs.find((l) => l.integracao_slug === "lobby_blaze");
-  const lobbyBlazeStatusOk = lobbyIntegracaoStatusOk(
-    "lobby_blaze",
-    syncLogs.filter((l) => l.integracao_slug === "lobby_blaze"),
-    lobbyExecucoes,
-  );
-
   const ultimoSyncLobbyCdaLog = syncLogs.find((l) => l.integracao_slug === "lobby_cda");
-  const lobbyCdaStatusOk = lobbyIntegracaoStatusOk(
-    "lobby_cda",
-    syncLogs.filter((l) => l.integracao_slug === "lobby_cda"),
-    lobbyExecucoes,
-  );
-
   const ultimoSyncLobbyEsportivaLog = syncLogs.find((l) => l.integracao_slug === "lobby_esportiva");
-  const lobbyEsportivaStatusOk = lobbyIntegracaoStatusOk(
-    "lobby_esportiva",
-    syncLogs.filter((l) => l.integracao_slug === "lobby_esportiva"),
-    lobbyExecucoes,
-  );
-
   const ultimoSyncLobbyJonbetLog = syncLogs.find((l) => l.integracao_slug === "lobby_jonbet");
-  const lobbyJonbetStatusOk = lobbyIntegracaoStatusOk(
-    "lobby_jonbet",
-    syncLogs.filter((l) => l.integracao_slug === "lobby_jonbet"),
-    lobbyExecucoes,
-  );
-
   const ultimoSyncLobbyBateuLog = syncLogs.find((l) => l.integracao_slug === "lobby_bateu");
-  const lobbyBateuStatusOk = lobbyIntegracaoStatusOk(
-    "lobby_bateu",
-    syncLogs.filter((l) => l.integracao_slug === "lobby_bateu"),
-    lobbyExecucoes,
-  );
-
   const ultimoSyncLobbyRicoLog = syncLogs.find((l) => l.integracao_slug === "lobby_rico");
-  const lobbyRicoStatusOk = lobbyIntegracaoStatusOk(
-    "lobby_rico",
-    syncLogs.filter((l) => l.integracao_slug === "lobby_rico"),
-    lobbyExecucoes,
-  );
-
   const ultimoSyncLobbyBrxLog = syncLogs.find((l) => l.integracao_slug === "lobby_brx");
-  const lobbyBrxStatusOk = lobbyIntegracaoStatusOk(
-    "lobby_brx",
-    syncLogs.filter((l) => l.integracao_slug === "lobby_brx"),
-    lobbyExecucoes,
-  );
-
   const ultimoSyncLobbyDonaldLog = syncLogs.find((l) => l.integracao_slug === "lobby_donald");
-  const lobbyDonaldStatusOk = lobbyIntegracaoStatusOk(
-    "lobby_donald",
-    syncLogs.filter((l) => l.integracao_slug === "lobby_donald"),
-    lobbyExecucoes,
-  );
-
   const ultimoSyncLobbyBetpontoLog = syncLogs.find((l) => l.integracao_slug === "lobby_betponto");
-  const lobbyBetpontoStatusOk = lobbyIntegracaoStatusOk(
-    "lobby_betponto",
-    syncLogs.filter((l) => l.integracao_slug === "lobby_betponto"),
-    lobbyExecucoes,
-  );
+  const ultimoSyncLobbyGoldebetLog = syncLogs.find((l) => l.integracao_slug === "lobby_goldebet");
 
   const ultimoPipelineRun = pipelineRuns.reduce<PipelineRun | null>((max, r) => {
     if (!max) return r;
     return new Date(r.created_at) > new Date(max.created_at) ? r : max;
   }, null);
   const socialOkHoje = pipelineSucessoNoDia(pipelineRuns, hojeIsoKpi);
-  const socialStatusOk =
-    socialOkHoje || (!passouHorarioSocial && ultimoPipelineRun?.status === "success");
 
   const ultimoTechLogDiretoria = techLogs
     .filter((l) => l.tipo === "relatorio_diretoria")
@@ -1664,27 +1777,17 @@ export default function StatusTecnico() {
       !!emailUltimoAgenda &&
       (!ultimoTechLogAgenda || emailUltimoAgenda >= ultimoTechLogAgenda));
 
-  const integracoesAtivasCount = [
-    cdaStatusOk,
-    cdaAfiliadosStatusOk,
-    socialStatusOk,
-    spinNaRedeRssStatusOk,
-    comercialSpaStatusOk,
-    comercialDominioStatusOk,
-    comercialCnpjStatusOk,
-    lobbyBlazeStatusOk,
-    lobbyCdaStatusOk,
-    lobbyEsportivaStatusOk,
-    lobbyJonbetStatusOk,
-    lobbyBateuStatusOk,
-    lobbyRicoStatusOk,
-    lobbyBrxStatusOk,
-    lobbyDonaldStatusOk,
-    lobbyBetpontoStatusOk,
-    emailStatusDiretoriaOk,
-    emailStatusAgendaOk,
-  ].filter(Boolean).length;
-  const totalIntegracoes = 18;
+  const { ativas: integracoesAtivasCount, total: totalIntegracoes } = computeIntegracoesAtivasCount({
+    syncLogs,
+    lobbyExecucoes,
+    pipelineRuns,
+    techLogs,
+    emailCountHojeDiretoria: fluxoDados.find((f) => f.data === hojeIsoKpi)?.emails?.relatorio_diretoria ?? 0,
+    emailCountHojeAgenda: fluxoDados.find((f) => f.data === hojeIsoKpi)?.emails?.email_agenda_diaria ?? 0,
+    emailUltimoDiretoria,
+    emailUltimoAgenda,
+    hojeIso: hojeIsoKpi,
+  });
 
   // Último Sync: mais recente entre CDA, Social, Spin na Rede RSS e e-mails (por data de execução)
   const timestamps: Array<{ ts: string; label: string }> = [];
@@ -1709,6 +1812,12 @@ export default function StatusTecnico() {
       label: LABEL_UI_COMERCIAL_CNPJ_ESTADO_CIDADE,
     });
   }
+  if (ultimoSyncRevenueSentinelLog?.executado_em) {
+    timestamps.push({
+      ts: ultimoSyncRevenueSentinelLog.executado_em,
+      label: LABEL_UI_REVENUE_SENTINEL,
+    });
+  }
   if (ultimoSyncLobbyBlazeLog?.executado_em) timestamps.push({ ts: ultimoSyncLobbyBlazeLog.executado_em, label: "Lobby Blaze" });
   if (ultimoSyncLobbyCdaLog?.executado_em) timestamps.push({ ts: ultimoSyncLobbyCdaLog.executado_em, label: "Lobby CDA" });
   if (ultimoSyncLobbyEsportivaLog?.executado_em) {
@@ -1731,6 +1840,9 @@ export default function StatusTecnico() {
   }
   if (ultimoSyncLobbyBetpontoLog?.executado_em) {
     timestamps.push({ ts: ultimoSyncLobbyBetpontoLog.executado_em, label: LABEL_UI_LOBBY_BETPONTO });
+  }
+  if (ultimoSyncLobbyGoldebetLog?.executado_em) {
+    timestamps.push({ ts: ultimoSyncLobbyGoldebetLog.executado_em, label: LABEL_UI_LOBBY_GOLDEBET });
   }
   if (emailUltimoDiretoria) timestamps.push({ ts: emailUltimoDiretoria, label: "E-mail Diretoria" });
   if (emailUltimoAgenda) timestamps.push({ ts: emailUltimoAgenda, label: "E-mail Agenda" });
@@ -1758,6 +1870,10 @@ export default function StatusTecnico() {
   const comercialCnpjTotal = syncLogs.filter((l) => l.integracao_slug === "comercial_cnpj_enriquecimento").length;
   const comercialCnpjFalhas = syncLogs.filter(
     (l) => l.integracao_slug === "comercial_cnpj_enriquecimento" && l.status === "falha",
+  ).length;
+  const revenueSentinelTotal = syncLogs.filter((l) => l.integracao_slug === "revenue_sentinel").length;
+  const revenueSentinelFalhas = syncLogs.filter(
+    (l) => l.integracao_slug === "revenue_sentinel" && l.status === "falha",
   ).length;
   const lobbyBlazeTotal = syncLogs.filter((l) => l.integracao_slug === "lobby_blaze").length;
   const lobbyBlazeFalhas = syncLogs.filter((l) => l.integracao_slug === "lobby_blaze" && l.status === "falha").length;
@@ -1791,6 +1907,10 @@ export default function StatusTecnico() {
   const lobbyBetpontoFalhas = syncLogs.filter(
     (l) => l.integracao_slug === "lobby_betponto" && l.status === "falha",
   ).length;
+  const lobbyGoldebetTotal = syncLogs.filter((l) => l.integracao_slug === "lobby_goldebet").length;
+  const lobbyGoldebetFalhas = syncLogs.filter(
+    (l) => l.integracao_slug === "lobby_goldebet" && l.status === "falha",
+  ).length;
   const socialTotal = pipelineRuns.length;
   const socialFalhas = pipelineRuns.filter((r) => r.status === "error").length;
   const emailFalhas = techLogs.filter((l) =>
@@ -1807,6 +1927,7 @@ export default function StatusTecnico() {
     comercialSpaTotal +
     comercialDominioTotal +
     comercialCnpjTotal +
+    revenueSentinelTotal +
     lobbyBlazeTotal +
     lobbyCdaTotal +
     lobbyEsportivaTotal +
@@ -1816,6 +1937,7 @@ export default function StatusTecnico() {
     lobbyBrxTotal +
     lobbyDonaldTotal +
     lobbyBetpontoTotal +
+    lobbyGoldebetTotal +
     socialTotal +
     Math.max(emailTotal, 1);
   const totalFalhas =
@@ -1825,6 +1947,7 @@ export default function StatusTecnico() {
     comercialSpaFalhas +
     comercialDominioFalhas +
     comercialCnpjFalhas +
+    revenueSentinelFalhas +
     lobbyBlazeFalhas +
     lobbyCdaFalhas +
     lobbyEsportivaFalhas +
@@ -1834,6 +1957,7 @@ export default function StatusTecnico() {
     lobbyBrxFalhas +
     lobbyDonaldFalhas +
     lobbyBetpontoFalhas +
+    lobbyGoldebetFalhas +
     socialFalhas +
     emailFalhas;
   const taxaErro = totalTentativas > 0 ? ((totalFalhas / totalTentativas) * 100).toFixed(1) : "0";
@@ -2065,6 +2189,43 @@ export default function StatusTecnico() {
     alertas.push({
       nivel: "erro",
       msg: `Taxa de erro alta em ${LABEL_UI_COMERCIAL_CNPJ_ESTADO_CIDADE} (${taxaErroComercialCnpj}%)`,
+    });
+  }
+
+  // ── Revenue Sentinel — Jogadores Spin — cron ~4h20 BRT ──
+  const syncLogsRevenueSentinel = syncLogsRevenueSentinelKpi;
+  const ultimoSyncRevenueSentinelOk = syncLogsRevenueSentinel.find((l) => l.status === "ok");
+  const ultimoSyncRevenueSentinelFalha = syncLogsRevenueSentinel.find((l) => l.status === "falha");
+  const revenueSentinelTeveHistorico = syncLogsRevenueSentinel.some((l) => l.status === "ok");
+  const taxaErroRevenueSentinel =
+    syncLogsRevenueSentinel.length > 0
+      ? (
+          (syncLogsRevenueSentinel.filter((l) => l.status === "falha").length /
+            syncLogsRevenueSentinel.length) *
+          100
+        ).toFixed(1)
+      : "0";
+
+  if (
+    syncLogsRevenueSentinel.length > 0 &&
+    !ultimoSyncRevenueSentinelOk &&
+    ultimoSyncRevenueSentinelFalha
+  ) {
+    alertas.push({
+      nivel: "erro",
+      msg: `Nenhum sync ${LABEL_UI_REVENUE_SENTINEL} com sucesso`,
+    });
+  }
+  if (passouHorarioRevenueSentinel && revenueSentinelTeveHistorico && !revenueSentinelOkHoje) {
+    alertas.push({
+      nivel: "erro",
+      msg: `${LABEL_UI_REVENUE_SENTINEL} não executou hoje (agendado 4h20)`,
+    });
+  }
+  if (parseFloat(taxaErroRevenueSentinel) > 5 && syncLogsRevenueSentinel.length > 0) {
+    alertas.push({
+      nivel: "erro",
+      msg: `Taxa de erro alta em ${LABEL_UI_REVENUE_SENTINEL} (${taxaErroRevenueSentinel}%)`,
     });
   }
 
@@ -2350,6 +2511,36 @@ export default function StatusTecnico() {
     });
   }
 
+  const syncLogsLobbyGoldebet = syncLogs.filter((l) => l.integracao_slug === "lobby_goldebet");
+  const taxaErroLobbyGoldebet =
+    syncLogsLobbyGoldebet.length > 0
+      ? ((syncLogsLobbyGoldebet.filter((l) => l.status === "falha").length /
+          syncLogsLobbyGoldebet.length) *
+          100
+        ).toFixed(1)
+      : "0";
+  if (
+    !lobbyIntegracaoTemColetaComSucesso("lobby_goldebet", syncLogsLobbyGoldebet, lobbyExecucoes) &&
+    (syncLogsLobbyGoldebet.length > 0 ||
+      lobbyExecucoes.some((e) => e.operadora_slug === "goldebet"))
+  ) {
+    alertas.push({ nivel: "erro", msg: `Nenhuma coleta ${LABEL_UI_LOBBY_GOLDEBET} com sucesso` });
+  } else {
+    const ultimoOkEm = ultimaColetaLobbyOkEm("lobby_goldebet", syncLogsLobbyGoldebet, lobbyExecucoes);
+    if (ultimoOkEm && new Date(ultimoOkEm) < vinteQuatroHoras) {
+      alertas.push({
+        nivel: "aviso",
+        msg: `Coleta ${LABEL_UI_LOBBY_GOLDEBET} atrasada (> 24h sem execução OK)`,
+      });
+    }
+  }
+  if (parseFloat(taxaErroLobbyGoldebet) > 5 && syncLogsLobbyGoldebet.length > 0) {
+    alertas.push({
+      nivel: "erro",
+      msg: `Taxa de erro alta no ${LABEL_UI_LOBBY_GOLDEBET} (${taxaErroLobbyGoldebet}%)`,
+    });
+  }
+
   // Status por integração (última execução)
   const statusPorIntegracao = useMemo(
     () =>
@@ -2394,6 +2585,8 @@ export default function StatusTecnico() {
                   ? ("comercial_dominio" as const)
                   : int.slug === "comercial_cnpj_enriquecimento"
                     ? ("comercial_cnpj" as const)
+                  : int.slug === "revenue_sentinel"
+                    ? ("revenue_sentinel" as const)
                 : int.slug === "lobby_blaze"
                 ? ("lobby_blaze" as const)
                 : int.slug === "lobby_cda"
@@ -2412,6 +2605,8 @@ export default function StatusTecnico() {
                               ? ("lobby_donald" as const)
                               : int.slug === "lobby_betponto"
                                 ? ("lobby_betponto" as const)
+                                : int.slug === "lobby_goldebet"
+                                  ? ("lobby_goldebet" as const)
                   : ("none" as const);
         return {
           ...int,
@@ -2581,7 +2776,7 @@ export default function StatusTecnico() {
     [rowFromSyncLogsFallback],
   );
 
-  /** Lobby Esportiva / Jonbet / Bateu / Rico / BRX / Donald / BetPonto — sempre na tabela Operadoras (mesmo sem row em `integrations`). */
+  /** Lobby Esportiva / Jonbet / Bateu / Rico / BRX / Donald / BetPonto / Goldebet — sempre na tabela Operadoras (mesmo sem row em `integrations`). */
   const lobbyEsportivaRow = useMemo(
     () => rowFromSyncLogsFallback("lobby_esportiva", LABEL_UI_LOBBY_ESPORTIVA, "lobby_esportiva"),
     [rowFromSyncLogsFallback],
@@ -2610,6 +2805,10 @@ export default function StatusTecnico() {
     () => rowFromSyncLogsFallback("lobby_betponto", LABEL_UI_LOBBY_BETPONTO, "lobby_betponto"),
     [rowFromSyncLogsFallback],
   );
+  const lobbyGoldebetRow = useMemo(
+    () => rowFromSyncLogsFallback("lobby_goldebet", LABEL_UI_LOBBY_GOLDEBET, "lobby_goldebet"),
+    [rowFromSyncLogsFallback],
+  );
 
   const linhasOperadoras = useMemo(
     () =>
@@ -2627,6 +2826,7 @@ export default function StatusTecnico() {
             lobbyBrxRow,
             lobbyDonaldRow,
             lobbyBetpontoRow,
+            lobbyGoldebetRow,
           ] as (StatusIntegracaoRow | null)[]
         ).filter(Boolean) as StatusIntegracaoRow[],
         sortOperadoras,
@@ -2640,6 +2840,7 @@ export default function StatusTecnico() {
       lobbyBrxRow,
       lobbyDonaldRow,
       lobbyBetpontoRow,
+      lobbyGoldebetRow,
       sortOperadoras,
     ],
   );
@@ -2653,6 +2854,7 @@ export default function StatusTecnico() {
           pickIntegracaoRow("comercial_spa_lista"),
           pickIntegracaoRow("comercial_dominio_validacao"),
           pickIntegracaoRow("comercial_cnpj_enriquecimento"),
+          pickIntegracaoRow("revenue_sentinel"),
           pickIntegracaoRow("painel_noticias_rss"),
           {
             slug: socialKpisRow.slug,
@@ -2736,6 +2938,8 @@ export default function StatusTecnico() {
                             ? LABEL_UI_LOBBY_DONALD
                             : log.integracao_slug === "lobby_betponto"
                               ? LABEL_UI_LOBBY_BETPONTO
+                              : log.integracao_slug === "lobby_goldebet"
+                                ? LABEL_UI_LOBBY_GOLDEBET
                 : log.integracao_slug);
         return nomeIntegracaoStatusTecnicoUi(log.integracao_slug, nomeDb);
       }
@@ -2755,6 +2959,7 @@ export default function StatusTecnico() {
           comercial_spa_lista: LABEL_UI_COMERCIAL_SPA_LISTA,
           comercial_dominio_validacao: LABEL_UI_COMERCIAL_DOMINIO_VALIDACAO,
           comercial_cnpj_enriquecimento: LABEL_UI_COMERCIAL_CNPJ_ESTADO_CIDADE,
+          revenue_sentinel: LABEL_UI_REVENUE_SENTINEL,
           painel_noticias_rss: "Painel de Notícias (RSS)",
           cs_atendimento_outlook: LABEL_UI_CS_ATENDIMENTO_OUTLOOK,
           lobby_blaze: "Lobby Blaze",
@@ -2766,6 +2971,7 @@ export default function StatusTecnico() {
           lobby_brx: LABEL_UI_LOBBY_BRX,
           lobby_donald: LABEL_UI_LOBBY_DONALD,
           lobby_betponto: LABEL_UI_LOBBY_BETPONTO,
+          lobby_goldebet: LABEL_UI_LOBBY_GOLDEBET,
           diagnostico_plataforma: "Diagnóstico da plataforma",
           diagnostico_ok: "Diagnóstico da plataforma",
           diagnostico_aviso: "Diagnóstico da plataforma",
@@ -2809,6 +3015,7 @@ export default function StatusTecnico() {
       social: "Social Media",
       spin_rss: "Spin na Rede (RSS)",
       comercial_cnpj: `${LABEL_UI_COMERCIAL_CNPJ_ESTADO_CIDADE} (Pipeline B2B)`,
+      revenue_sentinel: LABEL_UI_REVENUE_SENTINEL,
       lobby_blaze: "Lobby Blaze",
       lobby_cda: "Lobby CDA",
       lobby_esportiva: "Lobby Esportiva Bet",
@@ -2818,6 +3025,7 @@ export default function StatusTecnico() {
       lobby_brx: LABEL_UI_LOBBY_BRX,
       lobby_donald: LABEL_UI_LOBBY_DONALD,
       lobby_betponto: LABEL_UI_LOBBY_BETPONTO,
+      lobby_goldebet: LABEL_UI_LOBBY_GOLDEBET,
       relatorio_diretoria: "E-mail: Relatório",
       email_agenda_diaria: "E-mail: Agenda",
       boas_vindas: "E-mail: Boas-vindas",
@@ -2829,6 +3037,7 @@ export default function StatusTecnico() {
       social: BRAND.azul,
       spin_rss: "#a78bfa",
       comercial_cnpj: "#0d9488",
+      revenue_sentinel: "#6366f1",
       lobby_blaze: "#f97316",
       lobby_cda: "#0ea5e9",
       lobby_esportiva: "#22c55e",
@@ -2838,6 +3047,7 @@ export default function StatusTecnico() {
       lobby_brx: "#06b6d4",
       lobby_donald: "#eab308",
       lobby_betponto: "#d946ef",
+      lobby_goldebet: "#f59e0b",
       relatorio_diretoria: BRAND.verde,
       email_agenda_diaria: "#14b8a6",
       boas_vindas: "#8b5cf6",
@@ -2888,10 +3098,11 @@ export default function StatusTecnico() {
     syncComercialSpaExecutando,
     syncComercialDominioExecutando,
     syncComercialCnpjExecutando,
+    syncRevenueSentinelExecutando,
     emailEnviando,
     emailAgendaEnviando,
     canEditarOk: perm.canEditarOk,
-    onConfirmarSync: (tipo: "cda" | "cda_afiliados" | "social" | "spin_rss" | "painel_rss" | "cs_outlook" | "comercial_spa" | "comercial_dominio" | "comercial_cnpj") =>
+    onConfirmarSync: (tipo: "cda" | "cda_afiliados" | "social" | "spin_rss" | "painel_rss" | "cs_outlook" | "comercial_spa" | "comercial_dominio" | "comercial_cnpj" | "revenue_sentinel") =>
       setConfirmarSync(tipo),
     onConfirmarEmail: (tipo: "diretoria" | "agenda") => setConfirmarEmail(tipo),
   };
@@ -2997,6 +3208,10 @@ export default function StatusTecnico() {
         actions={<AjudaContextualAcoes pageKey="status_tecnico" />}
       />
 
+      {erroCarga ? (
+        <AlertaCargaComRetry mensagem={erroCarga} onRetry={() => void carregar()} />
+      ) : (
+      <>
       <div className="app-grid-kpi-4" style={{ ...getPageKpiSectionGapStyle(), width: "100%", gap: 14 }}>
         {kpisConsolidados.map((k) => (
           <div
@@ -3052,6 +3267,7 @@ export default function StatusTecnico() {
         syncComercialSpaMensagem ||
         syncComercialDominioMensagem ||
         syncComercialCnpjMensagem ||
+        syncRevenueSentinelMensagem ||
         syncLobbyBlazeMensagem ||
         emailMensagem ||
         emailAgendaMensagem) && (
@@ -3073,6 +3289,10 @@ export default function StatusTecnico() {
               syncComercialCnpjMensagem && {
                 prefix: LABEL_UI_COMERCIAL_CNPJ_ESTADO_CIDADE,
                 msg: syncComercialCnpjMensagem,
+              },
+              syncRevenueSentinelMensagem && {
+                prefix: LABEL_UI_REVENUE_SENTINEL,
+                msg: syncRevenueSentinelMensagem,
               },
               syncLobbyBlazeMensagem && { prefix: "Lobby Blaze", msg: syncLobbyBlazeMensagem },
               emailMensagem && { prefix: "E-mail de Relatório", msg: emailMensagem },
@@ -3184,7 +3404,9 @@ export default function StatusTecnico() {
             { key: "lobby_brx", label: LABEL_UI_LOBBY_BRX },
             { key: "lobby_donald", label: LABEL_UI_LOBBY_DONALD },
             { key: "lobby_betponto", label: LABEL_UI_LOBBY_BETPONTO },
+            { key: "lobby_goldebet", label: LABEL_UI_LOBBY_GOLDEBET },
             { key: "comercial_cnpj", label: LABEL_UI_COMERCIAL_CNPJ_ESTADO_CIDADE },
+            { key: "revenue_sentinel", label: LABEL_UI_REVENUE_SENTINEL },
             { key: "relatorio_diretoria", label: "E-mail de Relatório" },
             { key: "email_agenda_diaria", label: "E-mail de Agenda" },
             { key: "boas_vindas", label: "Boas-vindas" },
@@ -3293,10 +3515,22 @@ export default function StatusTecnico() {
                         style={{ width: `${pct(f.lobbyBetponto)}%`, minWidth: f.lobbyBetponto > 0 ? 8 : 0, height: "100%", background: fluxoCor("lobby_betponto"), opacity: isHover ? 1 : 0.88, transition: "opacity 0.15s" }}
                       />
                     )}
+                    {f.lobbyGoldebet > 0 && (
+                      <div
+                        title={`${fluxoLabel("lobby_goldebet")}: ${f.lobbyGoldebet.toLocaleString("pt-BR")}`}
+                        style={{ width: `${pct(f.lobbyGoldebet)}%`, minWidth: f.lobbyGoldebet > 0 ? 8 : 0, height: "100%", background: fluxoCor("lobby_goldebet"), opacity: isHover ? 1 : 0.88, transition: "opacity 0.15s" }}
+                      />
+                    )}
                     {f.comercialCnpj > 0 && (
                       <div
                         title={`${fluxoLabel("comercial_cnpj")}: ${f.comercialCnpj.toLocaleString("pt-BR")}`}
                         style={{ width: `${pct(f.comercialCnpj)}%`, minWidth: f.comercialCnpj > 0 ? 8 : 0, height: "100%", background: fluxoCor("comercial_cnpj"), opacity: isHover ? 1 : 0.88, transition: "opacity 0.15s" }}
+                      />
+                    )}
+                    {f.revenueSentinel > 0 && (
+                      <div
+                        title={`${fluxoLabel("revenue_sentinel")}: ${f.revenueSentinel.toLocaleString("pt-BR")}`}
+                        style={{ width: `${pct(f.revenueSentinel)}%`, minWidth: f.revenueSentinel > 0 ? 8 : 0, height: "100%", background: fluxoCor("revenue_sentinel"), opacity: isHover ? 1 : 0.88, transition: "opacity 0.15s" }}
                       />
                     )}
                     {Object.entries(f.emails).filter(([, n]) => n > 0).map(([tipo, n]) => (
@@ -3343,7 +3577,9 @@ export default function StatusTecnico() {
                       {f.lobbyBrx > 0 && <div style={{ padding: "2px 0" }}><span style={{ color: fluxoCor("lobby_brx"), fontWeight: 600 }} aria-hidden="true">●</span> {fluxoLabel("lobby_brx")}: {f.lobbyBrx.toLocaleString("pt-BR")}</div>}
                       {f.lobbyDonald > 0 && <div style={{ padding: "2px 0" }}><span style={{ color: fluxoCor("lobby_donald"), fontWeight: 600 }} aria-hidden="true">●</span> {fluxoLabel("lobby_donald")}: {f.lobbyDonald.toLocaleString("pt-BR")}</div>}
                       {f.lobbyBetponto > 0 && <div style={{ padding: "2px 0" }}><span style={{ color: fluxoCor("lobby_betponto"), fontWeight: 600 }} aria-hidden="true">●</span> {fluxoLabel("lobby_betponto")}: {f.lobbyBetponto.toLocaleString("pt-BR")}</div>}
+                      {f.lobbyGoldebet > 0 && <div style={{ padding: "2px 0" }}><span style={{ color: fluxoCor("lobby_goldebet"), fontWeight: 600 }} aria-hidden="true">●</span> {fluxoLabel("lobby_goldebet")}: {f.lobbyGoldebet.toLocaleString("pt-BR")}</div>}
                       {f.comercialCnpj > 0 && <div style={{ padding: "2px 0" }}><span style={{ color: fluxoCor("comercial_cnpj"), fontWeight: 600 }} aria-hidden="true">●</span> {fluxoLabel("comercial_cnpj")}: {f.comercialCnpj.toLocaleString("pt-BR")}</div>}
+                      {f.revenueSentinel > 0 && <div style={{ padding: "2px 0" }}><span style={{ color: fluxoCor("revenue_sentinel"), fontWeight: 600 }} aria-hidden="true">●</span> {fluxoLabel("revenue_sentinel")}: {f.revenueSentinel.toLocaleString("pt-BR")}</div>}
                       {Object.entries(f.emails).filter(([, n]) => n > 0).map(([tipo, n]) => (
                         <div key={tipo} style={{ padding: "2px 0" }}><span style={{ color: fluxoCor(tipo), fontWeight: 600 }} aria-hidden="true">●</span> {fluxoLabel(tipo)}: {n.toLocaleString("pt-BR")}</div>
                       ))}
@@ -3710,6 +3946,7 @@ export default function StatusTecnico() {
                 `Confirmar ${LABEL_UI_COMERCIAL_DOMINIO_VALIDACAO}`}
               {confirmarSync === "comercial_cnpj" &&
                 `Confirmar enriquecimento ${LABEL_UI_COMERCIAL_CNPJ_ESTADO_CIDADE}`}
+              {confirmarSync === "revenue_sentinel" && `Confirmar sync ${LABEL_UI_REVENUE_SENTINEL}`}
               {confirmarSync === "lobby_blaze" && "Confirmar coleta Lobby Blaze"}
               {confirmarEmail === "diretoria" && "Confirmar envio — E-mail de Relatório"}
               {confirmarEmail === "agenda" && "Confirmar envio — E-mail de Agenda"}
@@ -3776,6 +4013,9 @@ export default function StatusTecnico() {
                   } else if (confirmarSync === "comercial_cnpj") {
                     setConfirmarSync(null);
                     void executarSyncComercialCnpj();
+                  } else if (confirmarSync === "revenue_sentinel") {
+                    setConfirmarSync(null);
+                    void executarSyncRevenueSentinel();
                   } else if (confirmarSync === "lobby_blaze") {
                     setConfirmarSync(null);
                     void executarSyncLobbyBlaze();
@@ -3839,6 +4079,8 @@ export default function StatusTecnico() {
           error={cidrErroExcluir}
           zIndex={2100}
         />
+      )}
+      </>
       )}
     </div>
   );

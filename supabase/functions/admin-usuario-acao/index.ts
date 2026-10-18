@@ -295,7 +295,9 @@ serve(async (req) => {
       }
 
       const jaAtivo = (targetProfile as { ativo?: boolean | null }).ativo !== false
-      if (jaAtivo) {
+      // Trigger de Influencers/Afiliados já pode ter setado ativo=true antes deste POST;
+      // nesse fluxo ainda precisamos de senha padrão + e-mail.
+      if (jaAtivo && origemAtivacao !== 'ativacao_influencer_afiliado') {
         return new Response(JSON.stringify({ success: true, skipped: true, reason: 'ja_ativo' }), {
           status: 200,
           headers: { ...cors, 'Content-Type': 'application/json' },

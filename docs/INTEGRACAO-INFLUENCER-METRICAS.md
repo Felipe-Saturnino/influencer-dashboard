@@ -49,7 +49,31 @@ Métricas e UTMs gravam sempre com `operadora_slug = casa_apostas`. Cron diário
 - **CDA_AFILIADOS_REPORTING_ENDPOINT:** (opcional) endpoint da conta Afiliados; senão `CDA_REPORTING_ENDPOINT` / default.
 - **CDA_AUTH_FORMAT:** (opcional) `Bearer` (default) ou `direct` — para API key (vale para Plywood e Reporting API).
 
-- Edge Function `sync-metricas-cda` implantada (v2.1.0+)
+- Edge Function `sync-metricas-cda` implantada (v2.2.0+)
+
+**Fase jogadores (IDs por UTM):** no mesmo sync da Reporting API, após o agregado `group_by=utm_source`, a função chama `group_by=utm_source,ext_customer_id` e faz upsert em `jogadores` / `jogadores_metricas_diarias` (`origem_tipo=tap_utm`, `origem`=utm_source, `ext_customer_id`). Sem PII. Falha desta fase não bloqueia `influencer_metricas`. `skip_jogadores: true` no body pula a fase. Colunas Spin (`ggr_spin`, `rodadas_spin`, …) ficam vazias até o job **Revenue Sentinel** (`sync-revenue-sentinel`).
+
+### Revenue Sentinel (Jogadores Spin)
+
+Data Export API (header `X-API-Key`). A Edge cruza IDs TAP (`ext_customer_id`) com `external_id` OnAir (`CDA-{crm}`). GGR gravado é **Spin**, não TAP.
+
+- **Fonte principal:** `GET /v1/datasets/operator-player-rounds`, paginado em até 10 mil linhas. Cada `game_id` é uma rodada e traz `round_date`, `game_table_id`, `table_name`, GGR, turnover e `bet_count`.
+- **Reconciliação/fallback:** `POST /v1/jogadores/spin`, em lotes de até 500 IDs. Se o dataset detalhado falhar ou não cruzar nenhum ID TAP numa competência com dados, o consolidado é preservado e o sync registra o aviso.
+- **Mesa:** `game_table_id` é cruzado com Gestão de Estúdios (`mesas_spin_cadastro` e identificação da Casa de Apostas). A UI exibe o tipo e o nome canónico, por exemplo **Dedicada — Blackjack 1** ou **Network — Roleta**.
+
+| Item | Valor |
+|------|--------|
+| Edge | `sync-revenue-sentinel` (`index.ts` + `revenueSentinelJogadores.ts` + `revenueSentinelRounds.ts`) |
+| Secrets | `RS_API_URL` (opcional) + `RS_API_KEY` |
+| Cron | `daily-sync-revenue-sentinel` ~4h20 BRT (depois do TAP Influencers) |
+| Status Técnico | Integrações Externas → **Revenue Sentinel — Jogadores Spin** → Sync |
+| SQL | `enriquecer_jogadores_spin_diario` / `_cadastro` (só `service_role`) |
+
+Na v1.5.0, `jogou_spin` exige pelo menos um `game_id` do dataset granular. `rodadas_spin` conta rodadas distintas; `apostas_spin` soma `bet_count`. O bloco `bko` é o backoffice do operador — todos os produtos — e **não** é fonte de rodada Spin: usá-lo como fallback inflou ago/2026 em 2,2 M de rodadas com turnover de R$ 360 (corrigido na v1.4.1). `jogou_outros` = jogador TAP com depósito e zero rodada Spin.
+
+O dataset granular entrega a data real da rodada; a Edge ainda aceita **uma competência por chamada** para limitar volume e manter o backfill controlado. O cron consulta início do mês → D-1 com `atualizar_cadastro=false`. Depois de publicar a v1.5.0, recarregar o histórico com `node scripts/backfill-rs-competencias.mjs --gravar`; o script limpa somente as colunas Spin antigas e preserva os fatos TAP.
+
+Migrações: `supabase/migrations/20260915180000_integrations_revenue_sentinel.sql` e `20260915181000_cron_sync_revenue_sentinel.sql`.
 
 ### Erro "Edge Function returned a non-2xx status code"
 

@@ -58,6 +58,10 @@ import {
   pipelineComercialNomePorId,
   sortAgregadoras,
 } from "./helpers";
+import { fetchAllPages } from "../../../lib/supabasePaginate";
+
+const MSG_ERRO_CARREGAR =
+  "Não foi possível carregar as agregadoras. Se o problema persistir, entre em contato com o suporte.";
 
 const TAB_ICONS: Record<AgregadoraTab, ReactNode> = {
   todos: <LayoutList {...FILTRO_BAR_TAB_ICON_PROPS} />,
@@ -106,6 +110,7 @@ export default function PipelineAgregadoras() {
   const [rows, setRows] = useState<AgregadoraRow[]>([]);
   const [comerciais, setComerciais] = useState<ComercialOpcao[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [sort, setSort] = useState<{ col: TableColAgregadora; dir: SortDir }>({
     col: "nome",
     dir: "asc",
@@ -121,32 +126,43 @@ export default function PipelineAgregadoras() {
   const loadData = useCallback(async (opts?: { showLoading?: boolean }) => {
     const showLoading = opts?.showLoading !== false;
     if (showLoading) setLoading(true);
-    const [aggRes, gestoresRes] = await Promise.all([
-      supabase
-        .from("comercial_agregadoras")
-        .select(
-          "id, nome, site, jogos, status_pipeline, comercial_user_id, ultimo_contato",
-        )
-        .order("nome")
-        .limit(500),
-      supabase
-        .from("profiles")
-        .select("id, name")
-        .in("name", [...PIPELINE_COMERCIAL_NOMES])
-        .or("ativo.is.null,ativo.eq.true"),
-    ]);
+    setLoadError(null);
+    try {
+      const [aggRows, gestoresRes] = await Promise.all([
+        fetchAllPages<Record<string, unknown>>(async (from, to) =>
+          supabase
+            .from("comercial_agregadoras")
+            .select(
+              "id, nome, site, jogos, status_pipeline, comercial_user_id, ultimo_contato",
+            )
+            .order("nome")
+            .order("id")
+            .range(from, to),
+        ),
+        supabase
+          .from("profiles")
+          .select("id, name")
+          .in("name", [...PIPELINE_COMERCIAL_NOMES])
+          .or("ativo.is.null,ativo.eq.true"),
+      ]);
 
-    if (aggRes.error) console.error(aggRes.error);
-    if (gestoresRes.error) console.error(gestoresRes.error);
+      if (gestoresRes.error) throw new Error(gestoresRes.error.message);
 
-    const comercialList = buildPipelineComerciais(gestoresRes.data ?? []);
-    setComerciais(comercialList);
+      const comercialList = buildPipelineComerciais(gestoresRes.data ?? []);
+      setComerciais(comercialList);
 
-    const names = Object.fromEntries(
-      comercialList.flatMap((c) => (c.id ? [[c.id, c.name] as const] : [])),
-    );
-    setRows((aggRes.data ?? []).map((r) => mapRow(r as Record<string, unknown>, names)));
-    if (showLoading) setLoading(false);
+      const names = Object.fromEntries(
+        comercialList.flatMap((c) => (c.id ? [[c.id, c.name] as const] : [])),
+      );
+      setRows(aggRows.map((r) => mapRow(r, names)));
+    } catch (e: unknown) {
+      console.error("[PipelineAgregadoras] loadData:", e);
+      setRows([]);
+      setComerciais([]);
+      setLoadError(MSG_ERRO_CARREGAR);
+    } finally {
+      if (showLoading) setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -408,6 +424,37 @@ export default function PipelineAgregadoras() {
         </div>
       </div>
 
+      <div
+        id={`panel-agregadoras-${tab}`}
+        role="tabpanel"
+        aria-labelledby={`tab-agregadoras-${tab}`}
+        tabIndex={0}
+      >
+      {loadError ? (
+        <div role="alert" aria-live="polite" style={pageBox}>
+          <div style={{ padding: "40px 0", textAlign: "center", fontFamily: FONT.body }}>
+            <p style={{ color: "#e84025", fontSize: 13, marginBottom: 12 }}>{loadError}</p>
+            <button
+              type="button"
+              onClick={() => void loadData()}
+              style={{
+                padding: "10px 20px",
+                borderRadius: 10,
+                border: `1px solid ${t.cardBorder}`,
+                background: t.inputBg,
+                color: t.text,
+                fontSize: 13,
+                fontWeight: 700,
+                fontFamily: FONT.body,
+                cursor: "pointer",
+              }}
+            >
+              Tentar novamente
+            </button>
+          </div>
+        </div>
+      ) : (
+        <>
       <div style={pageBox}>
         <SectionTitle sub="Totais por status do funil">KPIs Consolidados</SectionTitle>
         {loading ? (
@@ -492,6 +539,9 @@ export default function PipelineAgregadoras() {
             )}
           </TabelaComPaginacao>
         )}
+      </div>
+        </>
+      )}
       </div>
 
       {mostrarCadastro ? (

@@ -6,6 +6,7 @@ import {
   BookOpen,
   Boxes,
   Building2,
+  Bitcoin,
   Briefcase,
   Calendar,
   CalendarRange,
@@ -114,6 +115,7 @@ export const MENU: MenuSection[] = [
     items: [
       { key: "comercial_integracao", label: "Integração", icon: Plug },
       { key: "comercial_pipeline_b2b", label: "Pipeline B2B", icon: Briefcase },
+      { key: "comercial_pipeline_crypto", label: "Pipeline Crypto", icon: Bitcoin },
       { key: "comercial_pipeline_agregadoras", label: "Pipeline Agregadoras", icon: Layers },
     ],
   },
@@ -139,6 +141,7 @@ export const MENU: MenuSection[] = [
     items: [
       { key: "academy_performance_hub", label: "Performance Hub", icon: GraduationCap },
       { key: "academy_portal", label: "Portal da Academy", icon: BookOpen },
+      { key: "academy_cronograma", label: "Cronograma", icon: CalendarRange },
     ],
   },
   {

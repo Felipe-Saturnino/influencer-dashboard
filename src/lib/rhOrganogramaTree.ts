@@ -10,11 +10,18 @@ import type {
   RhOrgTimeOpcao,
 } from "../types/rhOrganograma";
 
+/**
+ * Monta a árvore diretoria → gerência → time.
+ * Por padrão só nós `ativo` (Visualização, selects, cadastros).
+ * `incluirInativos: true` — Gerenciamento do Organograma (mantém soft-deleted na UI).
+ */
 export function montarArvoreOrganograma(
   diretorias: RhOrgDiretoria[],
   gerencias: RhOrgGerencia[],
   times: RhOrgTime[],
+  opts?: { incluirInativos?: boolean },
 ): RhOrgDiretoriaComFilhos[] {
+  const incluirInativos = opts?.incluirInativos === true;
   const gPorD = new Map<string, RhOrgGerencia[]>();
   gerencias.forEach((g) => {
     const arr = gPorD.get(g.diretoria_id) ?? [];
@@ -29,16 +36,21 @@ export function montarArvoreOrganograma(
   });
   const ordenarNome = <T extends { nome: string }>(a: T, b: T) => a.nome.localeCompare(b.nome, "pt-BR");
 
-  return [...diretorias].sort(ordenarNome).map((d) => {
-    const gList = (gPorD.get(d.id) ?? [])
-      .filter((g) => g.status === "ativo")
-      .sort(ordenarNome)
-      .map((g): RhOrgGerenciaComFilhos => {
-        const tList = (tPorG.get(g.id) ?? []).filter((ti) => ti.status === "ativo").sort(ordenarNome);
-        return { ...g, times: tList };
-      });
-    return { ...d, gerencias: gList };
-  });
+  return [...diretorias]
+    .filter((d) => incluirInativos || d.status === "ativo")
+    .sort(ordenarNome)
+    .map((d) => {
+      const gList = (gPorD.get(d.id) ?? [])
+        .filter((g) => incluirInativos || g.status === "ativo")
+        .sort(ordenarNome)
+        .map((g): RhOrgGerenciaComFilhos => {
+          const tList = (tPorG.get(g.id) ?? [])
+            .filter((ti) => incluirInativos || ti.status === "ativo")
+            .sort(ordenarNome);
+          return { ...g, times: tList };
+        });
+      return { ...d, gerencias: gList };
+    });
 }
 
 function nomeLivreOuFuncMap(

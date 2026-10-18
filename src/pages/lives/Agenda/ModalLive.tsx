@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useApp } from "../../../context/AppContext";
 import { useIdentidadeEfetiva } from "../../../hooks/useIdentidadeEfetiva";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
@@ -7,6 +7,7 @@ import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { FONT } from "../../../constants/theme";
 import { BRAND, FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
+import { fetchAllPages } from "../../../lib/supabasePaginate";
 import { verificarElegibilidadeAgendaLive } from "../../../lib/influencerAgendaGate";
 import {
   isErroInfluencerCadastroInativo,
@@ -24,6 +25,9 @@ import {descricaoModalExcluirItem, tooltipExcluir} from "../../../lib/excluirIte
 import { PLATAFORMAS, PLAT_COLOR, PLAT_LINK_KEY } from "../../../constants/platforms";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { PlatLogo } from "../../../components/PlatLogo";
+import { SelectListaComBusca } from "../../../components/SelectListaComBusca";
+import { FilterBarIcons } from "../../../lib/filterBarIconCatalog";
+import { FILTER_SEARCH_INFLUENCER } from "../../../lib/searchBarConstants";
 import { ROLES_PARIDADE_INFLUENCER, ROLES_STAFF_OPERACOES_LIVES, roleParidadeInfluencer } from "../../../lib/staffRoles";
 
 function dateToISOLocal(d: Date): string {
@@ -52,13 +56,22 @@ function fmtDataLive(iso: string): string {
 interface Props {
   live?:   Live;
   influencerIdInicial?: string;
+  /** Catálogo já paginado na Agenda — evita 2º fetch truncado em ~1000. */
+  influencersCatalog?: { id: string; name: string }[];
   onClose: () => void;
   onSave:  () => void;
   onBloqueioInativo?: (persona: PersonaBloqueioAgendaCota) => void;
 }
 
 // ─── MODAL ────────────────────────────────────────────────────────────────────
-export default function ModalLive({ live, influencerIdInicial, onClose, onSave, onBloqueioInativo }: Props) {
+export default function ModalLive({
+  live,
+  influencerIdInicial,
+  influencersCatalog,
+  onClose,
+  onSave,
+  onBloqueioInativo,
+}: Props) {
   const { theme: t, user, isDark, setActivePage } = useApp();
   const { userId: userIdEfetivo, role: roleEfetivo } = useIdentidadeEfetiva();
   const brand = useDashboardBrand();
@@ -84,7 +97,19 @@ export default function ModalLive({ live, influencerIdInicial, onClose, onSave, 
   // Apenas Admin e Gestor podem criar/editar lives em períodos anteriores (data/hora no passado)
   const podeAlterarPeriodoAnterior = isAdminOuGestor;
 
-  const [influencers, setInfluencers] = useState<{ id: string; name: string }[]>([]);
+  const [influencersFallback, setInfluencersFallback] = useState<{ id: string; name: string }[]>([]);
+  const influencers = useMemo(() => {
+    if (isInfluencer) return [];
+    if (influencersCatalog && influencersCatalog.length > 0) return influencersCatalog;
+    return influencersFallback;
+  }, [isInfluencer, influencersCatalog, influencersFallback]);
+  const influencerOptions = useMemo(
+    () =>
+      [...influencers]
+        .sort((a, b) => (a.name ?? "").localeCompare(b.name ?? "", "pt-BR"))
+        .map((i) => ({ value: i.id, label: i.name || i.id })),
+    [influencers],
+  );
   const [form, setForm] = useState({
     influencer_id: live?.influencer_id
       ?? influencerIdInicial
@@ -114,12 +139,29 @@ export default function ModalLive({ live, influencerIdInicial, onClose, onSave, 
   }, [live?.id, isEdit]);
 
   useEffect(() => {
-    if (!isInfluencer) {
-      supabase.from("profiles").select("id, name").in("role", [...ROLES_PARIDADE_INFLUENCER]).then(({ data }) => {
-        if (data) setInfluencers(data.filter((i: { id: string }) => podeVerInfluencer(i.id)));
-      });
-    }
-  }, [isInfluencer, podeVerInfluencer]);
+    if (isInfluencer) return;
+    if (influencersCatalog && influencersCatalog.length > 0) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const rows = await fetchAllPages<{ id: string; name: string }>(async (from, to) =>
+          supabase
+            .from("profiles")
+            .select("id, name")
+            .in("role", [...ROLES_PARIDADE_INFLUENCER])
+            .order("name")
+            .range(from, to),
+        );
+        if (cancelled) return;
+        setInfluencersFallback(rows.filter((i) => podeVerInfluencer(i.id)));
+      } catch (e) {
+        console.error(e);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isInfluencer, influencersCatalog, podeVerInfluencer]);
 
   useEffect(() => {
     if (!form.influencer_id) {
@@ -300,13 +342,20 @@ export default function ModalLive({ live, influencerIdInicial, onClose, onSave, 
 
   return (
     <>
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 20 }}>
+    <div
+      className="app-modal-overlay-pad"
+      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
       <div
         ref={panelRef}
         tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-live-title"
+        onMouseDown={(e) => e.stopPropagation()}
         style={{
           background: t.cardBg,
           border: `1px solid ${t.cardBorder}`,
@@ -408,17 +457,18 @@ export default function ModalLive({ live, influencerIdInicial, onClose, onSave, 
               Influencer
               {showReqMark ? <CampoObrigatorioMark /> : null}
             </label>
-            <select
+            <SelectListaComBusca
+              variant="campo"
+              label="Influencer"
+              icon={FilterBarIcons.influencer}
               value={form.influencer_id}
-                onChange={(e) => {
-                  if (!somenteLeitura) void escolherInfluencer(e.target.value);
-                }}
+              onChange={(id) => {
+                if (!somenteLeitura) void escolherInfluencer(id);
+              }}
+              options={influencerOptions}
+              searchPlaceholder={FILTER_SEARCH_INFLUENCER}
               disabled={somenteLeitura}
-              style={inputStyle}
-            >
-              <option value="">Selecione...</option>
-              {[...influencers].sort((a, b) => (a.name ?? "").localeCompare(b.name ?? "", "pt-BR")).map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
-            </select>
+            />
           </div>
         )}
 

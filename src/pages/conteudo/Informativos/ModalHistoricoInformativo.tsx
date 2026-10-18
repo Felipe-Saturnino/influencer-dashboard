@@ -83,15 +83,44 @@ export function ModalHistoricoInformativo({
       <ModalHeader title={`Histórico — ${assunto}`} onClose={onClose} />
       <div style={{ padding: "0 20px 20px", fontFamily: FONT.body }}>
         {erro ? (
-          <div role="alert" style={{ color: "#e84025", fontSize: 13, marginBottom: 12 }}>
-            {erro}
+          <div
+            role="alert"
+            style={{
+              color: "#e84025",
+              fontSize: 13,
+              marginBottom: 12,
+              display: "flex",
+              flexWrap: "wrap",
+              alignItems: "center",
+              gap: 12,
+              justifyContent: "space-between",
+            }}
+          >
+            <span>{erro}</span>
+            <button
+              type="button"
+              onClick={() => void carregar()}
+              style={{
+                padding: "6px 12px",
+                borderRadius: 8,
+                border: "1px solid rgba(232,64,37,0.35)",
+                background: "rgba(232,64,37,0.08)",
+                color: "#e84025",
+                fontSize: 12,
+                fontWeight: 700,
+                cursor: "pointer",
+                fontFamily: FONT.body,
+              }}
+            >
+              Tentar de novo
+            </button>
           </div>
         ) : null}
         {loading ? (
           <div style={{ textAlign: "center", padding: 24, color: t.textMuted }}>
             <Loader2 className="app-lucide-spin" size={22} color="var(--brand-primary, #7c3aed)" aria-hidden />
           </div>
-        ) : itens.length === 0 ? (
+        ) : erro ? null : itens.length === 0 ? (
           <p style={{ color: t.textMuted, fontSize: 13, margin: 0 }}>Nenhum registro de alteração.</p>
         ) : (
           <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 10 }}>

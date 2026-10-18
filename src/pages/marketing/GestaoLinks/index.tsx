@@ -7,6 +7,7 @@ import { useRouteTab } from "../../../hooks/useRouteTab";
 import { useMediaQuery } from "../../../hooks/useMediaQuery";
 import { FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
+import { fetchAllPages, fetchInBatched, LIVE_RESULTADOS_IN_CHUNK } from "../../../lib/supabasePaginate";
 import { UtmAlias } from "../../../types";
 import { nomeExibicaoLinksEntidade } from "../../../lib/linksMateriaisCanal";
 import { Ban, CheckCircle2, Link2, EyeOff, RotateCcw, AlertCircle, Loader2 } from "lucide-react";
@@ -16,6 +17,8 @@ import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { ModalBase, ModalHeader, ModalConfirmDelete } from "../../../components/OperacoesModal";
+import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
+import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
 import {
   FiltroBarTabButton,
   FILTRO_BAR_TAB_ICON_PROPS,
@@ -38,20 +41,22 @@ import {
 import { getFilterBarRowStyle } from "../../../lib/filterBarStyles";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { TabelaComPaginacao } from "../../../components/TabelaPaginacaoBar";
+import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
 
 const COR = {
   vermelho: "#e84025",
   verde: "#22c55e",
 } as const;
 
-function ctaGradient(useBrand: boolean): string {
-  return useBrand
-    ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
-    : "linear-gradient(135deg, #4a2082, #1e36f8)";
-}
+const UTM_ALIAS_COLS =
+  "id, utm_source, operadora_slug, cda_conta, influencer_id, campanha_id, status, primeiro_visto, ultimo_visto, total_visits, total_registrations, total_ftds, total_deposit, total_withdrawal, mapeado_por, mapeado_em, atualizado_em, criado_em" as const;
+
+const ENTIDADE_IN_CHUNK = LIVE_RESULTADOS_IN_CHUNK;
 
 const MSG_ERRO_MAPEAR =
   "Não foi possível mapear o link. Se o problema persistir, entre em contato com o suporte.";
+const MSG_ERRO_CARREGAR_LINKS =
+  "Não foi possível carregar os links. Se o problema persistir, entre em contato com o suporte.";
 
 /** Rótulo da coluna Proprietário — mesmo nome exibido no select do modal Mapear. */
 function labelProprietarioAlias(
@@ -134,6 +139,7 @@ export default function GestaoLinks() {
   const [operadorasList, setOperadorasList] = useState<{ slug: string; nome: string }[]>([]);
   const [aliases, setAliases] = useState<UtmAlias[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [influencers, setInfluencers] = useState<InfluencerOpcao[]>([]);
   const [afiliados, setAfiliados] = useState<InfluencerOpcao[]>([]);
   const [loadingEntidades, setLoadingEntidades] = useState(true);
@@ -181,68 +187,99 @@ export default function GestaoLinks() {
 
   const carregar = useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
     const statusFiltro: Record<Aba, string> = { pendentes: "pendente", mapeados: "mapeado", ignorados: "ignorado" };
     let query = supabase
       .from("utm_aliases")
-      .select("*")
+      .select(UTM_ALIAS_COLS)
       .eq("status", statusFiltro[aba])
       .order(aba === "pendentes" ? "total_visits" : "total_ftds", { ascending: false })
       .limit(500);
     if (operadoraFiltro !== "todas") query = query.eq("operadora_slug", operadoraFiltro);
     const { data, error } = await query;
-    if (error) { console.error("Erro ao carregar utm_aliases:", error.message); setAliases([]); setLoading(false); return; }
-    const aliasData = data ?? [];
+    if (error) {
+      console.error("Erro ao carregar utm_aliases:", error.message);
+      setAliases([]);
+      setLoadError(MSG_ERRO_CARREGAR_LINKS);
+      setLoading(false);
+      return;
+    }
+    const aliasData = (data ?? []) as UtmAlias[];
     let infNomeMap = new Map<string, string>();
     let campanhaNomeMap = new Map<string, string>();
     if (aba === "mapeados") {
       const influencerIds = [
-        ...new Set(aliasData.map((r: UtmAlias) => r.influencer_id).filter(Boolean) as string[]),
+        ...new Set(aliasData.map((r) => r.influencer_id).filter(Boolean) as string[]),
       ];
       if (influencerIds.length > 0) {
         // Fonte canónica do nome (igual Links/Materiais e sync CDA): influencer_perfil.id = profiles.id
-        const [{ data: perfilData, error: perfilErr }, { data: profData, error: profErr }] =
-          await Promise.all([
-            supabase
-              .from("influencer_perfil")
-              .select("id, nome_artistico, nome_completo")
-              .in("id", influencerIds),
-            supabase.from("profiles").select("id, name, role").in("id", influencerIds),
-          ]);
-        if (perfilErr) console.error("[GestaoLinks] nomes influencer_perfil:", perfilErr.message);
-        if (profErr) console.error("[GestaoLinks] nomes profiles:", profErr.message);
-
         type PerfilRow = {
           id: string;
           nome_artistico: string | null;
           nome_completo: string | null;
         };
         type ProfRow = { id: string; name: string | null; role: string };
-        const perfilById = new Map(((perfilData ?? []) as PerfilRow[]).map((p) => [p.id, p]));
-        const profById = new Map(((profData ?? []) as ProfRow[]).map((p) => [p.id, p]));
-
-        infNomeMap = new Map();
-        for (const id of influencerIds) {
-          const perfil = perfilById.get(id);
-          const prof = profById.get(id);
-          infNomeMap.set(
-            id,
-            nomeExibicaoLinksEntidade({
-              role: prof?.role,
-              nome_artistico: perfil?.nome_artistico,
-              nome_completo: perfil?.nome_completo,
-              name: prof?.name,
+        try {
+          const [perfilData, profData] = await Promise.all([
+            fetchInBatched(influencerIds, ENTIDADE_IN_CHUNK, async (slice) => {
+              const { data: rows, error: err } = await supabase
+                .from("influencer_perfil")
+                .select("id, nome_artistico, nome_completo")
+                .in("id", slice);
+              if (err) throw new Error(err.message);
+              return (rows ?? []) as PerfilRow[];
             }),
-          );
+            fetchInBatched(influencerIds, ENTIDADE_IN_CHUNK, async (slice) => {
+              const { data: rows, error: err } = await supabase
+                .from("profiles")
+                .select("id, name, role")
+                .in("id", slice);
+              if (err) throw new Error(err.message);
+              return (rows ?? []) as ProfRow[];
+            }),
+          ]);
+
+          const perfilById = new Map(perfilData.map((p) => [p.id, p]));
+          const profById = new Map(profData.map((p) => [p.id, p]));
+
+          infNomeMap = new Map();
+          for (const id of influencerIds) {
+            const perfil = perfilById.get(id);
+            const prof = profById.get(id);
+            infNomeMap.set(
+              id,
+              nomeExibicaoLinksEntidade({
+                role: prof?.role,
+                nome_artistico: perfil?.nome_artistico,
+                nome_completo: perfil?.nome_completo,
+                name: prof?.name,
+              }),
+            );
+          }
+        } catch (e: unknown) {
+          console.error("[GestaoLinks] nomes mapeados:", e);
         }
       }
-      const campanhaIds = aliasData.map((r: UtmAlias) => r.campanha_id).filter(Boolean) as string[];
+      const campanhaIds = [
+        ...new Set(aliasData.map((r) => r.campanha_id).filter(Boolean) as string[]),
+      ];
       let campanhaAtivoMap = new Map<string, boolean>();
       if (campanhaIds.length > 0) {
-        const { data: campData } = await supabase.from("campanhas").select("id, nome, ativo").in("id", campanhaIds);
-        campanhaNomeMap = new Map((campData ?? []).map((c: { id: string; nome: string }) => [c.id, c.nome]));
-        campanhaAtivoMap = new Map((campData ?? []).map((c: { id: string; ativo: boolean }) => [c.id, c.ativo]));
+        const campData = await fetchInBatched(campanhaIds, ENTIDADE_IN_CHUNK, async (slice) => {
+          const { data: rows, error: err } = await supabase
+            .from("campanhas")
+            .select("id, nome, ativo")
+            .in("id", slice);
+          if (err) throw new Error(err.message);
+          return (rows ?? []) as { id: string; nome: string; ativo: boolean }[];
+        }).catch((e: unknown) => {
+          console.error("[GestaoLinks] nomes campanhas:", e);
+          return [] as { id: string; nome: string; ativo: boolean }[];
+        });
+        campanhaNomeMap = new Map(campData.map((c) => [c.id, c.nome]));
+        campanhaAtivoMap = new Map(campData.map((c) => [c.id, c.ativo]));
       }
-      setAliases(aliasData.map((r: UtmAlias) => ({
+      setAliases(aliasData.map((r) => ({
         ...r,
         influencer_name: r.influencer_id ? (infNomeMap.get(r.influencer_id) || "—") : undefined,
         campanha_nome: r.campanha_id ? (campanhaNomeMap.get(r.campanha_id) || "—") : undefined,
@@ -251,7 +288,7 @@ export default function GestaoLinks() {
       setLoading(false);
       return;
     }
-    setAliases(aliasData.map((r: UtmAlias) => ({ ...r })));
+    setAliases(aliasData.map((r) => ({ ...r })));
     setLoading(false);
   }, [aba, operadoraFiltro]);
 
@@ -262,71 +299,68 @@ export default function GestaoLinks() {
     void (async () => {
       setLoadingEntidades(true);
       setErroEntidades(false);
-      const { data: profilesData, error: profilesError } = await supabase
-        .from("profiles")
-        .select("id, name, role")
-        .in("role", ["influencer", "afiliado"]);
-      if (profilesError) {
-        console.error("[GestaoLinks] lista profiles:", profilesError.message);
+      try {
+        type ProfileRow = {
+          id: string;
+          name: string | null;
+          role: "influencer" | "afiliado";
+        };
+        type PerfilRow = {
+          id: string;
+          nome_artistico: string | null;
+          nome_completo: string | null;
+          status: string | null;
+        };
+        const profiles = await fetchAllPages<ProfileRow>(async (from, to) =>
+          supabase
+            .from("profiles")
+            .select("id, name, role")
+            .in("role", ["influencer", "afiliado"])
+            .order("id", { ascending: true })
+            .range(from, to),
+        );
         if (cancelled) return;
-        setInfluencers([]);
-        setAfiliados([]);
-        setErroEntidades(true);
-        setLoadingEntidades(false);
-        return;
-      }
 
-      type ProfileRow = {
-        id: string;
-        name: string | null;
-        role: "influencer" | "afiliado";
-      };
-      type PerfilRow = {
-        id: string;
-        nome_artistico: string | null;
-        nome_completo: string | null;
-        status: string | null;
-      };
-      const profiles = (profilesData ?? []) as ProfileRow[];
-      const ids = profiles.map((profile) => profile.id);
-      const perfilRes =
-        ids.length > 0
-          ? await supabase
-              .from("influencer_perfil")
-              .select("id, nome_artistico, nome_completo, status")
-              .in("id", ids)
-          : { data: [] as PerfilRow[], error: null };
-      if (perfilRes.error) {
-        console.error("[GestaoLinks] lista influencer_perfil:", perfilRes.error.message);
+        const ids = profiles.map((profile) => profile.id);
+        const perfilRows =
+          ids.length > 0
+            ? await fetchInBatched(ids, ENTIDADE_IN_CHUNK, async (slice) => {
+                const { data, error } = await supabase
+                  .from("influencer_perfil")
+                  .select("id, nome_artistico, nome_completo, status")
+                  .in("id", slice);
+                if (error) throw new Error(error.message);
+                return (data ?? []) as PerfilRow[];
+              })
+            : [];
         if (cancelled) return;
-        setInfluencers([]);
-        setAfiliados([]);
-        setErroEntidades(true);
-        setLoadingEntidades(false);
-        return;
-      }
 
-      const perfilById = new Map(
-        ((perfilRes.data ?? []) as PerfilRow[]).map((perfil) => [perfil.id, perfil] as const),
-      );
-      const mapped = profiles.map((r) => {
-        const perfil = perfilById.get(r.id);
-        return {
-          id: r.id,
-          role: r.role,
-          status: (perfil?.status ?? "ativo").toString(),
-          nome: nomeExibicaoLinksEntidade({
+        const perfilById = new Map(perfilRows.map((perfil) => [perfil.id, perfil] as const));
+        const mapped = profiles.map((r) => {
+          const perfil = perfilById.get(r.id);
+          return {
+            id: r.id,
             role: r.role,
-            nome_artistico: perfil?.nome_artistico,
-            nome_completo: perfil?.nome_completo,
-            name: r.name,
-          }),
-        } satisfies InfluencerOpcao;
-      });
-      if (cancelled) return;
-      setInfluencers(mapped.filter((m) => m.role === "influencer"));
-      setAfiliados(mapped.filter((m) => m.role === "afiliado"));
-      setLoadingEntidades(false);
+            status: (perfil?.status ?? "ativo").toString(),
+            nome: nomeExibicaoLinksEntidade({
+              role: r.role,
+              nome_artistico: perfil?.nome_artistico,
+              nome_completo: perfil?.nome_completo,
+              name: r.name,
+            }),
+          } satisfies InfluencerOpcao;
+        });
+        setInfluencers(mapped.filter((m) => m.role === "influencer"));
+        setAfiliados(mapped.filter((m) => m.role === "afiliado"));
+        setLoadingEntidades(false);
+      } catch (e: unknown) {
+        console.error("[GestaoLinks] lista entidades:", e);
+        if (cancelled) return;
+        setInfluencers([]);
+        setAfiliados([]);
+        setErroEntidades(true);
+        setLoadingEntidades(false);
+      }
     })();
     return () => {
       cancelled = true;
@@ -728,7 +762,7 @@ export default function GestaoLinks() {
       <div
         role="tabpanel"
         id={`painel-${aba}`}
-        aria-labelledby={`tab-${aba}`}
+        aria-labelledby={`tab-links-${aba}`}
         tabIndex={0}
       >
       {loading ? (
@@ -744,7 +778,37 @@ export default function GestaoLinks() {
           }}
         >
           <Loader2 size={22} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden />
-          Carregando links...
+          Carregando…
+        </div>
+      ) : loadError ? (
+        <div
+          role="alert"
+          aria-live="polite"
+          style={getPageContentBoxStyle(brand, t, {
+            padding: 60,
+            textAlign: "center",
+          })}
+        >
+          <p style={{ color: COR.vermelho, fontSize: 13, fontFamily: FONT.body, marginBottom: 12 }}>
+            {loadError}
+          </p>
+          <button
+            type="button"
+            onClick={() => void carregar()}
+            style={{
+              padding: "10px 20px",
+              borderRadius: 10,
+              border: `1px solid ${t.cardBorder}`,
+              background: t.inputBg,
+              color: t.text,
+              fontSize: 13,
+              fontWeight: 700,
+              fontFamily: FONT.body,
+              cursor: "pointer",
+            }}
+          >
+            Tentar novamente
+          </button>
         </div>
       ) : aliases.length === 0 ? (
         <div style={getPageContentBoxStyle(brand, t, {
@@ -971,21 +1035,27 @@ export default function GestaoLinks() {
                       <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap", justifyContent: "center" }}>
                         {aba === "pendentes" && podeMapearAlias() && (
                           <>
-                            <button type="button" onClick={() => abrirModal(alias)}
-                              style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "6px 12px", borderRadius: 10, border: "none", background: ctaGradient(brand.useBrand), color: "#fff", fontSize: 12, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer", whiteSpace: "nowrap" }}>
-                              <Link2 size={12} aria-hidden /> Mapear
-                            </button>
-                            <button type="button" onClick={() => ignorar(alias)}
-                              style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "6px 12px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.textMuted, fontSize: 12, fontFamily: FONT.body, cursor: "pointer", whiteSpace: "nowrap" }}>
-                              <EyeOff size={12} aria-hidden /> Ignorar
-                            </button>
+                            <BtnIconeAcaoLinha
+                              label={tooltipAcao("Mapear link")}
+                              onClick={() => abrirModal(alias)}
+                            >
+                              <Link2 size={14} aria-hidden />
+                            </BtnIconeAcaoLinha>
+                            <BtnIconeAcaoLinha
+                              label={tooltipAcao("Ignorar link")}
+                              onClick={() => void ignorar(alias)}
+                            >
+                              <EyeOff size={14} aria-hidden />
+                            </BtnIconeAcaoLinha>
                           </>
                         )}
                         {(aba === "mapeados" || aba === "ignorados") && podeReativarAlias(alias) && (
-                          <button type="button" onClick={() => reativar(alias)}
-                            style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "6px 12px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.text, fontSize: 12, fontFamily: FONT.body, cursor: "pointer", whiteSpace: "nowrap" }}>
-                            <RotateCcw size={12} aria-hidden /> Reabrir
-                          </button>
+                          <BtnIconeAcaoLinha
+                            label={tooltipAcao("Reabrir link")}
+                            onClick={() => void reativar(alias)}
+                          >
+                            <RotateCcw size={14} aria-hidden />
+                          </BtnIconeAcaoLinha>
                         )}
                       </div>
                     </td>
@@ -1219,7 +1289,7 @@ export default function GestaoLinks() {
                   padding: "9px 20px",
                   borderRadius: 10,
                   border: "none",
-                  background: ctaGradient(brand.useBrand),
+                  background: getCtaCriarGradient(brand),
                   color: "#fff",
                   fontSize: 13,
                   fontWeight: 700,

@@ -16,9 +16,16 @@ export function usePerformanceHubScoringConfig() {
   );
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [reloadTick, setReloadTick] = useState(0);
+
+  const recarregar = useCallback(() => {
+    setReloadTick((n) => n + 1);
+  }, []);
 
   useEffect(() => {
     let cancelado = false;
+    setLoading(true);
+    setLoadError(null);
 
     void fetchPerformanceHubScoringConfig().then((result) => {
       if (cancelado) return;
@@ -30,7 +37,7 @@ export function usePerformanceHubScoringConfig() {
     return () => {
       cancelado = true;
     };
-  }, []);
+  }, [reloadTick]);
 
   const salvar = useCallback(
     (
@@ -45,6 +52,7 @@ export function usePerformanceHubScoringConfig() {
     setScoringPorTime,
     loading,
     loadError,
+    recarregar,
     salvar,
   };
 }

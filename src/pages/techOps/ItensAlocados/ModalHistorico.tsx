@@ -80,7 +80,7 @@ export function ModalHistoricoItemAlocado({
           label="Tipo de Histórico"
           value={tipo}
           onChange={(v) => setTipo(v as HistoricoEventoTipo)}
-          pill
+          pill={false}
           minWidth={180}
         >
           <option value="checklist">Check-list</option>

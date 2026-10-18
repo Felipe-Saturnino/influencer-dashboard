@@ -1,4 +1,4 @@
-import { Building2, TrendingUp, UserRound, Users } from "lucide-react";
+import { Radar, TrendingUp, UserRound, Users } from "lucide-react";
 import { useApp } from "../../../../context/AppContext";
 import { useDashboardBrand } from "../../../../hooks/useDashboardBrand";
 import { useAppPageNav } from "../../../../hooks/useAppPageNav";
@@ -37,9 +37,9 @@ export function KpisAdminHome({
       <div className="app-grid-kpi-4" style={{ gap: 12 }}>
         <HomeKpiCard label="GGR do mês" value={kpis.ggrMtdFmt} icon={<TrendingUp size={16} aria-hidden />} />
         <HomeKpiCard
-          label="Operadoras ativas"
-          value={fmt(kpis.operadorasAtivas)}
-          icon={<Building2 size={16} aria-hidden />}
+          label="Integrações ativas"
+          value={kpis.integracoesAtivasFmt}
+          icon={<Radar size={16} aria-hidden />}
           accentVar="--brand-secondary"
         />
         <HomeKpiCard label="Usuários ativos" value={fmt(kpis.usuariosAtivos)} icon={<Users size={16} aria-hidden />} />
@@ -50,6 +50,10 @@ export function KpisAdminHome({
         Quer saber mais? Acessa{" "}
         <a {...propsFor("mesas_spin")} style={HOME_LINK_BUTTON}>
           Overview Spin
+        </a>
+        {" · "}
+        <a {...propsFor("status_tecnico")} style={HOME_LINK_BUTTON}>
+          Status Técnico
         </a>
       </p>
     </section>

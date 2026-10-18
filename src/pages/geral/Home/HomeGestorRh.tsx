@@ -13,7 +13,7 @@ import { PAGE_CONTENT_BOX_GAP } from "../../../lib/pageContentBoxStyles";
 import { HOME_GESTOR_RH_ROLE, HOME_GESTOR_RH_SUB } from "../../../lib/homePerfisCopy";
 import { BoasVindasPerfilHome } from "./shared/BoasVindasPerfilHome";
 import { AtalhosCuradosHome } from "./shared/AtalhosCuradosHome";
-import { InformativosHome } from "./shared/InformativosHome";
+import { InformacoesStaffHome } from "./shared/InformacoesStaffHome";
 import { HomePageLoading } from "./shared/HomePageLoading";
 import { useHomeGestorRhData } from "./hooks/useHomeGestorRhData";
 import { AlertasGestorRh } from "./gestorRh/AlertasGestorRh";
@@ -64,7 +64,7 @@ export default function HomeGestorRh() {
       />
       <AlertasGestorRh alertas={alertas} />
       <KpisGestorRh kpis={kpis} erro={erro} sectionIdPrefix={PREFIX} />
-      <InformativosHome perfil="gestor_rh" sectionIdPrefix={PREFIX} />
+      <InformacoesStaffHome perfil="gestor_rh" sectionIdPrefix={PREFIX} />
       <AtalhosCuradosHome sectionIdPrefix={PREFIX} atalhos={ATALHOS} />
     </div>
   );

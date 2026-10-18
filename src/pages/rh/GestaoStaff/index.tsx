@@ -122,8 +122,12 @@ const ERRO_CARREGAR_ESTUDIOS =
   "Não foi possível carregar os estúdios. Se o problema persistir, entre em contato com o suporte.";
 const ERRO_CARREGAR_ANOTACOES =
   "Não foi possível carregar as anotações. Se o problema persistir, entre em contato com o suporte.";
+const ERRO_CARREGAR_HISTORICO =
+  "Não foi possível carregar o histórico. Se o problema persistir, entre em contato com o suporte.";
 const ERRO_SALVAR_ANOTACAO =
   "Não foi possível salvar a anotação. Se o problema persistir, entre em contato com o suporte.";
+const AVISO_PROPRIOS_SEM_VINCULO =
+  "Seu login não está vinculado a um prestador ativo nos times de Gestão de Staff. A lista fica vazia — entre em contato com o RH.";
 const ERRO_UPLOAD_FOTO =
   "Não foi possível enviar a foto. Se o problema persistir, entre em contato com o suporte.";
 const ERRO_DEALER_APOS_SALVAR =
@@ -362,32 +366,35 @@ function ModalStaffAnotacoes({
   const carregar = useCallback(async () => {
     setLoading(true);
     setErr("");
-    const { data, error } = await supabase
-      .from("rh_staff_anotacoes")
-      .select("id, rh_funcionario_id, texto, created_at, created_by")
-      .eq("rh_funcionario_id", row.id)
-      .order("created_at", { ascending: false });
-    if (error) {
+    try {
+      const items = await fetchAllPages<RhStaffAnotacao>(async (from, to) => {
+        const { data, error } = await supabase
+          .from("rh_staff_anotacoes")
+          .select("id, rh_funcionario_id, texto, created_at, created_by")
+          .eq("rh_funcionario_id", row.id)
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: false })
+          .range(from, to);
+        return { data: (data as RhStaffAnotacao[] | null) ?? null, error };
+      });
+      setLista(items);
+      const ids = [...new Set(items.map((a) => a.created_by).filter(Boolean))] as string[];
+      if (ids.length === 0) {
+        setNomesAutor({});
+        setLoading(false);
+        return;
+      }
+      const { data: profs } = await supabase.from("profiles").select("id, name").in("id", ids);
+      const m: Record<string, string> = {};
+      (profs ?? []).forEach((p: { id: string; name: string | null }) => {
+        m[p.id] = (p.name ?? "").trim() || p.id.slice(0, 8);
+      });
+      setNomesAutor(m);
+    } catch {
       setLista([]);
       setNomesAutor({});
       setErr(ERRO_CARREGAR_ANOTACOES);
-      setLoading(false);
-      return;
     }
-    const items = (data ?? []) as RhStaffAnotacao[];
-    setLista(items);
-    const ids = [...new Set(items.map((a) => a.created_by).filter(Boolean))] as string[];
-    if (ids.length === 0) {
-      setNomesAutor({});
-      setLoading(false);
-      return;
-    }
-    const { data: profs } = await supabase.from("profiles").select("id, name").in("id", ids);
-    const m: Record<string, string> = {};
-    (profs ?? []).forEach((p: { id: string; name: string | null }) => {
-      m[p.id] = (p.name ?? "").trim() || p.id.slice(0, 8);
-    });
-    setNomesAutor(m);
     setLoading(false);
   }, [row.id]);
 
@@ -490,8 +497,38 @@ function ModalStaffAnotacoes({
           Estas entradas são só desta página e não aparecem no histórico geral de RH nem na Gestão de Prestadores.
         </p>
         {err ? (
-          <div role="alert" style={{ color: "#e84025", fontSize: 12, marginBottom: 12 }}>
-            {err}
+          <div
+            role="alert"
+            style={{
+              color: "#e84025",
+              fontSize: 12,
+              marginBottom: 12,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
+              flexWrap: "wrap",
+            }}
+          >
+            <span>{err}</span>
+            {err === ERRO_CARREGAR_ANOTACOES ? (
+              <button
+                type="button"
+                onClick={() => void carregar()}
+                style={{
+                  padding: "8px 14px",
+                  borderRadius: 10,
+                  border: "1px solid rgba(232,64,37,0.35)",
+                  background: "transparent",
+                  color: "#e84025",
+                  fontWeight: 700,
+                  fontFamily: FONT.body,
+                  cursor: "pointer",
+                }}
+              >
+                Tentar de novo
+              </button>
+            ) : null}
           </div>
         ) : null}
         {loading ? (
@@ -499,7 +536,7 @@ function ModalStaffAnotacoes({
             <Loader2 size={16} className="app-lucide-spin" aria-hidden style={{ marginRight: 8, verticalAlign: "middle" }} />
             Carregando anotações…
           </div>
-        ) : lista.length === 0 ? (
+        ) : err === ERRO_CARREGAR_ANOTACOES ? null : lista.length === 0 ? (
           <div style={{ padding: "20px 0", textAlign: "center", color: t.textMuted, fontSize: 13 }}>Ainda não há anotações registradas.</div>
         ) : (
           <ul style={{ listStyle: "none", margin: 0, padding: 0, maxHeight: "min(48dvh, 360px)", overflowY: "auto" }}>
@@ -551,6 +588,7 @@ export default function RhGestaoStaffPage() {
   const [times, setTimes] = useState<StaffTimeRow[]>([]);
   const [loadingTimes, setLoadingTimes] = useState(true);
   const [erroTimes, setErroTimes] = useState<string | null>(null);
+  const [avisoPropriosSemVinculo, setAvisoPropriosSemVinculo] = useState<string | null>(null);
 
   const [estudiosNome, setEstudiosNome] = useState<Record<string, string>>({});
   const [estudiosFiltroOpts, setEstudiosFiltroOpts] = useState<{ slug: string; nome: string }[]>([]);
@@ -588,12 +626,21 @@ export default function RhGestaoStaffPage() {
     if (error) {
       setErroTimes(ERRO_CARREGAR_TIMES);
       setTimes([]);
+      setAvisoPropriosSemVinculo(null);
     } else {
       let list = (data ?? []) as StaffTimeRow[];
       if (recorteProprios) {
         const eu = emailEfetivo ? await buscarRhFuncionarioAtivoPorEmailLogin(emailEfetivo) : null;
         const tid = eu?.org_time_id;
-        list = tid ? list.filter((t) => t.id === tid) : [];
+        if (!tid) {
+          setAvisoPropriosSemVinculo(AVISO_PROPRIOS_SEM_VINCULO);
+          list = [];
+        } else {
+          setAvisoPropriosSemVinculo(null);
+          list = list.filter((t) => t.id === tid);
+        }
+      } else {
+        setAvisoPropriosSemVinculo(null);
       }
       setTimes(list);
     }
@@ -602,40 +649,45 @@ export default function RhGestaoStaffPage() {
 
   const carregarEstudios = useCallback(async () => {
     setErroEstudios(null);
-    const { data, error } = await supabase
-      .from("estudios_spin")
-      .select("slug, nome, tipo, estudios_spin_operadoras(operadora_slug)")
-      .eq("ativo", true);
-    if (error) {
-      setErroEstudios(ERRO_CARREGAR_ESTUDIOS);
-      return;
-    }
-    const nomeMap: Record<string, string> = {};
-    const opts: { slug: string; nome: string }[] = [];
-    const junctionFlat: { operadora_slug: string; estudio_slug: string; tipo: string }[] = [];
-    for (const raw of data ?? []) {
-      const e = raw as {
-        slug: string;
-        nome: string;
-        tipo: string;
-        estudios_spin_operadoras: { operadora_slug: string } | { operadora_slug: string }[] | null;
-      };
-      nomeMap[e.slug] = e.nome;
-      opts.push({ slug: e.slug, nome: e.nome });
-      const joins = e.estudios_spin_operadoras;
-      const list = joins == null ? [] : Array.isArray(joins) ? joins : [joins];
-      for (const j of list) {
-        junctionFlat.push({
-          operadora_slug: j.operadora_slug,
-          estudio_slug: e.slug,
-          tipo: e.tipo,
-        });
+    type EstudioSpinBootRow = {
+      slug: string;
+      nome: string;
+      tipo: string;
+      estudios_spin_operadoras: { operadora_slug: string } | { operadora_slug: string }[] | null;
+    };
+    try {
+      const rows = await fetchAllPages<EstudioSpinBootRow>(async (from, to) => {
+        const { data, error } = await supabase
+          .from("estudios_spin")
+          .select("slug, nome, tipo, estudios_spin_operadoras(operadora_slug)")
+          .eq("ativo", true)
+          .order("slug", { ascending: true })
+          .range(from, to);
+        return { data: (data as EstudioSpinBootRow[] | null) ?? null, error };
+      });
+      const nomeMap: Record<string, string> = {};
+      const opts: { slug: string; nome: string }[] = [];
+      const junctionFlat: { operadora_slug: string; estudio_slug: string; tipo: string }[] = [];
+      for (const e of rows) {
+        nomeMap[e.slug] = e.nome;
+        opts.push({ slug: e.slug, nome: e.nome });
+        const joins = e.estudios_spin_operadoras;
+        const list = joins == null ? [] : Array.isArray(joins) ? joins : [joins];
+        for (const j of list) {
+          junctionFlat.push({
+            operadora_slug: j.operadora_slug,
+            estudio_slug: e.slug,
+            tipo: e.tipo,
+          });
+        }
       }
+      setEstudiosNome(nomeMap);
+      setEstudiosFiltroOpts(opts.sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")));
+      setOpParaEstudio(buildOperadoraParaEstudioMap(junctionFlat));
+      setOperadorasPorEstudio(buildOperadorasPorEstudioMap(junctionFlat));
+    } catch {
+      setErroEstudios(ERRO_CARREGAR_ESTUDIOS);
     }
-    setEstudiosNome(nomeMap);
-    setEstudiosFiltroOpts(opts.sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")));
-    setOpParaEstudio(buildOperadoraParaEstudioMap(junctionFlat));
-    setOperadorasPorEstudio(buildOperadorasPorEstudioMap(junctionFlat));
   }, []);
 
   const carregarPrestadores = useCallback(async (timeIds: string[]) => {
@@ -655,12 +707,18 @@ export default function RhGestaoStaffPage() {
           .in("org_time_id", timeIds)
           .in("status", ["ativo", "indisponivel"])
           .order("nome", { ascending: true })
+          .order("id", { ascending: true })
           .range(from, to);
         return { data: ((data as unknown as RhFuncionario[]) ?? []), error };
       });
       if (recorteProprios && emailEfetivo) {
         const eu = await buscarRhFuncionarioAtivoPorEmailLogin(emailEfetivo);
-        setPrestadores(eu ? rows.filter((r) => r.id === eu.id) : []);
+        if (!eu) {
+          setAvisoPropriosSemVinculo(AVISO_PROPRIOS_SEM_VINCULO);
+          setPrestadores([]);
+        } else {
+          setPrestadores(rows.filter((r) => r.id === eu.id));
+        }
       } else {
         setPrestadores(rows);
       }
@@ -1073,6 +1131,23 @@ export default function RhGestaoStaffPage() {
           </button>
         </div>
       )}
+      {avisoPropriosSemVinculo && (
+        <div
+          role="status"
+          style={{
+            marginBottom: 14,
+            padding: "10px 14px",
+            borderRadius: 10,
+            fontSize: 13,
+            color: "#b45309",
+            border: "1px solid rgba(245,158,11,0.4)",
+            background: "rgba(245,158,11,0.1)",
+            fontFamily: FONT.body,
+          }}
+        >
+          {avisoPropriosSemVinculo}
+        </div>
+      )}
 
       {mostrarKpisGamePresenter ? (
         <StaffKpiResumo
@@ -1227,7 +1302,7 @@ export default function RhGestaoStaffPage() {
           <Loader2 size={22} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden />
           <span style={{ color: t.textMuted, fontSize: 13 }}>Carregando prestadores…</span>
         </div>
-      ) : times.length === 0 ? (
+      ) : erroTimes ? null : avisoPropriosSemVinculo ? null : times.length === 0 ? (
         <div style={{ padding: "32px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
           Nenhum time encontrado para as gerências Game Floor ou Operation Management. Ajuste os nomes no organograma ou
           entre em contato com o RH.
@@ -1339,11 +1414,13 @@ export default function RhGestaoStaffPage() {
             </thead>
             <tbody>
               {linhasTabela.length === 0 ? (
+                erroPrestadores ? null : (
                 <tr>
                   <td colSpan={colSpanTabelaStaff} style={{ ...dataTable.tdCenter, padding: "32px 16px", color: t.textMuted }}>
                     Nenhum prestador neste filtro.
                   </td>
                 </tr>
+                )
               ) : (
                 linhasTabelaPagina.map((row, i) => {
                   const nomeTime =
@@ -1544,44 +1621,51 @@ function ModalStaffVer({
   const verAbas = useMemo(() => staffVerAbasVisiveis(exibirAbaHistorico), [exibirAbaHistorico]);
   const [hist, setHist] = useState<RhFuncionarioHistorico[]>([]);
   const [histLoading, setHistLoading] = useState(false);
+  const [histErro, setHistErro] = useState<string | null>(null);
   const [nomesAutor, setNomesAutor] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (!exibirAbaHistorico && aba === "historico") setAba("pessoal");
   }, [exibirAbaHistorico, aba]);
 
-  useEffect(() => {
-    if (aba !== "historico") return;
+  const carregarHistorico = useCallback(async () => {
     setHistLoading(true);
-    void (async () => {
-      const { data, error } = await supabase
-        .from("rh_funcionario_historico")
-        .select("id, rh_funcionario_id, tipo, detalhes, anexos, created_at, created_by")
-        .eq("rh_funcionario_id", row.id)
-        .order("created_at", { ascending: false })
-        .limit(100);
-      if (error) {
-        setHist([]);
-        setHistLoading(false);
-        return;
-      }
-      const items = (data ?? []) as RhFuncionarioHistorico[];
+    setHistErro(null);
+    try {
+      const items = await fetchAllPages<RhFuncionarioHistorico>(async (from, to) => {
+        const { data, error } = await supabase
+          .from("rh_funcionario_historico")
+          .select("id, rh_funcionario_id, tipo, detalhes, anexos, created_at, created_by")
+          .eq("rh_funcionario_id", row.id)
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: false })
+          .range(from, to);
+        return { data: (data as RhFuncionarioHistorico[] | null) ?? null, error };
+      });
       setHist(items);
       const ids = [...new Set(items.map((h) => h.created_by).filter(Boolean))] as string[];
       if (ids.length === 0) {
         setNomesAutor({});
-        setHistLoading(false);
-        return;
+      } else {
+        const { data: profs } = await supabase.from("profiles").select("id, name").in("id", ids);
+        const m: Record<string, string> = {};
+        (profs ?? []).forEach((p: { id: string; name: string | null }) => {
+          m[p.id] = (p.name ?? "").trim() || p.id.slice(0, 8);
+        });
+        setNomesAutor(m);
       }
-      const { data: profs } = await supabase.from("profiles").select("id, name").in("id", ids);
-      const m: Record<string, string> = {};
-      (profs ?? []).forEach((p: { id: string; name: string | null }) => {
-        m[p.id] = (p.name ?? "").trim() || p.id.slice(0, 8);
-      });
-      setNomesAutor(m);
-      setHistLoading(false);
-    })();
-  }, [aba, row.id]);
+    } catch {
+      setHist([]);
+      setNomesAutor({});
+      setHistErro(ERRO_CARREGAR_HISTORICO);
+    }
+    setHistLoading(false);
+  }, [row.id]);
+
+  useEffect(() => {
+    if (aba !== "historico") return;
+    void carregarHistorico();
+  }, [aba, carregarHistorico]);
 
   const skills = useMemo(() => normalizarSkills(row.staff_skills as Record<string, unknown>), [row.staff_skills]);
   const estudioSlug = staffEstudioSlugEfetivo(row, opParaEstudio);
@@ -1730,6 +1814,36 @@ function ModalStaffVer({
             <div style={{ color: t.textMuted, fontSize: 13 }}>
               <Loader2 size={16} className="app-lucide-spin" aria-hidden style={{ marginRight: 8, verticalAlign: "middle" }} />
               Carregando histórico…
+            </div>
+          ) : histErro ? (
+            <div
+              role="alert"
+              style={{
+                padding: "20px 0",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 12,
+                flexWrap: "wrap",
+              }}
+            >
+              <span style={{ color: "#e84025", fontSize: 13, fontFamily: FONT.body }}>{histErro}</span>
+              <button
+                type="button"
+                onClick={() => void carregarHistorico()}
+                style={{
+                  padding: "8px 14px",
+                  borderRadius: 10,
+                  border: "1px solid rgba(232,64,37,0.35)",
+                  background: "transparent",
+                  color: "#e84025",
+                  fontWeight: 700,
+                  fontFamily: FONT.body,
+                  cursor: "pointer",
+                }}
+              >
+                Tentar de novo
+              </button>
             </div>
           ) : hist.length === 0 ? (
             <div style={{ padding: "20px 0", textAlign: "center", color: t.textMuted, fontSize: 13 }}>Nenhum registro no histórico.</div>

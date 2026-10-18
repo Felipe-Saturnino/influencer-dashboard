@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { Loader2 } from "lucide-react";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
@@ -15,6 +15,9 @@ import type { RhSolicitacaoFeedbackRecomendacao } from "../../../types/rhSolicit
 
 type Brand = ReturnType<typeof useDashboardBrand>;
 
+const ERRO_CARGA_PRESTADORES =
+  "Não foi possível carregar os prestadores. Se o problema persistir, entre em contato com o suporte.";
+
 function grupoTimePrestador(time: string): "gp" | "shuffler" | "" {
   const n = time.toLowerCase();
   if (n.includes("shuffler")) return "shuffler";
@@ -28,17 +31,46 @@ export interface ModalRegistrarFeedbackProps {
   onSaved: () => void;
   t: Theme;
   brand: Brand;
+  /** `null` = sem recorte (Ver/Editar Sim). Lista de ids da cascata quando Próprios. */
+  prestadorIdsPermitidos?: string[] | null;
 }
 
-export function ModalRegistrarFeedback({ open, onClose, onSaved, t, brand }: ModalRegistrarFeedbackProps) {
+export function ModalRegistrarFeedback({
+  open,
+  onClose,
+  onSaved,
+  t,
+  brand,
+  prestadorIdsPermitidos = null,
+}: ModalRegistrarFeedbackProps) {
   const [timeFiltro, setTimeFiltro] = useState<"" | "gp" | "shuffler">("");
   const [prestadorId, setPrestadorId] = useState("");
   const [recomendacao, setRecomendacao] = useState<"" | RhSolicitacaoFeedbackRecomendacao>("");
   const [observacao, setObservacao] = useState("");
   const [prestadores, setPrestadores] = useState<CtPrestadorOpt[]>([]);
   const [loadingPrest, setLoadingPrest] = useState(false);
+  const [erroPrest, setErroPrest] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+
+  const carregarPrestadores = useCallback(async () => {
+    setErroPrest(null);
+    setLoadingPrest(true);
+    try {
+      const list = await listPrestadoresGpShuffler();
+      if (prestadorIdsPermitidos) {
+        const allow = new Set(prestadorIdsPermitidos);
+        setPrestadores(list.filter((p) => allow.has(p.id)));
+      } else {
+        setPrestadores(list);
+      }
+    } catch (e) {
+      console.error("[ModalRegistrarFeedback]", e);
+      setErroPrest(ERRO_CARGA_PRESTADORES);
+      setPrestadores([]);
+    }
+    setLoadingPrest(false);
+  }, [prestadorIdsPermitidos]);
 
   useEffect(() => {
     if (!open) return;
@@ -48,15 +80,8 @@ export function ModalRegistrarFeedback({ open, onClose, onSaved, t, brand }: Mod
     setObservacao("");
     setErr(null);
     setSaving(false);
-    setLoadingPrest(true);
-    void listPrestadoresGpShuffler()
-      .then((list) => setPrestadores(list))
-      .catch((e) => {
-        console.error("[ModalRegistrarFeedback]", e);
-        setPrestadores([]);
-      })
-      .finally(() => setLoadingPrest(false));
-  }, [open]);
+    void carregarPrestadores();
+  }, [open, carregarPrestadores]);
 
   const prestadoresFiltrados = useMemo(() => {
     if (!timeFiltro) return [];
@@ -120,6 +145,40 @@ export function ModalRegistrarFeedback({ open, onClose, onSaved, t, brand }: Mod
           </div>
         ) : null}
 
+        {erroPrest ? (
+          <div
+            role="alert"
+            style={{
+              color: "#e84025",
+              fontSize: 12,
+              marginBottom: 12,
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              flexWrap: "wrap",
+            }}
+          >
+            <span>{erroPrest}</span>
+            <button
+              type="button"
+              onClick={() => void carregarPrestadores()}
+              style={{
+                fontFamily: FONT.body,
+                fontSize: 12,
+                fontWeight: 700,
+                padding: "6px 12px",
+                borderRadius: 8,
+                border: "1px solid rgba(232,64,37,0.35)",
+                background: "transparent",
+                color: "#e84025",
+                cursor: "pointer",
+              }}
+            >
+              Tentar de novo
+            </button>
+          </div>
+        ) : null}
+
         <label style={{ display: "block", marginBottom: 14 }}>
           <span style={{ display: "block", fontSize: 12, fontWeight: 700, color: t.textMuted, marginBottom: 6 }}>
             Time
@@ -133,6 +192,7 @@ export function ModalRegistrarFeedback({ open, onClose, onSaved, t, brand }: Mod
             }}
             aria-label="Time"
             aria-required
+            disabled={!!erroPrest}
             style={inputStyle}
           >
             <option value="">Selecione…</option>
@@ -151,11 +211,17 @@ export function ModalRegistrarFeedback({ open, onClose, onSaved, t, brand }: Mod
             onChange={(e) => setPrestadorId(e.target.value)}
             aria-label="Prestador"
             aria-required
-            disabled={!timeFiltro || loadingPrest}
+            disabled={!timeFiltro || loadingPrest || !!erroPrest}
             style={inputStyle}
           >
             <option value="">
-              {!timeFiltro ? "Selecione o time…" : loadingPrest ? "Carregando…" : "Selecione…"}
+              {!timeFiltro
+                ? "Selecione o time…"
+                : loadingPrest
+                  ? "Carregando…"
+                  : erroPrest
+                    ? "Indisponível"
+                    : "Selecione…"}
             </option>
             {prestadoresFiltrados.map((p) => (
               <option key={p.id} value={p.id}>
@@ -206,7 +272,7 @@ export function ModalRegistrarFeedback({ open, onClose, onSaved, t, brand }: Mod
           <button
             type="button"
             onClick={() => void confirmar()}
-            disabled={saving || loadingPrest}
+            disabled={saving || loadingPrest || !!erroPrest}
             style={{
               padding: "10px 20px",
               borderRadius: 10,

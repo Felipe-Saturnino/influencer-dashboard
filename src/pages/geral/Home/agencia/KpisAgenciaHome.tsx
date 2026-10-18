@@ -1,11 +1,11 @@
 import {
-  ArrowDownToLine,
   BarChart2,
   Coins,
   Loader2,
   TrendingUp,
   Trophy,
   UserPlus,
+  Users,
   Video,
 } from "lucide-react";
 import { useApp } from "../../../../context/AppContext";
@@ -50,7 +50,7 @@ export function KpisAgenciaHome({
   const semEscopo = influencerIds.length === 0;
   const { loading, erro, atual, anterior, mesLabel, zero } = useHomeCanalKpisEscopo(
     semEscopo ? undefined : influencerIds,
-    { comInvestimento: true },
+    { comInvestimento: true, comUapSpin: true },
   );
   const box = getPageContentBoxStyle(brand, t);
   const titleId = `${sectionIdPrefix}-kpis-title`;
@@ -143,12 +143,11 @@ export function KpisAgenciaHome({
               comparativoMensal={comparativoCard(kpiAtual.ftds, kpiAnterior.ftds, fmtNum)}
             />
             <HomeKpiCard
-              label="Depósitos"
-              value={fmtNum(kpiAtual.depositos_qtd)}
-              icon={<ArrowDownToLine size={16} aria-hidden />}
+              label="UAP Spin"
+              value={fmtNum(kpiAtual.uap_spin)}
+              icon={<Users size={16} aria-hidden />}
               accentVar="--brand-secondary"
-              subValue={{ value: fmtBRL(kpiAtual.depositos_valor), label: "valor" }}
-              comparativoMensal={comparativoCard(kpiAtual.depositos_qtd, kpiAnterior.depositos_qtd, fmtNum)}
+              comparativoMensal={comparativoCard(kpiAtual.uap_spin, kpiAnterior.uap_spin, fmtNum)}
             />
             <HomeKpiCard
               label="Lives"

@@ -63,9 +63,9 @@
 
   const PLAYER_LAST_SEG =
     "arrayElement(splitByChar('.', assumeNotNull(toString(player_id))), -1)";
-  /** Dimensão de marca — uma query cobre as 6 keys do grupo EsportivaBet. */
-  const BRAND_SQL = `multiIf(match(${PLAYER_LAST_SEG}, '^bateubetbr_'), 'bateu', match(${PLAYER_LAST_SEG}, '^brxbetbr_'), 'brx', match(${PLAYER_LAST_SEG}, '^ricobetbr_'), 'rico', match(${PLAYER_LAST_SEG}, '^donaldbetbr_'), 'donald', match(${PLAYER_LAST_SEG}, '^betpontobetbetbr_'), 'betponto', 'esportiva')`;
-  const ESPORTIVA_KEYS = ["esportiva", "bateu", "brx", "rico", "donald", "betponto"];
+  /** Dimensão de marca — uma query cobre as keys do grupo EsportivaBet. */
+  const BRAND_SQL = `multiIf(match(${PLAYER_LAST_SEG}, '^bateubetbr_'), 'bateu', match(${PLAYER_LAST_SEG}, '^brxbetbr_'), 'brx', match(${PLAYER_LAST_SEG}, '^ricobetbr_'), 'rico', match(${PLAYER_LAST_SEG}, '^donaldbetbr_'), 'donald', match(${PLAYER_LAST_SEG}, '^betpontobetbetbr_'), 'betponto', match(${PLAYER_LAST_SEG}, '^goldebetbr_'), 'goldebet', 'esportiva')`;
+  const ESPORTIVA_KEYS = ["esportiva", "bateu", "brx", "rico", "donald", "betponto", "goldebet"];
 
   const SCENARIOS = {
     network: [

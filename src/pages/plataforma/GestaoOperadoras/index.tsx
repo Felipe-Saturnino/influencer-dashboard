@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "../../../lib/supabase";
+import { fetchAllPages } from "../../../lib/supabasePaginate";
 import { useApp } from "../../../context/AppContext";
 import { usePermission } from "../../../hooks/usePermission";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { BRAND_SEMANTIC as BRAND, FONT, FONT_TITLE } from "../../../constants/theme";
 import { Operadora } from "../../../types";
 import { Pencil, Loader2 } from "lucide-react";
+import { AlertaCargaComRetry } from "../../../components/AlertaCargaComRetry";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
@@ -29,6 +31,10 @@ import { GestaoUsuariosLoading } from "../GestaoUsuarios/gestaoUsuariosUi";
 import { getPageContentBoxStyle, getPageKpiSectionGapStyle } from "../../../lib/pageContentBoxStyles";
 
 const MSG_SEM_PERMISSAO = "Você não tem permissão para visualizar esta página.";
+const ERRO_CARREGAR =
+  "Não foi possível carregar as operadoras. Se o problema persistir, entre em contato com o suporte.";
+const OPERADORA_COLS =
+  "slug, nome, ativo, criado_em, brand_action, brand_contrast, brand_bg, brand_text, logo_url, font_url, turno_manha_inicio, turno_tarde_inicio, turno_noite_inicio, home_template";
 const ERRO_EXCLUIR_OPERADORA =
   "Não foi possível excluir a operadora. Verifique vínculos ou tente desativar em vez de excluir.";
 
@@ -42,6 +48,7 @@ export default function GestaoOperadoras() {
   const perm = usePermission("gestao_operadoras");
   const [operadoras, setOperadoras] = useState<Operadora[]>([]);
   const [loading, setLoading] = useState(true);
+  const [erroCarga, setErroCarga] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [editando, setEditando] = useState<Operadora | null>(null);
   type OpSortCol = "slug" | "nome" | "status" | "criada";
@@ -53,9 +60,23 @@ export default function GestaoOperadoras() {
 
   const carregar = useCallback(async () => {
     setLoading(true);
-    const { data } = await supabase.from("operadoras").select("*").order("nome");
-    setOperadoras(data ?? []);
-    setLoading(false);
+    setErroCarga(null);
+    try {
+      const data = await fetchAllPages<Operadora>(async (from, to) =>
+        supabase
+          .from("operadoras")
+          .select(OPERADORA_COLS)
+          .order("nome", { ascending: true })
+          .order("slug", { ascending: true })
+          .range(from, to),
+      );
+      setOperadoras(data);
+    } catch (e) {
+      console.error("Gestão de Operadoras: falha ao carregar", e);
+      setErroCarga(ERRO_CARREGAR);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => { carregar(); }, [carregar]);
@@ -149,9 +170,9 @@ export default function GestaoOperadoras() {
       {/* ─── Cards de resumo ─────────────────────────────────────────────────── */}
       <div className="app-grid-kpi-3" style={getPageKpiSectionGapStyle()}>
         {[
-          { label: "Total", valor: loading ? "—" : operadoras.length, cor: BRAND.roxoVivo },
-          { label: "Ativas", valor: loading ? "—" : ativas, cor: "#059669" },
-          { label: "Inativas", valor: loading ? "—" : operadoras.length - ativas, cor: BRAND.cinza },
+          { label: "Total", valor: loading || erroCarga ? "—" : operadoras.length, cor: BRAND.roxoVivo },
+          { label: "Ativas", valor: loading || erroCarga ? "—" : ativas, cor: "#059669" },
+          { label: "Inativas", valor: loading || erroCarga ? "—" : operadoras.length - ativas, cor: BRAND.cinza },
         ].map((c) => (
           <div key={c.label} style={{
             background: t.cardBg, border: `1px solid ${t.cardBorder}`,
@@ -203,7 +224,9 @@ export default function GestaoOperadoras() {
           </div>
         </div>
 
-        {loading ? (
+        {erroCarga ? (
+          <AlertaCargaComRetry mensagem={erroCarga} onRetry={() => void carregar()} />
+        ) : loading ? (
           <div
             style={{
               padding: "40px 0",

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { AlertCircle, Loader2, ScanLine } from "lucide-react"
+import { AlertCircle, CheckCircle2, Loader2, PackageMinus, PackagePlus, ScanLine, Trash2, Wrench } from "lucide-react"
 import { supabase } from "../../../lib/supabase"
 import { fetchAllPages } from "../../../lib/supabasePaginate"
 import { useApp } from "../../../context/AppContext"
@@ -15,6 +15,8 @@ import { useDataTableBlock } from "../../../hooks/useDataTableBlock"
 import { buscarRhFuncionarioIdsPorEmailLogin } from "../../../lib/rhFuncionarioLoginMatch"
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina"
 import { TabelaComPaginacao } from "../../../components/TabelaPaginacaoBar"
+import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha"
+import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y"
 import { PageHeader } from "../../../components/PageHeader"
 import { PageMenuIcon } from "../../../components/PageMenuIcon"
 import { AjudaContextualAcoes, type AjudaContextualTutorial } from "../../../components/AjudaContextualAcoes"
@@ -74,6 +76,18 @@ const TUTORIAL_CTX_FIGURINOS: AjudaContextualTutorial = {
   titulo: TUTORIAL_FIGURINO_RETIRADA_DEVOLUCAO.titulo,
   descricao: "Retirada e devolução manual ou por bipagem, com classificação da peça.",
 };
+
+const PECA_COLS =
+  "id, code, barcode, name, category, size, genero, cor, description, status, condition, purchase_date, maintenance_reason, maintenance_entered_at, maintenance_entered_by, discarded_at, discard_reason, discarded_by, atende_todos_estudios, atende_staff, created_at, updated_at";
+const PECA_SELECT =
+  `${PECA_COLS}, rh_figurino_peca_estudios(estudio_slug), rh_figurino_peca_operadoras(operadora_slug)`;
+const EMPRESTIMO_COLS =
+  "id, item_id, borrower_name, borrower_ref, withdrawal_type, loaned_by, loaned_at, returned_at, return_condition, return_notes, returned_by, status";
+const HIST_COLS = "id, item_id, previous_status, new_status, changed_by, notes, changed_at";
+const MSG_ERRO_INVENTARIO =
+  "Não foi possível carregar o inventário. Se o problema persistir, entre em contato com o suporte.";
+const MSG_ERRO_HIST =
+  "Não foi possível carregar o histórico desta peça. Se o problema persistir, entre em contato com o suporte.";
 
 export default function FigurinosPage() {
   const { theme: t, user } = useApp();
@@ -194,14 +208,12 @@ export default function FigurinosPage() {
     setLoading(true);
     setErroGlobal(null);
     await carregarEstudios();
-    const selEmbed =
-      "*, rh_figurino_peca_estudios(estudio_slug), rh_figurino_peca_operadoras(operadora_slug)";
     try {
       const [pecasRows, emps] = await Promise.all([
         fetchAllPages<RhFigurinoPeca>(async (from, to) => {
           const { data, error } = await supabase
             .from("rh_figurino_pecas")
-            .select(selEmbed)
+            .select(PECA_SELECT)
             .order("created_at", { ascending: false })
             .order("id", { ascending: true })
             .range(from, to);
@@ -210,7 +222,7 @@ export default function FigurinosPage() {
         fetchAllPages<RhFigurinoEmprestimo>(async (from, to) => {
           const { data, error } = await supabase
             .from("rh_figurino_emprestimos")
-            .select("*")
+            .select(EMPRESTIMO_COLS)
             .eq("status", "active")
             .order("id", { ascending: true })
             .range(from, to);
@@ -225,7 +237,7 @@ export default function FigurinosPage() {
       setEmpPorItem(map);
     } catch (e) {
       console.error("[Figurinos] Erro ao carregar inventário:", e);
-      setErroGlobal("Não foi possível carregar o inventário. Se o problema persistir, entre em contato com o suporte.");
+      setErroGlobal(MSG_ERRO_INVENTARIO);
       setPecas([]);
       setEmpPorItem({});
     }
@@ -434,7 +446,7 @@ export default function FigurinosPage() {
       const rows = await fetchAllPages<RhFigurinoStatusHist>(async (from, to) => {
         const { data, error } = await supabase
           .from("rh_figurino_status_history")
-          .select("*")
+          .select(HIST_COLS)
           .eq("item_id", p.id)
           .order("changed_at", { ascending: false })
           .order("id", { ascending: true })
@@ -445,7 +457,7 @@ export default function FigurinosPage() {
     } catch (e) {
       console.error("[Figurinos] Erro ao carregar histórico da peça:", e);
       setHistStatus([]);
-      setHistErro("Não foi possível carregar o histórico desta peça. Se o problema persistir, entre em contato com o suporte.");
+      setHistErro(MSG_ERRO_HIST);
     }
     setLoadingHist(false);
   };
@@ -458,7 +470,7 @@ export default function FigurinosPage() {
       const local = pecaPorCodigoLocal(pecas, raw);
       if (local) return local;
 
-      const emb = "*, rh_figurino_peca_estudios(estudio_slug), rh_figurino_peca_operadoras(operadora_slug)";
+      const emb = PECA_SELECT;
       const cands = candidatosLookupFigurino(raw);
       for (const cand of cands) {
         const byBar = await supabase.from("rh_figurino_pecas").select(emb).eq("barcode", cand).maybeSingle();
@@ -560,22 +572,42 @@ export default function FigurinosPage() {
       {erroGlobal ? (
         <div
           role="alert"
+          aria-live="polite"
           style={{
             display: "flex",
+            flexDirection: "column",
             alignItems: "center",
-            gap: 8,
-            padding: "10px 14px",
+            gap: 12,
+            padding: "24px 14px",
             borderRadius: 10,
             marginBottom: 14,
             background: "rgba(232,64,37,0.12)",
             border: "1px solid rgba(232,64,37,0.35)",
-            color: "#e84025",
-            fontSize: 13,
             fontFamily: FONT.body,
+            textAlign: "center",
           }}
         >
-          <AlertCircle size={14} aria-hidden />
-          {erroGlobal}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#e84025", fontSize: 13 }}>
+            <AlertCircle size={14} aria-hidden />
+            {erroGlobal}
+          </div>
+          <button
+            type="button"
+            onClick={() => void carregar()}
+            style={{
+              padding: "10px 20px",
+              borderRadius: 10,
+              border: `1px solid ${t.cardBorder}`,
+              background: t.inputBg,
+              color: t.text,
+              fontSize: 13,
+              fontWeight: 700,
+              fontFamily: FONT.body,
+              cursor: "pointer",
+            }}
+          >
+            Tentar novamente
+          </button>
         </div>
       ) : null}
 
@@ -761,7 +793,7 @@ export default function FigurinosPage() {
 
       {/* Bloco 3: Tabela */}
       <div role="tabpanel" id={`panel-fig-${aba}`} aria-labelledby={`tab-fig-${aba}`} tabIndex={0}>
-        {loading || (perm.canView === "proprios" && loadingRhPrestadorMatch) ? (
+        {erroGlobal ? null : loading || (perm.canView === "proprios" && loadingRhPrestadorMatch) ? (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 280, gap: 10, color: t.textMuted }}>
             <Loader2 size={22} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden />
             <span style={{ fontFamily: FONT.body, fontSize: 13 }}>Carregando…</span>
@@ -868,42 +900,22 @@ export default function FigurinosPage() {
                             {podeEditar || podeCriar ? (
                               <>
                                 {podeEditar ? (
-                                  <button
-                                    type="button"
+                                  <BtnIconeAcaoLinha
+                                    label={tooltipAcao("Retirada")}
                                     onClick={() => setEmpPeca(p)}
-                                    style={{
-                                      padding: "4px 10px",
-                                      borderRadius: 8,
-                                      border: `1px solid rgba(34,197,94,0.35)`,
-                                      background: "rgba(34,197,94,0.12)",
-                                      color: "#22c55e",
-                                      fontSize: 11,
-                                      fontWeight: 700,
-                                      cursor: "pointer",
-                                      fontFamily: FONT.body,
-                                    }}
+                                    style={{ color: "#22c55e", borderColor: "rgba(34,197,94,0.35)", background: "rgba(34,197,94,0.12)" }}
                                   >
-                                    Retirada
-                                  </button>
+                                    <PackageMinus size={14} aria-hidden />
+                                  </BtnIconeAcaoLinha>
                                 ) : null}
                                 {podeCriar ? (
-                                  <button
-                                    type="button"
+                                  <BtnIconeAcaoLinha
+                                    label={tooltipAcao("Manutenção")}
                                     onClick={() => setManutPeca(p)}
-                                    style={{
-                                      padding: "4px 10px",
-                                      borderRadius: 8,
-                                      border: `1px solid rgba(167,139,250,0.4)`,
-                                      background: "rgba(167,139,250,0.12)",
-                                      color: "#a78bfa",
-                                      fontSize: 11,
-                                      fontWeight: 700,
-                                      cursor: "pointer",
-                                      fontFamily: FONT.body,
-                                    }}
+                                    style={{ color: "#a78bfa", borderColor: "rgba(167,139,250,0.4)", background: "rgba(167,139,250,0.12)" }}
                                   >
-                                    Manutenção
-                                  </button>
+                                    <Wrench size={14} aria-hidden />
+                                  </BtnIconeAcaoLinha>
                                 ) : null}
                               </>
                             ) : (
@@ -932,23 +944,13 @@ export default function FigurinosPage() {
                           <td style={dataTable.tdCenter}>
                             <div style={{ display: "flex", justifyContent: "center", whiteSpace: "nowrap" }}>
                             {podeEditar ? (
-                              <button
-                                type="button"
+                              <BtnIconeAcaoLinha
+                                label={tooltipAcao("Devolução")}
                                 onClick={() => setDevPeca(p)}
-                                style={{
-                                  padding: "4px 10px",
-                                  borderRadius: 8,
-                                  border: `1px solid rgba(245,158,11,0.4)`,
-                                  background: "rgba(245,158,11,0.12)",
-                                  color: "#f59e0b",
-                                  fontSize: 11,
-                                  fontWeight: 700,
-                                  cursor: "pointer",
-                                  fontFamily: FONT.body,
-                                }}
+                                style={{ color: "#f59e0b", borderColor: "rgba(245,158,11,0.4)", background: "rgba(245,158,11,0.12)" }}
                               >
-                                Devolução
-                              </button>
+                                <PackagePlus size={14} aria-hidden />
+                              </BtnIconeAcaoLinha>
                             ) : (
                               "—"
                             )}
@@ -973,40 +975,20 @@ export default function FigurinosPage() {
                             <div style={{ display: "flex", justifyContent: "center", flexWrap: "wrap", gap: 6, whiteSpace: "nowrap" }}>
                             {podeCriar ? (
                               <>
-                                <button
-                                  type="button"
+                                <BtnIconeAcaoLinha
+                                  label={tooltipAcao("Disponibilizar")}
                                   onClick={() => setConcluirManutPeca(p)}
-                                  style={{
-                                    padding: "4px 10px",
-                                    borderRadius: 8,
-                                    border: `1px solid rgba(34,197,94,0.35)`,
-                                    background: "rgba(34,197,94,0.12)",
-                                    color: "#22c55e",
-                                    fontSize: 11,
-                                    fontWeight: 700,
-                                    cursor: "pointer",
-                                    fontFamily: FONT.body,
-                                  }}
+                                  style={{ color: "#22c55e", borderColor: "rgba(34,197,94,0.35)", background: "rgba(34,197,94,0.12)" }}
                                 >
-                                  Disponibilizar
-                                </button>
-                                <button
-                                  type="button"
+                                  <CheckCircle2 size={14} aria-hidden />
+                                </BtnIconeAcaoLinha>
+                                <BtnIconeAcaoLinha
+                                  label={tooltipAcao("Descartar")}
                                   onClick={() => setDescPeca(p)}
-                                  style={{
-                                    padding: "4px 10px",
-                                    borderRadius: 8,
-                                    border: "1px solid rgba(107,114,128,0.45)",
-                                    background: "rgba(107,114,128,0.1)",
-                                    color: "#6b7280",
-                                    fontSize: 11,
-                                    fontWeight: 700,
-                                    cursor: "pointer",
-                                    fontFamily: FONT.body,
-                                  }}
+                                  style={{ color: "#6b7280", borderColor: "rgba(107,114,128,0.45)", background: "rgba(107,114,128,0.1)" }}
                                 >
-                                  Descartar
-                                </button>
+                                  <Trash2 size={14} aria-hidden />
+                                </BtnIconeAcaoLinha>
                               </>
                             ) : (
                               "—"
@@ -1050,7 +1032,7 @@ export default function FigurinosPage() {
           onCreated={async (row) => {
             const { data } = await supabase
               .from("rh_figurino_pecas")
-              .select("*, rh_figurino_peca_estudios(estudio_slug), rh_figurino_peca_operadoras(operadora_slug)")
+              .select(PECA_SELECT)
               .eq("id", row.id)
               .maybeSingle();
             setPecaNova((data ?? row) as RhFigurinoPeca);
@@ -1230,6 +1212,7 @@ export default function FigurinosPage() {
           podeEditar={podeEditar}
           podeCriar={podeCriar}
           onClose={() => setDetalhe(null)}
+          onRetryHist={() => void abrirDetalhe(detalhe)}
           onRetirada={() => {
             setDetalhe(null);
             setEmpPeca(detalhe);

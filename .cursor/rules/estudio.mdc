@@ -81,18 +81,21 @@ alwaysApply: false
 - **Escopo Operador:** filtro e elenco pelos **estúdios** ligados à(s) operadora(s) do escopo via `estudios_spin_operadoras` (`buildEstudiosSlugsParaOperadoras`) — dedicado **e** network (ex.: Blaze vê estúdios **Blaze** e **Sports Club**). Cards mostram a tag do estúdio em que o GP está (Blaze vs Sports Club). `operadora_slug` no registro dealer permanece só para **solicitações** (Central / `dealer_solicitacoes`).
 - **Tags de jogo** (filtro consolidado + badges nos cards): **`getGameTagChipStyle`** (`lib/gameIdentityColors.ts`) + ícones **`GAME_IDENTITY_ICONS`** — Global § Identidade por jogo (BJ verde, Roleta ouro, Baccarat azul, FB laranja); **não** pill amarela única nem roxo de marca. **Exceção:** só com pedido explícito — «Exceções — identidade de jogo» neste MDC.
 - **Handoff:** solicitar/histórico por operadora, upload de foto.
+- **Carga:** RPC `dealers_lista_elenco`; fallback `dealers` com colunas explícitas + `fetchAllPages`. Falha de boot ou de estúdios → alerta + **Tentar novamente** (não `MSG_SEM_DADOS_FILTRO`). Empty legítimo: `Nenhum dealer encontrado.` Histórico do GP: erro no modal ≠ «Nenhuma solicitação registrada.»
 
 ---
 
 ## Central de Notificações (`central_notificacoes`)
 
 - Abas staff com contagem e `aria-label` quando `count > 0`.
+- **Um** `role=tabpanel` dinâmico (`id` / `aria-labelledby` da aba ativa) — padrão Pipeline B2B.
 - Histórico na FilterBar: **`FiltroHistoricoButton`** (padrão Overview Influencer), limitado às 13 competências mensais inclusivas do Global; loading secundário: `Clock` + “Carregando…” (U+2026) — não `Loader2` na barra.
 - Cards: `<article aria-label={Campanha|Observação...}>`.
 - Datas campanha: badge **VIGENTE** verde quando no intervalo.
 - Texto longo: line-clamp + “Ver mais” / “Ver menos”.
 - Dealer inativo: tag **DEALER INATIVO** + ID — nunca mensagem genérica “removido”.
 - Vazio: `Nenhuma campanha cadastrada neste período.` (lista campanhas).
+- **Carga:** `fetchAllPages` nas listas (sem `.limit` artificial); falha → alerta + **Tentar novamente**. Thread partilhada: mensagens com `fetchAllPages`; erro de rede ≠ «não encontrada».
 - **Handoff:** threads, filtros operadora, notificações pendentes.
 
 ---
@@ -112,7 +115,9 @@ alwaysApply: false
 - **Código da peça:** prefixo das **3 primeiras letras** da categoria (sem acento, maiúsculas) + `-` + sequencial de 6 dígitos por prefixo (ex.: Camisa → `CAM-000001`, Vestido → `VES-000001`, Acessório → `ACE-000001`). Contador independente por categoria em `rh_figurino_category_code_counters`; pré-visualização no cadastro via `rh_figurino_preview_proximo_code(p_category)`.
 - **Cadastro — estúdios:** modal com **Staff** (pode combinar com um ou mais estúdios; `atende_staff = true` + `rh_figurino_peca_estudios` quando houver slugs), **Todos Estúdios** (exclusivo sozinho; `atende_todos_estudios = true`) ou só estúdio(s) específico(s). Referência UI: `FigurinoEstudioCampoSelect`.
 - **Cadastro — gênero e cor:** obrigatórios no modal, abaixo de categoria/tamanho — **Gênero** (`Masculino` | `Feminino` | `Unisex`, default `Unisex`); **Cor** (`Branco` | `Preto` | `Cinza` | `Único`, default `Único`). Colunas `genero` e `cor` em `rh_figurino_pecas`; RPC `rh_figurino_criar_peca` com `p_genero` e `p_cor`.
-- **Carga sem teto artificial:** `fetchAllPages` em `rh_figurino_pecas`, empréstimos ativos, histórico da peça e lista de prestadores na retirada — **proibido** `.limit(N)` que truncava inventário (~1000 PostgREST) ou prestadores (5000). Bipagem: candidatos com zeros à esquerda (`candidatosLookupFigurino` / `pecaPorCodigoLocal`) + consulta ao banco.
+- **Carga sem teto artificial:** `fetchAllPages` em `rh_figurino_pecas`, empréstimos ativos, histórico da peça e lista de prestadores na retirada — **proibido** `.limit(N)` que truncava inventário (~1000 PostgREST) ou prestadores (5000). Select **sempre** com colunas explícitas (nunca `*`). Bipagem: candidatos com zeros à esquerda (`candidatosLookupFigurino` / `pecaPorCodigoLocal`) + consulta ao banco.
+- **Erro ≠ vazio:** falha de inventário → alerta + **Tentar novamente** (sem empty da aba). Histórico no modal e prestadores na Retirada: mesmo padrão de retry.
+- **Ações de linha:** `BtnIconeAcaoLinha` + `tooltipAcao` (Retirada / Devolução / Manutenção / Disponibilizar / Descartar).
 - **Permissões:** **Editar** = Retirada / Devolução; **Criar** = Cadastrar peça, Manutenção (aba Disponíveis), Disponibilizar e Descartar (aba Manutenção).
 - **Handoff:** barcode (leitor USB modo teclado + câmera opcional), condição da peça, abas.
 
@@ -136,6 +141,7 @@ Nenhuma exceção documentada nesta secção. Usar paleta canónica (Global § I
 - Tag de estúdio nos itens quando filtro = **Todos Estúdios** (`roteiroEstudioLabelFromRow` com fallback operadora→estúdio).
 - `BannerPendencias` + `ModalThreadSolicitacao` continuam por **operadora** (escopo do operador).
 - Gestão de Usuários: `roteiro_mesa` com `hasCriar` / `hasEditar` / `hasExcluir` = true (matriz Ver/Criar/Editar/Excluir).
+- **Carga:** colunas explícitas + `fetchAllPages`; falha → alerta + **Tentar novamente** (não empty de bloco). Exclusão: erro visível no `ModalConfirmExcluirPadrao`.
 - **Handoff:** edição de campanhas de mesa (ainda só criar/excluir na UI).
 
 ---
@@ -158,8 +164,10 @@ Nenhuma exceção documentada nesta secção. Usar paleta canónica (Global § I
 ### Abas (URL)
 
 - **`useRouteTab`** + `APP_ROUTE_CATALOG`: **Tickets** (`/Incidentes/Tickets`) e **Sinais** (`/Incidentes/Sinais`).
-- **Tickets** — KPIs por categoria + tabela de incidentes + filtros de ticket; respeita o filtro **Time**. Fetch **só com a aba Tickets ativa**; mês atual primeiro, MoM em background (`Clock` + `Carregando…` na barra). Catálogo de mesas só ao abrir **Novo/Editar Incidente**.
+- **Dois** `role=tabpanel` no DOM desde o 1º render (`#panel-incidentes-tickets` / `#panel-incidentes-sinais`, `hidden` na inativa) — `aria-controls` sempre válidos.
+- **Tickets** — KPIs por categoria + tabela de incidentes + filtros de ticket; respeita o filtro **Time**. Fetch **só com a aba Tickets ativa**; mês atual primeiro, MoM em background (`Clock` + `Carregando…` na barra). Catálogo de mesas só ao abrir **Novo/Editar Incidente** — falha → alerta + **Tentar novamente** no modal (não lista vazia silenciosa).
 - **Sinais** — totais em `sm_sinais_resumo_diario`; filtros de ticket ocultos; ver subsecção **Aba Sinais** abaixo. Fetch só com a aba Sinais ativa; MoM em background.
+- Boot de filtros (estúdios / staff): falha → alerta + **Tentar novamente** (não filtros vazios silenciosos).
 
 ### Filtros
 
@@ -203,13 +211,13 @@ Nenhuma exceção documentada nesta secção. Usar paleta canónica (Global § I
   - Coluna **Abertura** da tabela e filtro do carrossel usam `created_at` (registro), com limites de dia em **America/Sao_Paulo** (`inicioDiaBrasilUtcIso` / `fimDiaBrasilUtcIso`) — evita registro “sumir” à noite por deslocamento UTC. `data_rodada` / `hora_rodada` são só da rodada. No insert, `ocorrido_em` = agora (alinhado ao registro); **proibido** gravar data/hora da rodada em `ocorrido_em`.
   - **Descrição (GP):** Resolução / Payout → Descrição → Anexos.
   - **Descrição (Shuffler):** Resolução / Payout / Local do Shoe → Descrição → Anexos.
-  - Anexos exibem **Arquivo 1**, **Arquivo 2**, … (nome original só em `title` / `aria-label`).
+  - Anexos exibem **Arquivo 1**, **Arquivo 2**, … (nome original só em `title` / `aria-label`). Falha ao listar anexos → alerta + **Tentar de novo** no modal.
   - Prop `ocultarPrestadorTimeRelator` quando `canView === "proprios"`.
-- **`ModalNovoIncidente`** (`maxWidth` 920) — Time (GP/Shuffler) no topo; layout por linhas:
+- **`ModalNovoIncidente`** (`maxWidth` 920) — Time (GP/Shuffler) no topo (`role="group"` + `aria-pressed`, não `tablist`); layout por linhas:
   - **GP:** Mesa / Tipo → Incidente / Resolução / Payout → Prestador / ID da Rodada → Data / Hora → Descrição → Anexos.
   - **Shuffler:** Mesa / Tipo → Incidente / Resolução → Payout / Local do Shoe → Prestador / ID da Rodada → Data / Hora → Descrição → Anexos.
   - **Mesa:** combo buscável ordenado por **número da mesa**; Roleta omitida quando `time_alvo = "shuf"`.
-  - **Prestador:** combo buscável com barra **Pesquisar por nome ou nickname...** (`forceSearch`); opções = prestadores ativos/indisponíveis do time GP ou Shuffler em Gestão de Staff (`fetchStaffFormIncidente` via `rh_org_times` + `org_time_id`). Rótulo: **GP** = `Nickname - Nome`; **Shuffler** = `Nome - Nickname` (`labelPrestadorIncidentePorTime`).
+  - **Prestador:** combo buscável com barra **Pesquisar por nome ou nickname...** (`ComboBuscavel` — painel em portal `fixed`, Global § Lista pesquisável em modal); opções = prestadores ativos/indisponíveis do time GP ou Shuffler em Gestão de Staff (`fetchStaffFormIncidente` via `rh_org_times` + `org_time_id`). Rótulo: **GP** = `Nickname - Nome`; **Shuffler** = `Nome - Nickname` (`labelPrestadorIncidentePorTime`).
 - **Teclado (piloto Incidentes):** nos combos buscáveis Mesa/Prestador, `useListboxKeyboardNavigation` — **↑/↓** percorrem, **Home/End** saltam, **Enter** seleciona; **Escape** (`onEscape`) fecha somente o dropdown e devolve o foco ao campo — nunca o modal. As opções internas usam `tabIndex=-1`: **Tab/Shift+Tab** avançam entre os controles do formulário, sem parar em cada valor do dropdown. Grupos binários (Payout e Local do Shoe) têm um único tab stop (opção ativa). Ao abrir Novo/Editar, o foco inicial vai para **Time**; Protocolo somente leitura fica fora da sequência de Tab.
 - **Anel de foco:** todo controle focável do modal usa a classe **`app-campo-foco`** (`src/styles/global.css`) — `:focus-visible` com contorno 2px em `--brand-primary` + halo suave; `:focus` por mouse não desenha anel. **Proibido** `outline: "none"` inline em campo do modal (mata o indicador do Tab). Mesma classe já aplicada em **`CampoUploadArquivos`** (área de arraste + botão).
   - **ID da Rodada:** obrigatório salvo checkbox **Não tem ID** (grava `INCIDENTE_ID_RODADA_SEM_ID` = `—`).
@@ -232,13 +240,15 @@ Nenhuma exceção documentada nesta secção. Chip de jogo na tabela usa paleta 
 
 - **Menu:** Estúdio, abaixo de Incidentes. **h1** = Controle de Turno. **Subtítulo:** «Acompanhe rotação, escala/presença e notificações operacionais do turno.»
 - **Pasta:** `estudio/ControleTurno/` — `PageKey` permanece `escala_controle_turno` (matriz de permissões / RPCs).
-- **Abas (`useRouteTab`):** Escala do Turno | Rotação | Relatório de Turno | Notificações (`FiltroBarTabButton`). Abas montam na 1ª visita e **permanecem montadas** (`hidden`) — troca de aba não remonta nem perde o estado da Escala.
+- **Abas (`useRouteTab`):** Escala do Turno | Rotação | Relatório de Turno | Notificações (`FiltroBarTabButton`). Os **4** painéis montam no 1º render (`hidden` na inativa) — `aria-controls` válidos; troca de aba não remonta nem perde estado.
+- **Erro ≠ empty:** falha de carga nas abas Escala / Relatório / Notificações / Rotação → alerta + **Tentar novamente** (sem empty falso). Modal **Histórico** de presença: mesmo padrão (**Tentar de novo**).
 - **Filtros:** carrossel de **dia** (passados livres; futuro **só até amanhã** — `hoje+1`) + **`FiltroHojeButton`** (ativo quando o dia selecionado é hoje; default ao abrir) + `FiltroTurnoSelect` (Manhã/Tarde/Noite, sem «Todos Turnos») — oculto nas abas **Relatório** e **Notificações**. Busca conforme a aba.
 - **Rotação (aba):** motor `lib/escalaRotacao.ts` (regras de negócio em `escala.mdc` § Rotação). **Um bloco por estúdio ativo** (GPs + mesas) **e um bloco Shuffler** (sem **Mover estúdio**; grade com posição **TODOS**; **1 Break por slot** e **≤3 TODOS seguidos**). Em cada bloco: KPIs **Escalados / Não Chegaram / Horas Adicionais / Disponíveis**; pool filtrado pela Escala do Turno (**Presente** / **Pendente** / **Saída Antecipada** / **Hora Adicional**; HA do turno anterior no seguinte, com **X** após a saída); **Mover estúdio…** / **Restaurar estúdio** só nos chips de GP. Máquina de estados por bloco: **idle** → **Gerar prévia**; **prévia** → **Incluir Liderança** + toggle **Rotação de 20min/30min** + **Publicar** + grade com drag-and-drop; **publicada** → só **Regenerar**. Grade equipe × slot pagina **20 linhas** (`TabelaComPaginacao`; barra oculta com uma só página); índices de drag-and-drop continuam os da matriz completa. Ordem das linhas de GP na prévia é **aleatória** a cada geração completa. **Publicar** com ≥2h contínuas em mesa pede confirmação com o tempo máximo. Tutorial: **Gerar Rotação** (`controle-turno-rotacao`, URL `/Ajuda/Tutoriais/ControleTurnoRotacao`) — atalho na aba Rotação. Página legada `escala_rotacao` **descontinuada** (menu Escala removido). Relatório de Turno legado também descontinuado — fluxo oficial é a aba Relatório do CT.
 - **Escala do Turno:** RPC **`escala_controle_turno_presenca_dia`**. Coluna **Aprovado** só via ação **Aprovar**. Bloco **Controle de Presença**: **`SortTableTh`** nas colunas de dados (default Nome asc; Ações sem ordenação); paginação 20/página (`TabelaPaginacaoBar`). Saída overnight (saída < entrada) exibe `HH:MM · DD/MM` do dia civil seguinte. Ponto do Calendário só aplica se o check-in cair na janela do turno (migration `20261207150000_*`). **Registrar Horário:** pré-preenche Entrada/Saída em branco com horário previsto do turno no estúdio (`turno_*_inicio` + 8h); mantém check-in já preenchido. Schema: `docs/sql/escala_controle_turno_schema.sql` + migrations `escala_ct_*`.
 - **Relatório de Turno:** cards por turno com KPIs **Escalados / Presentes / Atrasados / Faltas** (GP e Shuffler) derivados da **Escala do Turno** do mesmo dia/turno (`statsPresencaRelatorioCt`). **Atrasados** = status `atraso` ou entrada realizada > prevista em mais de 5 min; **Presentes** exclui atrasados. Na aba **Anotações** do modal: **Termômetro do Turno** (0–5 estrelas; 0 = horrível · 5 = maravilhoso; obrigatório ao publicar) acima de **Comentários Gerais**. SOS/Figurino/Equipamentos/manutenção/comentários/`termometro` em `escala_ct_relatorio_turno`.
 - **Notificações → Ausências Prolongadas:** Motivo **Médico** ou **Pessoal**; com **Pessoal**, campo obrigatório **Tipo de Ausência** — **Programada** (aviso com pelo menos 24h antes do início do turno) ou **Não Programada** (aviso com menos de 24h) (`tipo_ausencia` = `programada` | `nao_programada`).
 - **Notificações → Feedbacks:** modal **Registrar Feedback** — se Recomendação = **Orientação**, label do texto = **Ata da Orientação**; senão **Observação**. Sem ação **Aplicar** nesta aba (aplicação em página futura). Tabelas dos quatro blocos com **`SortTableTh`** nas colunas de dados e paginação 20/página.
+- **Notificações — seletores em modal:** Prestador via `SelectListaComBusca` `variant="campo"`; Mesas via `MesaMultiSelect` com portal `fixed` (Global § Lista pesquisável em modal). Catálogo de mesas: `listMesasForFechamento` com **`fetchAllPages`** + `order` estável (`nome_mesa`, `id`).
 - **Notificações → Fechamento de Mesa:** data+hora de fechamento e de abertura (`data_registro` / `hora_fechamento` + `data_reabertura` / `hora_reabertura`). Visível em cada dia D com `data_registro ≤ D ≤ data_reabertura` (ou enquanto `nao_reaberta`). Status **Não aberta** / **Reaberta** relativo ao dia do carrossel.
 - **Permissões:** seed Ver/Criar/Editar = Não (exceto Admin). `can_excluir` null.
 - **Tutoriais (Ajuda → Tutoriais):**

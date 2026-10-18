@@ -53,11 +53,15 @@ export interface RhSolicitacaoRow {
     | {
         id: string;
         nome: string;
+        org_time_id?: string | null;
+        org_gerencia_id?: string | null;
         org_time?: { nome: string } | { nome: string }[] | null;
       }
     | {
         id: string;
         nome: string;
+        org_time_id?: string | null;
+        org_gerencia_id?: string | null;
         org_time?: { nome: string } | { nome: string }[] | null;
       }[]
     | null;

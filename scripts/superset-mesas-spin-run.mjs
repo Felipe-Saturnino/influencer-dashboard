@@ -1,30 +1,31 @@
 /**
- * Carga Mesas Spin a partir da extração do Daily Commercial Report [BRL] (Superset).
+ * Transformação e gravação da carga Mesas Spin.
+ *
+ * Nome histórico mantido para compatibilidade. A entrada canônica atual vem do
+ * Grafana/ClickHouse; JSONs antigos do Superset continuam aceitos.
  *
  * Fluxo diário (quando o usuário pedir para atualizar) — padrão canónico:
  *   ver .cursor/rules/mesas-spin-carga.mdc (+ business.mdc § Grupo EsportivaBet).
- *   1. Abrir o dashboard 15 logado no navegador controlado.
- *   2. Extract Network (split esportiva/bateu/brx/rico/donald/betponto via coluna marca) →
- *      Dedicado → Monthly; preferir tmp/make-oneshot-inject.mjs (Console 1 passo) ou
- *      tmp/make-compact-extract.mjs + CDP; JSON em tmp/.
- *   3. Este script com --gravar (UPSERT direto). Carga incremental:
+ *   1. Abrir o Grafana logado no navegador controlado.
+ *   2. Extract Network + Dedicado + Monthly via /api/ds/query.
+ *   3. Este script (ou scripts/mesas-spin-run.mjs) com --gravar. Carga incremental:
  *      --preencher-faltantes (só dias > último no Supabase).
- *   4. Não carregar D-0 incompleto; ATE exclusivo no extract.
+ *   4. Não carregar D-0 incompleto; --ate é inclusivo.
  *   5. Com credenciais Supabase: emite zeros para slugs que já têm daily antes da janela
  *      mesmo se o extract veio vazio (evita buraco donald/betponto).
  *
  * Uso:
- *   node scripts/superset-mesas-spin-run.mjs --network=tmp/n.json --dedicado=tmp/d.json --sql
- *   node scripts/superset-mesas-spin-run.mjs --network=… --dedicado=… --monthly=… --escrever-sql
- *   node scripts/superset-mesas-spin-run.mjs --network=… --dedicado=… --preencher-faltantes --gravar
- *   node scripts/superset-mesas-spin-run.mjs --network=… --de=2026-08-04 --ate=2026-08-11 --escrever-sql
+ *   node scripts/mesas-spin-run.mjs --network=tmp/n.json --dedicado=tmp/d.json --sql
+ *   node scripts/mesas-spin-run.mjs --network=… --dedicado=… --monthly=… --escrever-sql
+ *   node scripts/mesas-spin-run.mjs --network=… --dedicado=… --preencher-faltantes --gravar
+ *   node scripts/mesas-spin-run.mjs --network=… --de=2026-08-04 --ate=2026-08-11 --escrever-sql
  *
  * Env para --gravar / --preencher-faltantes / zeros por histórico: VITE_SUPABASE_URL (ou SUPABASE_URL)
  * e SUPABASE_SERVICE_ROLE_KEY no .env.
  *
  * Regras: TO/GGR arredondados por mesa (Math.round); daily = soma das mesas;
  * UAP daily = UAP_TOT (não somar uap_por_jogo); monthly = MTD do mês de DE
- * (extract usa dia 1 → ATE exclusivo — ver MONTHLY_TIME_RANGE no browser script).
+ * (extract usa dia 1 → --ate inclusivo).
  *
  * Network — grupo EsportivaBet (split por player_id; brand_name vazio no CH):
  *   esportiva → esportiva_bet (esportivabetbr_* + IDs sem marca)
@@ -33,6 +34,7 @@
  *   rico      → rico_bet
  *   donald    → donald_bet (donaldbetbr_*)
  *   betponto  → betponto_bet (betpontobetbetbr_* — Bet.Bet)
+ *   goldebet  → goldebet (goldebetbr_* — Gol de Bet; volume ainda pode ser zero)
  */
 
 import { readFileSync, writeFileSync } from "node:fs";
@@ -101,6 +103,13 @@ const OPS = {
   betponto: {
     slug: "betponto_bet",
     nome: "Bet.Bet",
+    canal: "network",
+    mesas: ["Blackjack 1", "Futebol Brasileiro", "Speed Baccarat", "Roleta"],
+    jogos: ["Blackjack", "Futebol Brasileiro", "Speed Baccarat", "Roleta"],
+  },
+  goldebet: {
+    slug: "goldebet",
+    nome: "Goldebet",
     canal: "network",
     mesas: ["Blackjack 1", "Futebol Brasileiro", "Speed Baccarat", "Roleta"],
     jogos: ["Blackjack", "Futebol Brasileiro", "Speed Baccarat", "Roleta"],
@@ -311,7 +320,7 @@ function montarDia(opKey, canal, block, dia) {
 function opsDoExtract(raw, canal) {
   const keys =
     canal === "network"
-      ? ["esportiva", "bateu", "brx", "rico", "donald", "betponto", "casa", "blaze", "jonbet"]
+      ? ["esportiva", "bateu", "brx", "rico", "donald", "betponto", "goldebet", "casa", "blaze", "jonbet"]
       : ["casa", "blaze"];
   const out = [];
   for (const k of keys) {
@@ -400,9 +409,11 @@ function sqlValuesUap(rows) {
     .join(",\n");
 }
 
-function sqlValuesMonthly(mes, pares) {
+function sqlValuesMonthly(pares) {
   const wU = Math.max(3, ...pares.map((p) => String(p.uap).length));
-  return pares.map((p) => `  ('${mes}', '${p.slug}', ${pad(p.uap, wU)})`).join(",\n");
+  return pares
+    .map((p) => `  ('${p.mes}', '${p.slug}', ${pad(p.uap, wU)})`)
+    .join(",\n");
 }
 
 function montarSqlCanal({ canal, rows, monthly, de, ate }) {
@@ -413,7 +424,7 @@ function montarSqlCanal({ canal, rows, monthly, de, ate }) {
   const titulo = canal === "network" ? "Estúdio Network" : "Estúdio Dedicado";
   const slugs = [...new Set(rows.map((r) => r.slug))].join(", ");
   const linhas = [];
-  linhas.push(`-- Mesas Spin — ${de} a ${ate}: ${titulo} (${slugs}) — UPSERT via Superset.`);
+  linhas.push(`-- Mesas Spin — ${de} a ${ate}: ${titulo} (${slugs}) — UPSERT via Grafana/ClickHouse.`);
   linhas.push("-- Daily TO/GGR/apostas = soma das mesas (Math.round por mesa). UAP daily = UAP_TOT.");
   linhas.push("-- UAP por jogo ≠ daily (esperado). Monthly = MTD corrente (não comparar histórico).");
   linhas.push("--");
@@ -451,7 +462,7 @@ function montarSqlCanal({ canal, rows, monthly, de, ate }) {
     linhas.push("");
     linhas.push(`INSERT INTO public.${tabelaMes} (mes, operadora_slug, uap)`);
     linhas.push("VALUES");
-    linhas.push(sqlValuesMonthly(monthly[0].mes, monthly));
+    linhas.push(sqlValuesMonthly(monthly));
     linhas.push("ON CONFLICT (mes, operadora_slug) DO UPDATE SET");
     linhas.push("  uap        = EXCLUDED.uap,");
     linhas.push("  updated_at = now();");
@@ -464,7 +475,6 @@ function montarSqlCanal({ canal, rows, monthly, de, ate }) {
 
 function monthlyDoExtract(raw) {
   if (!raw) return null;
-  const mes = raw.mes || `${new Date().toISOString().slice(0, 7)}-01`;
   const map = {
     ded_casa: { canal: "dedicado", slug: "casa_apostas" },
     ded_blaze: { canal: "dedicado", slug: "blaze" },
@@ -474,15 +484,22 @@ function monthlyDoExtract(raw) {
     net_rico: { canal: "network", slug: "rico_bet" },
     net_donald: { canal: "network", slug: "donald_bet" },
     net_betponto: { canal: "network", slug: "betponto_bet" },
+    net_goldebet: { canal: "network", slug: "goldebet" },
     net_casa: { canal: "network", slug: "casa_apostas" },
     net_blaze: { canal: "network", slug: "blaze" },
     net_jonbet: { canal: "network", slug: "jonbet" },
   };
   const out = { dedicado: [], network: [] };
-  for (const [k, meta] of Object.entries(map)) {
-    const uap = raw[k]?.uap;
-    if (uap == null) continue;
-    out[meta.canal].push({ mes, slug: meta.slug, uap: Number(uap) });
+  const monthlyItems =
+    Array.isArray(raw.months) && raw.months.length ? raw.months : [raw];
+  for (const item of monthlyItems) {
+    const mes =
+      item.mes || raw.mes || `${new Date().toISOString().slice(0, 7)}-01`;
+    for (const [k, meta] of Object.entries(map)) {
+      const uap = item[k]?.uap;
+      if (uap == null) continue;
+      out[meta.canal].push({ mes, slug: meta.slug, uap: Number(uap) });
+    }
   }
   return out;
 }
@@ -577,7 +594,7 @@ function registrosUap(rows) {
 
 /**
  * A partir do 1º dia com volume no extract, gera linha em todos os dias seguintes
- * (zeros se Superset vazio) — evita buracos no Detalhamento Diário.
+ * (zeros se o ClickHouse não devolver volume) — evita buracos no Detalhamento Diário.
  *
  * Se o extract não tem atividade na janela mas o slug já existe no Supabase
  * antes de `dias[0]` (`priorSlugs`), emite zeros para todos os dias da janela

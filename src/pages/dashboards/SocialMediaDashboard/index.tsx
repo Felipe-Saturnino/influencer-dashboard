@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, type ReactNode } from "react"
+import { useState, useEffect, useMemo, useCallback, type CSSProperties, type ReactNode } from "react"
 import { useApp } from "../../../context/AppContext"
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand"
 import { useDashboardCatalogos } from "../../../hooks/useDashboardCatalogos"
@@ -6,7 +6,7 @@ import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros"
 import { usePermission } from "../../../hooks/usePermission"
 import { FONT } from "../../../constants/theme"
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles"
-import { FONT_TITLE, BRAND } from "../../../lib/dashboardConstants"
+import { FONT_TITLE, BRAND, MSG_SEM_DADOS_PERIODO } from "../../../lib/dashboardConstants"
 import {
   fmtBRL,
   getIdxMesCarrosselPadrao,
@@ -44,7 +44,24 @@ import {
 import { FILTRO_BAR_TAB_ICON_SIZE, handleFiltroBarTabsArrowKeyDown } from "../../../lib/filterBarStyles"
 import { supabase } from "../../../lib/supabase"
 import { fetchAllPages } from "../../../lib/supabasePaginate"
-import { ArrowDownToLine, ArrowUpFromLine, Bookmark, Clock, Heart, MessageCircle, Mic, Megaphone, MousePointerClick, Percent, Play, Sparkles, ChevronLeft, ChevronRight, Trophy, TrendingUp, CircleDollarSign, UserPlus, Eye } from "lucide-react"
+import { ArrowDownToLine, ArrowUpFromLine, Bookmark, Clock, Heart, Loader2, MessageCircle, Mic, Megaphone, MousePointerClick, Percent, Play, Sparkles, ChevronLeft, ChevronRight, Trophy, TrendingUp, CircleDollarSign, UserPlus, Eye } from "lucide-react"
+
+/** Erro canónico de carga (não confundir com vazio). */
+const MSG_ERRO_MIDIAS_SOCIAIS =
+  "Não foi possível carregar os dados. Se o problema persistir, entre em contato com o suporte.";
+
+const KPI_DAILY_SELECT =
+  "channel,date,followers,impressions,reach,engagements,engagement_rate,posts_published,video_views,link_clicks";
+const META_ADS_DAILY_SELECT =
+  "date,ad_account_id,spend,impressions,reach,clicks,link_clicks,engagements,boosted_posts_count,attributed_ggr";
+const META_BOOSTED_POSTS_SELECT =
+  "ad_id,post_id,platform,date,ad_name,campaign_name,spend,impressions,reach,engagements,link_clicks,permalink,thumbnail_url";
+const INSTAGRAM_POSTS_SELECT =
+  "date,published_at,type,caption,likes,comments,saves,impressions,permalink,thumbnail_url";
+const FACEBOOK_POSTS_SELECT =
+  "date,published_at,type,message,reactions,comments,impressions,permalink,thumbnail_url";
+const YOUTUBE_VIDEOS_SELECT =
+  "date,published_at,type,title,views,likes,comments,video_id";
 import {
   COR_FUNIL_A,
   COR_FUNIL_B,
@@ -161,6 +178,9 @@ export default function SocialMediaDashboard() {
   const [carIdx,   setCarIdx]   = useState(0);
   const [loadingAlcance, setLoadingAlcance] = useState(false);
   const [loadingCampanhas, setLoadingCampanhas] = useState(false);
+  const [momPronto, setMomPronto] = useState(true);
+  const [erroCarga, setErroCarga] = useState<string | null>(null);
+  const [reloadTick, setReloadTick] = useState(0);
   const [kpiData,  setKpiData]  = useState<KpiDaily[]>([]);
   const [kpiAntRows, setKpiAntRows] = useState<KpiDaily[]>([]);
   const [posts,    setPosts]    = useState<PostUnificado[]>([]);
@@ -183,6 +203,10 @@ export default function SocialMediaDashboard() {
   const [metaAdsDailyPrev, setMetaAdsDailyPrev] = useState<MetaAdsDaily[]>([]);
   const [metaBoostedPosts, setMetaBoostedPosts] = useState<MetaBoostedPost[]>([]);
 
+  const recarregar = useCallback(() => {
+    setReloadTick((n) => n + 1);
+  }, []);
+
   useEffect(() => {
     const withData = campanhasPerf.filter((c) => (Number(c.visitas) || 0) > 0 || (Number(c.ftds) || 0) > 0);
     if (withData.length >= 1) {
@@ -204,134 +228,171 @@ export default function SocialMediaDashboard() {
     let cancelled = false;
     async function loadAlcance() {
       setLoadingAlcance(true);
+      setErroCarga(null);
+      setMomPronto(historico);
+      setKpiAntRows([]);
       setCarIdx(0);
 
-      const [kpi, kpiPrev, igRes, fbRes, ytRes] = await Promise.all([
-        fetchAllPages<KpiDaily>(async (from, to) =>
-          supabase
-            .from("kpi_daily")
-            .select("*")
-            .gte("date", start)
-            .lte("date", end)
-            .order("date", { ascending: true })
-            .order("channel", { ascending: true })
-            .range(from, to)
-        ),
-        startPrev && endPrev
-          ? fetchAllPages<KpiDaily>(async (from, to) =>
+      try {
+        type IgRow = {
+          date: string; published_at: string | null; type: string; caption: string | null;
+          likes: number | null; comments: number | null; saves: number | null;
+          impressions: number | null; permalink: string | null; thumbnail_url: string | null;
+        };
+        type FbRow = {
+          date: string; published_at: string | null; type: string; message: string | null;
+          reactions: number | null; comments: number | null;
+          impressions: number | null; permalink: string | null; thumbnail_url: string | null;
+        };
+        type YtRow = {
+          date: string; published_at: string | null; type: string; title: string | null;
+          views: number | null; likes: number | null; comments: number | null; video_id: string;
+        };
+
+        const [kpi, ig, fb, yt] = await Promise.all([
+          fetchAllPages<KpiDaily>(async (from, to) =>
+            supabase
+              .from("kpi_daily")
+              .select(KPI_DAILY_SELECT)
+              .gte("date", start)
+              .lte("date", end)
+              .order("date", { ascending: true })
+              .order("channel", { ascending: true })
+              .range(from, to)
+          ),
+          fetchAllPages<IgRow>(async (from, to) =>
+            supabase
+              .from("instagram_posts")
+              .select(INSTAGRAM_POSTS_SELECT)
+              .gte("date", start)
+              .lte("date", end)
+              .order("date", { ascending: false })
+              .range(from, to)
+          ),
+          fetchAllPages<FbRow>(async (from, to) =>
+            supabase
+              .from("facebook_posts")
+              .select(FACEBOOK_POSTS_SELECT)
+              .gte("date", start)
+              .lte("date", end)
+              .order("date", { ascending: false })
+              .range(from, to)
+          ),
+          fetchAllPages<YtRow>(async (from, to) =>
+            supabase
+              .from("youtube_videos")
+              .select(YOUTUBE_VIDEOS_SELECT)
+              .gte("date", start)
+              .lte("date", end)
+              .order("date", { ascending: false })
+              .range(from, to)
+          ),
+        ]);
+
+        if (cancelled) return;
+        setKpiData(kpi);
+
+        const tipoMap: Record<string, string> = {
+          REELS: "Reels", VIDEO: "Vídeo", CAROUSEL_ALBUM: "Carrossel",
+          IMAGE: "Foto", photo: "Foto", video: "Vídeo", link: "Link",
+          status: "Status", short: "Short", live: "Live", upload: "Upload",
+        };
+
+        const formatoCount: Record<string, number> = {};
+
+        const unificar = <T extends { date: string; type: string; published_at?: string | null }>(
+          arr: T[], canal: string, cor: string, tag: string,
+          getResumo: (r: T) => string,
+          getStats: (r: T) => ReactNode[],
+          getUrl: (r: T) => string | null,
+          getThumbnail: (r: T) => string | null
+        ): PostUnificado[] =>
+          arr.map((r) => {
+            const tipo = tipoMap[r.type] ?? r.type ?? "Post";
+            formatoCount[tipo] = (formatoCount[tipo] ?? 0) + 1;
+            return {
+              canal, tipo, cor, tag, resumo: getResumo(r), stats: getStats(r),
+              date: r.date, publishedAt: r.published_at ?? null, url: getUrl(r), thumbnailUrl: getThumbnail(r),
+            };
+          });
+
+        const postsUnif: PostUnificado[] = [
+          ...unificar(ig, "Instagram", "#E1306C", "IG",
+            (r) => (r.caption ?? "").slice(0, 140),
+            (r) => [
+              postStatPill(<Heart size={15} strokeWidth={2} aria-hidden />, fmtNum(r.likes)),
+              postStatPill(<MessageCircle size={15} strokeWidth={2} aria-hidden />, fmtNum(r.comments)),
+              ...(r.saves != null ? [postStatPill(<Bookmark size={15} strokeWidth={2} aria-hidden />, fmtNum(r.saves))] : []),
+            ],
+            (r) => r.permalink, (r) => r.thumbnail_url),
+          ...unificar(fb, "Facebook", "#1877F2", "FB",
+            (r) => (r.message ?? "").slice(0, 140),
+            (r) => [
+              postStatPill(<Heart size={15} strokeWidth={2} aria-hidden />, fmtNum(r.reactions)),
+              postStatPill(<MessageCircle size={15} strokeWidth={2} aria-hidden />, fmtNum(r.comments)),
+            ],
+            (r) => r.permalink, (r) => r.thumbnail_url),
+          ...unificar(yt, "YouTube", "#FF0000", "YT",
+            (r) => (r.title ?? "").slice(0, 140),
+            (r) => [
+              postStatPill(<Play size={15} strokeWidth={2} aria-hidden />, fmtNum(r.views)),
+              postStatPill(<Heart size={15} strokeWidth={2} aria-hidden />, fmtNum(r.likes)),
+              postStatPill(<MessageCircle size={15} strokeWidth={2} aria-hidden />, fmtNum(r.comments)),
+            ],
+            (r) => (r.video_id ? `https://www.youtube.com/watch?v=${r.video_id}` : null),
+            (r) => (r.video_id ? `https://img.youtube.com/vi/${r.video_id}/mqdefault.jpg` : null)),
+        ].sort(ordenarPostsRecentes);
+
+        setPosts(postsUnif);
+        setYoutubeVideoRows(
+          yt.map((r) => ({
+            video_id: r.video_id,
+            date: r.date,
+            likes: r.likes,
+            comments: r.comments,
+          }))
+        );
+        setFormatos(
+          Object.entries(formatoCount)
+            .map(([tipo, total]) => ({ tipo, total }))
+            .sort((a, b) => b.total - a.total)
+        );
+        setLoadingAlcance(false);
+
+        if (!historico && startPrev && endPrev) {
+          try {
+            const kpiPrev = await fetchAllPages<KpiDaily>(async (from, to) =>
               supabase
                 .from("kpi_daily")
-                .select("*")
+                .select(KPI_DAILY_SELECT)
                 .gte("date", startPrev)
                 .lte("date", endPrev)
                 .order("date", { ascending: true })
                 .order("channel", { ascending: true })
                 .range(from, to)
-            )
-          : Promise.resolve([] as KpiDaily[]),
-        supabase.from("instagram_posts")
-          .select("date,published_at,type,caption,likes,comments,saves,impressions,permalink,thumbnail_url")
-          .gte("date", start).lte("date", end)
-          .order("date", { ascending: false }).limit(500),
-        supabase.from("facebook_posts")
-          .select("date,published_at,type,message,reactions,comments,impressions,permalink,thumbnail_url")
-          .gte("date", start).lte("date", end)
-          .order("date", { ascending: false }).limit(500),
-        supabase.from("youtube_videos")
-          .select("date,published_at,type,title,views,likes,comments,video_id")
-          .gte("date", start).lte("date", end)
-          .order("date", { ascending: false }).limit(500),
-      ]);
-
-      if (cancelled) return;
-      setKpiData(kpi);
-      setKpiAntRows(kpiPrev);
-
-      const ig = (igRes.data ?? []) as Array<{
-        date: string; published_at: string | null; type: string; caption: string | null;
-        likes: number | null; comments: number | null; saves: number | null;
-        impressions: number | null; permalink: string | null; thumbnail_url: string | null;
-      }>;
-      const fb = (fbRes.data ?? []) as Array<{
-        date: string; published_at: string | null; type: string; message: string | null;
-        reactions: number | null; comments: number | null;
-        impressions: number | null; permalink: string | null; thumbnail_url: string | null;
-      }>;
-      const yt = (ytRes.data ?? []) as Array<{
-        date: string; published_at: string | null; type: string; title: string | null;
-        views: number | null; likes: number | null; comments: number | null; video_id: string;
-      }>;
-
-      const tipoMap: Record<string, string> = {
-        REELS: "Reels", VIDEO: "Vídeo", CAROUSEL_ALBUM: "Carrossel",
-        IMAGE: "Foto", photo: "Foto", video: "Vídeo", link: "Link",
-        status: "Status", short: "Short", live: "Live", upload: "Upload",
-      };
-
-      const formatoCount: Record<string, number> = {};
-
-      const unificar = <T extends { date: string; type: string; published_at?: string | null }>(
-        arr: T[], canal: string, cor: string, tag: string,
-        getResumo: (r: T) => string,
-        getStats: (r: T) => ReactNode[],
-        getUrl: (r: T) => string | null,
-        getThumbnail: (r: T) => string | null
-      ): PostUnificado[] =>
-        arr.map((r) => {
-          const tipo = tipoMap[r.type] ?? r.type ?? "Post";
-          formatoCount[tipo] = (formatoCount[tipo] ?? 0) + 1;
-          return {
-            canal, tipo, cor, tag, resumo: getResumo(r), stats: getStats(r),
-            date: r.date, publishedAt: r.published_at ?? null, url: getUrl(r), thumbnailUrl: getThumbnail(r),
-          };
-        });
-
-      const postsUnif: PostUnificado[] = [
-        ...unificar(ig, "Instagram", "#E1306C", "IG",
-          (r) => (r.caption ?? "").slice(0, 140),
-          (r) => [
-            postStatPill(<Heart size={15} strokeWidth={2} aria-hidden />, fmtNum(r.likes)),
-            postStatPill(<MessageCircle size={15} strokeWidth={2} aria-hidden />, fmtNum(r.comments)),
-            ...(r.saves != null ? [postStatPill(<Bookmark size={15} strokeWidth={2} aria-hidden />, fmtNum(r.saves))] : []),
-          ],
-          (r) => r.permalink, (r) => r.thumbnail_url),
-        ...unificar(fb, "Facebook", "#1877F2", "FB",
-          (r) => (r.message ?? "").slice(0, 140),
-          (r) => [
-            postStatPill(<Heart size={15} strokeWidth={2} aria-hidden />, fmtNum(r.reactions)),
-            postStatPill(<MessageCircle size={15} strokeWidth={2} aria-hidden />, fmtNum(r.comments)),
-          ],
-          (r) => r.permalink, (r) => r.thumbnail_url),
-        ...unificar(yt, "YouTube", "#FF0000", "YT",
-          (r) => (r.title ?? "").slice(0, 140),
-          (r) => [
-            postStatPill(<Play size={15} strokeWidth={2} aria-hidden />, fmtNum(r.views)),
-            postStatPill(<Heart size={15} strokeWidth={2} aria-hidden />, fmtNum(r.likes)),
-            postStatPill(<MessageCircle size={15} strokeWidth={2} aria-hidden />, fmtNum(r.comments)),
-          ],
-          (r) => (r.video_id ? `https://www.youtube.com/watch?v=${r.video_id}` : null),
-          (r) => (r.video_id ? `https://img.youtube.com/vi/${r.video_id}/mqdefault.jpg` : null)),
-      ].sort(ordenarPostsRecentes);
-
-      setPosts(postsUnif);
-      setYoutubeVideoRows(
-        yt.map((r) => ({
-          video_id: r.video_id,
-          date: r.date,
-          likes: r.likes,
-          comments: r.comments,
-        }))
-      );
-      setFormatos(
-        Object.entries(formatoCount)
-          .map(([tipo, total]) => ({ tipo, total }))
-          .sort((a, b) => b.total - a.total)
-      );
-      setLoadingAlcance(false);
+            );
+            if (cancelled) return;
+            setKpiAntRows(kpiPrev);
+            setMomPronto(true);
+          } catch (err) {
+            console.error("[SocialMediaDashboard] Alcance MoM:", err);
+            if (!cancelled) setMomPronto(true);
+          }
+        } else if (!cancelled) {
+          setMomPronto(true);
+        }
+      } catch (err) {
+        console.error("[SocialMediaDashboard] Alcance:", err);
+        if (!cancelled) {
+          setErroCarga(MSG_ERRO_MIDIAS_SOCIAIS);
+          setLoadingAlcance(false);
+          setMomPronto(true);
+        }
+      }
     }
-    loadAlcance();
+    void loadAlcance();
     return () => { cancelled = true; };
-  }, [aba, start, end, startPrev, endPrev, historico]);
+  }, [aba, start, end, startPrev, endPrev, historico, reloadTick]);
 
   // ── Impulsionamento (Meta Ads) — global, sem operadora ───────────────────────
   useEffect(() => {
@@ -339,44 +400,69 @@ export default function SocialMediaDashboard() {
     let cancelled = false;
     async function loadImpulsionamento() {
       setLoadingImpulsionamento(true);
-      const [daily, dailyPrev, postsRes] = await Promise.all([
-        fetchAllPages<MetaAdsDaily>(async (from, to) =>
-          supabase
-            .from("meta_ads_daily")
-            .select("*")
-            .gte("date", start)
-            .lte("date", end)
-            .order("date", { ascending: true })
-            .range(from, to)
-        ),
-        startPrev && endPrev
-          ? fetchAllPages<MetaAdsDaily>(async (from, to) =>
+      setErroCarga(null);
+      setMomPronto(historico);
+      setMetaAdsDailyPrev([]);
+
+      try {
+        const [daily, postsBoost] = await Promise.all([
+          fetchAllPages<MetaAdsDaily>(async (from, to) =>
+            supabase
+              .from("meta_ads_daily")
+              .select(META_ADS_DAILY_SELECT)
+              .gte("date", start)
+              .lte("date", end)
+              .order("date", { ascending: true })
+              .range(from, to)
+          ),
+          fetchAllPages<MetaBoostedPost>(async (from, to) =>
+            supabase
+              .from("meta_boosted_posts")
+              .select(META_BOOSTED_POSTS_SELECT)
+              .gte("date", start)
+              .lte("date", end)
+              .order("spend", { ascending: false })
+              .range(from, to)
+          ),
+        ]);
+        if (cancelled) return;
+        setMetaAdsDaily(daily);
+        setMetaBoostedPosts(postsBoost);
+        setLoadingImpulsionamento(false);
+
+        if (!historico && startPrev && endPrev) {
+          try {
+            const dailyPrev = await fetchAllPages<MetaAdsDaily>(async (from, to) =>
               supabase
                 .from("meta_ads_daily")
-                .select("*")
+                .select(META_ADS_DAILY_SELECT)
                 .gte("date", startPrev)
                 .lte("date", endPrev)
                 .order("date", { ascending: true })
                 .range(from, to)
-            )
-          : Promise.resolve([] as MetaAdsDaily[]),
-        supabase
-          .from("meta_boosted_posts")
-          .select("*")
-          .gte("date", start)
-          .lte("date", end)
-          .order("spend", { ascending: false })
-          .limit(500),
-      ]);
-      if (cancelled) return;
-      setMetaAdsDaily(daily);
-      setMetaAdsDailyPrev(dailyPrev);
-      setMetaBoostedPosts((postsRes.data ?? []) as MetaBoostedPost[]);
-      setLoadingImpulsionamento(false);
+            );
+            if (cancelled) return;
+            setMetaAdsDailyPrev(dailyPrev);
+            setMomPronto(true);
+          } catch (err) {
+            console.error("[SocialMediaDashboard] Impulsionamento MoM:", err);
+            if (!cancelled) setMomPronto(true);
+          }
+        } else if (!cancelled) {
+          setMomPronto(true);
+        }
+      } catch (err) {
+        console.error("[SocialMediaDashboard] Impulsionamento:", err);
+        if (!cancelled) {
+          setErroCarga(MSG_ERRO_MIDIAS_SOCIAIS);
+          setLoadingImpulsionamento(false);
+          setMomPronto(true);
+        }
+      }
     }
-    loadImpulsionamento();
+    void loadImpulsionamento();
     return () => { cancelled = true; };
-  }, [aba, start, end, startPrev, endPrev, historico]);
+  }, [aba, start, end, startPrev, endPrev, historico, reloadTick]);
 
   // ── Conversão (campanhas / UTMs) — filtro operadora ──────────────────────────
   useEffect(() => {
@@ -384,37 +470,42 @@ export default function SocialMediaDashboard() {
     let cancelled = false;
     async function loadCampanhas() {
       setLoadingCampanhas(true);
+      setErroCarga(null);
+      setMomPronto(historico);
+      setCampanhasPerfPrev([]);
 
       const agregacaoSerie = historico ? "month" : "day";
-      const [funilRes, campRes, serieRes, campPrevRes] = await Promise.all([
-        supabase.rpc("get_campanha_funil_totais", {
-          p_data_inicio: start,
-          p_data_fim: end,
-          p_operadora_slug: operadoraParaRpc,
-        }),
-        supabase.rpc("get_campanhas_performance", {
-          p_data_inicio: start,
-          p_data_fim: end,
-          p_operadora_slug: operadoraParaRpc,
-          p_modo_historico: historico,
-        }),
-        supabase.rpc("get_campanha_funil_serie_temporal", {
-          p_data_inicio: start,
-          p_data_fim: end,
-          p_agregacao: agregacaoSerie,
-          p_operadora_slug: operadoraParaRpc,
-        }),
-        startPrev && endPrev
-          ? supabase.rpc("get_campanhas_performance", {
-              p_data_inicio: startPrev,
-              p_data_fim: endPrev,
-              p_operadora_slug: operadoraParaRpc,
-              p_modo_historico: false,
-            })
-          : Promise.resolve({ data: null as CampanhaPerfRow[] | null, error: null }),
-      ]);
+      try {
+        const [funilRes, campRes, serieRes] = await Promise.all([
+          supabase.rpc("get_campanha_funil_totais", {
+            p_data_inicio: start,
+            p_data_fim: end,
+            p_operadora_slug: operadoraParaRpc,
+          }),
+          supabase.rpc("get_campanhas_performance", {
+            p_data_inicio: start,
+            p_data_fim: end,
+            p_operadora_slug: operadoraParaRpc,
+            p_modo_historico: historico,
+          }),
+          supabase.rpc("get_campanha_funil_serie_temporal", {
+            p_data_inicio: start,
+            p_data_fim: end,
+            p_agregacao: agregacaoSerie,
+            p_operadora_slug: operadoraParaRpc,
+          }),
+        ]);
 
-      if (!cancelled) {
+        if (cancelled) return;
+
+        if (funilRes.error || campRes.error) {
+          console.error("[SocialMediaDashboard] campanhas:", funilRes.error ?? campRes.error);
+          setErroCarga(MSG_ERRO_MIDIAS_SOCIAIS);
+          setLoadingCampanhas(false);
+          setMomPronto(true);
+          return;
+        }
+
         const fr = funilRes.data as Array<{ visitas: number; registros: number; ftds: number; ftd_total: number }> | null;
         setFunilTotais(fr && fr.length > 0 ? fr[0] : null);
         setCampanhasPerf((campRes.data as CampanhaPerfRow[]) ?? []);
@@ -437,13 +528,42 @@ export default function SocialMediaDashboard() {
             }))
           );
         }
-        setCampanhasPerfPrev((campPrevRes.data as CampanhaPerfRow[] | null) ?? []);
         setLoadingCampanhas(false);
+
+        if (!historico && startPrev && endPrev) {
+          try {
+            const campPrevRes = await supabase.rpc("get_campanhas_performance", {
+              p_data_inicio: startPrev,
+              p_data_fim: endPrev,
+              p_operadora_slug: operadoraParaRpc,
+              p_modo_historico: false,
+            });
+            if (cancelled) return;
+            if (campPrevRes.error) {
+              console.error("[SocialMediaDashboard] campanhas MoM:", campPrevRes.error);
+            } else {
+              setCampanhasPerfPrev((campPrevRes.data as CampanhaPerfRow[] | null) ?? []);
+            }
+            setMomPronto(true);
+          } catch (err) {
+            console.error("[SocialMediaDashboard] campanhas MoM:", err);
+            if (!cancelled) setMomPronto(true);
+          }
+        } else if (!cancelled) {
+          setMomPronto(true);
+        }
+      } catch (err) {
+        console.error("[SocialMediaDashboard] campanhas:", err);
+        if (!cancelled) {
+          setErroCarga(MSG_ERRO_MIDIAS_SOCIAIS);
+          setLoadingCampanhas(false);
+          setMomPronto(true);
+        }
       }
     }
-    loadCampanhas();
+    void loadCampanhas();
     return () => { cancelled = true; };
-  }, [aba, start, end, startPrev, endPrev, historico, operadoraParaRpc]);
+  }, [aba, start, end, startPrev, endPrev, historico, operadoraParaRpc, reloadTick]);
 
   // ── Totais agregados ──────────────────────────────────────────────────────────
   const youtubeEngFallback = useMemo(
@@ -475,11 +595,11 @@ export default function SocialMediaDashboard() {
       ? (totaisAntMom.engagements / totalImprAnt) * 100
       : null;
 
-  const cmpSeguidores = !historico ? fmtComparativoMoM(totais.seguidores, totaisAntMom.seguidores) : null;
-  const cmpImpressoes = !historico ? fmtComparativoMoM(totais.impressoes, totaisAntMom.impressoes) : null;
+  const cmpSeguidores = !historico && momPronto ? fmtComparativoMoM(totais.seguidores, totaisAntMom.seguidores) : null;
+  const cmpImpressoes = !historico && momPronto ? fmtComparativoMoM(totais.impressoes, totaisAntMom.impressoes) : null;
   const cmpEngMedio =
-    !historico && engMedio != null && engMedioAnt != null ? fmtComparativoMoM(engMedio, engMedioAnt) : null;
-  const cmpPostagens = !historico ? fmtComparativoMoM(totais.postagens, totaisAntMom.postagens) : null;
+    !historico && momPronto && engMedio != null && engMedioAnt != null ? fmtComparativoMoM(engMedio, engMedioAnt) : null;
+  const cmpPostagens = !historico && momPronto ? fmtComparativoMoM(totais.postagens, totaisAntMom.postagens) : null;
 
   const totaisImp = useMemo(
     () => totaisFromMetaAdsRows(metaAdsDaily, metaBoostedPosts),
@@ -489,11 +609,11 @@ export default function SocialMediaDashboard() {
     () => totaisFromMetaAdsRows(metaAdsDailyPrev, []),
     [metaAdsDailyPrev]
   );
-  const cmpBoostPosts = !historico
+  const cmpBoostPosts = !historico && momPronto
     ? fmtComparativoMoM(totaisImp.boosted_posts_count, totaisImpAnt.boosted_posts_count)
     : null;
-  const cmpSpend = !historico ? fmtComparativoMoM(totaisImp.spend, totaisImpAnt.spend) : null;
-  const cmpImpEng = !historico
+  const cmpSpend = !historico && momPronto ? fmtComparativoMoM(totaisImp.spend, totaisImpAnt.spend) : null;
+  const cmpImpEng = !historico && momPronto
     ? fmtComparativoMoM(totaisImp.engagements, totaisImpAnt.engagements)
     : null;
   const cpmImp = totaisImp.impressions > 0 ? (totaisImp.spend / totaisImp.impressions) * 1000 : null;
@@ -505,10 +625,10 @@ export default function SocialMediaDashboard() {
   const ggrPorJogador = consolidado.deposit_count > 0 ? consolidado.ggr / consolidado.deposit_count : null;
   const ggrPorJogadorPrev = consolidadoPrev.deposit_count > 0 ? consolidadoPrev.ggr / consolidadoPrev.deposit_count : null;
 
-  const cmpGgr = !historico ? fmtComparativoMoM(consolidado.ggr, consolidadoPrev.ggr) : null;
-  const cmpRegs = !historico ? fmtComparativoMoM(consolidado.registros, consolidadoPrev.registros) : null;
+  const cmpGgr = !historico && momPronto ? fmtComparativoMoM(consolidado.ggr, consolidadoPrev.ggr) : null;
+  const cmpRegs = !historico && momPronto ? fmtComparativoMoM(consolidado.registros, consolidadoPrev.registros) : null;
   const cmpGgrJog =
-    !historico && ggrPorJogador != null && ggrPorJogadorPrev != null
+    !historico && momPronto && ggrPorJogador != null && ggrPorJogadorPrev != null
       ? fmtComparativoMoM(ggrPorJogador, ggrPorJogadorPrev)
       : null;
 
@@ -709,7 +829,7 @@ export default function SocialMediaDashboard() {
   const dataTable = useDataTableBlock();
   const corFunilComparativoCampanhaA = brand.useBrand ? COR_FUNIL_B : COR_FUNIL_A;
   const corFunilComparativoCampanhaB = COR_FUNIL_B;
-  const selectCampStyle: React.CSSProperties = {
+  const selectCampStyle: CSSProperties = {
     flex: 1,
     minWidth: 120,
     padding: "10px 12px",
@@ -724,7 +844,6 @@ export default function SocialMediaDashboard() {
   const skeletonBloco = (
     <>
       <div style={card}>
-        <SectionTitle>Carregando…</SectionTitle>
         <div className="app-grid-kpi-6">
           {[0, 1, 2, 3, 4, 5].map((i) => (
             <SkeletonKpiCard key={i} />
@@ -732,10 +851,44 @@ export default function SocialMediaDashboard() {
         </div>
       </div>
       <div style={{ ...card, marginTop: PAGE_CONTENT_BOX_GAP }}>
-        <div style={{ height: 200, borderRadius: 12, animation: "skeleton-pulse 1.5s ease-in-out infinite", background: "rgba(124,58,237,0.08)" }} />
+        <div
+          style={{
+            height: 200,
+            borderRadius: 12,
+            animation: "skeleton-pulse 1.5s ease-in-out infinite",
+            background: "color-mix(in srgb, var(--brand-action, #7c3aed) 8%, transparent)",
+          }}
+        />
       </div>
     </>
   );
+
+  if (perm.loading) {
+    return (
+      <div
+        className="app-page-shell"
+        style={{
+          background: t.bg,
+          minHeight: "100vh",
+          fontFamily: FONT.body,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <div style={{ textAlign: "center", color: t.textMuted }}>
+          <Loader2
+            size={24}
+            className="app-lucide-spin"
+            color="var(--brand-action, #7c3aed)"
+            aria-hidden="true"
+            style={{ marginBottom: 12 }}
+          />
+          <div style={{ fontSize: 13 }}>Carregando…</div>
+        </div>
+      </div>
+    );
+  }
 
   if (perm.canView === "nao") {
     return (
@@ -801,7 +954,7 @@ export default function SocialMediaDashboard() {
               />
             )}
 
-            {loadingAbaAtiva && (
+            {(loadingAbaAtiva || (!momPronto && !historico && !erroCarga)) && (
               <span style={{ fontSize: 12, color: t.textMuted, display: "flex", alignItems: "center", gap: 6 }}>
                 <Clock size={12} aria-hidden />
                 Carregando…
@@ -835,6 +988,43 @@ export default function SocialMediaDashboard() {
           </div>
       </div>
 
+      {erroCarga ? (
+        <div
+          role="alert"
+          aria-live="polite"
+          style={{
+            ...getPageFilterBoxStyle(brand, t),
+            marginBottom: 14,
+            color: "#e84025",
+            fontSize: 13,
+            fontFamily: FONT.body,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 12,
+            flexWrap: "wrap",
+          }}
+        >
+          <span>{erroCarga}</span>
+          <button
+            type="button"
+            onClick={() => recarregar()}
+            style={{
+              fontFamily: FONT.body,
+              fontSize: 13,
+              fontWeight: 700,
+              padding: "8px 14px",
+              borderRadius: 10,
+              border: "1px solid rgba(232,64,37,0.35)",
+              background: "transparent",
+              color: "#e84025",
+              cursor: "pointer",
+            }}
+          >
+            Tentar de novo
+          </button>
+        </div>
+      ) : (
       <div role="tabpanel" id={`panel-midias-${aba}`} aria-labelledby={`tab-midias-${aba}`}>
 
       {aba === "overview" && (
@@ -901,21 +1091,21 @@ export default function SocialMediaDashboard() {
                     icon={<Trophy size={16} aria-hidden />}
                     atual={{ qtd: consolidado.ftds, valor: consolidado.ftd_total }}
                     anterior={{ qtd: consolidadoPrev.ftds, valor: consolidadoPrev.ftd_total }}
-                    isHistorico={historico}
+                    isHistorico={historico || !momPronto}
                   />
                   <KpiCardDepositos
                     label="Depósitos"
                     icon={<ArrowDownToLine size={16} aria-hidden />}
                     atual={{ qtd: consolidado.deposit_count, valor: consolidado.deposit_total }}
                     anterior={{ qtd: consolidadoPrev.deposit_count, valor: consolidadoPrev.deposit_total }}
-                    isHistorico={historico}
+                    isHistorico={historico || !momPronto}
                   />
                   <KpiCardDepositos
                     label="Saques"
                     icon={<ArrowUpFromLine size={16} aria-hidden />}
                     atual={{ qtd: consolidado.withdrawal_count, valor: consolidado.withdrawal_total }}
                     anterior={{ qtd: consolidadoPrev.withdrawal_count, valor: consolidadoPrev.withdrawal_total }}
-                    isHistorico={historico}
+                    isHistorico={historico || !momPronto}
                   />
                 </div>
               </div>
@@ -988,7 +1178,7 @@ export default function SocialMediaDashboard() {
                   </TabelaComPaginacao>
                 ) : (
                   <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
-                    Sem dados para o período selecionado.
+                    {MSG_SEM_DADOS_PERIODO}
                   </div>
                 )}
               </div>
@@ -1096,7 +1286,7 @@ export default function SocialMediaDashboard() {
                   />
                 ) : (
                   <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
-                    Sem dados para o período selecionado.
+                    {MSG_SEM_DADOS_PERIODO}
                   </div>
                 )}
               </div>
@@ -1609,7 +1799,7 @@ export default function SocialMediaDashboard() {
               ))
             ) : (
               <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
-                Sem dados para o período selecionado.
+                {MSG_SEM_DADOS_PERIODO}
               </div>
             )}
           </div>
@@ -1752,7 +1942,7 @@ export default function SocialMediaDashboard() {
               </>
             ) : (
               <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
-                Sem dados para o período selecionado.
+                {MSG_SEM_DADOS_PERIODO}
               </div>
             )}
           </div>
@@ -1760,6 +1950,7 @@ export default function SocialMediaDashboard() {
         )
       )}
       </div>
+      )}
     </div>
   );
 }

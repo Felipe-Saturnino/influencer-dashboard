@@ -135,6 +135,7 @@ function OverviewPrestadorAbaKpisOcrConteudo({
   const {
     loading,
     erro,
+    recarregar,
     kpisAtual,
     kpisAnterior,
     porJogo,
@@ -309,8 +310,38 @@ function OverviewPrestadorAbaKpisOcrConteudo({
       <div style={pageBox}>
         <SectionTitle sub={subTitulo}>KPIs de Atendimento</SectionTitle>
         {erro && (
-          <div role="alert" aria-live="polite" style={{ color: "#e84025", fontSize: 12, fontFamily: FONT.body, marginBottom: 12 }}>
-            {erro}
+          <div
+            role="alert"
+            aria-live="polite"
+            style={{
+              color: "#e84025",
+              fontSize: 12,
+              fontFamily: FONT.body,
+              marginBottom: 12,
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              flexWrap: "wrap",
+            }}
+          >
+            <span>{erro}</span>
+            <button
+              type="button"
+              onClick={recarregar}
+              style={{
+                fontFamily: FONT.body,
+                fontSize: 13,
+                fontWeight: 700,
+                padding: "8px 14px",
+                borderRadius: 10,
+                border: "1px solid rgba(232,64,37,0.35)",
+                background: "transparent",
+                color: "#e84025",
+                cursor: "pointer",
+              }}
+            >
+              Tentar de novo
+            </button>
           </div>
         )}
         {loading ? (

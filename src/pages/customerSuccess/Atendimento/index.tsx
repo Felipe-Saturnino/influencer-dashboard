@@ -53,6 +53,7 @@ import {
   labelStatusChamado,
 } from "../../../lib/csAtendimentoConstants";
 import { carregarAtendentesCustomerService, mapCsChamadoFromDb, unwrapCsEmbed, type CsChamadoRowDb } from "../../../lib/csAtendimentoHelpers";
+import { fetchAllPages } from "../../../lib/supabasePaginate";
 import {
   COL_LABEL_EMAIL,
   COL_LABEL_SITE_SPIN,
@@ -75,6 +76,16 @@ import type {
 } from "../../../types/csAtendimento";
 import { ModalAtenderChamado, ModalVerChamado } from "./ModalsVerAtender";
 import { CsAtendimentoInstagramPainel } from "./CsAtendimentoInstagramPainel";
+
+const MSG_ERRO_CARREGAR =
+  "Não foi possível carregar os chamados. Se o problema persistir, entre em contato com o suporte.";
+const MSG_ERRO_HISTORICO =
+  "Não foi possível carregar o histórico. Se o problema persistir, entre em contato com o suporte.";
+const MSG_ERRO_ATENDENTES =
+  "Não foi possível carregar a lista de staff. Se o problema persistir, entre em contato com o suporte.";
+
+const CS_HISTORICO_SELECT =
+  "id, chamado_id, tipo_acao, usuario_id, usuario_nome, anotacao, status_anterior, status_novo, created_at";
 
 const CS_CHAMADOS_SELECT = `
   id,
@@ -170,12 +181,15 @@ export default function CsAtendimentoPage() {
   const [atendentes, setAtendentes] = useState<CsAtendenteFiltroOption[]>([]);
   const [lista, setLista] = useState<CsChamadoRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [erroAtendentes, setErroAtendentes] = useState<string | null>(null);
   const [sortSite, setSortSite] = useState<{ col: SortColSiteSpin; dir: SortDir }>({ col: "data", dir: "desc" });
   const [sortEmail, setSortEmail] = useState<{ col: SortColEmail; dir: SortDir }>({ col: "data", dir: "desc" });
   const [modalVer, setModalVer] = useState<CsChamadoRow | null>(null);
   const [modalAtender, setModalAtender] = useState<CsChamadoRow | null>(null);
   const [historico, setHistorico] = useState<CsChamadoHistoricoRow[]>([]);
   const [loadingHistorico, setLoadingHistorico] = useState(false);
+  const [erroHistorico, setErroHistorico] = useState<string | null>(null);
 
   const isAbaEmail = abaOrigem === CS_ATENDIMENTO_ORIGEM_EMAIL;
   const isAbaInstagram = abaOrigem === CS_ATENDIMENTO_ABA_INSTAGRAM;
@@ -216,49 +230,56 @@ export default function CsAtendimentoPage() {
 
   const fetchLista = useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
+    try {
+      const rows = await fetchAllPages(async (from, to) => {
+        let q = supabase
+          .from("cs_chamados")
+          .select(CS_CHAMADOS_SELECT)
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: true })
+          .range(from, to);
 
-    let q = supabase
-      .from("cs_chamados")
-      .select(CS_CHAMADOS_SELECT)
-      .order("created_at", { ascending: false })
-      .limit(200);
+        if (abaOrigem === CS_ATENDIMENTO_ABA_INSTAGRAM) {
+          q = q.in("origem", [CS_ATENDIMENTO_ORIGEM_INSTAGRAM_DM, CS_ATENDIMENTO_ORIGEM_INSTAGRAM_COMENTARIO]);
+        } else {
+          q = q.eq("origem", abaOrigem);
+        }
 
-    if (abaOrigem === CS_ATENDIMENTO_ABA_INSTAGRAM) {
-      q = q.in("origem", [CS_ATENDIMENTO_ORIGEM_INSTAGRAM_DM, CS_ATENDIMENTO_ORIGEM_INSTAGRAM_COMENTARIO]);
-    } else {
-      q = q.eq("origem", abaOrigem);
-    }
-
-    if (filtroStatus !== CS_ATENDIMENTO_FILTRO_TODOS_STATUS_VALUE) {
-      q = q.eq("status", filtroStatus);
-    }
-    if (filtroAtendente === CS_ATENDIMENTO_FILTRO_NENHUM_VALUE) {
-      q = q.is("atendente_id", null);
-    } else if (filtroAtendente !== CS_ATENDIMENTO_FILTRO_TODOS_VALUE) {
-      q = q.eq("atendente_id", filtroAtendente);
-    }
-
-    const { data, error } = await q;
-    if (error) {
-      console.error("[CsAtendimento]", error);
+        if (filtroStatus !== CS_ATENDIMENTO_FILTRO_TODOS_STATUS_VALUE) {
+          q = q.eq("status", filtroStatus);
+        }
+        if (filtroAtendente === CS_ATENDIMENTO_FILTRO_NENHUM_VALUE) {
+          q = q.is("atendente_id", null);
+        } else if (filtroAtendente !== CS_ATENDIMENTO_FILTRO_TODOS_VALUE) {
+          q = q.eq("atendente_id", filtroAtendente);
+        }
+        const { data, error } = await q;
+        return { data: (data ?? null) as CsChamadoRowDb[] | null, error };
+      });
+      setLista(rows.map(mapCsChamadoFromDb));
+    } catch (e: unknown) {
+      console.error("[CsAtendimento]", e);
       setLista([]);
-    } else {
-      setLista(((data ?? []) as unknown as CsChamadoRowDb[]).map(mapCsChamadoFromDb));
+      setLoadError(MSG_ERRO_CARREGAR);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, [abaOrigem, filtroStatus, filtroAtendente]);
 
   const carregarHistorico = useCallback(async (chamadoId: string) => {
     setLoadingHistorico(true);
+    setErroHistorico(null);
     const { data, error } = await supabase
       .from("cs_chamado_historico")
-      .select("*")
+      .select(CS_HISTORICO_SELECT)
       .eq("chamado_id", chamadoId)
       .order("created_at", { ascending: true })
       .limit(300);
     if (error) {
       console.error("[CsAtendimento] historico", error);
       setHistorico([]);
+      setErroHistorico(MSG_ERRO_HISTORICO);
     } else {
       setHistorico((data ?? []) as CsChamadoHistoricoRow[]);
     }
@@ -267,7 +288,14 @@ export default function CsAtendimentoPage() {
 
   useEffect(() => {
     if (perm.loading || perm.canView === "nao") return;
-    void carregarAtendentesCustomerService().then(setAtendentes);
+    setErroAtendentes(null);
+    void carregarAtendentesCustomerService()
+      .then(setAtendentes)
+      .catch((e: unknown) => {
+        console.error("[CsAtendimento] atendentes", e);
+        setAtendentes([]);
+        setErroAtendentes(MSG_ERRO_ATENDENTES);
+      });
   }, [perm.loading, perm.canView]);
 
   useEffect(() => {
@@ -581,6 +609,11 @@ export default function CsAtendimentoPage() {
             />
             <AjudaContextualAcoes pageKey="cs_atendimento" />
           </div>
+          {erroAtendentes ? (
+            <div role="alert" aria-live="polite" style={{ width: "100%", textAlign: "center", color: "#e84025", fontSize: 12, fontFamily: FONT.body, marginTop: 8 }}>
+              {erroAtendentes}
+            </div>
+          ) : null}
         </div>
 
         <div
@@ -621,6 +654,30 @@ export default function CsAtendimentoPage() {
       </div>
 
       {isAbaInstagram ? (
+        loadError ? (
+          <div style={pageBox} id="panel-cs-instagram" role="tabpanel" aria-labelledby="tab-cs-instagram">
+            <div role="alert" aria-live="polite" style={{ padding: "40px 0", textAlign: "center", fontFamily: FONT.body }}>
+              <p style={{ color: "#e84025", fontSize: 13, marginBottom: 12 }}>{loadError}</p>
+              <button
+                type="button"
+                onClick={() => void fetchLista()}
+                style={{
+                  padding: "10px 20px",
+                  borderRadius: 10,
+                  border: `1px solid ${t.cardBorder}`,
+                  background: t.inputBg,
+                  color: t.text,
+                  fontSize: 13,
+                  fontWeight: 700,
+                  fontFamily: FONT.body,
+                  cursor: "pointer",
+                }}
+              >
+                Tentar novamente
+              </button>
+            </div>
+          </div>
+        ) : (
         <CsAtendimentoInstagramPainel
           listaDm={listaInstagramDm}
           listaComentario={listaInstagramComentario}
@@ -633,6 +690,7 @@ export default function CsAtendimentoPage() {
           onVer={setModalVer}
           onAtender={setModalAtender}
         />
+        )
       ) : (
         <div style={pageBox} id={panelId} role="tabpanel" aria-labelledby={tabId}>
           <SectionTitle>Atendimentos</SectionTitle>
@@ -641,6 +699,27 @@ export default function CsAtendimentoPage() {
             <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
               <Loader2 className="app-lucide-spin" size={22} color="var(--brand-primary, #7c3aed)" aria-hidden style={{ marginBottom: 12 }} />
               <div style={{ fontSize: 13 }}>Carregando…</div>
+            </div>
+          ) : loadError ? (
+            <div role="alert" aria-live="polite" style={{ padding: "40px 0", textAlign: "center", fontFamily: FONT.body }}>
+              <p style={{ color: "#e84025", fontSize: 13, marginBottom: 12 }}>{loadError}</p>
+              <button
+                type="button"
+                onClick={() => void fetchLista()}
+                style={{
+                  padding: "10px 20px",
+                  borderRadius: 10,
+                  border: `1px solid ${t.cardBorder}`,
+                  background: t.inputBg,
+                  color: t.text,
+                  fontSize: 13,
+                  fontWeight: 700,
+                  fontFamily: FONT.body,
+                  cursor: "pointer",
+                }}
+              >
+                Tentar novamente
+              </button>
             </div>
           ) : listaOrdenada.length === 0 ? (
             <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
@@ -710,6 +789,8 @@ export default function CsAtendimentoPage() {
         row={modalVer}
         historico={historico}
         loadingHistorico={loadingHistorico}
+        erroHistorico={erroHistorico}
+        onRetryHistorico={modalVer ? () => void carregarHistorico(modalVer.id) : undefined}
         t={t}
       />
       <ModalAtenderChamado
@@ -718,6 +799,8 @@ export default function CsAtendimentoPage() {
         row={modalAtender}
         historico={historico}
         loadingHistorico={loadingHistorico}
+        erroHistorico={erroHistorico}
+        onRetryHistorico={modalAtender ? () => void carregarHistorico(modalAtender.id) : undefined}
         t={t}
         brand={brand}
         onSaved={() => void fetchLista()}

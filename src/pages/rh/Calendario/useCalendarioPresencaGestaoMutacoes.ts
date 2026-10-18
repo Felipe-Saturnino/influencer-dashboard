@@ -57,6 +57,8 @@ export type UseCalendarioPresencaGestaoMutacoesOpts = {
   setPresencaAlvoModal: Dispatch<SetStateAction<PresencaTurnoAlvo | null>>;
   presencaJustificarAlvo: PresencaJustificarAlvo | null;
   setPresencaJustificarAlvo: Dispatch<SetStateAction<PresencaJustificarAlvo | null>>;
+  /** Feedback de falha na persistência (ex.: análise de correção na linha). */
+  setErroPersistenciaPresenca?: Dispatch<SetStateAction<string | null>>;
 };
 
 /**
@@ -81,6 +83,7 @@ export function useCalendarioPresencaGestaoMutacoes(opts: UseCalendarioPresencaG
     setPresencaAlvoModal,
     presencaJustificarAlvo,
     setPresencaJustificarAlvo,
+    setErroPersistenciaPresenca,
   } = opts;
 
   const persistirPresencaGestao = useCallback(
@@ -92,11 +95,18 @@ export function useCalendarioPresencaGestaoMutacoes(opts: UseCalendarioPresencaG
       const result = await salvarPresencaGestaoDia(supabase, funcionarioId, diaIso, gestao);
       if (!result.ok) {
         console.error("Não foi possível salvar a gestão de presença.");
+        setErroPersistenciaPresenca?.(
+          result.semPermissao
+            ? "Você não tem permissão de Editar para alterar esta presença. Peça liberação em Gestão de Usuários → Permissões (Calendário)."
+            : "Não foi possível salvar a gestão de presença. Se o problema persistir, entre em contato com o suporte.",
+        );
         setPresencaGestaoTick((x) => x + 1);
+      } else {
+        setErroPersistenciaPresenca?.(null);
       }
       return result;
     },
-    [setPresencaGestaoTick],
+    [setPresencaGestaoTick, setErroPersistenciaPresenca],
   );
 
   const confirmarAprovacaoPresenca = useCallback(async (): Promise<{
@@ -346,7 +356,12 @@ export function useCalendarioPresencaGestaoMutacoes(opts: UseCalendarioPresencaG
           };
         }
         next.set(chave, novo);
-        void persistirPresencaGestao(funcionarioId, diaIso, novo);
+        void (async () => {
+          const result = await persistirPresencaGestao(funcionarioId, diaIso, novo);
+          if (!result.ok) {
+            /* persistirPresencaGestao já define setErroPersistenciaPresenca + tick de reload */
+          }
+        })();
         return next;
       };
       setPresencaGestaoPorChave(aplicar);

@@ -1,4 +1,4 @@
-import { BookOpen, GraduationCap, HelpCircle } from "lucide-react";
+import { BookOpen, CalendarRange, GraduationCap, HelpCircle } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useIdentidadeEfetiva } from "../../../hooks/useIdentidadeEfetiva";
 import { FONT } from "../../../constants/theme";
@@ -6,7 +6,7 @@ import { PAGE_CONTENT_BOX_GAP } from "../../../lib/pageContentBoxStyles";
 import { HOME_GESTOR_ACADEMY_ROLE, HOME_GESTOR_ACADEMY_SUB } from "../../../lib/homePerfisCopy";
 import { BoasVindasPerfilHome } from "./shared/BoasVindasPerfilHome";
 import { AtalhosCuradosHome } from "./shared/AtalhosCuradosHome";
-import { InformativosHome } from "./shared/InformativosHome";
+import { InformacoesStaffHome } from "./shared/InformacoesStaffHome";
 import { HomePageLoading } from "./shared/HomePageLoading";
 import { useHomeGestorAcademyData } from "./hooks/useHomeGestorAcademyData";
 import { AlertasGestorAcademy } from "./gestorAcademy/AlertasGestorAcademy";
@@ -17,6 +17,7 @@ const PREFIX = "home-gestor-academy";
 const ATALHOS = [
   { key: "academy_performance_hub" as const, icon: GraduationCap },
   { key: "academy_portal" as const, icon: BookOpen },
+  { key: "academy_cronograma" as const, icon: CalendarRange },
   { key: "ajuda" as const, icon: HelpCircle },
 ];
 
@@ -54,7 +55,7 @@ export default function HomeGestorAcademy() {
       />
       <AlertasGestorAcademy alertas={alertas} />
       <KpisGestorAcademy kpis={kpis} erro={erro} sectionIdPrefix={PREFIX} />
-      <InformativosHome perfil="gestor_academy" sectionIdPrefix={PREFIX} />
+      <InformacoesStaffHome perfil="gestor_academy" sectionIdPrefix={PREFIX} />
       <AtalhosCuradosHome sectionIdPrefix={PREFIX} atalhos={ATALHOS} />
     </div>
   );

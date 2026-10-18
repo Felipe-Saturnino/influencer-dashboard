@@ -86,6 +86,7 @@ export const APP_ROUTE_CATALOG: AppRouteDef[] = [
   ]),
   page("Overview Comercial", "comercial_overview", "OverviewComercial", [
     { tabId: "operadoras", slug: "Operadoras", label: "Operadoras", access: "always" },
+    { tabId: "crypto", slug: "Crypto", label: "Crypto", access: "always" },
     { tabId: "agregadoras", slug: "Agregadoras", label: "Agregadoras", access: "always" },
     { tabId: "integracoes", slug: "Integracoes", label: "Integrações", access: "always" },
   ]),
@@ -94,6 +95,13 @@ export const APP_ROUTE_CATALOG: AppRouteDef[] = [
     { tabId: "nao_iniciados", slug: "NaoIniciados", label: "Não Iniciados", access: "always" },
     { tabId: "em_andamento", slug: "EmAndamento", label: "Em andamento", access: "always" },
     { tabId: "concluidos", slug: "Concluidos", label: "Concluídos", access: "always" },
+  ]),
+  page("Pipeline Crypto", "comercial_pipeline_crypto", "PipelineCrypto", [
+    { tabId: "todos", slug: "Todos", label: "Todos", access: "always" },
+    { tabId: "disponiveis", slug: "Disponiveis", label: "Disponíveis", access: "always" },
+    { tabId: "conexao", slug: "Conexao", label: "Conexão", access: "always" },
+    { tabId: "negociacao", slug: "Negociacao", label: "Negociação", access: "always" },
+    { tabId: "fechado", slug: "Fechado", label: "Fechado", access: "always" },
   ]),
   page("Pipeline B2B", "comercial_pipeline_b2b", "PipelineB2B", [
     { tabId: "todos", slug: "Todos", label: "Todos", access: "always" },
@@ -145,6 +153,7 @@ export const APP_ROUTE_CATALOG: AppRouteDef[] = [
   page("Streamers", "streamers", "Streamers", [
     { tabId: "overview", slug: "Overview", label: "Overview", access: "always" },
     { tabId: "conversao", slug: "Conversao", label: "Conversão", access: "always" },
+    { tabId: "jogadores", slug: "Jogadores", label: "Jogadores", access: "always" },
     { tabId: "financeiro", slug: "Financeiro", label: "Financeiro", access: "always" },
   ]),
   page("Afiliados", "dash_afiliados", "DashAfiliados", [
@@ -286,6 +295,12 @@ export const APP_ROUTE_CATALOG: AppRouteDef[] = [
       label: "Gerenciamento de Postagens",
       access: "academy_portal_gerenciamento",
     },
+  ]),
+  page("Cronograma", "academy_cronograma", "Cronograma", [
+    { tabId: "cronogramas", slug: "Cronogramas", label: "Cronogramas", access: "always" },
+    { tabId: "trilhas", slug: "Trilhas", label: "Trilhas", access: "always" },
+    { tabId: "materiais", slug: "Materiais", label: "Materiais", access: "always" },
+    { tabId: "provas", slug: "Provas", label: "Provas", access: "always" },
   ]),
   page("Informativos", "informativos", "Informativos", [
     { tabId: "informativos", slug: "Informativos", label: "Informativos", access: "always" },

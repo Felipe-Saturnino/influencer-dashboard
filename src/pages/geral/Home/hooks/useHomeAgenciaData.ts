@@ -34,8 +34,10 @@ export type HomeAgenciaLiveFutura = Live & { influencer_name: string };
 export type UseHomeAgenciaDataResult = {
   ready: boolean;
   cadastrosIncompletosCount: number;
+  cadastrosIncompletosNomes: string[];
   horasPendentesCount: number;
   horasPendentesTotal: number;
+  horasPendentesNomes: string[];
   livesFuturas: HomeAgenciaLiveFutura[];
 };
 
@@ -47,8 +49,10 @@ export function useHomeAgenciaData(influencerIds: string[]): UseHomeAgenciaDataR
   const idsKey = influencerIds.slice().sort().join("|");
   const [ready, setReady] = useState(false);
   const [cadastrosIncompletosCount, setCadastrosIncompletosCount] = useState(0);
+  const [cadastrosIncompletosNomes, setCadastrosIncompletosNomes] = useState<string[]>([]);
   const [horasPendentesCount, setHorasPendentesCount] = useState(0);
   const [horasPendentesTotal, setHorasPendentesTotal] = useState(0);
+  const [horasPendentesNomes, setHorasPendentesNomes] = useState<string[]>([]);
   const [livesFuturas, setLivesFuturas] = useState<HomeAgenciaLiveFutura[]>([]);
 
   useEffect(() => {
@@ -56,8 +60,10 @@ export function useHomeAgenciaData(influencerIds: string[]): UseHomeAgenciaDataR
     if (ids.length === 0) {
       setReady(true);
       setCadastrosIncompletosCount(0);
+      setCadastrosIncompletosNomes([]);
       setHorasPendentesCount(0);
       setHorasPendentesTotal(0);
+      setHorasPendentesNomes([]);
       setLivesFuturas([]);
       return;
     }
@@ -99,20 +105,23 @@ export function useHomeAgenciaData(influencerIds: string[]): UseHomeAgenciaDataR
 
         const nomePorId = new Map<string, string>();
         let incompletos = 0;
-        const comCota: { id: string; acordadas: number; ciclo: string }[] = [];
+        const nomesIncompletos: string[] = [];
+        const comCota: { id: string; acordadas: number; ciclo: string; artistico: string }[] = [];
 
         for (const p of perfis) {
+          const artistico = (p.nome_artistico ?? "").trim();
           const nome =
-            p.nome_artistico?.trim() || p.nome_completo?.trim() || "Influencer";
+            artistico || p.nome_completo?.trim() || "Influencer";
           nomePorId.set(p.id, nome);
           const status = (p.status ?? "ativo").toLowerCase();
           if (status === "ativo" && isPerfilIncompleto(p, nome)) {
             incompletos += 1;
+            if (artistico) nomesIncompletos.push(artistico);
           }
           const acordadas = p.horas_acordadas;
           const ciclo = p.horas_ciclo_iniciado_em;
           if (status === "ativo" && acordadas != null && acordadas > 0 && ciclo) {
-            comCota.push({ id: p.id, acordadas, ciclo });
+            comCota.push({ id: p.id, acordadas, ciclo, artistico });
           }
         }
 
@@ -123,15 +132,16 @@ export function useHomeAgenciaData(influencerIds: string[]): UseHomeAgenciaDataR
 
         let countHoras = 0;
         let totalHoras = 0;
+        const nomesHoras: string[] = [];
         const horasResults = await Promise.all(
           comCota.map(async (c) => {
             try {
               const realizadas = await buscarHorasRealizadasCiclo(c.id, c.ciclo);
               const pend = horasPendentesCota(c.acordadas, realizadas);
-              return { id: c.id, pend };
+              return { id: c.id, pend, artistico: c.artistico };
             } catch (err) {
               console.error("useHomeAgenciaData horas:", err);
-              return { id: c.id, pend: null as number | null };
+              return { id: c.id, pend: null as number | null, artistico: c.artistico };
             }
           }),
         );
@@ -139,8 +149,14 @@ export function useHomeAgenciaData(influencerIds: string[]): UseHomeAgenciaDataR
           if (h.pend != null && h.pend > 0 && !idsComLiveFutura.has(h.id)) {
             countHoras += 1;
             totalHoras += h.pend;
+            if (h.artistico) nomesHoras.push(h.artistico);
           }
         }
+
+        const sortNomes = (xs: string[]) =>
+          [...xs]
+            .sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" }))
+            .slice(0, 5);
 
         const livesOrdenadas = [...agendadasFuturas]
           .sort((a, b) => {
@@ -157,8 +173,10 @@ export function useHomeAgenciaData(influencerIds: string[]): UseHomeAgenciaDataR
 
         if (!cancelled) {
           setCadastrosIncompletosCount(incompletos);
+          setCadastrosIncompletosNomes(sortNomes(nomesIncompletos));
           setHorasPendentesCount(countHoras);
           setHorasPendentesTotal(totalHoras);
+          setHorasPendentesNomes(sortNomes(nomesHoras));
           setLivesFuturas(livesOrdenadas);
           setReady(true);
         }
@@ -166,8 +184,10 @@ export function useHomeAgenciaData(influencerIds: string[]): UseHomeAgenciaDataR
         console.error("useHomeAgenciaData:", e);
         if (!cancelled) {
           setCadastrosIncompletosCount(0);
+          setCadastrosIncompletosNomes([]);
           setHorasPendentesCount(0);
           setHorasPendentesTotal(0);
+          setHorasPendentesNomes([]);
           setLivesFuturas([]);
           setReady(true);
         }
@@ -182,8 +202,10 @@ export function useHomeAgenciaData(influencerIds: string[]): UseHomeAgenciaDataR
   return {
     ready,
     cadastrosIncompletosCount,
+    cadastrosIncompletosNomes,
     horasPendentesCount,
     horasPendentesTotal,
+    horasPendentesNomes,
     livesFuturas,
   };
 }

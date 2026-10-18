@@ -135,8 +135,8 @@ export function ModalImprimirIdsStaff({
       />
 
       <p style={{ margin: "0 0 12px", fontSize: 13, color: t.textMuted, fontFamily: FONT.body, lineHeight: 1.45 }}>
-        Selecione os prestadores dos times de Gestão de Staff. Será gerado um único PDF com etiquetas de 8×6 cm (código
-        de barras, número e nickname) para impressão.
+        Selecione os prestadores dos times de Gestão de Staff. Será gerado um único PDF com cartões de 5×3,6 cm (código
+        GS1-128, número e nickname) para impressão — até 28 por folha A4.
       </p>
 
       <BarraPesquisaPagina
@@ -195,8 +195,41 @@ export function ModalImprimirIdsStaff({
       ) : null}
 
       {erro ? (
-        <div role="alert" aria-live="polite" style={{ color: "#e84025", fontSize: 13, fontFamily: FONT.body, marginBottom: 10 }}>
-          {erro}
+        <div
+          role="alert"
+          aria-live="polite"
+          style={{
+            color: "#e84025",
+            fontSize: 13,
+            fontFamily: FONT.body,
+            marginBottom: 10,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+            flexWrap: "wrap",
+          }}
+        >
+          <span>{erro}</span>
+          {erro === ERRO_GERAR ? (
+            <button
+              type="button"
+              onClick={() => void gerar()}
+              disabled={gerando}
+              style={{
+                padding: "8px 14px",
+                borderRadius: 10,
+                border: "1px solid rgba(232,64,37,0.35)",
+                background: "transparent",
+                color: "#e84025",
+                fontWeight: 700,
+                fontFamily: FONT.body,
+                cursor: gerando ? "not-allowed" : "pointer",
+              }}
+            >
+              Tentar de novo
+            </button>
+          ) : null}
         </div>
       ) : null}
 

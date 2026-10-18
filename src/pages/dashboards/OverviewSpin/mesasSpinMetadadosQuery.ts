@@ -2,7 +2,7 @@ import { queryClient } from "../../../lib/queryClient";
 import { supabase } from "../../../lib/supabase";
 import { fetchAllPages } from "../../../lib/supabasePaginate";
 
-/** QueryKey estável — compartilhada pelos 9 hooks de Posicionamento (e futuros leitores). */
+/** QueryKey estável — compartilhada pelos 10 hooks de Posicionamento (e futuros leitores). */
 export const MESAS_SPIN_METADADOS_QUERY_KEY = ["overview-spin", "mesas-spin-metadados"] as const;
 
 export const MESAS_SPIN_METADADOS_STALE_MS = 10 * 60 * 1000;

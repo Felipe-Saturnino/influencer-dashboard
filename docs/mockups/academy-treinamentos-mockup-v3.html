@@ -1,0 +1,2106 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Academy — Gestão de Treinamento (Mockup)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --brand-primary: #7c3aed;
+      --brand-secondary: #1e36f8;
+      --brand-success: #22c55e;
+      --brand-danger: #e84025;
+      --brand-warning: #f59e0b;
+      --bg: #f4f4f8;
+      --card-bg: #ffffff;
+      --card-border: #e2e2ee;
+      --text: #1a1a2e;
+      --text-muted: #6b7280;
+      --input-bg: #f8f8fc;
+      --radius-box: 14px;
+      --radius-tab: 10px;
+      --radius-pill: 999px;
+      --shadow: 0 2px 8px rgba(0,0,0,0.07);
+      --font: "Inter", "Helvetica Neue", Arial, sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 24px;
+      line-height: 1.4;
+    }
+    .mockup-bar {
+      position: sticky; top: 0; z-index: 100;
+      background: #1a1a2e; color: #fff;
+      padding: 10px 16px; border-radius: 10px; margin-bottom: 20px;
+      display: flex; flex-wrap: wrap; align-items: center; gap: 12px; font-size: 12px;
+    }
+    .mockup-bar strong { color: #a78bfa; }
+    .mockup-bar button {
+      font-family: var(--font); font-size: 12px; padding: 5px 10px;
+      border-radius: 6px; border: 1px solid #3a3a5c; background: #2a2a40; color: #fff; cursor: pointer;
+    }
+    .mockup-bar button.active { background: var(--brand-primary); border-color: var(--brand-primary); }
+    .page-shell { max-width: 1280px; margin: 0 auto; }
+    .page-header { margin-bottom: 18px; }
+    .page-header-row { display: flex; align-items: center; gap: 10px; }
+    .page-icon {
+      width: 32px; height: 32px; border-radius: 9px;
+      background: color-mix(in srgb, var(--brand-primary) 12%, transparent);
+      border: 1px solid color-mix(in srgb, var(--brand-primary) 30%, transparent);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--brand-primary); flex-shrink: 0;
+    }
+    .page-header h1 {
+      font-size: 18px; font-weight: 800; text-transform: uppercase;
+      letter-spacing: 0.04em; color: var(--brand-primary);
+    }
+    .page-header .subtitle {
+      font-size: 13px; color: var(--text-muted); margin-top: 5px; padding-left: 42px;
+    }
+    .filter-box {
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: var(--radius-box); box-shadow: var(--shadow);
+      padding: 12px 20px; margin-bottom: 14px;
+    }
+    .filter-row {
+      display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 10px; width: 100%;
+    }
+    .filter-row + .filter-row { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--card-border); }
+    .pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 14px; border-radius: var(--radius-pill);
+      border: 1px solid var(--card-border); background: var(--input-bg);
+      font-size: 13px; font-weight: 500; color: var(--text); cursor: pointer;
+    }
+    .pill.active {
+      border-color: color-mix(in srgb, var(--brand-primary) 35%, transparent);
+      background: color-mix(in srgb, var(--brand-primary) 15%, transparent);
+      color: var(--brand-primary); font-weight: 600;
+    }
+    .tab-btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 18px; min-height: 44px; border-radius: var(--radius-tab);
+      border: 1px solid var(--card-border); background: var(--input-bg);
+      font-size: 13px; font-weight: 500; color: var(--text-muted); cursor: pointer;
+    }
+    .tab-btn.active {
+      border-color: color-mix(in srgb, var(--brand-secondary) 35%, transparent);
+      background: color-mix(in srgb, var(--brand-secondary) 15%, transparent);
+      color: var(--brand-secondary); font-weight: 700;
+    }
+    .content-box {
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: var(--radius-box); box-shadow: var(--shadow);
+      padding: 20px; margin-bottom: 14px;
+    }
+    .section-title {
+      font-size: 14px; font-weight: 800; text-transform: uppercase;
+      letter-spacing: 0.06em; color: var(--brand-primary); margin-bottom: 14px;
+    }
+    .section-title .sub {
+      font-size: 11px; font-weight: 400; color: var(--text-muted);
+      text-transform: none; letter-spacing: 0;
+    }
+    .section-title .sub::before { content: " — "; font-size: 12px; }
+    .section-head {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      gap: 12px; flex-wrap: wrap; margin-bottom: 14px;
+    }
+    .section-head .section-title { margin-bottom: 0; }
+    .hint-box {
+      background: color-mix(in srgb, var(--brand-primary) 8%, var(--card-bg));
+      border: 1px dashed color-mix(in srgb, var(--brand-primary) 30%, transparent);
+      border-radius: 10px; padding: 12px 16px; font-size: 12px;
+      color: var(--text-muted); margin-bottom: 14px;
+    }
+    .hint-box strong { color: var(--brand-primary); }
+    .kpi-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 14px; }
+    @media (max-width: 900px) { .kpi-grid-3 { grid-template-columns: 1fr; } }
+    .kpi-card {
+      border-radius: var(--radius-box); border: 1px solid var(--card-border);
+      background: var(--card-bg); overflow: hidden;
+    }
+    .kpi-card .bar { height: 3px; }
+    .kpi-card .body { padding: 14px 16px; }
+    .kpi-label {
+      font-size: 10px; font-weight: 600; letter-spacing: 0.07em;
+      text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px;
+    }
+    .kpi-value { font-size: 22px; font-weight: 800; line-height: 1.1; }
+    .kpi-vs { font-size: 11px; color: var(--text-muted); margin-top: 6px; }
+    .table-wrap {
+      overflow-x: auto; border-radius: var(--radius-box); border: 1px solid var(--card-border);
+    }
+    table { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 720px; font-size: 13px; }
+    caption { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
+    thead th {
+      background: color-mix(in srgb, var(--card-bg) 86%, var(--brand-primary) 14%);
+      font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+      padding: 10px 12px; text-align: center; color: var(--text-muted);
+      border-bottom: 1px solid var(--card-border); white-space: nowrap;
+    }
+    thead th:first-child, tbody td:first-child { text-align: left; }
+    tbody td {
+      padding: 10px 12px; text-align: center;
+      border-bottom: 1px solid var(--card-border);
+    }
+    tbody tr:nth-child(even) { background: var(--input-bg); }
+    tbody tr:hover { background: color-mix(in srgb, var(--brand-primary) 5%, var(--input-bg)); }
+    .badge {
+      display: inline-flex; align-items: center; font-size: 10px; font-weight: 700;
+      padding: 3px 9px; border-radius: 20px; white-space: nowrap;
+    }
+    .badge-ok { background: #22c55e22; color: #22c55e; border: 1px solid #22c55e44; }
+    .badge-warn { background: #f59e0b22; color: #f59e0b; border: 1px solid #f59e0b44; }
+    .badge-muted { background: #6b728022; color: #6b7280; border: 1px solid #6b728044; }
+    .badge-info { background: #1e36f822; color: #1e36f8; border: 1px solid #1e36f844; }
+    .tipo-tag {
+      display: inline-flex; align-items: center;
+      font-size: 10px; font-weight: 700; padding: 3px 9px; border-radius: 20px;
+      background: #6b728018; color: #6b7280; border: 1px solid #6b728033;
+      text-transform: uppercase; letter-spacing: 0.04em; vertical-align: middle;
+    }
+    .btn-icon {
+      width: 28px; height: 28px; border-radius: 8px;
+      border: 1px solid var(--card-border); background: var(--input-bg);
+      display: inline-flex; align-items: center; justify-content: center;
+      cursor: pointer; color: var(--text-muted); margin: 0 2px;
+    }
+    .btn-icon:hover { color: var(--brand-primary); border-color: color-mix(in srgb, var(--brand-primary) 30%, transparent); }
+    .btn-icon.danger {
+      color: #f87171;
+      border-color: #fecaca;
+      background: #fff5f5;
+    }
+    .btn-icon.danger:hover { color: #ef4444; border-color: #f87171; background: #fee2e2; }
+    .cta {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 10px 20px; border-radius: 10px; border: none;
+      background: linear-gradient(135deg, #4a2082, #1e36f8);
+      color: #fff; font-size: 13px; font-weight: 700; font-family: var(--font); cursor: pointer;
+    }
+    .panel { display: none; }
+    .panel.active { display: block; }
+    .crono-view { display: none; }
+    .crono-view.active { display: block; }
+
+    /* Timeline visual */
+    .timeline {
+      display: flex; flex-direction: column; gap: 0; position: relative;
+    }
+    .timeline-step {
+      display: grid; grid-template-columns: 36px 1fr; gap: 14px; align-items: stretch;
+    }
+    .timeline-rail {
+      display: flex; flex-direction: column; align-items: center;
+    }
+    .timeline-dot {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: color-mix(in srgb, var(--brand-primary) 12%, #fff);
+      border: 2px solid var(--brand-primary);
+      color: var(--brand-primary); font-size: 12px; font-weight: 800;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .timeline-line {
+      width: 2px; flex: 1; min-height: 16px;
+      background: color-mix(in srgb, var(--brand-primary) 25%, var(--card-border));
+    }
+    .timeline-card {
+      border: 1px solid var(--card-border); border-radius: 12px;
+      background: var(--input-bg); padding: 14px 16px; margin-bottom: 12px;
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+    }
+    .timeline-card h3 { font-size: 14px; font-weight: 700; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .timeline-meta { font-size: 12px; color: var(--text-muted); display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .timeline-actions { display: flex; align-items: center; flex-shrink: 0; }
+
+    .barra-pesquisa { position: relative; width: 100%; max-width: 320px; }
+    .barra-pesquisa .search-icon {
+      position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+      color: var(--text-muted); pointer-events: none;
+    }
+    .barra-pesquisa input {
+      width: 100%; padding: 10px 14px 10px 38px; border-radius: 12px;
+      border: 1px solid var(--card-border); background: var(--input-bg);
+      font-family: var(--font); font-size: 13px; color: var(--text); outline: none;
+    }
+    .toolbar-row {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; flex-wrap: wrap; margin-bottom: 14px;
+    }
+
+    .modal-overlay {
+      display: none; position: fixed; inset: 0; z-index: 1000;
+      background: rgba(15, 15, 26, 0.65); padding: 24px 16px;
+      align-items: center; justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-panel {
+      width: min(860px, 100%); max-height: 90dvh;
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: 14px; box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+      display: flex; flex-direction: column; overflow: hidden;
+    }
+    .modal-panel.wide { width: min(960px, 100%); }
+    .modal-header { padding: 18px 20px 12px; border-bottom: 1px solid var(--card-border); position: relative; }
+    .modal-header h2 {
+      font-size: 16px; font-weight: 800; color: var(--brand-primary);
+      text-transform: uppercase; letter-spacing: 0.04em; padding-right: 36px;
+    }
+    .modal-header .modal-sub { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+    .modal-close {
+      position: absolute; top: 16px; right: 16px; width: 32px; height: 32px;
+      border-radius: 8px; border: 1px solid var(--card-border); background: var(--input-bg);
+      cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text-muted);
+    }
+    .modal-body { padding: 16px 20px; overflow-y: auto; flex: 1; }
+    .modal-footer {
+      padding: 14px 20px; border-top: 1px solid var(--card-border);
+      display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap;
+    }
+    .field { margin-bottom: 14px; }
+    .field label { display: block; font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; }
+    .field select, .field input[type="text"], .field input[type="number"], .field textarea {
+      width: 100%; font-family: var(--font); font-size: 13px; padding: 10px 12px;
+      border-radius: 10px; border: 1px solid var(--card-border); background: var(--input-bg); color: var(--text);
+    }
+    .field textarea { min-height: 72px; resize: vertical; }
+    .field-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 640px) { .field-grid-2 { grid-template-columns: 1fr; } }
+    .campo-obrigatorio { color: #e84025; font-weight: 700; margin-left: 2px; }
+    .btn-modal {
+      padding: 10px 18px; border-radius: 10px; font-size: 13px; font-weight: 700;
+      font-family: var(--font); cursor: pointer; border: 1px solid var(--card-border);
+      background: var(--input-bg); color: var(--text);
+    }
+    .btn-modal.primary {
+      background: linear-gradient(135deg, #4a2082, #1e36f8); color: #fff; border: none;
+    }
+    .btn-modal.danger {
+      background: #fff5f5; color: #ef4444; border-color: #fecaca;
+    }
+    .modal-panel.narrow { width: min(480px, 100%); }
+    .modal-footer.split { justify-content: space-between; }
+    .modal-footer-msg { font-size: 12px; color: #e84025; font-weight: 600; flex: 1; min-height: 18px; }
+    .modal-footer-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+    .field[aria-readonly] input,
+    .field[aria-readonly] select,
+    .field[aria-readonly] textarea,
+    .leitura { pointer-events: none; opacity: 0.92; }
+    .opcao input[type="text"] {
+      flex: 1; font-family: var(--font); font-size: 13px; padding: 8px 10px;
+      border-radius: 8px; border: 1px solid var(--card-border); background: #fff; color: var(--text);
+    }
+    .questao-enunciado { margin-bottom: 10px; }
+    .questao-enunciado input[type="text"] {
+      width: 100%; font-family: var(--font); font-size: 13px; padding: 10px 12px;
+      border-radius: 10px; border: 1px solid var(--card-border); background: #fff; color: var(--text);
+    }
+    .badge-rascunho { background: #f59e0b22; color: #d97706; border: 1px solid #f59e0b44; }
+    .badge-arquivado { background: #6b728022; color: #6b7280; border: 1px solid #6b728044; }
+    .badge-negativo { background: #e840251a; color: #e84025; border: 1px solid #e8402544; }
+    .presenca-grid { display: grid; grid-template-columns: minmax(160px, 1fr) repeat(var(--dias, 5), 34px); gap: 6px; align-items: center; }
+    .presenca-grid .cab { font-size: 10px; font-weight: 700; text-align: center; color: var(--text-muted); }
+    .presenca-check {
+      width: 26px; height: 26px; border-radius: 7px; border: 1px solid var(--card-border);
+      background: var(--input-bg); cursor: pointer; font-size: 12px; font-weight: 800;
+      display: flex; align-items: center; justify-content: center; color: var(--text-muted);
+      margin: 0 auto;
+    }
+    .presenca-check.presente { background: #22c55e22; border-color: #22c55e66; color: #16a34a; }
+    .presenca-check.falta { background: #e840251a; border-color: #e8402566; color: #e84025; }
+    .turma-nome-wrap { display: flex; flex-direction: column; }
+    .turma-nome-wrap .cod { font-size: 11px; color: var(--text-muted); }
+    .roster-item {
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      padding: 10px 0; border-bottom: 1px solid var(--card-border); font-size: 13px;
+    }
+    .roster-item:last-child { border-bottom: none; }
+    .roster-item .nome { font-weight: 600; }
+    .upload-fake {
+      border: 1px dashed var(--card-border); border-radius: 10px; padding: 16px;
+      text-align: center; font-size: 13px; color: var(--text-muted); background: var(--input-bg);
+    }
+    .upload-fake button {
+      margin-top: 8px; font-family: var(--font); font-size: 12px; font-weight: 700;
+      padding: 8px 14px; border-radius: 8px; border: 1px solid var(--card-border);
+      background: #fff; cursor: pointer;
+    }
+    .questao {
+      border: 1px solid var(--card-border); border-radius: 12px;
+      padding: 14px; margin-bottom: 12px; background: var(--input-bg);
+    }
+    .questao-head {
+      display: flex; justify-content: space-between; align-items: center;
+      gap: 8px; margin-bottom: 10px;
+    }
+    .questao-head strong { font-size: 13px; }
+    .opcao {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 13px;
+    }
+    .opcao input[type="radio"] { accent-color: var(--brand-primary); }
+    .opcao.correta { color: #16a34a; font-weight: 600; }
+    .paginacao {
+      display: flex; justify-content: flex-end; align-items: center;
+      gap: 8px; margin-top: 12px; font-size: 12px; color: var(--text-muted);
+    }
+    .empty { text-align: center; padding: 28px 12px; color: var(--text-muted); font-size: 13px; }
+  </style>
+</head>
+<body>
+
+<div class="mockup-bar">
+  <strong>MOCKUP v3</strong> Academy → Gestão de Treinamento (Formação Interna)
+  <span style="opacity:0.4">|</span>
+  <span>1 de 4 páginas da Academy · currículo (Cronogramas/Trilhas) + operação de turma (Turmas) · prestador vê só a agenda da própria turma em "Meu Onboarding"</span>
+  <span style="opacity:0.4">|</span>
+  <button class="active" id="btnTabCrono" type="button" onclick="setTab('cronogramas')">Cronogramas</button>
+  <button id="btnTabTurmas" type="button" onclick="setTab('turmas')">Turmas</button>
+  <button id="btnTabTrilhas" type="button" onclick="setTab('trilhas')">Trilhas</button>
+  <button id="btnTabMat" type="button" onclick="setTab('materiais')">Materiais</button>
+  <button id="btnTabProvas" type="button" onclick="setTab('provas')">Provas</button>
+</div>
+
+<div class="page-shell">
+  <header class="page-header">
+    <div class="page-header-row">
+      <div class="page-icon" aria-hidden="true">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 1.7 3.3 3 6 3s6-1.3 6-3v-5"/></svg>
+      </div>
+      <h1>Gestão de Treinamento</h1>
+    </div>
+    <p class="subtitle">Monte as trilhas, os materiais das aulas e as provas dos cronogramas de entrada e atualização.</p>
+  </header>
+
+  <div class="filter-box">
+    <div class="filter-row" role="tablist" aria-label="Abas de Gestão de Treinamento">
+      <button type="button" class="tab-btn active" id="tabCrono" role="tab" aria-selected="true" onclick="setTab('cronogramas')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h10M4 18h7"/></svg>
+        Cronogramas
+      </button>
+      <button type="button" class="tab-btn" id="tabTurmas" role="tab" aria-selected="false" onclick="setTab('turmas')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="m9 16 2 2 4-4"/></svg>
+        Turmas
+      </button>
+      <button type="button" class="tab-btn" id="tabTrilhas" role="tab" aria-selected="false" onclick="setTab('trilhas')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        Trilhas
+      </button>
+      <button type="button" class="tab-btn" id="tabMat" role="tab" aria-selected="false" onclick="setTab('materiais')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+        Materiais
+      </button>
+      <button type="button" class="tab-btn" id="tabProvas" role="tab" aria-selected="false" onclick="setTab('provas')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        Provas
+      </button>
+    </div>
+    <div class="filter-row" id="filtroCronoPills">
+      <button type="button" class="pill active" id="pillGp" onclick="setCrono('gp')">Game Presenter</button>
+      <button type="button" class="pill" id="pillSh" onclick="setCrono('shuffler')">Shuffler</button>
+      <button type="button" class="pill" id="pillAt" onclick="setCrono('atualizacao')">Atualização</button>
+    </div>
+  </div>
+
+  <!-- ═══ ABA CRONOGRAMAS ═══ -->
+  <div id="panel-cronogramas" class="panel active">
+    <div class="kpi-grid-3">
+      <div class="kpi-card">
+        <div class="bar" style="background:#7c3aed"></div>
+        <div class="body">
+          <div class="kpi-label">Trilhas neste cronograma</div>
+          <div class="kpi-value" id="kpiTrilhas">8</div>
+          <div class="kpi-vs">Módulos reutilizáveis na ordem do onboarding</div>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="bar" style="background:#1e36f8"></div>
+        <div class="body">
+          <div class="kpi-label">Provas ligadas</div>
+          <div class="kpi-value" id="kpiProvas">8</div>
+          <div class="kpi-vs">Múltipla escolha — nota automática</div>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="bar" style="background:#22c55e"></div>
+        <div class="body">
+          <div class="kpi-label">Duração prevista</div>
+          <div class="kpi-value" id="kpiDias">15 dias</div>
+          <div class="kpi-vs">Referência do currículo — datas reais ficam na turma</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-box">
+      <div class="section-head">
+        <h2 class="section-title">Ordem das trilhas <span class="sub" id="cronoSub">Onboarding de Game Presenter</span></h2>
+        <button type="button" class="cta" onclick="abrirModalInserirTrilha()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+          Incluir trilha
+        </button>
+      </div>
+      <div class="hint-box">
+        O cronograma é o <strong>currículo</strong> do onboarding — sem datas. Uma sequência de trilhas já cadastradas.
+        Cada trilha pode ser usada sozinha depois (retreinamento). Datas, instrutor e presença ficam na aba <strong>Turmas</strong>, aqui do lado.
+        A liberação para Live continua com o instrutor — a nota da prova não libera sozinha.
+      </div>
+
+      <div id="crono-gp" class="crono-view active">
+        <div class="timeline">
+          <div class="timeline-step">
+            <div class="timeline-rail"><div class="timeline-dot">1</div><div class="timeline-line"></div></div>
+            <article class="timeline-card">
+              <div>
+                <h3>Onboarding Spin <span class="tipo-tag">Institucional</span></h3>
+                <div class="timeline-meta">
+                  <span>Dia 1</span>
+                  <span class="badge badge-ok">2 materiais</span>
+                  <span class="badge badge-info">sem prova</span>
+                </div>
+              </div>
+              <div class="timeline-actions">
+                <button class="btn-icon" title="Subir" aria-label="Subir Onboarding Spin" disabled>↑</button>
+                <button class="btn-icon" title="Descer" aria-label="Descer Onboarding Spin">↓</button>
+                <button class="btn-icon danger" title="Remover do cronograma" aria-label="Remover Onboarding Spin">✕</button>
+              </div>
+            </article>
+          </div>
+          <div class="timeline-step">
+            <div class="timeline-rail"><div class="timeline-dot">2</div><div class="timeline-line"></div></div>
+            <article class="timeline-card">
+              <div>
+                <h3>Imagem e postura <span class="tipo-tag">Institucional</span></h3>
+                <div class="timeline-meta">
+                  <span>Dia 1</span>
+                  <span class="badge badge-ok">1 material</span>
+                  <span class="badge badge-info">sem prova</span>
+                </div>
+              </div>
+              <div class="timeline-actions">
+                <button class="btn-icon" title="Subir">↑</button>
+                <button class="btn-icon" title="Descer">↓</button>
+                <button class="btn-icon danger" title="Remover do cronograma">✕</button>
+              </div>
+            </article>
+          </div>
+          <div class="timeline-step">
+            <div class="timeline-rail"><div class="timeline-dot">3</div><div class="timeline-line"></div></div>
+            <article class="timeline-card">
+              <div>
+                <h3>Blackjack <span class="tipo-tag">Jogo</span></h3>
+                <div class="timeline-meta">
+                  <span>Dias 1 a 5</span>
+                  <span class="badge badge-ok">4 materiais</span>
+                  <span class="badge badge-warn">4 provas</span>
+                </div>
+              </div>
+              <div class="timeline-actions">
+                <button class="btn-icon" title="Subir">↑</button>
+                <button class="btn-icon" title="Descer">↓</button>
+                <button class="btn-icon danger" title="Remover do cronograma">✕</button>
+              </div>
+            </article>
+          </div>
+          <div class="timeline-step">
+            <div class="timeline-rail"><div class="timeline-dot">4</div><div class="timeline-line"></div></div>
+            <article class="timeline-card">
+              <div>
+                <h3>Procedimentos do Sistema <span class="tipo-tag">Operação</span></h3>
+                <div class="timeline-meta">
+                  <span>Dia 5</span>
+                  <span class="badge badge-ok">1 material</span>
+                  <span class="badge badge-warn">1 prova</span>
+                </div>
+              </div>
+              <div class="timeline-actions">
+                <button class="btn-icon" title="Subir">↑</button>
+                <button class="btn-icon" title="Descer">↓</button>
+                <button class="btn-icon danger" title="Remover do cronograma">✕</button>
+              </div>
+            </article>
+          </div>
+          <div class="timeline-step">
+            <div class="timeline-rail"><div class="timeline-dot">5</div><div class="timeline-line"></div></div>
+            <article class="timeline-card">
+              <div>
+                <h3>Roleta <span class="tipo-tag">Jogo</span></h3>
+                <div class="timeline-meta">
+                  <span>Dias 5 a 7</span>
+                  <span class="badge badge-ok">3 materiais</span>
+                  <span class="badge badge-warn">1 prova</span>
+                </div>
+              </div>
+              <div class="timeline-actions">
+                <button class="btn-icon" title="Subir">↑</button>
+                <button class="btn-icon" title="Descer">↓</button>
+                <button class="btn-icon danger" title="Remover do cronograma">✕</button>
+              </div>
+            </article>
+          </div>
+          <div class="timeline-step">
+            <div class="timeline-rail"><div class="timeline-dot">6</div><div class="timeline-line"></div></div>
+            <article class="timeline-card">
+              <div>
+                <h3>Baccarat <span class="tipo-tag">Jogo</span></h3>
+                <div class="timeline-meta">
+                  <span>Dias 8 e 9</span>
+                  <span class="badge badge-ok">3 materiais</span>
+                  <span class="badge badge-warn">1 prova</span>
+                </div>
+              </div>
+              <div class="timeline-actions">
+                <button class="btn-icon" title="Subir">↑</button>
+                <button class="btn-icon" title="Descer">↓</button>
+                <button class="btn-icon danger" title="Remover do cronograma">✕</button>
+              </div>
+            </article>
+          </div>
+          <div class="timeline-step">
+            <div class="timeline-rail"><div class="timeline-dot">7</div><div class="timeline-line"></div></div>
+            <article class="timeline-card">
+              <div>
+                <h3>Futebol Studio <span class="tipo-tag">Jogo</span></h3>
+                <div class="timeline-meta">
+                  <span>Dias 11 e 12</span>
+                  <span class="badge badge-ok">2 materiais</span>
+                  <span class="badge badge-warn">1 prova</span>
+                </div>
+              </div>
+              <div class="timeline-actions">
+                <button class="btn-icon" title="Subir">↑</button>
+                <button class="btn-icon" title="Descer">↓</button>
+                <button class="btn-icon danger" title="Remover do cronograma">✕</button>
+              </div>
+            </article>
+          </div>
+          <div class="timeline-step">
+            <div class="timeline-rail"><div class="timeline-dot">8</div></div>
+            <article class="timeline-card">
+              <div>
+                <h3>Prática e rotação <span class="tipo-tag">Prática</span></h3>
+                <div class="timeline-meta">
+                  <span>Dias 7, 10, 13 a 15</span>
+                  <span class="badge badge-ok">1 material</span>
+                  <span class="badge badge-info">sem prova</span>
+                </div>
+              </div>
+              <div class="timeline-actions">
+                <button class="btn-icon" title="Subir">↑</button>
+                <button class="btn-icon" title="Descer" disabled>↓</button>
+                <button class="btn-icon danger" title="Remover do cronograma">✕</button>
+              </div>
+            </article>
+          </div>
+        </div>
+      </div>
+
+      <div id="crono-shuffler" class="crono-view">
+        <div class="timeline">
+          <div class="timeline-step">
+            <div class="timeline-rail"><div class="timeline-dot">1</div><div class="timeline-line"></div></div>
+            <article class="timeline-card">
+              <div>
+                <h3>Onboarding Spin <span class="tipo-tag">Institucional</span></h3>
+                <div class="timeline-meta"><span>Dia 1</span><span class="badge badge-ok">2 materiais</span><span class="badge badge-info">sem prova</span></div>
+              </div>
+              <div class="timeline-actions">
+                <button class="btn-icon" disabled>↑</button><button class="btn-icon">↓</button>
+                <button class="btn-icon danger" title="Remover do cronograma">✕</button>
+              </div>
+            </article>
+          </div>
+          <div class="timeline-step">
+            <div class="timeline-rail"><div class="timeline-dot">2</div><div class="timeline-line"></div></div>
+            <article class="timeline-card">
+              <div>
+                <h3>Imagem e postura <span class="tipo-tag">Institucional</span></h3>
+                <div class="timeline-meta"><span>Dia 1</span><span class="badge badge-ok">1 material</span><span class="badge badge-info">sem prova</span></div>
+              </div>
+              <div class="timeline-actions">
+                <button class="btn-icon">↑</button><button class="btn-icon">↓</button>
+                <button class="btn-icon danger" title="Remover do cronograma">✕</button>
+              </div>
+            </article>
+          </div>
+          <div class="timeline-step">
+            <div class="timeline-rail"><div class="timeline-dot">3</div><div class="timeline-line"></div></div>
+            <article class="timeline-card">
+              <div>
+                <h3>Procedimentos de embaralhamento <span class="tipo-tag">Operação</span></h3>
+                <div class="timeline-meta"><span>Dias 2 a 4</span><span class="badge badge-ok">3 materiais</span><span class="badge badge-warn">1 prova</span></div>
+              </div>
+              <div class="timeline-actions">
+                <button class="btn-icon">↑</button><button class="btn-icon">↓</button>
+                <button class="btn-icon danger" title="Remover do cronograma">✕</button>
+              </div>
+            </article>
+          </div>
+          <div class="timeline-step">
+            <div class="timeline-rail"><div class="timeline-dot">4</div><div class="timeline-line"></div></div>
+            <article class="timeline-card">
+              <div>
+                <h3>Incidentes no shoe <span class="tipo-tag">Operação</span></h3>
+                <div class="timeline-meta"><span>Dia 5</span><span class="badge badge-ok">1 material</span><span class="badge badge-warn">1 prova</span></div>
+              </div>
+              <div class="timeline-actions">
+                <button class="btn-icon">↑</button><button class="btn-icon">↓</button>
+                <button class="btn-icon danger" title="Remover do cronograma">✕</button>
+              </div>
+            </article>
+          </div>
+          <div class="timeline-step">
+            <div class="timeline-rail"><div class="timeline-dot">5</div></div>
+            <article class="timeline-card">
+              <div>
+                <h3>Prática e liberação <span class="tipo-tag">Prática</span></h3>
+                <div class="timeline-meta"><span>Dia 6</span><span class="badge badge-info">sem prova</span></div>
+              </div>
+              <div class="timeline-actions">
+                <button class="btn-icon">↑</button><button class="btn-icon" disabled>↓</button>
+                <button class="btn-icon danger" title="Remover do cronograma">✕</button>
+              </div>
+            </article>
+          </div>
+        </div>
+      </div>
+
+      <div id="crono-atualizacao" class="crono-view">
+        <div class="timeline">
+          <div class="timeline-step">
+            <div class="timeline-rail"><div class="timeline-dot">1</div><div class="timeline-line"></div></div>
+            <article class="timeline-card">
+              <div>
+                <h3>Imagem e postura <span class="tipo-tag">Institucional</span></h3>
+                <div class="timeline-meta"><span class="badge badge-muted">pula Onboarding Spin</span><span class="badge badge-ok">1 material</span></div>
+              </div>
+              <div class="timeline-actions">
+                <button class="btn-icon" disabled>↑</button><button class="btn-icon">↓</button>
+                <button class="btn-icon danger" title="Remover do cronograma">✕</button>
+              </div>
+            </article>
+          </div>
+          <div class="timeline-step">
+            <div class="timeline-rail"><div class="timeline-dot">2</div><div class="timeline-line"></div></div>
+            <article class="timeline-card">
+              <div>
+                <h3>Blackjack <span class="tipo-tag">Jogo</span></h3>
+                <div class="timeline-meta"><span class="badge badge-ok">4 materiais</span><span class="badge badge-warn">4 provas</span></div>
+              </div>
+              <div class="timeline-actions">
+                <button class="btn-icon">↑</button><button class="btn-icon">↓</button>
+                <button class="btn-icon danger" title="Remover do cronograma">✕</button>
+              </div>
+            </article>
+          </div>
+          <div class="timeline-step">
+            <div class="timeline-rail"><div class="timeline-dot">3</div><div class="timeline-line"></div></div>
+            <article class="timeline-card">
+              <div>
+                <h3>Procedimentos do Sistema <span class="tipo-tag">Operação</span></h3>
+                <div class="timeline-meta"><span class="badge badge-ok">1 material</span><span class="badge badge-warn">1 prova</span></div>
+              </div>
+              <div class="timeline-actions">
+                <button class="btn-icon">↑</button><button class="btn-icon">↓</button>
+                <button class="btn-icon danger" title="Remover do cronograma">✕</button>
+              </div>
+            </article>
+          </div>
+          <div class="timeline-step">
+            <div class="timeline-rail"><div class="timeline-dot">4</div><div class="timeline-line"></div></div>
+            <article class="timeline-card">
+              <div>
+                <h3>Roleta <span class="tipo-tag">Jogo</span></h3>
+                <div class="timeline-meta"><span class="badge badge-ok">3 materiais</span><span class="badge badge-warn">1 prova</span></div>
+              </div>
+              <div class="timeline-actions">
+                <button class="btn-icon">↑</button><button class="btn-icon">↓</button>
+                <button class="btn-icon danger" title="Remover do cronograma">✕</button>
+              </div>
+            </article>
+          </div>
+          <div class="timeline-step">
+            <div class="timeline-rail"><div class="timeline-dot">5</div><div class="timeline-line"></div></div>
+            <article class="timeline-card">
+              <div>
+                <h3>Baccarat <span class="tipo-tag">Jogo</span></h3>
+                <div class="timeline-meta"><span class="badge badge-ok">3 materiais</span><span class="badge badge-warn">1 prova</span></div>
+              </div>
+              <div class="timeline-actions">
+                <button class="btn-icon">↑</button><button class="btn-icon">↓</button>
+                <button class="btn-icon danger" title="Remover do cronograma">✕</button>
+              </div>
+            </article>
+          </div>
+          <div class="timeline-step">
+            <div class="timeline-rail"><div class="timeline-dot">6</div><div class="timeline-line"></div></div>
+            <article class="timeline-card">
+              <div>
+                <h3>Futebol Studio <span class="tipo-tag">Jogo</span></h3>
+                <div class="timeline-meta"><span class="badge badge-ok">2 materiais</span><span class="badge badge-warn">1 prova</span></div>
+              </div>
+              <div class="timeline-actions">
+                <button class="btn-icon">↑</button><button class="btn-icon">↓</button>
+                <button class="btn-icon danger" title="Remover do cronograma">✕</button>
+              </div>
+            </article>
+          </div>
+          <div class="timeline-step">
+            <div class="timeline-rail"><div class="timeline-dot">7</div></div>
+            <article class="timeline-card">
+              <div>
+                <h3>Prática e rotação <span class="tipo-tag">Prática</span></h3>
+                <div class="timeline-meta"><span class="badge badge-info">sem prova</span></div>
+              </div>
+              <div class="timeline-actions">
+                <button class="btn-icon">↑</button><button class="btn-icon" disabled>↓</button>
+                <button class="btn-icon danger" title="Remover do cronograma">✕</button>
+              </div>
+            </article>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ ABA TURMAS ═══ -->
+  <div id="panel-turmas" class="panel">
+    <div class="hint-box">
+      Turma é a <strong>instância real</strong> de um Cronograma: data de início, instrutor responsável e a lista de prestadores matriculados.
+      Presença é marcada pelo instrutor, dia a dia. A liberação para Live é uma ação manual do instrutor dentro da turma — a prova aprovada não libera sozinha.
+    </div>
+    <div class="kpi-grid-3">
+      <div class="kpi-card">
+        <div class="bar" style="background:#22c55e"></div>
+        <div class="body">
+          <div class="kpi-label">Turmas em andamento</div>
+          <div class="kpi-value">2</div>
+          <div class="kpi-vs">27 prestadores em formação</div>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="bar" style="background:#1e36f8"></div>
+        <div class="body">
+          <div class="kpi-label">Próxima turma</div>
+          <div class="kpi-value">06/10</div>
+          <div class="kpi-vs">Onboarding Shuffler · Turma SH-08</div>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="bar" style="background:#7c3aed"></div>
+        <div class="body">
+          <div class="kpi-label">Presença média</div>
+          <div class="kpi-value">94%</div>
+          <div class="kpi-vs">Últimas 4 turmas concluídas</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-box">
+      <div class="section-head">
+        <h2 class="section-title">Turmas <span class="sub">cada turma roda um Cronograma, com instrutor e datas reais</span></h2>
+        <button type="button" class="cta" onclick="abrirModalNovaTurma()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+          Nova turma
+        </button>
+      </div>
+      <div class="filter-row" style="justify-content:flex-start;margin-bottom:14px">
+        <button type="button" class="pill active">Todas</button>
+        <button type="button" class="pill">Agendadas</button>
+        <button type="button" class="pill">Em andamento</button>
+        <button type="button" class="pill">Concluídas</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <caption>Turmas de formação interna</caption>
+          <thead>
+            <tr>
+              <th scope="col">Turma</th>
+              <th scope="col">Cronograma-base</th>
+              <th scope="col">Instrutor</th>
+              <th scope="col">Início</th>
+              <th scope="col">Prestadores</th>
+              <th scope="col">Progresso</th>
+              <th scope="col">Status</th>
+              <th scope="col">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <div class="turma-nome-wrap"><span>Onboarding GP — Outubro</span><span class="cod">GP-14</span></div>
+              </td>
+              <td>Onboarding de Game Presenter</td>
+              <td>Juliana Mendes</td>
+              <td>18/09/2026</td>
+              <td>9</td>
+              <td>Dia 6 de 15</td>
+              <td><span class="badge badge-ok">Em andamento</span></td>
+              <td>
+                <button class="btn-icon" title="Ver turma" onclick="abrirModalVerTurma('gp14')">👁</button>
+                <button class="btn-icon" title="Registrar presença" onclick="abrirModalPresenca('gp14')">✓</button>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <div class="turma-nome-wrap"><span>Atualização — Blackjack/Roleta</span><span class="cod">AT-05</span></div>
+              </td>
+              <td>Atualização Shuffler → Game Presenter</td>
+              <td>Ricardo Nunes</td>
+              <td>15/09/2026</td>
+              <td>4</td>
+              <td>Dia 4 de 7</td>
+              <td><span class="badge badge-ok">Em andamento</span></td>
+              <td>
+                <button class="btn-icon" title="Ver turma" onclick="abrirModalVerTurma('at05')">👁</button>
+                <button class="btn-icon" title="Registrar presença" onclick="abrirModalPresenca('at05')">✓</button>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <div class="turma-nome-wrap"><span>Onboarding Shuffler — Outubro</span><span class="cod">SH-08</span></div>
+              </td>
+              <td>Onboarding de Shuffler</td>
+              <td>Juliana Mendes</td>
+              <td>06/10/2026</td>
+              <td>6</td>
+              <td>Não iniciada</td>
+              <td><span class="badge badge-info">Agendada</span></td>
+              <td>
+                <button class="btn-icon" title="Ver turma" onclick="abrirModalVerTurma('sh08')">👁</button>
+                <button class="btn-icon" title="Editar turma">✎</button>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <div class="turma-nome-wrap"><span>Onboarding GP — Agosto</span><span class="cod">GP-13</span></div>
+              </td>
+              <td>Onboarding de Game Presenter</td>
+              <td>Ricardo Nunes</td>
+              <td>10/08/2026</td>
+              <td>8</td>
+              <td>Concluída · 15 de 15</td>
+              <td><span class="badge badge-muted">Concluída</span></td>
+              <td>
+                <button class="btn-icon" title="Ver turma" onclick="abrirModalVerTurma('gp13')">👁</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="paginacao">1–4 de 4</div>
+    </div>
+  </div>
+
+  <!-- ═══ ABA TRILHAS ═══ -->
+  <div id="panel-trilhas" class="panel">
+    <div class="content-box">
+      <div class="section-head">
+        <h2 class="section-title">Catálogo de trilhas <span class="sub">módulos reutilizáveis no onboarding e no retreinamento</span></h2>
+        <button type="button" class="cta" onclick="abrirModalNovaTrilha()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+          Nova trilha
+        </button>
+      </div>
+      <div class="toolbar-row">
+        <div class="barra-pesquisa">
+          <svg class="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <input type="search" placeholder="Buscar trilha…" aria-label="Buscar trilha" />
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <caption>Trilhas de treinamento</caption>
+          <thead>
+            <tr>
+              <th scope="col">Trilha</th>
+              <th scope="col">Tipo</th>
+              <th scope="col">Usada em</th>
+              <th scope="col">Materiais</th>
+              <th scope="col">Provas</th>
+              <th scope="col">Status</th>
+              <th scope="col">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Onboarding Spin</td>
+              <td>Institucional</td>
+              <td>GP · Shuffler</td>
+              <td>2</td>
+              <td>0</td>
+              <td><span class="badge badge-ok">Publicada</span></td>
+              <td>
+                <button class="btn-icon" title="Ver trilha" onclick="abrirModalTrilha('Onboarding Spin')">👁</button>
+                <button class="btn-icon" title="Editar trilha">✎</button>
+              </td>
+            </tr>
+            <tr>
+              <td>Imagem e postura</td>
+              <td>Institucional</td>
+              <td>GP · Shuffler · Atualização</td>
+              <td>1</td>
+              <td>0</td>
+              <td><span class="badge badge-ok">Publicada</span></td>
+              <td>
+                <button class="btn-icon" title="Ver trilha">👁</button>
+                <button class="btn-icon" title="Editar trilha">✎</button>
+              </td>
+            </tr>
+            <tr>
+              <td>Blackjack</td>
+              <td>Jogo</td>
+              <td>GP · Atualização</td>
+              <td>4</td>
+              <td>4</td>
+              <td><span class="badge badge-ok">Publicada</span></td>
+              <td>
+                <button class="btn-icon" title="Ver trilha" onclick="abrirModalTrilha('Blackjack')">👁</button>
+                <button class="btn-icon" title="Editar trilha">✎</button>
+              </td>
+            </tr>
+            <tr>
+              <td>Procedimentos do Sistema</td>
+              <td>Operação</td>
+              <td>GP · Atualização</td>
+              <td>1</td>
+              <td>1</td>
+              <td><span class="badge badge-ok">Publicada</span></td>
+              <td>
+                <button class="btn-icon" title="Ver trilha">👁</button>
+                <button class="btn-icon" title="Editar trilha">✎</button>
+              </td>
+            </tr>
+            <tr>
+              <td>Roleta</td>
+              <td>Jogo</td>
+              <td>GP · Atualização</td>
+              <td>3</td>
+              <td>1</td>
+              <td><span class="badge badge-warn">A refatorar</span></td>
+              <td>
+                <button class="btn-icon" title="Ver trilha">👁</button>
+                <button class="btn-icon" title="Editar trilha">✎</button>
+              </td>
+            </tr>
+            <tr>
+              <td>Baccarat</td>
+              <td>Jogo</td>
+              <td>GP · Atualização</td>
+              <td>3</td>
+              <td>1</td>
+              <td><span class="badge badge-warn">A refatorar</span></td>
+              <td>
+                <button class="btn-icon" title="Ver trilha">👁</button>
+                <button class="btn-icon" title="Editar trilha">✎</button>
+              </td>
+            </tr>
+            <tr>
+              <td>Futebol Studio</td>
+              <td>Jogo</td>
+              <td>GP · Atualização</td>
+              <td>2</td>
+              <td>1</td>
+              <td><span class="badge badge-warn">A refatorar</span></td>
+              <td>
+                <button class="btn-icon" title="Ver trilha" aria-label="Ver Futebol Studio">👁</button>
+                <button class="btn-icon" title="Editar trilha" aria-label="Editar Futebol Studio">✎</button>
+              </td>
+            </tr>
+            <tr>
+              <td>Prática e rotação</td>
+              <td>Prática</td>
+              <td>GP · Atualização</td>
+              <td>1</td>
+              <td>0</td>
+              <td><span class="badge badge-ok">Publicada</span></td>
+              <td>
+                <button class="btn-icon" title="Ver trilha">👁</button>
+                <button class="btn-icon" title="Editar trilha">✎</button>
+              </td>
+            </tr>
+            <tr>
+              <td>Procedimentos de embaralhamento</td>
+              <td>Operação</td>
+              <td>Shuffler</td>
+              <td>3</td>
+              <td>1</td>
+              <td><span class="badge badge-warn">A refatorar</span></td>
+              <td>
+                <button class="btn-icon" title="Ver trilha">👁</button>
+                <button class="btn-icon" title="Editar trilha">✎</button>
+              </td>
+            </tr>
+            <tr>
+              <td>Incidentes no shoe</td>
+              <td>Operação</td>
+              <td>Shuffler</td>
+              <td>1</td>
+              <td>1</td>
+              <td><span class="badge badge-warn">A refatorar</span></td>
+              <td>
+                <button class="btn-icon" title="Ver trilha">👁</button>
+                <button class="btn-icon" title="Editar trilha">✎</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="paginacao">1–10 de 10</div>
+    </div>
+  </div>
+
+  <!-- ═══ ABA MATERIAIS ═══ -->
+  <div id="panel-materiais" class="panel">
+    <div class="content-box">
+      <div class="section-head">
+        <h2 class="section-title">Materiais das aulas <span class="sub">conteúdo pesado de entrada — não substitui o Portal</span></h2>
+        <button type="button" class="cta" onclick="abrirModalMaterial()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+          Novo material
+        </button>
+      </div>
+      <div class="toolbar-row">
+        <div class="barra-pesquisa">
+          <svg class="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <input type="search" placeholder="Buscar material…" aria-label="Buscar material" />
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <caption>Materiais de aula</caption>
+          <thead>
+            <tr>
+              <th scope="col">Material</th>
+              <th scope="col">Trilha</th>
+              <th scope="col">Tipo</th>
+              <th scope="col">Versão</th>
+              <th scope="col">Atualizado em</th>
+              <th scope="col">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Código de ética, LGPD e compliance</td>
+              <td>Onboarding Spin</td>
+              <td>PDF</td>
+              <td>1.0</td>
+              <td>29/04/2026</td>
+              <td>
+                <button class="btn-icon" title="Baixar">↓</button>
+                <button class="btn-icon" title="Substituir arquivo">↻</button>
+                <button class="btn-icon" title="Editar">✎</button>
+              </td>
+            </tr>
+            <tr>
+              <td>Conhecendo o business Spin</td>
+              <td>Onboarding Spin</td>
+              <td>PDF</td>
+              <td>1.0</td>
+              <td>29/04/2026</td>
+              <td>
+                <button class="btn-icon" title="Baixar">↓</button>
+                <button class="btn-icon" title="Substituir arquivo">↻</button>
+                <button class="btn-icon" title="Editar">✎</button>
+              </td>
+            </tr>
+            <tr>
+              <td>Política de imagem e postura</td>
+              <td>Imagem e postura</td>
+              <td>PDF</td>
+              <td>1.0</td>
+              <td>29/04/2026</td>
+              <td>
+                <button class="btn-icon" title="Baixar">↓</button>
+                <button class="btn-icon" title="Substituir arquivo">↻</button>
+                <button class="btn-icon" title="Editar">✎</button>
+              </td>
+            </tr>
+            <tr>
+              <td>Blackjack — regras e contagem</td>
+              <td>Blackjack</td>
+              <td>PDF</td>
+              <td>1.0</td>
+              <td>29/04/2026</td>
+              <td>
+                <button class="btn-icon" title="Baixar">↓</button>
+                <button class="btn-icon" title="Substituir arquivo">↻</button>
+                <button class="btn-icon" title="Editar">✎</button>
+              </td>
+            </tr>
+            <tr>
+              <td>Blackjack — apostas laterais</td>
+              <td>Blackjack</td>
+              <td>PDF</td>
+              <td>1.0</td>
+              <td>29/04/2026</td>
+              <td>
+                <button class="btn-icon" title="Baixar">↓</button>
+                <button class="btn-icon" title="Substituir arquivo">↻</button>
+                <button class="btn-icon" title="Editar">✎</button>
+              </td>
+            </tr>
+            <tr>
+              <td>Blackjack — software e sabot</td>
+              <td>Blackjack</td>
+              <td>Vídeo</td>
+              <td>1.0</td>
+              <td>29/04/2026</td>
+              <td>
+                <button class="btn-icon" title="Assistir">▶</button>
+                <button class="btn-icon" title="Substituir arquivo">↻</button>
+                <button class="btn-icon" title="Editar">✎</button>
+              </td>
+            </tr>
+            <tr>
+              <td>Incidentes em Blackjack</td>
+              <td>Blackjack</td>
+              <td>PDF</td>
+              <td>1.0</td>
+              <td>29/04/2026</td>
+              <td>
+                <button class="btn-icon" title="Baixar">↓</button>
+                <button class="btn-icon" title="Substituir arquivo">↻</button>
+                <button class="btn-icon" title="Editar">✎</button>
+              </td>
+            </tr>
+            <tr>
+              <td>Botões do sistema e jogo responsável</td>
+              <td>Procedimentos do Sistema</td>
+              <td>PDF</td>
+              <td>1.0</td>
+              <td>29/04/2026</td>
+              <td>
+                <button class="btn-icon" title="Baixar">↓</button>
+                <button class="btn-icon" title="Substituir arquivo">↻</button>
+                <button class="btn-icon" title="Editar">✎</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="paginacao">1–8 de 18 · 20 por página</div>
+    </div>
+  </div>
+
+  <!-- ═══ ABA PROVAS ═══ -->
+  <div id="panel-provas" class="panel">
+    <div class="content-box">
+      <div class="section-head">
+        <h2 class="section-title">Banco de provas <span class="sub">múltipla escolha — o prestador responde em outra página</span></h2>
+        <button type="button" class="cta" onclick="abrirModalNovaProva()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+          Nova prova
+        </button>
+      </div>
+      <div class="hint-box">
+        Nota fecha sozinha (gabarito). <strong>Não</strong> libera o prestador para a mesa.
+        Publicada: só ver ou arquivar. Rascunho e arquivada: ver ou editar.
+      </div>
+      <div class="table-wrap">
+        <table>
+          <caption>Provas de treinamento</caption>
+          <thead>
+            <tr>
+              <th scope="col">Prova</th>
+              <th scope="col">Trilha</th>
+              <th scope="col">Questões</th>
+              <th scope="col">Nota mínima</th>
+              <th scope="col">Status</th>
+              <th scope="col">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyProvas">
+            <tr data-prova="bj-regras" data-status="publicada" data-trilha="Blackjack">
+              <td>Blackjack — regras</td>
+              <td class="cel-trilha">Blackjack</td>
+              <td>10</td>
+              <td>70%</td>
+              <td class="cel-status"><span class="badge badge-ok">Publicada</span></td>
+              <td>
+                <button class="btn-icon" title="Ver prova" aria-label="Ver Blackjack — regras" onclick="abrirModalVerProva('bj-regras')">👁</button>
+                <button class="btn-icon" title="Arquivar prova" aria-label="Arquivar Blackjack — regras" onclick="abrirModalArquivarProva('bj-regras')">▣</button>
+              </td>
+            </tr>
+            <tr data-prova="bj-laterais" data-status="publicada" data-trilha="Blackjack">
+              <td>Blackjack — apostas laterais</td>
+              <td class="cel-trilha">Blackjack</td>
+              <td>10</td>
+              <td>70%</td>
+              <td class="cel-status"><span class="badge badge-ok">Publicada</span></td>
+              <td>
+                <button class="btn-icon" title="Ver prova" onclick="abrirModalVerProva('bj-laterais')">👁</button>
+                <button class="btn-icon" title="Arquivar prova" onclick="abrirModalArquivarProva('bj-laterais')">▣</button>
+              </td>
+            </tr>
+            <tr data-prova="sistema" data-status="publicada" data-trilha="Procedimentos do Sistema">
+              <td>Procedimentos do Sistema</td>
+              <td class="cel-trilha">Procedimentos do Sistema</td>
+              <td>10</td>
+              <td>70%</td>
+              <td class="cel-status"><span class="badge badge-ok">Publicada</span></td>
+              <td>
+                <button class="btn-icon" title="Ver prova" onclick="abrirModalVerProva('sistema')">👁</button>
+                <button class="btn-icon" title="Arquivar prova" onclick="abrirModalArquivarProva('sistema')">▣</button>
+              </td>
+            </tr>
+            <tr data-prova="incidentes" data-status="publicada" data-trilha="Blackjack">
+              <td>Incidentes — Blackjack</td>
+              <td class="cel-trilha">Blackjack</td>
+              <td>10</td>
+              <td>70%</td>
+              <td class="cel-status"><span class="badge badge-ok">Publicada</span></td>
+              <td>
+                <button class="btn-icon" title="Ver prova" onclick="abrirModalVerProva('incidentes')">👁</button>
+                <button class="btn-icon" title="Arquivar prova" onclick="abrirModalArquivarProva('incidentes')">▣</button>
+              </td>
+            </tr>
+            <tr data-prova="roleta" data-status="rascunho" data-trilha="Roleta">
+              <td>Roleta — regras</td>
+              <td class="cel-trilha">Roleta</td>
+              <td>2</td>
+              <td>70%</td>
+              <td class="cel-status"><span class="badge badge-rascunho">Rascunho</span></td>
+              <td>
+                <button class="btn-icon" title="Ver prova" onclick="abrirModalVerProva('roleta')">👁</button>
+                <button class="btn-icon" title="Editar prova" onclick="abrirModalEditarProva('roleta')">✎</button>
+              </td>
+            </tr>
+            <tr data-prova="baccarat" data-status="rascunho" data-trilha="Baccarat">
+              <td>Baccarat — regras</td>
+              <td class="cel-trilha">Baccarat</td>
+              <td>0</td>
+              <td>—</td>
+              <td class="cel-status"><span class="badge badge-rascunho">Rascunho</span></td>
+              <td>
+                <button class="btn-icon" title="Ver prova" onclick="abrirModalVerProva('baccarat')">👁</button>
+                <button class="btn-icon" title="Editar prova" onclick="abrirModalEditarProva('baccarat')">✎</button>
+              </td>
+            </tr>
+            <tr data-prova="bj-vf" data-status="arquivado" data-trilha="">
+              <td>Blackjack — verdadeiro ou falso</td>
+              <td class="cel-trilha">—</td>
+              <td>10</td>
+              <td>70%</td>
+              <td class="cel-status"><span class="badge badge-arquivado">Arquivado</span></td>
+              <td>
+                <button class="btn-icon" title="Ver prova" onclick="abrirModalVerProva('bj-vf')">👁</button>
+                <button class="btn-icon" title="Editar prova" onclick="abrirModalEditarProva('bj-vf')">✎</button>
+              </td>
+            </tr>
+            <tr data-prova="futebol" data-status="arquivado" data-trilha="">
+              <td>Futebol Studio — regras</td>
+              <td class="cel-trilha">—</td>
+              <td>8</td>
+              <td>70%</td>
+              <td class="cel-status"><span class="badge badge-arquivado">Arquivado</span></td>
+              <td>
+                <button class="btn-icon" title="Ver prova" onclick="abrirModalVerProva('futebol')">👁</button>
+                <button class="btn-icon" title="Editar prova" onclick="abrirModalEditarProva('futebol')">✎</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="paginacao">1–8 de 8</div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: ver / editar trilha -->
+<div id="modalTrilha" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalTrilhaTitulo" onclick="if(event.target===this)fecharModais()">
+  <div class="modal-panel">
+    <div class="modal-header">
+      <button type="button" class="modal-close" onclick="fecharModais()" aria-label="Fechar">✕</button>
+      <h2 id="modalTrilhaTitulo">Blackjack</h2>
+      <p class="modal-sub">Trilha reutilizável — materiais e provas desta trilha.</p>
+    </div>
+    <div class="modal-body">
+      <div class="field-grid-2">
+        <div class="field">
+          <label for="trilhaNome">Nome da trilha <span class="campo-obrigatorio">*</span></label>
+          <input id="trilhaNome" type="text" value="Blackjack" />
+        </div>
+        <div class="field">
+          <label for="trilhaTipo">Tipo</label>
+          <select id="trilhaTipo">
+            <option>Institucional</option>
+            <option selected>Jogo</option>
+            <option>Operação</option>
+            <option>Prática</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label for="trilhaDesc">Descrição</label>
+        <textarea id="trilhaDesc">Regras, contagem, apostas laterais, software, sabot, incidentes, roteiro e prática de Blackjack.</textarea>
+      </div>
+      <p class="section-title" style="margin-top:8px">Materiais <span class="sub">4 arquivos</span></p>
+      <ul style="font-size:13px;padding-left:18px;margin-bottom:14px;color:var(--text)">
+        <li>Blackjack — regras e contagem (PDF)</li>
+        <li>Blackjack — apostas laterais (PDF)</li>
+        <li>Blackjack — software e sabot (Vídeo)</li>
+        <li>Incidentes em Blackjack (PDF)</li>
+      </ul>
+      <p class="section-title">Provas <span class="sub">4 publicadas</span></p>
+      <ul style="font-size:13px;padding-left:18px;color:var(--text)">
+        <li>Blackjack — regras (10 questões)</li>
+        <li>Blackjack — apostas laterais (10 questões)</li>
+        <li>Blackjack — verdadeiro ou falso (10 questões)</li>
+        <li>Incidentes — Blackjack (10 questões)</li>
+      </ul>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn-modal" onclick="fecharModais()">Fechar</button>
+      <button type="button" class="btn-modal primary">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: nova trilha -->
+<div id="modalNovaTrilha" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalNovaTrilhaTitulo" onclick="if(event.target===this)fecharModais()">
+  <div class="modal-panel">
+    <div class="modal-header">
+      <button type="button" class="modal-close" onclick="fecharModais()" aria-label="Fechar">✕</button>
+      <h2 id="modalNovaTrilhaTitulo">Nova trilha</h2>
+      <p class="modal-sub">Cria o módulo. Depois você liga materiais, provas e encaixa no cronograma.</p>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label for="novaTrilhaNome">Nome da trilha <span class="campo-obrigatorio">*</span></label>
+        <input id="novaTrilhaNome" type="text" placeholder="Ex.: Roleta — incidentes" />
+      </div>
+      <div class="field">
+        <label for="novaTrilhaTipo">Tipo <span class="campo-obrigatorio">*</span></label>
+        <select id="novaTrilhaTipo" onchange="atualizarCampoJogoNovaTrilha()">
+          <option>Institucional</option>
+          <option>Jogo</option>
+          <option>Operação</option>
+          <option>Prática</option>
+        </select>
+      </div>
+      <div class="field" id="campoNovaTrilhaJogo" hidden>
+        <label for="novaTrilhaJogo">Jogo <span class="campo-obrigatorio">*</span></label>
+        <select id="novaTrilhaJogo">
+          <option>—</option>
+          <option>Blackjack</option>
+          <option>Roleta</option>
+          <option>Baccarat</option>
+          <option>Futebol Brasileiro</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="novaTrilhaDesc">Descrição <span class="campo-obrigatorio">*</span></label>
+        <textarea id="novaTrilhaDesc" placeholder="O que esta trilha cobre." required></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn-modal" onclick="fecharModais()">Cancelar</button>
+      <button type="button" class="btn-modal primary">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: incluir trilha no cronograma -->
+<div id="modalInserir" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalInserirTitulo" onclick="if(event.target===this)fecharModais()">
+  <div class="modal-panel">
+    <div class="modal-header">
+      <button type="button" class="modal-close" onclick="fecharModais()" aria-label="Fechar">✕</button>
+      <h2 id="modalInserirTitulo">Incluir trilha no cronograma</h2>
+      <p class="modal-sub">Escolhe um módulo já cadastrado. Não cria trilha nova.</p>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label for="inserirTrilha">Trilha <span class="campo-obrigatorio">*</span></label>
+        <select id="inserirTrilha">
+          <option>Onboarding Spin</option>
+          <option>Imagem e postura</option>
+          <option selected>Blackjack</option>
+          <option>Procedimentos do Sistema</option>
+          <option>Roleta</option>
+          <option>Baccarat</option>
+          <option>Futebol Studio</option>
+          <option>Prática e rotação</option>
+          <option>Procedimentos de embaralhamento</option>
+          <option>Incidentes no shoe</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="inserirPos">Posição na ordem</label>
+        <select id="inserirPos">
+          <option>No final</option>
+          <option>Após Onboarding Spin</option>
+          <option>Após Imagem e postura</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn-modal" onclick="fecharModais()">Cancelar</button>
+      <button type="button" class="btn-modal primary">Incluir</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: material -->
+<div id="modalMaterial" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalMaterialTitulo" onclick="if(event.target===this)fecharModais()">
+  <div class="modal-panel">
+    <div class="modal-header">
+      <button type="button" class="modal-close" onclick="fecharModais()" aria-label="Fechar">✕</button>
+      <h2 id="modalMaterialTitulo">Novo material</h2>
+      <p class="modal-sub">Arquivo da aula. O prestador lê na turma — não no Portal da Academy.</p>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label for="matTitulo">Título <span class="campo-obrigatorio">*</span></label>
+        <input id="matTitulo" type="text" placeholder="Ex.: Roleta — técnica de giro" />
+      </div>
+      <div class="field-grid-2">
+        <div class="field">
+          <label for="matTrilha">Trilha <span class="campo-obrigatorio">*</span></label>
+          <select id="matTrilha">
+            <option>Onboarding Spin</option>
+            <option>Imagem e postura</option>
+            <option>Blackjack</option>
+            <option>Procedimentos do Sistema</option>
+            <option>Roleta</option>
+            <option>Baccarat</option>
+            <option>Futebol Studio</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="matTipo">Tipo <span class="campo-obrigatorio">*</span></label>
+          <select id="matTipo">
+            <option>PDF</option>
+            <option>Vídeo</option>
+            <option>Apresentação</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label for="matIntro">Introdução <span class="campo-obrigatorio">*</span></label>
+        <textarea id="matIntro" placeholder="Resumo do que o prestador vai estudar neste material." required></textarea>
+      </div>
+      <div class="field">
+        <label>Arquivo <span class="campo-obrigatorio">*</span></label>
+        <div class="upload-fake">
+          Nenhum arquivo selecionado
+          <br />
+          <button type="button">Adicionar arquivo</button>
+          <div class="upload-hint" style="margin-top:8px;font-size:11px">PDF, PPTX, MP4 ou MOV. Mockup — sem upload real.</div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn-modal" onclick="fecharModais()">Cancelar</button>
+      <button type="button" class="btn-modal primary">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Nova / Editar prova -->
+<div id="modalFormProva" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalFormProvaTitulo" onclick="if(event.target===this)fecharModais()">
+  <div class="modal-panel wide">
+    <div class="modal-header">
+      <button type="button" class="modal-close" onclick="fecharModais()" aria-label="Fechar">✕</button>
+      <h2 id="modalFormProvaTitulo">Nova prova</h2>
+      <p class="modal-sub" id="modalFormProvaSub">Múltipla escolha. Publicar exige todos os campos e ao menos uma questão com gabarito.</p>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label for="provaNome">Nome da prova <span class="campo-obrigatorio">*</span></label>
+        <input id="provaNome" type="text" placeholder="Ex.: Roleta — regras" />
+      </div>
+      <div class="field-grid-2">
+        <div class="field">
+          <label for="provaTrilha">Trilha <span class="campo-obrigatorio">*</span></label>
+          <select id="provaTrilha">
+            <option value="">—</option>
+            <option>Onboarding Spin</option>
+            <option>Imagem e postura</option>
+            <option>Blackjack</option>
+            <option>Procedimentos do Sistema</option>
+            <option>Roleta</option>
+            <option>Baccarat</option>
+            <option>Futebol Studio</option>
+            <option>Procedimentos de embaralhamento</option>
+            <option>Incidentes no shoe</option>
+            <option>Prática e rotação</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="provaMin">Nota mínima (%) <span class="campo-obrigatorio">*</span></label>
+          <input id="provaMin" type="number" min="0" max="100" placeholder="Ex.: 70" />
+        </div>
+      </div>
+      <p class="section-title">Questões <span class="sub" id="provaQtdSub">nenhuma ainda</span></p>
+      <div id="provaQuestoes"></div>
+      <button type="button" class="btn-modal" onclick="adicionarQuestao()">+ Nova questão</button>
+    </div>
+    <div class="modal-footer split">
+      <p class="modal-footer-msg" id="provaFormErro" role="alert"></p>
+      <div class="modal-footer-actions">
+        <button type="button" class="btn-modal" onclick="fecharModais()">Cancelar</button>
+        <button type="button" class="btn-modal" onclick="salvarRascunhoProva()">Salvar rascunho</button>
+        <button type="button" class="btn-modal primary" onclick="publicarProva()">Publicar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Ver prova -->
+<div id="modalVerProva" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalVerProvaTitulo" onclick="if(event.target===this)fecharModais()">
+  <div class="modal-panel wide">
+    <div class="modal-header">
+      <button type="button" class="modal-close" onclick="fecharModais()" aria-label="Fechar">✕</button>
+      <h2 id="modalVerProvaTitulo">Blackjack — regras</h2>
+      <p class="modal-sub">Somente leitura.</p>
+    </div>
+    <div class="modal-body">
+      <div class="field-grid-2">
+        <div class="field" aria-readonly="true">
+          <label>Nome da prova</label>
+          <input type="text" id="verProvaNome" value="Blackjack — regras" readonly />
+        </div>
+        <div class="field" aria-readonly="true">
+          <label>Trilha</label>
+          <input type="text" id="verProvaTrilha" value="Blackjack" readonly />
+        </div>
+      </div>
+      <div class="field-grid-2">
+        <div class="field" aria-readonly="true">
+          <label>Nota mínima</label>
+          <input type="text" id="verProvaMin" value="70%" readonly />
+        </div>
+        <div class="field" aria-readonly="true">
+          <label>Status</label>
+          <input type="text" id="verProvaStatus" value="Publicada" readonly />
+        </div>
+      </div>
+      <p class="section-title">Questões</p>
+      <div id="verProvaQuestoes">
+        <div class="questao leitura">
+          <div class="questao-head"><strong>1. Qual é o valor do Ás?</strong></div>
+          <label class="opcao">A. 1</label>
+          <label class="opcao">B. 10</label>
+          <label class="opcao correta">C. 1 ou 11 (correta)</label>
+          <label class="opcao">D. 11</label>
+        </div>
+        <div class="questao leitura">
+          <div class="questao-head"><strong>2. Quantas cartas são distribuídas inicialmente para cada jogador?</strong></div>
+          <label class="opcao">A. 3</label>
+          <label class="opcao">B. 4</label>
+          <label class="opcao correta">C. 2 (correta)</label>
+          <label class="opcao">D. 1</label>
+        </div>
+        <div class="questao leitura">
+          <div class="questao-head"><strong>3. O que significa “hit” no Blackjack?</strong></div>
+          <label class="opcao correta">A. Pedir outra carta (correta)</label>
+          <label class="opcao">B. Ficar com as cartas atuais</label>
+          <label class="opcao">C. Dobrar a aposta</label>
+          <label class="opcao">D. Dividir a aposta</label>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn-modal" onclick="fecharModais()">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Arquivar prova -->
+<div id="modalArquivarProva" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalArquivarTitulo" onclick="if(event.target===this)fecharModais()">
+  <div class="modal-panel narrow">
+    <div class="modal-header">
+      <button type="button" class="modal-close" onclick="fecharModais()" aria-label="Fechar">✕</button>
+      <h2 id="modalArquivarTitulo">Arquivar prova</h2>
+      <p class="modal-sub" id="modalArquivarSub">Confirme o arquivamento.</p>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--text);line-height:1.5">
+        Ao arquivar, o status passa a <strong>Arquivado</strong> e a prova <strong>sai da trilha</strong>.
+        Prestadores não poderão fazê-la. Depois você pode ver ou editar o rascunho arquivado.
+      </p>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn-modal" onclick="fecharModais()">Cancelar</button>
+      <button type="button" class="btn-modal danger" onclick="confirmarArquivarProva()">Arquivar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: nova turma -->
+<div id="modalNovaTurma" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalNovaTurmaTitulo" onclick="if(event.target===this)fecharModais()">
+  <div class="modal-panel wide">
+    <div class="modal-header">
+      <button type="button" class="modal-close" onclick="fecharModais()" aria-label="Fechar">✕</button>
+      <h2 id="modalNovaTurmaTitulo">Nova turma</h2>
+      <p class="modal-sub">Cria a instância real de um cronograma — com instrutor, data e prestadores matriculados.</p>
+    </div>
+    <div class="modal-body">
+      <div class="field-grid-2">
+        <div class="field">
+          <label for="turmaNome">Nome da turma <span class="campo-obrigatorio">*</span></label>
+          <input id="turmaNome" type="text" placeholder="Ex.: Onboarding GP — Novembro" />
+        </div>
+        <div class="field">
+          <label for="turmaCodigo">Código</label>
+          <input id="turmaCodigo" type="text" placeholder="Ex.: GP-15" />
+        </div>
+      </div>
+      <div class="field-grid-2">
+        <div class="field">
+          <label for="turmaCronograma">Cronograma-base <span class="campo-obrigatorio">*</span></label>
+          <select id="turmaCronograma">
+            <option>Onboarding de Game Presenter</option>
+            <option>Onboarding de Shuffler</option>
+            <option>Atualização Shuffler → Game Presenter</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="turmaInstrutor">Instrutor responsável <span class="campo-obrigatorio">*</span></label>
+          <select id="turmaInstrutor">
+            <option>Juliana Mendes</option>
+            <option>Ricardo Nunes</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-grid-2">
+        <div class="field">
+          <label for="turmaInicio">Data de início <span class="campo-obrigatorio">*</span></label>
+          <input id="turmaInicio" type="text" placeholder="dd/mm/aaaa" />
+        </div>
+        <div class="field">
+          <label for="turmaLocal">Sala / local</label>
+          <input id="turmaLocal" type="text" placeholder="Ex.: Estúdio SP — Sala 2" />
+        </div>
+      </div>
+      <div class="field">
+        <label for="turmaPrestadores">Prestadores a matricular</label>
+        <input id="turmaPrestadores" type="text" placeholder="Buscar prestador por nome…" />
+        <div class="publico-chips">
+          <span class="badge badge-info">Pedro Alves ✕</span>
+          <span class="badge badge-info">Larissa Souza ✕</span>
+          <span class="badge badge-info">Thiago Ramos ✕</span>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn-modal" onclick="fecharModais()">Cancelar</button>
+      <button type="button" class="btn-modal primary" onclick="fecharModais()">Criar turma</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: ver turma -->
+<div id="modalVerTurma" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalVerTurmaTitulo" onclick="if(event.target===this)fecharModais()">
+  <div class="modal-panel wide">
+    <div class="modal-header">
+      <button type="button" class="modal-close" onclick="fecharModais()" aria-label="Fechar">✕</button>
+      <h2 id="modalVerTurmaTitulo">Onboarding GP — Outubro</h2>
+      <p class="modal-sub" id="modalVerTurmaSub">Turma GP-14 · Instrutor Juliana Mendes · início 18/09/2026 · Dia 6 de 15</p>
+    </div>
+    <div class="modal-body">
+      <p class="section-title">Prestadores matriculados <span class="sub" id="verTurmaContagem">9 prestadores</span></p>
+      <div id="verTurmaRoster">
+        <div class="roster-item">
+          <span class="nome">Pedro Alves</span>
+          <span class="badge badge-ok">Em dia</span>
+          <button type="button" class="btn-modal" style="padding:6px 12px;font-size:12px" disabled title="Libera quando concluir o cronograma">Liberar p/ mesa</button>
+        </div>
+        <div class="roster-item">
+          <span class="nome">Larissa Souza</span>
+          <span class="badge badge-warn">Prova pendente — Blackjack</span>
+          <button type="button" class="btn-modal" style="padding:6px 12px;font-size:12px" disabled title="Libera quando concluir o cronograma">Liberar p/ mesa</button>
+        </div>
+        <div class="roster-item">
+          <span class="nome">Thiago Ramos</span>
+          <span class="badge badge-negativo">Faltou — Dia 5</span>
+          <button type="button" class="btn-modal" style="padding:6px 12px;font-size:12px" disabled title="Libera quando concluir o cronograma">Liberar p/ mesa</button>
+        </div>
+      </div>
+      <p class="hint-box" style="margin-top:14px;margin-bottom:0">
+        "Liberar p/ mesa" fica disponível prestador a prestador quando o cronograma da turma é concluído e todas as provas exigidas estão aprovadas.
+        É sempre uma decisão do instrutor — não acontece sozinho.
+      </p>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn-modal" onclick="fecharModais()">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: registrar presença -->
+<div id="modalPresenca" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalPresencaTitulo" onclick="if(event.target===this)fecharModais()">
+  <div class="modal-panel wide">
+    <div class="modal-header">
+      <button type="button" class="modal-close" onclick="fecharModais()" aria-label="Fechar">✕</button>
+      <h2 id="modalPresencaTitulo">Registrar presença</h2>
+      <p class="modal-sub" id="modalPresencaSub">Onboarding GP — Outubro (GP-14) · toque no dia pra marcar presente ou falta</p>
+    </div>
+    <div class="modal-body">
+      <div class="presenca-grid" style="--dias:5">
+        <div></div>
+        <div class="cab">D3</div><div class="cab">D4</div><div class="cab">D5</div><div class="cab">D6</div><div class="cab">D7</div>
+        <div style="font-size:13px;font-weight:600">Pedro Alves</div>
+        <button class="presenca-check presente" type="button" onclick="togglePresenca(this)">✓</button>
+        <button class="presenca-check presente" type="button" onclick="togglePresenca(this)">✓</button>
+        <button class="presenca-check presente" type="button" onclick="togglePresenca(this)">✓</button>
+        <button class="presenca-check presente" type="button" onclick="togglePresenca(this)">✓</button>
+        <button class="presenca-check" type="button" onclick="togglePresenca(this)">—</button>
+        <div style="font-size:13px;font-weight:600">Larissa Souza</div>
+        <button class="presenca-check presente" type="button" onclick="togglePresenca(this)">✓</button>
+        <button class="presenca-check presente" type="button" onclick="togglePresenca(this)">✓</button>
+        <button class="presenca-check presente" type="button" onclick="togglePresenca(this)">✓</button>
+        <button class="presenca-check presente" type="button" onclick="togglePresenca(this)">✓</button>
+        <button class="presenca-check" type="button" onclick="togglePresenca(this)">—</button>
+        <div style="font-size:13px;font-weight:600">Thiago Ramos</div>
+        <button class="presenca-check presente" type="button" onclick="togglePresenca(this)">✓</button>
+        <button class="presenca-check presente" type="button" onclick="togglePresenca(this)">✓</button>
+        <button class="presenca-check falta" type="button" onclick="togglePresenca(this)">✕</button>
+        <button class="presenca-check presente" type="button" onclick="togglePresenca(this)">✓</button>
+        <button class="presenca-check" type="button" onclick="togglePresenca(this)">—</button>
+      </div>
+      <p style="font-size:12px;color:var(--text-muted);margin-top:14px">
+        Clique alterna entre presente (✓), falta (✕) e sem registro (—). Dias futuros ficam bloqueados até chegar a data.
+      </p>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn-modal" onclick="fecharModais()">Fechar</button>
+      <button type="button" class="btn-modal primary" onclick="fecharModais()">Salvar presença</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const TAB_BTNS = {
+    cronogramas: ["tabCrono", "btnTabCrono"],
+    turmas: ["tabTurmas", "btnTabTurmas"],
+    trilhas: ["tabTrilhas", "btnTabTrilhas"],
+    materiais: ["tabMat", "btnTabMat"],
+    provas: ["tabProvas", "btnTabProvas"],
+  };
+
+  function setTab(tab) {
+    document.querySelectorAll(".panel").forEach((p) => p.classList.remove("active"));
+    document.getElementById("panel-" + tab).classList.add("active");
+    document.querySelectorAll(".tab-btn").forEach((b) => {
+      b.classList.remove("active");
+      b.setAttribute("aria-selected", "false");
+    });
+    document.querySelectorAll(".mockup-bar button").forEach((b) => b.classList.remove("active"));
+    (TAB_BTNS[tab] || []).forEach((id) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.classList.add("active");
+      if (el.getAttribute("role") === "tab") el.setAttribute("aria-selected", "true");
+    });
+    document.getElementById("filtroCronoPills").style.display = tab === "cronogramas" ? "flex" : "none";
+  }
+
+  const CRONO = {
+    gp: { trilhas: "8", provas: "8", dias: "15 dias", sub: "Onboarding de Game Presenter" },
+    shuffler: { trilhas: "5", provas: "2", dias: "6 dias", sub: "Onboarding de Shuffler" },
+    atualizacao: { trilhas: "7", provas: "8", dias: "variável", sub: "Atualização Shuffler → Game Presenter" },
+  };
+
+  function setCrono(key) {
+    document.querySelectorAll(".crono-view").forEach((v) => v.classList.remove("active"));
+    document.getElementById("crono-" + key).classList.add("active");
+    document.querySelectorAll("#filtroCronoPills .pill").forEach((p) => p.classList.remove("active"));
+    const pill = { gp: "pillGp", shuffler: "pillSh", atualizacao: "pillAt" }[key];
+    document.getElementById(pill).classList.add("active");
+    const d = CRONO[key];
+    document.getElementById("kpiTrilhas").textContent = d.trilhas;
+    document.getElementById("kpiProvas").textContent = d.provas;
+    document.getElementById("kpiDias").textContent = d.dias;
+    document.getElementById("cronoSub").textContent = d.sub;
+  }
+
+  function fecharModais() {
+    document.querySelectorAll(".modal-overlay").forEach((m) => m.classList.remove("open"));
+  }
+
+  function abrirModalTrilha(nome) {
+    const titulo = document.getElementById("modalTrilhaTitulo");
+    const campo = document.getElementById("trilhaNome");
+    if (nome) {
+      titulo.textContent = nome;
+      campo.value = nome;
+    }
+    document.getElementById("modalTrilha").classList.add("open");
+  }
+
+  function atualizarCampoJogoNovaTrilha() {
+    const tipo = document.getElementById("novaTrilhaTipo").value;
+    document.getElementById("campoNovaTrilhaJogo").hidden = tipo !== "Jogo";
+  }
+
+  function abrirModalNovaTrilha() {
+    document.getElementById("novaTrilhaTipo").value = "Institucional";
+    atualizarCampoJogoNovaTrilha();
+    document.getElementById("modalNovaTrilha").classList.add("open");
+  }
+
+  function abrirModalInserirTrilha() {
+    document.getElementById("modalInserir").classList.add("open");
+  }
+
+  function abrirModalMaterial() {
+    document.getElementById("modalMaterial").classList.add("open");
+  }
+
+  const PROVAS = {
+    "bj-regras": { nome: "Blackjack — regras", trilha: "Blackjack", min: "70", status: "Publicada", questoes: [
+      { t: "Qual é o valor do Ás?", opts: ["1", "10", "1 ou 11", "11"], ok: 2 },
+      { t: "Quantas cartas são distribuídas inicialmente para cada jogador?", opts: ["3", "4", "2", "1"], ok: 2 },
+      { t: "O que significa “hit” no Blackjack?", opts: ["Pedir outra carta", "Ficar com as cartas atuais", "Dobrar a aposta", "Dividir a aposta"], ok: 0 },
+    ]},
+    "bj-laterais": { nome: "Blackjack — apostas laterais", trilha: "Blackjack", min: "70", status: "Publicada", questoes: [
+      { t: "O que são apostas laterais no Blackjack?", opts: ["Apostas que não envolvem cartas", "Apostas adicionais além da aposta principal", "Apostas só no final", "Apostas que garantem vitória"], ok: 1 },
+    ]},
+    sistema: { nome: "Procedimentos do Sistema", trilha: "Procedimentos do Sistema", min: "70", status: "Publicada", questoes: [
+      { t: "Qual é a principal função dos botões no sistema do jogo?", opts: ["Enfeitar a interface", "Indicar ações ou enviar comandos", "Alterar o tema", "Aumentar o som"], ok: 1 },
+    ]},
+    incidentes: { nome: "Incidentes — Blackjack", trilha: "Blackjack", min: "70", status: "Publicada", questoes: [
+      { t: "Quando ocorre um incidente na mesa, qual deve ser o primeiro passo?", opts: ["Pedir ajuda ao colega", "Pedir desculpas", "Pressionar o botão INCIDENTE", "Retirar as cartas"], ok: 2 },
+    ]},
+    roleta: { nome: "Roleta — regras", trilha: "Roleta", min: "70", status: "Rascunho", questoes: [
+      { t: "Quantos números tem a roleta europeia?", opts: ["36", "37", "38", "40"], ok: 1 },
+    ]},
+    baccarat: { nome: "Baccarat — regras", trilha: "Baccarat", min: "", status: "Rascunho", questoes: [] },
+    "bj-vf": { nome: "Blackjack — verdadeiro ou falso", trilha: "", min: "70", status: "Arquivado", questoes: [
+      { t: "As apostas laterais são independentes do resultado da aposta principal.", opts: ["Verdadeiro", "Falso", "Depende da mesa", "Só no seguro"], ok: 0 },
+    ]},
+    futebol: { nome: "Futebol Studio — regras", trilha: "", min: "70", status: "Arquivado", questoes: [
+      { t: "O Futebol Studio usa o formato Card Matchup.", opts: ["Sim", "Não", "Só no Baccarat", "Só na Roleta"], ok: 0 },
+    ]},
+  };
+
+  let provaQuestaoSeq = 0;
+  let provaArquivarId = null;
+
+  function letras() { return ["A", "B", "C", "D"]; }
+
+  function atualizarQtdQuestoes() {
+    const n = document.querySelectorAll("#provaQuestoes .questao").length;
+    document.getElementById("provaQtdSub").textContent = n === 0 ? "nenhuma ainda" : (n === 1 ? "1 questão" : n + " questões");
+    document.querySelectorAll("#provaQuestoes .questao").forEach((el, i) => {
+      el.querySelector(".questao-num").textContent = (i + 1) + ".";
+    });
+  }
+
+  function adicionarQuestao(dados) {
+    provaQuestaoSeq += 1;
+    const id = "q" + provaQuestaoSeq;
+    const wrap = document.createElement("div");
+    wrap.className = "questao";
+    wrap.dataset.qid = id;
+    const opts = (dados && dados.opts) || ["", "", "", ""];
+    const ok = dados && typeof dados.ok === "number" ? dados.ok : -1;
+    wrap.innerHTML =
+      '<div class="questao-head"><strong><span class="questao-num"></span> Questão</strong>' +
+      '<button type="button" class="btn-icon danger" title="Excluir questão" aria-label="Excluir questão" onclick="removerQuestao(this)">✕</button></div>' +
+      '<div class="questao-enunciado"><input type="text" class="q-enunciado" placeholder="Enunciado da questão" value="' + (dados ? escapeAttr(dados.t) : "") + '" /></div>' +
+      letras().map(function (letra, i) {
+        return '<label class="opcao"><input type="radio" name="ok-' + id + '" value="' + i + '"' + (ok === i ? " checked" : "") + " /> " +
+          letra + '. <input type="text" class="q-opt" placeholder="Resposta ' + letra + '" value="' + escapeAttr(opts[i] || "") + '" /></label>';
+      }).join("");
+    document.getElementById("provaQuestoes").appendChild(wrap);
+    atualizarQtdQuestoes();
+  }
+
+  function removerQuestao(btn) {
+    btn.closest(".questao").remove();
+    atualizarQtdQuestoes();
+  }
+
+  function escapeAttr(s) {
+    return String(s || "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+  }
+
+  function limparFormProva() {
+    document.getElementById("provaNome").value = "";
+    document.getElementById("provaTrilha").value = "";
+    document.getElementById("provaMin").value = "";
+    document.getElementById("provaQuestoes").innerHTML = "";
+    document.getElementById("provaFormErro").textContent = "";
+    provaQuestaoSeq = 0;
+    atualizarQtdQuestoes();
+  }
+
+  function preencherFormProva(p) {
+    document.getElementById("provaNome").value = p.nome || "";
+    document.getElementById("provaTrilha").value = p.trilha || "";
+    document.getElementById("provaMin").value = p.min || "";
+    document.getElementById("provaQuestoes").innerHTML = "";
+    provaQuestaoSeq = 0;
+    (p.questoes || []).forEach(adicionarQuestao);
+    atualizarQtdQuestoes();
+    document.getElementById("provaFormErro").textContent = "";
+  }
+
+  function abrirModalNovaProva() {
+    document.getElementById("modalFormProvaTitulo").textContent = "Nova prova";
+    document.getElementById("modalFormProvaSub").textContent = "Salvar rascunho exige só o nome. Publicar exige todos os campos e ao menos uma questão com gabarito.";
+    limparFormProva();
+    document.getElementById("modalFormProva").classList.add("open");
+  }
+
+  function abrirModalEditarProva(id) {
+    const p = PROVAS[id];
+    if (!p) return;
+    document.getElementById("modalFormProvaTitulo").textContent = "Editar prova";
+    document.getElementById("modalFormProvaSub").textContent = "Sem campo de status. Publicar ou salvar rascunho.";
+    preencherFormProva(p);
+    document.getElementById("modalFormProva").classList.add("open");
+  }
+
+  function abrirModalVerProva(id) {
+    const p = PROVAS[id] || PROVAS["bj-regras"];
+    document.getElementById("modalVerProvaTitulo").textContent = p.nome;
+    document.getElementById("verProvaNome").value = p.nome;
+    document.getElementById("verProvaTrilha").value = p.trilha || "—";
+    document.getElementById("verProvaMin").value = p.min ? p.min + "%" : "—";
+    document.getElementById("verProvaStatus").value = p.status;
+    const box = document.getElementById("verProvaQuestoes");
+    if (!p.questoes.length) {
+      box.innerHTML = '<p class="empty">Nenhuma questão nesta prova.</p>';
+    } else {
+      box.innerHTML = p.questoes.map(function (q, i) {
+        return '<div class="questao leitura"><div class="questao-head"><strong>' + (i + 1) + ". " + escapeAttr(q.t) + "</strong></div>" +
+          letras().map(function (letra, j) {
+            const cls = q.ok === j ? "opcao correta" : "opcao";
+            const extra = q.ok === j ? " (correta)" : "";
+            return '<label class="' + cls + '">' + letra + ". " + escapeAttr(q.opts[j] || "") + extra + "</label>";
+          }).join("") + "</div>";
+      }).join("");
+    }
+    document.getElementById("modalVerProva").classList.add("open");
+  }
+
+  function abrirModalArquivarProva(id) {
+    provaArquivarId = id;
+    const p = PROVAS[id];
+    document.getElementById("modalArquivarSub").textContent = p ? p.nome : "Confirme o arquivamento.";
+    document.getElementById("modalArquivarProva").classList.add("open");
+  }
+
+  function confirmarArquivarProva() {
+    const id = provaArquivarId;
+    if (!id) return;
+    const p = PROVAS[id];
+    if (p) {
+      p.status = "Arquivado";
+      p.trilha = "";
+    }
+    const row = document.querySelector('#tbodyProvas tr[data-prova="' + id + '"]');
+    if (row) {
+      row.dataset.status = "arquivado";
+      row.dataset.trilha = "";
+      row.querySelector(".cel-trilha").textContent = "—";
+      row.querySelector(".cel-status").innerHTML = '<span class="badge badge-arquivado">Arquivado</span>';
+      const nome = row.cells[0].textContent;
+      row.cells[5].innerHTML =
+        '<button class="btn-icon" title="Ver prova" aria-label="Ver ' + escapeAttr(nome) + '" onclick="abrirModalVerProva(\'' + id + '\')">👁</button>' +
+        '<button class="btn-icon" title="Editar prova" aria-label="Editar ' + escapeAttr(nome) + '" onclick="abrirModalEditarProva(\'' + id + '\')">✎</button>';
+    }
+    fecharModais();
+  }
+
+  function coletarQuestoesForm() {
+    return Array.from(document.querySelectorAll("#provaQuestoes .questao")).map(function (el) {
+      const t = el.querySelector(".q-enunciado").value.trim();
+      const opts = Array.from(el.querySelectorAll(".q-opt")).map(function (i) { return i.value.trim(); });
+      const sel = el.querySelector("input[type=radio]:checked");
+      const ok = sel ? Number(sel.value) : -1;
+      return { t: t, opts: opts, ok: ok };
+    });
+  }
+
+  function salvarRascunhoProva() {
+    const nome = document.getElementById("provaNome").value.trim();
+    const erro = document.getElementById("provaFormErro");
+    if (!nome) {
+      erro.textContent = "Para salvar rascunho, preencha o nome da prova.";
+      return;
+    }
+    erro.textContent = "";
+    fecharModais();
+  }
+
+  function publicarProva() {
+    const nome = document.getElementById("provaNome").value.trim();
+    const trilha = document.getElementById("provaTrilha").value;
+    const min = document.getElementById("provaMin").value;
+    const qs = coletarQuestoesForm();
+    const erro = document.getElementById("provaFormErro");
+    if (!nome || !trilha || min === "") {
+      erro.textContent = "Para publicar, preencha nome, trilha e nota mínima.";
+      return;
+    }
+    if (qs.length < 1) {
+      erro.textContent = "Para publicar, inclua pelo menos 1 questão.";
+      return;
+    }
+    const incompleta = qs.some(function (q) {
+      return !q.t || q.opts.length < 4 || q.opts.some(function (o) { return !o; }) || q.ok < 0;
+    });
+    if (incompleta) {
+      erro.textContent = "Cada questão precisa de enunciado, 4 respostas e 1 opção correta.";
+      return;
+    }
+    erro.textContent = "";
+    fecharModais();
+  }
+
+  // ═══ TURMAS ═══
+  const TURMAS = {
+    gp14: { titulo: "Onboarding GP — Outubro", sub: "Turma GP-14 · Instrutor Juliana Mendes · início 18/09/2026 · Dia 6 de 15" },
+    at05: { titulo: "Atualização — Blackjack/Roleta", sub: "Turma AT-05 · Instrutor Ricardo Nunes · início 15/09/2026 · Dia 4 de 7" },
+    sh08: { titulo: "Onboarding Shuffler — Outubro", sub: "Turma SH-08 · Instrutor Juliana Mendes · início 06/10/2026 · ainda não iniciada" },
+    gp13: { titulo: "Onboarding GP — Agosto", sub: "Turma GP-13 · Instrutor Ricardo Nunes · concluída em 24/08/2026" },
+  };
+
+  function abrirModalNovaTurma() {
+    document.getElementById("modalNovaTurma").classList.add("open");
+  }
+
+  function abrirModalVerTurma(id) {
+    const t = TURMAS[id] || TURMAS.gp14;
+    document.getElementById("modalVerTurmaTitulo").textContent = t.titulo;
+    document.getElementById("modalVerTurmaSub").textContent = t.sub;
+    document.getElementById("modalVerTurma").classList.add("open");
+  }
+
+  function abrirModalPresenca(id) {
+    const t = TURMAS[id] || TURMAS.gp14;
+    document.getElementById("modalPresencaSub").textContent = t.titulo + " — toque no dia pra marcar presente ou falta";
+    document.getElementById("modalPresenca").classList.add("open");
+  }
+
+  function togglePresenca(el) {
+    if (el.classList.contains("presente")) {
+      el.classList.remove("presente");
+      el.classList.add("falta");
+      el.textContent = "✕";
+    } else if (el.classList.contains("falta")) {
+      el.classList.remove("falta");
+      el.textContent = "—";
+    } else {
+      el.classList.add("presente");
+      el.textContent = "✓";
+    }
+  }
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") fecharModais();
+  });
+</script>
+</body>
+</html>

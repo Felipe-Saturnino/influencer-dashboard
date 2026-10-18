@@ -21,6 +21,7 @@ alwaysApply: false
 | `comercial_overview` | Overview Comercial | Visão consolidada do funil B2B, produtos Live Cassino e carteira da equipe comercial. |
 | `comercial_integracao` | Integração | Acompanhe a integração técnica das marcas com Contrato Assinado no Pipeline B2B. |
 | `comercial_pipeline_b2b` | Pipeline B2B | Organize empresas, marcas e oportunidades de Live Cassino no mercado B2B. |
+| `comercial_pipeline_crypto` | Pipeline Crypto | Organize empresas, marcas e oportunidades no mercado crypto. |
 | `comercial_pipeline_agregadoras` | Pipeline Agregadoras | Organize agregadoras de jogos e oportunidades comerciais no funil B2B. |
 
 **Menu:** `comercial_overview` fica na seção **Dashboards** (abaixo de Overview Influencer). Integração e Pipelines permanecem em **Comercial**.
@@ -34,6 +35,7 @@ alwaysApply: false
 | `comercial_overview` | Overview Comercial | `comercial/OverviewComercial/` | **Dashboards** |
 | `comercial_integracao` | Integração | `comercial/Integracao/` | Comercial |
 | `comercial_pipeline_b2b` | Pipeline B2B | `comercial/PipelineB2B/` | Comercial |
+| `comercial_pipeline_crypto` | Pipeline Crypto | `comercial/PipelineCrypto/` | Comercial |
 | `comercial_pipeline_agregadoras` | Pipeline Agregadoras | `comercial/PipelineAgregadoras/` | Comercial |
 
 Perfis: Gestor (operação interna). Permissões iniciais **`Não`** para todos exceto Admin — liberar em Gestão de Usuários.
@@ -42,21 +44,22 @@ Perfis: Gestor (operação interna). Permissões iniciais **`Não`** para todos 
 
 ## Overview Comercial (`comercial_overview`)
 
-Dashboard analítico **somente leitura** — agrega Pipeline B2B (Operadoras), Pipeline Agregadoras e Integração. Permissão própria (`comercial_overview`).
+Dashboard analítico **somente leitura** — agrega Pipeline B2B (Operadoras), Pipeline Crypto, Pipeline Agregadoras e Integração. Permissão própria (`comercial_overview`).
 
 ### Abas principais (nível 2 — topo do filtro)
 
-`FiltroBarTabButton` + `useRouteTab` — `operadoras | agregadoras | integracoes` (URLs em `appRoutes.ts`), padrão Overview Spin.
+`FiltroBarTabButton` + `useRouteTab` — `operadoras | crypto | agregadoras | integracoes` (URLs em `appRoutes.ts`), padrão Overview Spin.
 
 | Aba | Filtros abaixo | Conteúdo |
 |-----|----------------|----------|
 | **Operadoras** | Só Comercial (abaixo das abas principais; mesma posição que Agregadoras) | KPIs, funil completo (visão Todos), produto Dedicada/Network, geo, carteira, novas marcas, movimentação — **sem** chips de status pipeline nem filtro de UF. **Novas marcas:** paginação 20/página (`TabelaComPaginacao`). Tooltip **Movimentação recente:** **não** paginar (hover — lista no card). **Não** paginar funil, KPIs nem carteira. |
+| **Crypto** | Só Comercial (carteira do Pipeline Crypto, independente do B2B) | Mesmos blocos da aba Operadoras, com dados de `comercial_crypto_marcas`. Bloco **Interesse** (não Produto): uma série da coluna **Retorno**, na ordem `STATUS_PRODUTO_ORDEM` + **Sem Status**. Possui Crypto não entra nesse bloco. KPIs abrem Pipeline Crypto. Geo usa UF da empresa SPA. |
 | **Agregadoras** | Só Comercial | KPIs sem legenda inferior; **Funil** em largura total; **Carteira** + **Movimentação** lado a lado (→ Conexão · → Negociação / → Fechado · Alterações totais). Tooltip **Movimentação recente:** **não** paginar. **Não** paginar funil, KPIs nem carteira. |
 | **Integrações** | Só Prioridade (**Todas Prioridades** / Baixo / Médio / Alta) | KPIs sem legenda; **SLA por etapa** (tempos médios Não Iniciado / Em andamento / Concluído via histórico de status); Produto (Tipo); Caminho; Agregadores |
 
 ### Dados (Supabase)
 
-Operadoras: `comercial_marcas` (+ empresa/contatos/produtos) e `comercial_marca_historico`. Agregadoras: `comercial_agregadoras` + histórico. Integrações: `comercial_integracoes`. SELECT via `_comercial_overview_perm('view')`.
+Operadoras: `comercial_marcas` (+ empresa/contatos/produtos) e `comercial_marca_historico`. Crypto: `comercial_crypto_marcas` (+ empresa/contatos) e `comercial_crypto_historico`. Agregadoras: `comercial_agregadoras` + histórico. Integrações: `comercial_integracoes`. SELECT via `_comercial_overview_perm('view')`.
 
 ### Estados de vazio (secção)
 
@@ -94,6 +97,7 @@ Quatro cards: **Total de Operadores**, **Concluídos**, **Em andamento**, **Não
 - Ações: **Histórico** e **Comentar** (`BtnIconeAcaoLinha`).
 - Com **Editar:** Prioridade, Status e Agregador via popover (Agregador com **barra de pesquisa**); Caminho e PAM via clique inline.
 - Paginação 20/página (`TabelaComPaginacao`); KPIs usam o conjunto filtrado completo.
+- Boot: `fetchAllPages` nas listas (sem `.limit` arbitrário); falha de carga → alerta + **Tentar novamente** (nunca empty filtrado). Abas com `role="tabpanel"` alinhado a `aria-controls`.
 - Vazio: `Nenhuma integração encontrada para os filtros selecionados.`
 
 ### Criação automática (Pipeline B2B)
@@ -134,7 +138,7 @@ Contagens e filtro KPI derivados da **tabela** (`rowMatchesConsolidadoFolha` em 
 
 ### Tabela
 
-- Padrão canónico: `useDataTableBlock`, `getDataTableWrapStyle`, `SortTableTh`, coluna **Razão Social** fixa + `rowSpan` por CNPJ. **Zebra** por razão social (CNPJ): todas as marcas da mesma empresa compartilham a mesma cor de linha; intercalação segue ordem de primeira aparição na lista. **Ordenação** (`SortTableTh`): Razão Social, Dedicada, Network, **Agregadora**, **Último Contato** — **sem** sort em Marca, Contato, Comercial, Status. Paginação 20/página (`TabelaPaginacaoBar`).
+- Padrão canónico: `useDataTableBlock`, `getDataTableWrapStyle`, `SortTableTh`, coluna **Razão Social** fixa + `rowSpan` por CNPJ. **Zebra** por razão social (CNPJ): todas as marcas da mesma empresa compartilham a mesma cor de linha; intercalação segue ordem de primeira aparição na lista. **Ordenação** (`SortTableTh`): Razão Social, Dedicada, Network, **Agregadora**, **Último Contato** — **sem** sort em Marca, Contato, Comercial, Status. Paginação 20/página (`TabelaPaginacaoBar`). Boot: `fetchAllPages` + order estável; falha → alerta + **Tentar novamente**; abas com `role="tabpanel"` alinhado.
 - Colunas variam por aba (`TAB_TABLE_CONFIG` em `constants.ts`).
 - Edição inline (Comercial, Status, Dedicada, Network, **Agregadora**): popover + permissão **Editar**; grava em `comercial_marca_historico`. **Agregadora:** opções = **Nome** das linhas de `comercial_agregadoras` (página **Pipeline Agregadoras**), em ordem alfabética, ou **—** para limpar; popover com **barra de pesquisa** (`BarraPesquisaFiltroPainel` + `textoContemBusca`); valor legado fora do catálogo continua visível e permanece na lista até alteração. Coluna `comercial_marcas.agregadora` é texto livre (sem CHECK). **Último Contato:** campo `date` editável inline (`<input type="date">`) com permissão **Editar**; grava em `comercial_marcas.ultimo_contato` + histórico. Badges **Dedicada** / **Network** usam `STATUS_PRODUTO_COLOR` com **`badgeProdutoStyle(status)`** — fundo, borda e texto em `color-mix` translúcido (não pill sólida); progressão pior → melhor: Sem interesse → Desinteresse Comercial → … → Ativo (hex em `constants.ts`).
 - **Colunas (todas as abas, mesma ordem):** Razão Social · Marca · Contato · Comercial · Status · Dedicada · Network · Agregadora · Último Contato · Ação (`PIPELINE_TABLE_COLS`). Campo `ultima_comunicacao` permanece no banco para o fluxo **Comunicar** (futuro) — **sem** coluna na tabela.
@@ -201,6 +205,22 @@ Teste manual SPA: `POST` com `{ "dry_run": true }` ou `{ "force": true }` para i
 
 ---
 
+## Pipeline Crypto (`comercial_pipeline_crypto`)
+
+Cópia do funil do Pipeline B2B com base própria. Menu Comercial, imediatamente abaixo de Pipeline B2B. Ícone `Bitcoin`. Subtítulo fixo: «Organize empresas, marcas e oportunidades no mercado crypto.»
+
+- **Empresas:** leitura de `comercial_empresas` (Lista SPA). **Nova Marca** não grava em `comercial_empresas` nem em `comercial_marcas`. CNPJ já existente vincula `empresa_id` e a razão social vem da SPA. CNPJ novo ou vazio fica só na linha crypto.
+- **Marcas SPA:** cópia de identidade (`origem = spa`: nome, domínio, empresa). Sync posterior atualiza nome/domínio e, se o domínio mudar, `status_dominio = inativo`. Não sobrescreve Status, Possui Crypto, Retorno, Comercial nem Última Comunicação. Comercial da cópia começa vazio (não herda a carteira B2B).
+- **Marcas manuais** (`origem = manual`) não aparecem no B2B.
+- **Colunas (todas as abas):** Razão Social · Marca · Contato · Comercial · Status · Possui Crypto · Retorno · Última Comunicação · Ação. Sem Agregadora. Sem botão Comunicar. CTA **Nova Marca** (`CtaCriarButton`, permissão Criar).
+- **Possui Crypto:** Sim, Não ou em branco. Não dispara Status.
+- **Retorno:** mesmos status de Network. Cascata só nesta coluna: Contrato Assinado ou Ativo → Fechado; Contrato enviado → Negociação; Em negociação → Conexão. Não cria linha em Integração.
+- **Última Comunicação:** data editável inline (Editar), campo `ultima_comunicacao`.
+- **Comercial:** catálogo `PIPELINE_COMERCIAL_NOMES`, atribuição independente do B2B.
+- Tabelas: `comercial_crypto_marcas`, `comercial_crypto_contatos`, `comercial_crypto_anotacoes`, `comercial_crypto_historico`. RLS `_comercial_pipeline_crypto_perm`. Permissão inicial **Não** (exceto Admin).
+
+---
+
 ## Pipeline Agregadoras (`comercial_pipeline_agregadoras`)
 
 Prospecção B2B de **agregadoras de jogos** (catálogo interno — sem sync SPA). Sem seed automático na v1.
@@ -224,6 +244,7 @@ Quatro cards clicáveis: **Disponíveis**, **Conexão**, **Negociação**, **Fec
 - Nome **sem** hiperlink (só texto). Site permanece link externo.
 - Cadastro novo: status inicial **`conexao`**; campos modal Nome*, Site*, Jogos, Comercial*.
 - Paginação 20/página (`TabelaComPaginacao`); KPIs usam o conjunto filtrado completo.
+- Boot: `fetchAllPages`; falha → alerta + **Tentar novamente**. Abas com `role="tabpanel"` alinhado.
 - Vazio: `Nenhuma agregadora encontrada para os filtros selecionados.`
 
 ### Dados (Supabase)

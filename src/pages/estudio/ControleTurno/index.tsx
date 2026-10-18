@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Bell,
   ChevronLeft,
@@ -92,17 +92,13 @@ export default function EscalaControleTurnoPage() {
   const [diaIso, setDiaIso] = useState(() => diaIsoLocal(new Date()));
   const [turno, setTurno] = useState<ControleTurnoTurno>("manha");
   const [busca, setBusca] = useState("");
-  /** Monta cada aba na 1ª visita e mantém montada — evita refetch/perda de estado ao trocar de aba. */
-  const [abasMontadas, setAbasMontadas] = useState<Record<ControleTurnoAba, boolean>>({
+  /** Quatro painéis montados desde o 1º render (hidden) — aria-controls válidos; estado preservado. */
+  const abasMontadas: Record<ControleTurnoAba, boolean> = {
     escala: true,
-    rotacao: false,
-    relatorio: false,
-    notificacoes: false,
-  });
-
-  useEffect(() => {
-    setAbasMontadas((prev) => (prev[aba] ? prev : { ...prev, [aba]: true }));
-  }, [aba]);
+    rotacao: true,
+    relatorio: true,
+    notificacoes: true,
+  };
 
   const esconderTurno = aba === "relatorio" || aba === "notificacoes";
   const mostrarBusca = aba === "escala" || aba === "relatorio" || aba === "notificacoes";

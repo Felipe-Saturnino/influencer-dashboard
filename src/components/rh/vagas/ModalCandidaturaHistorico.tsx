@@ -58,7 +58,10 @@ export function ModalCandidaturaHistorico({
       .order("created_at", { ascending: false });
     setLoading(false);
     if (error) {
-      setErro(error.message);
+      console.error("[rh_vaga_candidatura_historico]", error);
+      setErro(
+        "Não foi possível carregar o histórico. Se o problema persistir, entre em contato com o suporte.",
+      );
       setItens([]);
       return;
     }
@@ -84,12 +87,30 @@ export function ModalCandidaturaHistorico({
       <p style={{ margin: "0 0 16px", fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>{subtitulo}</p>
 
       {loading ? (
-        <div style={{ display: "flex", justifyContent: "center", padding: 24 }}>
+        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 8, padding: 24, color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
           <Loader2 className="app-lucide-spin" size={22} color="var(--brand-primary, #7c3aed)" aria-hidden />
+          Carregando…
         </div>
       ) : erro ? (
-        <div role="alert" style={{ color: "#e84025", fontSize: 13, fontFamily: FONT.body }}>
-          {erro}
+        <div role="alert" style={{ color: "#e84025", fontSize: 13, fontFamily: FONT.body, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+          <span>{erro}</span>
+          <button
+            type="button"
+            onClick={() => void carregar()}
+            style={{
+              fontFamily: FONT.body,
+              fontSize: 13,
+              fontWeight: 700,
+              padding: "8px 14px",
+              borderRadius: 10,
+              border: "1px solid rgba(232,64,37,0.35)",
+              background: "transparent",
+              color: "#e84025",
+              cursor: "pointer",
+            }}
+          >
+            Tentar de novo
+          </button>
         </div>
       ) : itens.length === 0 ? (
         <div style={{ padding: "24px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>

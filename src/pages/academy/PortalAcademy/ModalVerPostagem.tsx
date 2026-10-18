@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import { Clock, Eye, Loader2 } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { FONT } from "../../../constants/theme";
@@ -154,14 +154,28 @@ function MidiaBloco({ paths, titulo }: { paths: string[]; titulo: string }) {
   );
 }
 
+const BTN_RETRY_STYLE: CSSProperties = {
+  fontFamily: FONT.body,
+  fontSize: 13,
+  fontWeight: 700,
+  padding: "8px 14px",
+  borderRadius: 10,
+  border: "1px solid rgba(232,64,37,0.35)",
+  background: "transparent",
+  color: "#e84025",
+  cursor: "pointer",
+};
+
 function PainelHistorico({
   loading,
   erro,
   itens,
+  onRetry,
 }: {
   loading: boolean;
   erro: string | null;
   itens: HistRow[];
+  onRetry: () => void;
 }) {
   const { theme: t } = useApp();
   if (loading) {
@@ -174,8 +188,25 @@ function PainelHistorico({
   }
   if (erro) {
     return (
-      <div role="alert" style={{ color: "#e84025", fontSize: 13, fontFamily: FONT.body }}>
-        {erro}
+      <div
+        role="alert"
+        aria-live="polite"
+        style={{
+          color: "#e84025",
+          fontSize: 13,
+          fontFamily: FONT.body,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 12,
+          flexWrap: "wrap",
+          padding: "20px 0",
+        }}
+      >
+        <span>{erro}</span>
+        <button type="button" onClick={onRetry} style={BTN_RETRY_STYLE}>
+          Tentar de novo
+        </button>
       </div>
     );
   }
@@ -409,8 +440,25 @@ export function ModalVerPostagem({
             <div style={{ fontSize: 13, color: t.textMuted, marginTop: 8, fontFamily: FONT.body }}>Carregando…</div>
           </div>
         ) : erroVer ? (
-          <div role="alert" style={{ color: "#e84025", fontSize: 13, fontFamily: FONT.body }}>
-            {erroVer}
+          <div
+            role="alert"
+            aria-live="polite"
+            style={{
+              color: "#e84025",
+              fontSize: 13,
+              fontFamily: FONT.body,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 12,
+              flexWrap: "wrap",
+              padding: "20px 0",
+            }}
+          >
+            <span>{erroVer}</span>
+            <button type="button" onClick={() => void carregarPostagem()} style={BTN_RETRY_STYLE}>
+              Tentar de novo
+            </button>
           </div>
         ) : postagem ? (
           <div>
@@ -490,7 +538,12 @@ export function ModalVerPostagem({
         id="panel-ver-postagem-academy-historico"
         labelledBy="tab-ver-postagem-academy-historico"
       >
-        <PainelHistorico loading={loadingHist} erro={erroHist} itens={itens} />
+        <PainelHistorico
+          loading={loadingHist}
+          erro={erroHist}
+          itens={itens}
+          onRetry={() => void carregarHistorico()}
+        />
       </ModalTabPanel>
     </ModalBase>
   );

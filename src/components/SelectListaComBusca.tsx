@@ -9,6 +9,7 @@ import {
   type CSSProperties,
   type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 import { Check, ChevronDown, ChevronUp } from "lucide-react";
 import { FONT } from "../constants/theme";
 import { useApp } from "../context/AppContext";
@@ -22,6 +23,7 @@ import {
 import { placeholderPesquisaFiltro } from "../lib/searchBarConstants";
 import { textoContemBusca } from "../lib/searchText";
 import type { SelectListaComBuscaOption } from "../lib/selectListaComBuscaOptions";
+import { estiloPainelPortalFixed, posicaoPainelPortal, type PainelPortalPos } from "../lib/selectPainelPortal";
 import { BarraPesquisaFiltroPainel } from "./BarraPesquisaFiltroPainel";
 
 export type { SelectListaComBuscaOption };
@@ -42,6 +44,11 @@ export type SelectListaComBuscaProps = {
   wrapperStyle?: CSSProperties;
   id?: string;
   listboxAriaLabel?: string;
+  /**
+   * Default: `portal` em `variant="campo"` (modais/formulários); `inline` em `pill` (barra).
+   * `portal` — `position:fixed` em `document.body` (não corta no overflow do `ModalBase`).
+   */
+  panelStrategy?: "inline" | "portal";
 };
 
 /**
@@ -61,15 +68,20 @@ export function SelectListaComBusca({
   wrapperStyle,
   id,
   listboxAriaLabel,
+  panelStrategy,
 }: SelectListaComBuscaProps) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
   const isPill = variant === "pill";
+  const resolvedStrategy = panelStrategy ?? (isPill ? "inline" : "portal");
   const accentColor = brand.useBrand ? "var(--brand-action, #7c3aed)" : brand.accent;
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const ref = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const [portalPos, setPortalPos] = useState<PainelPortalPos | null>(null);
+  const usePortal = resolvedStrategy === "portal";
   const uid = useId();
   const listboxId = `select-busca-${(id ?? uid).replace(/:/g, "")}`;
   const placeholder = searchPlaceholder ?? placeholderPesquisaFiltro(label);
@@ -100,14 +112,19 @@ export function SelectListaComBusca({
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) closePanel();
+      const n = e.target as Node;
+      if (ref.current?.contains(n) || panelRef.current?.contains(n)) return;
+      closePanel();
     }
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, [closePanel]);
 
   useEffect(() => {
-    if (!open) setSearchQuery("");
+    if (!open) {
+      setSearchQuery("");
+      setPortalPos(null);
+    }
   }, [open]);
 
   const [alignRight, setAlignRight] = useState(false);
@@ -118,6 +135,22 @@ export function SelectListaComBusca({
     const spaceRight = window.innerWidth - r.right;
     setAlignRight(spaceRight < margin && r.left > Math.max(minWidth, 240));
   }, [open, minWidth]);
+
+  useLayoutEffect(() => {
+    if (!open || !usePortal) return;
+    const update = () => {
+      const el = triggerRef.current;
+      if (!el) return;
+      setPortalPos(posicaoPainelPortal(el.getBoundingClientRect(), { minWidth, matchTriggerWidth: !isPill }));
+    };
+    update();
+    window.addEventListener("resize", update);
+    window.addEventListener("scroll", update, true);
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("scroll", update, true);
+    };
+  }, [open, usePortal, minWidth, isPill]);
 
   const { activeIndex, optionRefs, onKeyDown } = useListboxKeyboardNavigation({
     items: filtered,
@@ -169,24 +202,26 @@ export function SelectListaComBusca({
         ...style,
       };
 
-  const panelStyle: CSSProperties = {
-    position: "absolute",
-    top: "calc(100% + 6px)",
-    left: alignRight ? "auto" : 0,
-    right: alignRight ? 0 : "auto",
-    zIndex: isPill ? 200 : 1100,
-    background: t.cardBg,
-    border: `1px solid ${t.cardBorder}`,
-    borderRadius: 12,
-    padding: 8,
-    minWidth: isPill ? Math.max(minWidth, 240) : "100%",
-    width: isPill ? undefined : "100%",
-    boxShadow: "0 8px 24px rgba(0,0,0,0.3)",
-    maxHeight: "min(320px, 55vh)",
-    display: "flex",
-    flexDirection: "column",
-    boxSizing: "border-box",
-  };
+  const panelStyle: CSSProperties = usePortal && portalPos
+    ? estiloPainelPortalFixed(portalPos, { background: t.cardBg, border: t.cardBorder })
+    : {
+        position: "absolute",
+        top: "calc(100% + 6px)",
+        left: alignRight ? "auto" : 0,
+        right: alignRight ? 0 : "auto",
+        zIndex: isPill ? 200 : 1100,
+        background: t.cardBg,
+        border: `1px solid ${t.cardBorder}`,
+        borderRadius: 12,
+        padding: 8,
+        minWidth: isPill ? Math.max(minWidth, 240) : "100%",
+        width: isPill ? undefined : "100%",
+        boxShadow: "0 8px 24px rgba(0,0,0,0.3)",
+        maxHeight: "min(320px, 55vh)",
+        display: "flex",
+        flexDirection: "column",
+        boxSizing: "border-box",
+      };
 
   function pick(opt: SelectListaComBuscaOption) {
     if (opt.disabled) return;
@@ -196,27 +231,9 @@ export function SelectListaComBusca({
 
   let flatIndex = 0;
 
-  return (
-    <div ref={ref} style={{ position: "relative", display: isPill ? "inline-flex" : "block", width: isPill ? undefined : "100%", ...wrapperStyle }}>
-      <button
-        ref={triggerRef}
-        type="button"
-        id={id}
-        disabled={disabled}
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        aria-controls={listboxId}
-        aria-label={label}
-        onClick={() => !disabled && setOpen((o) => !o)}
-        style={triggerStyle}
-      >
-        {icon}
-        <span style={{ flex: isPill ? undefined : 1, overflow: "hidden", textOverflow: "ellipsis" }}>{triggerLabel}</span>
-        {open ? <ChevronUp size={isPill ? 9 : 14} aria-hidden="true" /> : <ChevronDown size={isPill ? 9 : 14} aria-hidden="true" />}
-      </button>
-
-      {open ? (
-        <div style={panelStyle}>
+  const panelNode =
+    open && (!usePortal || portalPos) ? (
+        <div ref={panelRef} style={panelStyle}>
           <BarraPesquisaFiltroPainel
             value={searchQuery}
             onChange={setSearchQuery}
@@ -324,7 +341,27 @@ export function SelectListaComBusca({
             )}
           </div>
         </div>
-      ) : null}
+    ) : null;
+
+  return (
+    <div ref={ref} style={{ position: "relative", display: isPill ? "inline-flex" : "block", width: isPill ? undefined : "100%", ...wrapperStyle }}>
+      <button
+        ref={triggerRef}
+        type="button"
+        id={id}
+        disabled={disabled}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-controls={listboxId}
+        aria-label={label}
+        onClick={() => !disabled && setOpen((o) => !o)}
+        style={triggerStyle}
+      >
+        {icon}
+        <span style={{ flex: isPill ? undefined : 1, overflow: "hidden", textOverflow: "ellipsis" }}>{triggerLabel}</span>
+        {open ? <ChevronUp size={isPill ? 9 : 14} aria-hidden="true" /> : <ChevronDown size={isPill ? 9 : 14} aria-hidden="true" />}
+      </button>
+      {usePortal && panelNode ? createPortal(panelNode, document.body) : panelNode}
     </div>
   );
 }
