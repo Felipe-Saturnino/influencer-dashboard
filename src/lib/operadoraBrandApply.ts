@@ -1,4 +1,6 @@
+import type { Role } from "../types";
 import { validarBrandguide, cssDerivadasBrand, type BrandValidated } from "./brandguideValidation";
+import { roleParidadeInfluencer } from "./staffRoles";
 import {
   readOperadoraBrandCache,
   writeOperadoraBrandCache,
@@ -56,7 +58,22 @@ export function injectBrandCss(validated: BrandValidated) {
   root.setProperty("--brand-success", CHART_SEMANTIC.extra2);
 }
 
-/** Reseta para paleta Spin validada (usuário não operador ou sem brand). */
+/**
+ * Operadora whose brandguide should paint the shell.
+ * Operators and influencer/afiliado accounts with an operadora scope get that skin.
+ * Other roles stay on the Spin palette.
+ */
+export function slugSkinOperadora(
+  role: Role | null | undefined,
+  slugs: readonly string[] | null | undefined,
+): string | null {
+  const slug = slugs?.[0]?.trim() || null;
+  if (!slug) return null;
+  if (role === "operador" || roleParidadeInfluencer(role)) return slug;
+  return null;
+}
+
+/** Reseta para paleta Spin validada (usuário sem skin de operadora). */
 export function aplicarBrandguideReset() {
   injectBrandCss(validarBrandguide({}));
 }
