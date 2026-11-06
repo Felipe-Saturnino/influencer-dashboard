@@ -44,6 +44,7 @@ import {
 import { ALL_PAGE_KEYS } from "../lib/allPageKeys";
 import {
   aplicarBrandguideReset,
+  slugSkinOperadora,
   syncOperadoraBrandState,
 } from "../lib/operadoraBrandApply";
 import {
@@ -68,9 +69,11 @@ export interface EscoposVisiveis {
   vêTodosInfluencers?: boolean;   // true = admin, executivo, staff Spin, gestores de departamento, operador
   /** Áreas de prestador (user_scopes prestador_tipo); menu vs prestador_tipo_pages */
   prestadorTiposVisiveis?: string[];
+  /** Skin visual do influencer (`user_scopes.brand_operadora`). Ausente = identidade Spin. */
+  brandOperadoraSlug?: string | null;
 }
 
-/** Brand da operadora (operador): logo, fonte, fundo e template de Home */
+/** Brand da operadora (operador, ou influencer com skin opt-in): logo, fonte, fundo e template de Home */
 export interface OperadoraBrand {
   nome:           string | null;
   logo_url:       string | null;
@@ -157,6 +160,26 @@ export function registerRevisaoNavGate(handler: RevisaoNavGateHandler | null) {
 
 const ESCOPOS_VAZIOS: EscoposVisiveis = { influencersVisiveis: [], operadorasVisiveis: [], semRestricaoEscopo: false };
 
+async function aplicarOuLimparSkin(
+  role: Role | undefined,
+  escopos: EscoposVisiveis,
+  setBrand: (b: OperadoraBrand | null) => void,
+  setReady: (v: boolean) => void,
+): Promise<void> {
+  const slug = slugSkinOperadora({
+    role,
+    operadorasVisiveis: escopos.operadorasVisiveis ?? [],
+    brandOperadoraSlug: escopos.brandOperadoraSlug,
+  });
+  if (!slug) {
+    aplicarBrandguideReset();
+    setBrand(null);
+    setReady(true);
+    return;
+  }
+  await syncOperadoraBrandState(slug, setBrand, setReady);
+}
+
 const DEFAULT_FONT_FAMILY = "'Inter', 'Helvetica Neue', Arial, sans-serif";
 
 // ─── Carrega escopos visíveis por role e user_scopes (Etapa 7) ─────────────────
@@ -202,7 +225,10 @@ async function carregarEscoposVisiveis(
     const operadorasVisiveis = lista
       .filter((s) => s.scope_type === "operadora")
       .map((s) => s.scope_ref);
-    return { influencersVisiveis: [userId], operadorasVisiveis, semRestricaoEscopo: false };
+    const brandSalva = lista.find((s) => s.scope_type === "brand_operadora")?.scope_ref ?? null;
+    const brandOperadoraSlug =
+      role === "influencer" && brandSalva && operadorasVisiveis.includes(brandSalva) ? brandSalva : null;
+    return { influencersVisiveis: [userId], operadorasVisiveis, semRestricaoEscopo: false, brandOperadoraSlug };
   }
 
   // Executivo, Investidor e staff Spin: só role_permissions — sem user_scopes operadora/influencer.
@@ -632,16 +658,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [operadoraHomeReady, setOperadoraHomeReady] = useState(true);
   const [brandRefreshKey, setBrandRefreshKey] = useState(0);
 
+  const effectiveRole = simulacaoLogin?.role ?? user?.role;
+  const slugSkin = slugSkinOperadora({
+    role: effectiveRole,
+    operadorasVisiveis: escoposVisiveis.operadorasVisiveis ?? [],
+    brandOperadoraSlug: escoposVisiveis.brandOperadoraSlug,
+  });
+
   // Refetch brand ao voltar para a aba (ex.: admin atualizou operadora em outra aba)
   useEffect(() => {
-    const roleEfetivo = simulacaoLogin?.role ?? user?.role;
-    if (roleEfetivo !== "operador") return;
+    if (!slugSkin) return;
     const onFocus = () => setBrandRefreshKey((k) => k + 1);
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
-  }, [user?.role, simulacaoLogin?.role]);
-
-  const effectiveRole = simulacaoLogin?.role ?? user?.role;
+  }, [slugSkin]);
 
   // Operador: sempre modo Dark (brand da operadora); demais roles escolhem tema
   const effectiveIsDark = effectiveRole === "operador" ? true : isDark;
@@ -652,19 +682,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
     document.documentElement.setAttribute("data-theme", effectiveIsDark ? "dark" : "light");
   }, [effectiveIsDark]);
 
-  // Brandguide + template de Home: operador vê identidade da operadora do escopo
+  // Brandguide: operador (escopo) ou influencer com skin opt-in. Não troca Home nem tema.
   useEffect(() => {
-    if (!user || effectiveRole !== "operador" || !escoposVisiveis.operadorasVisiveis?.length) {
+    if (!user || !slugSkin) {
       aplicarBrandguideReset();
       setOperadoraBrand(null);
       setOperadoraHomeReady(true);
       return;
     }
-    const slug = escoposVisiveis.operadorasVisiveis[0];
-    void syncOperadoraBrandState(slug, setOperadoraBrand, setOperadoraHomeReady, { awaitNetwork: false });
-  }, [user, effectiveRole, escoposVisiveis.operadorasVisiveis, brandRefreshKey]);
+    void syncOperadoraBrandState(slugSkin, setOperadoraBrand, setOperadoraHomeReady, { awaitNetwork: false });
+  }, [user, slugSkin, brandRefreshKey]);
 
-  // Fonte customizada: injeta @font-face e aplica --brand-fontFamily quando operador tem font_url
+  // Fonte customizada: injeta @font-face quando a skin ativa traz font_url
   useEffect(() => {
     const id = "operadora-brand-font";
     const existing = document.getElementById(id);
@@ -708,13 +737,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setPermissions(permissionsReais);
     setPermissionsAcoes(permissionsAcoesReais);
     syncAuthRefs(u, permissionsReais, permissionsAcoesReais);
-    if (u.role === "operador" && escopos.operadorasVisiveis[0]) {
-      await syncOperadoraBrandState(escopos.operadorasVisiveis[0], setOperadoraBrand, setOperadoraHomeReady);
-    } else {
-      aplicarBrandguideReset();
-      setOperadoraBrand(null);
-      setOperadoraHomeReady(true);
-    }
+    await aplicarOuLimparSkin(u.role, escopos, setOperadoraBrand, setOperadoraHomeReady);
   }, [escoposReais, permissionsReais, permissionsAcoesReais]);
 
   const aplicarSimulacaoAtiva = useCallback(
@@ -728,13 +751,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setPermissionsAcoes(ctx.permissionsAcoes);
       syncAuthRefs(u, ctx.permissions, ctx.permissionsAcoes);
       writeSimulacaoSession(state);
-      if (state.role === "operador" && state.operadoraSlug) {
-        await syncOperadoraBrandState(state.operadoraSlug, setOperadoraBrand, setOperadoraHomeReady);
-      } else {
-        aplicarBrandguideReset();
-        setOperadoraBrand(null);
-        setOperadoraHomeReady(true);
-      }
+      await aplicarOuLimparSkin(state.role, ctx.escopos, setOperadoraBrand, setOperadoraHomeReady);
     },
     [permissionsReais],
   );
@@ -892,13 +909,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             simulacaoLoginRef.current = null;
             effectiveRoleRef.current = u.role;
             setEscoposVisiveis(escopos);
-            if (u.role === "operador" && escopos.operadorasVisiveis[0]) {
-              await syncOperadoraBrandState(
-                escopos.operadorasVisiveis[0],
-                setOperadoraBrand,
-                setOperadoraHomeReady,
-              );
-            }
+            await aplicarOuLimparSkin(u.role, escopos, setOperadoraBrand, setOperadoraHomeReady);
             setPermissions(perms);
             setPermissionsAcoes(acoes);
             syncAuthRefs(u, perms, acoes);
@@ -1025,13 +1036,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
                 simulacaoLoginRef.current = null;
                 effectiveRoleRef.current = u.role;
                 setEscoposVisiveis(escopos);
-                if (u.role === "operador" && escopos.operadorasVisiveis[0]) {
-                  await syncOperadoraBrandState(
-                    escopos.operadorasVisiveis[0],
-                    setOperadoraBrand,
-                    setOperadoraHomeReady,
-                  );
-                }
+                await aplicarOuLimparSkin(u.role, escopos, setOperadoraBrand, setOperadoraHomeReady);
                 setPermissions(perms);
                 setPermissionsAcoes(acoes);
                 syncAuthRefs(u, perms, acoes);

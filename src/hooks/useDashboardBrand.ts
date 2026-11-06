@@ -2,13 +2,14 @@ import { useApp } from "../context/AppContext";
 import { BRAND } from "../lib/dashboardConstants";
 
 /**
- * Hook para cores da operadora (perfil Operador + operadoraBrand).
+ * Hook para cores da operadora (perfil Operador, ou Influencer com skin opt-in).
  * Tokens base: `--brand-action`, `--brand-contrast`, `--brand-bg`, `--brand-text`;
  * derivadas: `--brand-action-12`, `--brand-surface`, etc. (injetadas no `AppContext`).
  */
 export function useDashboardBrand() {
-  const { theme: t, user, operadoraBrand } = useApp();
-  const useBrand = user?.role === "operador" && !!operadoraBrand;
+  const { theme: t, user, effectiveRole, operadoraBrand } = useApp();
+  const roleSkin = effectiveRole ?? user?.role;
+  const useBrand = !!operadoraBrand && (roleSkin === "operador" || roleSkin === "influencer");
 
   return {
     useBrand,

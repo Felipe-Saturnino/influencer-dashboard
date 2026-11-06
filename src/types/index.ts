@@ -247,11 +247,13 @@ export interface RolePermission {
 // "operadora"    → scope_ref = slug da operadora (ex: "blaze")
 // "agencia_par"  → scope_ref = "uuid_influencer:slug_operadora" (ex: "abc-123:blaze")
 // "prestador_tipo" → scope_ref = área de atuação do perfil Prestadores (aba Prestadores)
+// "brand_operadora" → scope_ref = slug da skin visual do influencer (opt-in)
 export type ScopeType =
   | "influencer"
   | "operadora"
   | "agencia_par"
-  | "prestador_tipo";
+  | "prestador_tipo"
+  | "brand_operadora";
 
 /** Áreas de atuação do perfil Prestadores (mapeiam prestador_tipo_pages). */
 export type PrestadorTipoSlug =

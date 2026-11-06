@@ -25,7 +25,7 @@ alwaysApply: false
 ## 1. Whitelabel — mecanismo
 
 - `AppContext` chama `aplicarBrandguide()` / reset e injeta variáveis em `document.documentElement`.
-- **Ativo:** perfil **operador** + `operadoraBrand` → `brand.useBrand === true` em `useDashboardBrand()`.
+- **Ativo:** perfil **operador** (operadora do escopo) ou **influencer** com skin opt-in (`user_scopes.scope_type = brand_operadora`, uma das operadoras já atribuídas) + `operadoraBrand` → `brand.useBrand === true` em `useDashboardBrand()`. A skin do influencer é só visual: não troca Home, menu, tema claro/escuro nem o recorte de dados. Sem a linha de skin, o influencer permanece na identidade Spin.
 - **Cache local:** após fetch bem-sucedido, snapshot em `localStorage` (`lib/operadoraBrandCache.ts`) — reaplicado **antes** do primeiro paint do layout (login e restauração de sessão) para evitar flash Spin → operadora. Refresh em background ao focar a aba (`brandRefreshKey`).
 - **Inativo:** defaults Spin em `src/styles/global.css` (`:root`); fallbacks nos `var(--brand-*, #…)` garantem identidade sem `if` por página.
 - **Fonte:** `--brand-fontFamily` + `@font-face` quando houver `font_url` da operadora.

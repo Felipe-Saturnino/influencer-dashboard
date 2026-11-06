@@ -15,6 +15,8 @@ interface AtualizarPerfilRequest {
   scopeOperadoras?: string[]
   scopePares?: string[]
   scopePrestadorTipos?: string[]
+  /** Slug da operadora cuja skin o influencer vê. Vazio = identidade Spin. */
+  brandOperadoraSlug?: string | null
 }
 
 const ROLES_BLOQUEADOS = [
@@ -51,6 +53,21 @@ const PRESTADOR_TIPO_SLUGS = [
 
 function paridadeInfluencer(role: string): boolean {
   return role === 'influencer' || role === 'afiliado'
+}
+
+/** Skin visual só do perfil influencer, e só entre as operadoras já atribuídas. */
+function brandOperadoraInfluencer(
+  role: string,
+  raw: unknown,
+  operadoras: string[],
+): { slug: string | null; error?: string } {
+  if (role !== 'influencer') return { slug: null }
+  const slug = typeof raw === 'string' ? raw.trim() : ''
+  if (!slug) return { slug: null }
+  if (!operadoras.includes(slug)) {
+    return { slug: null, error: 'A skin deve ser uma das operadoras atribuídas ao influencer.' }
+  }
+  return { slug }
 }
 
 function fingerprintScopes(rows: { scope_type: string; scope_ref: string }[]): string {
@@ -256,7 +273,7 @@ serve(async (req) => {
     })
   }
 
-  const { userId, name, role, scopeInfluencers, scopeOperadoras, scopePares, scopePrestadorTipos } =
+  const { userId, name, role, scopeInfluencers, scopeOperadoras, scopePares, scopePrestadorTipos, brandOperadoraSlug } =
     body
   const toStrArr = (v: unknown): string[] => Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []
   const scopeInfluencersArr = toStrArr(scopeInfluencers)
@@ -295,6 +312,13 @@ serve(async (req) => {
   }
   if (role === 'prestador' && scopePrestadorTiposArr.length === 0) {
     return new Response(JSON.stringify({ error: 'Selecione pelo menos uma área de atuação' }), {
+      status: 400,
+      headers: { ...cors, 'Content-Type': 'application/json' },
+    })
+  }
+  const brandSkin = brandOperadoraInfluencer(role, brandOperadoraSlug, scopeOperadorasArr)
+  if (brandSkin.error) {
+    return new Response(JSON.stringify({ error: brandSkin.error }), {
       status: 400,
       headers: { ...cors, 'Content-Type': 'application/json' },
     })
@@ -373,6 +397,9 @@ serve(async (req) => {
       } else {
         scopeInfluencersArr.forEach((ref) => novasLinhas.push({ user_id: userId, scope_type: 'influencer', scope_ref: ref }))
         scopeOperadorasArr.forEach((ref) => novasLinhas.push({ user_id: userId, scope_type: 'operadora', scope_ref: ref }))
+        if (brandSkin.slug) {
+          novasLinhas.push({ user_id: userId, scope_type: 'brand_operadora', scope_ref: brandSkin.slug })
+        }
       }
       if (novasLinhas.length > 0) {
         const { error: insScopeErr } = await supabase.from('user_scopes').insert(novasLinhas)

@@ -56,7 +56,29 @@ export function injectBrandCss(validated: BrandValidated) {
   root.setProperty("--brand-success", CHART_SEMANTIC.extra2);
 }
 
-/** Reseta para paleta Spin validada (usuário não operador ou sem brand). */
+/**
+ * Slug cuja skin entra no login.
+ * Operador: a operadora do escopo.
+ * Influencer: só se houver skin opt-in e ela ainda estiver entre as operadoras atribuídas.
+ */
+export function slugSkinOperadora(opts: {
+  role: string | undefined | null;
+  operadorasVisiveis: readonly string[];
+  brandOperadoraSlug?: string | null;
+}): string | null {
+  if (opts.role === "operador") {
+    const slug = opts.operadorasVisiveis[0]?.trim() ?? "";
+    return slug || null;
+  }
+  if (opts.role === "influencer") {
+    const slug = opts.brandOperadoraSlug?.trim() ?? "";
+    if (!slug) return null;
+    return opts.operadorasVisiveis.includes(slug) ? slug : null;
+  }
+  return null;
+}
+
+/** Reseta para paleta Spin validada (sem skin de operadora). */
 export function aplicarBrandguideReset() {
   injectBrandCss(validarBrandguide({}));
 }

@@ -19,6 +19,8 @@ interface CriarUsuarioRequest {
   scopeOperadoras: string[]
   scopePares: string[]
   scopePrestadorTipos?: string[]
+  /** Slug da operadora cuja skin o influencer vê. Vazio = identidade Spin. */
+  brandOperadoraSlug?: string | null
   loginUrl?: string  // URL da aplicação para o link no e-mail (ex: window.location.origin)
 }
 
@@ -56,6 +58,21 @@ const PRESTADOR_TIPO_SLUGS = [
 
 function paridadeInfluencer(role: string): boolean {
   return role === 'influencer' || role === 'afiliado'
+}
+
+/** Skin visual só do perfil influencer, e só entre as operadoras já atribuídas. */
+function brandOperadoraInfluencer(
+  role: string,
+  raw: unknown,
+  operadoras: string[],
+): { slug: string | null; error?: string } {
+  if (role !== 'influencer') return { slug: null }
+  const slug = typeof raw === 'string' ? raw.trim() : ''
+  if (!slug) return { slug: null }
+  if (!operadoras.includes(slug)) {
+    return { slug: null, error: 'A skin deve ser uma das operadoras atribuídas ao influencer.' }
+  }
+  return { slug }
 }
 
 /** Evita timers/listeners de Auth no cliente service_role (comum em Edge Functions travarem o isolate). */
@@ -269,6 +286,7 @@ serve(async (req) => {
     scopeOperadoras,
     scopePares,
     scopePrestadorTipos,
+    brandOperadoraSlug,
   } = body
   const emprestadoParaDb =
     typeof emprestadoPara === 'string' && emprestadoPara.trim() ? emprestadoPara.trim() : null
@@ -325,6 +343,13 @@ serve(async (req) => {
   }
   if (role === 'prestador' && scopePrestadorTiposArr.length === 0) {
     return new Response(JSON.stringify({ error: 'Selecione pelo menos uma área de atuação' }), {
+      status: 400,
+      headers: { ...cors, 'Content-Type': 'application/json' },
+    })
+  }
+  const brandSkin = brandOperadoraInfluencer(role, brandOperadoraSlug, scopeOperadorasArr)
+  if (brandSkin.error) {
+    return new Response(JSON.stringify({ error: brandSkin.error }), {
       status: 400,
       headers: { ...cors, 'Content-Type': 'application/json' },
     })
@@ -427,6 +452,9 @@ serve(async (req) => {
         operadorasUnicas.forEach((ref) =>
           novasLinhas.push({ user_id: uid, scope_type: 'operadora', scope_ref: ref })
         )
+        if (brandSkin.slug) {
+          novasLinhas.push({ user_id: uid, scope_type: 'brand_operadora', scope_ref: brandSkin.slug })
+        }
       }
       if (novasLinhas.length > 0) {
         const { error: scopeInsertErr } = await supabase.from('user_scopes').insert(novasLinhas)

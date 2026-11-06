@@ -1,4 +1,4 @@
-import { useState, useEffect, useId } from "react";
+import { useState, useEffect, useId, useMemo } from "react";
 import { AlertCircle } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { fetchAllPages, fetchInBatched } from "../../../lib/supabasePaginate";
@@ -45,6 +45,7 @@ export function ModalUsuario({ editando, operadoras, onClose, onSalvo }: ModalUs
   const [scopeOperadoras, setScopeOperadoras] = useState<string[]>([]);
   const [scopePares, setScopePares] = useState<string[]>([]);
   const [scopePrestadorTipos, setScopePrestadorTipos] = useState<string[]>([]);
+  const [brandOperadoraSlug, setBrandOperadoraSlug] = useState("");
   const [paresAgencia, setParesAgencia] = useState<Array<{ influencerId: string; operadoraSlug: string }>>([]);
   const [influencers, setInfluencers] = useState<{ id: string; nome: string }[]>([]);
   const [salvando, setSalvando] = useState(false);
@@ -121,6 +122,7 @@ export function ModalUsuario({ editando, operadoras, onClose, onSalvo }: ModalUs
       setScopeOperadoras([]);
       setScopePares([]);
       setScopePrestadorTipos([]);
+      setBrandOperadoraSlug("");
       return;
     }
     setScopeInfluencers(
@@ -138,6 +140,9 @@ export function ModalUsuario({ editando, operadoras, onClose, onSalvo }: ModalUs
     );
     setScopePares(scopes.filter((s) => s.scope_type === "agencia_par").map((s) => s.scope_ref));
     setScopePrestadorTipos(scopes.filter((s) => s.scope_type === "prestador_tipo").map((s) => s.scope_ref));
+    const opsAtribuidas = scopes.filter((s) => s.scope_type === "operadora").map((s) => s.scope_ref);
+    const skin = scopes.find((s) => s.scope_type === "brand_operadora")?.scope_ref ?? "";
+    setBrandOperadoraSlug(r === "influencer" && opsAtribuidas.includes(skin) ? skin : "");
     // Só na abertura / troca de id — troca de perfil limpa via handleRoleChange.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- sync intencional por editando.id
   }, [editando?.id]);
@@ -150,6 +155,7 @@ export function ModalUsuario({ editando, operadoras, onClose, onSalvo }: ModalUs
     setScopeOperadoras([]);
     setScopePares([]);
     setScopePrestadorTipos([]);
+    setBrandOperadoraSlug("");
   };
 
   /** Novo usuário influencer: pré-preenche operadora a partir do Scout (parceria), alinhado ao criar-usuario na Edge. */
@@ -257,6 +263,8 @@ export function ModalUsuario({ editando, operadoras, onClose, onSalvo }: ModalUs
                 : [];
       const scopePrestadorTiposArr =
         role === "prestador" ? (Array.isArray(scopePrestadorTipos) ? scopePrestadorTipos : []) : [];
+      const brandSlug =
+        role === "influencer" && scopeOperadorasArr.includes(brandOperadoraSlug) ? brandOperadoraSlug : null;
 
       if (editando) {
         await callSupabaseEdgeFunction("atualizar-perfil", {
@@ -268,6 +276,7 @@ export function ModalUsuario({ editando, operadoras, onClose, onSalvo }: ModalUs
           scopeOperadoras: scopeOperadorasArr,
           scopePares: scopeParesParaApi,
           scopePrestadorTipos: scopePrestadorTiposArr,
+          brandOperadoraSlug: brandSlug,
         });
         onSalvo();
       } else {
@@ -281,6 +290,7 @@ export function ModalUsuario({ editando, operadoras, onClose, onSalvo }: ModalUs
           scopeOperadoras: scopeOperadorasArr,
           scopePares: scopeParesParaApi,
           scopePrestadorTipos: role === "prestador" ? scopePrestadorTiposArr : [],
+          brandOperadoraSlug: brandSlug,
           loginUrl,
         });
         uid = fnData.userId ?? "";
@@ -342,6 +352,16 @@ export function ModalUsuario({ editando, operadoras, onClose, onSalvo }: ModalUs
   const tituloModal = editando ? "Editar Usuário" : "Novo Usuário";
   const salvarBg = ctaGradientSalvar(brand, salvando, BRAND.cinza);
   const roleOptions = ROLES.map((r) => ({ value: r.value, label: r.label }));
+  const skinOptions = useMemo(
+    () => [
+      { value: "", label: "Spin" },
+      ...scopeOperadoras.map((slug) => ({
+        value: slug,
+        label: operadoras.find((o) => o.slug === slug)?.nome ?? slug,
+      })),
+    ],
+    [scopeOperadoras, operadoras],
+  );
 
   return (
     <ModalBase onClose={onClose} maxWidth={560} zIndex={999}>
@@ -442,18 +462,41 @@ export function ModalUsuario({ editando, operadoras, onClose, onSalvo }: ModalUs
             field={field}
           />
         ) : roleParidadeInfluencer(role) ? (
-          <MultiSelect
-            t={t}
-            field={field}
-            labelStyle={labelStyle}
-            label="Operadoras atribuídas"
-            searchNome="Operadora"
-            obrigatorio
-            cor={roleBadgeColor(role)}
-            items={operadoras.map((o) => ({ value: o.slug, label: o.nome }))}
-            selected={scopeOperadoras}
-            onToggle={(v) => toggleItem(scopeOperadoras, setScopeOperadoras, v)}
-          />
+          <>
+            <MultiSelect
+              t={t}
+              field={field}
+              labelStyle={labelStyle}
+              label="Operadoras atribuídas"
+              searchNome="Operadora"
+              obrigatorio
+              cor={roleBadgeColor(role)}
+              items={operadoras.map((o) => ({ value: o.slug, label: o.nome }))}
+              selected={scopeOperadoras}
+              onToggle={(v) => {
+                const next = scopeOperadoras.includes(v)
+                  ? scopeOperadoras.filter((x) => x !== v)
+                  : [...scopeOperadoras, v];
+                setScopeOperadoras(next);
+                if (brandOperadoraSlug && !next.includes(brandOperadoraSlug)) setBrandOperadoraSlug("");
+              }}
+            />
+            {role === "influencer" ? (
+              <div style={field}>
+                <SelectListaComBusca
+                  variant="campo"
+                  label="Skin da operadora"
+                  value={brandOperadoraSlug}
+                  onChange={setBrandOperadoraSlug}
+                  options={skinOptions}
+                  searchPlaceholder="Pesquisar Operadora..."
+                />
+                <p style={{ margin: "6px 0 0", fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
+                  Cores e logo da operadora no login. O menu, a Home e os dados continuam os do influencer. Padrão: Spin.
+                </p>
+              </div>
+            ) : null}
+          </>
         ) : (
           <>
             {role !== "operador" && !ROLES_STAFF_APENAS_PERMISSOES.includes(role) && (
