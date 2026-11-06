@@ -44,6 +44,7 @@ import {
 import { ALL_PAGE_KEYS } from "../lib/allPageKeys";
 import {
   aplicarBrandguideReset,
+  slugSkinOperadora,
   syncOperadoraBrandState,
 } from "../lib/operadoraBrandApply";
 import {
@@ -635,7 +636,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // Refetch brand ao voltar para a aba (ex.: admin atualizou operadora em outra aba)
   useEffect(() => {
     const roleEfetivo = simulacaoLogin?.role ?? user?.role;
-    if (roleEfetivo !== "operador") return;
+    if (roleEfetivo !== "operador" && !roleParidadeInfluencer(roleEfetivo)) return;
     const onFocus = () => setBrandRefreshKey((k) => k + 1);
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
@@ -652,15 +653,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     document.documentElement.setAttribute("data-theme", effectiveIsDark ? "dark" : "light");
   }, [effectiveIsDark]);
 
-  // Brandguide + template de Home: operador vê identidade da operadora do escopo
+  // Brandguide: operador e influencer/afiliado com operadora no escopo usam essa skin.
   useEffect(() => {
-    if (!user || effectiveRole !== "operador" || !escoposVisiveis.operadorasVisiveis?.length) {
+    const slug = slugSkinOperadora(effectiveRole, escoposVisiveis.operadorasVisiveis);
+    if (!user || !slug) {
       aplicarBrandguideReset();
       setOperadoraBrand(null);
       setOperadoraHomeReady(true);
       return;
     }
-    const slug = escoposVisiveis.operadorasVisiveis[0];
     void syncOperadoraBrandState(slug, setOperadoraBrand, setOperadoraHomeReady, { awaitNetwork: false });
   }, [user, effectiveRole, escoposVisiveis.operadorasVisiveis, brandRefreshKey]);
 
@@ -708,8 +709,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setPermissions(permissionsReais);
     setPermissionsAcoes(permissionsAcoesReais);
     syncAuthRefs(u, permissionsReais, permissionsAcoesReais);
-    if (u.role === "operador" && escopos.operadorasVisiveis[0]) {
-      await syncOperadoraBrandState(escopos.operadorasVisiveis[0], setOperadoraBrand, setOperadoraHomeReady);
+    const skinSlug = slugSkinOperadora(u.role, escopos.operadorasVisiveis);
+    if (skinSlug) {
+      await syncOperadoraBrandState(skinSlug, setOperadoraBrand, setOperadoraHomeReady);
     } else {
       aplicarBrandguideReset();
       setOperadoraBrand(null);
@@ -728,8 +730,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setPermissionsAcoes(ctx.permissionsAcoes);
       syncAuthRefs(u, ctx.permissions, ctx.permissionsAcoes);
       writeSimulacaoSession(state);
-      if (state.role === "operador" && state.operadoraSlug) {
-        await syncOperadoraBrandState(state.operadoraSlug, setOperadoraBrand, setOperadoraHomeReady);
+      const skinSlug =
+        state.role === "operador" && state.operadoraSlug
+          ? state.operadoraSlug
+          : slugSkinOperadora(state.role, ctx.escopos.operadorasVisiveis);
+      if (skinSlug) {
+        await syncOperadoraBrandState(skinSlug, setOperadoraBrand, setOperadoraHomeReady);
       } else {
         aplicarBrandguideReset();
         setOperadoraBrand(null);
@@ -892,12 +898,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
             simulacaoLoginRef.current = null;
             effectiveRoleRef.current = u.role;
             setEscoposVisiveis(escopos);
-            if (u.role === "operador" && escopos.operadorasVisiveis[0]) {
-              await syncOperadoraBrandState(
-                escopos.operadorasVisiveis[0],
-                setOperadoraBrand,
-                setOperadoraHomeReady,
-              );
+            const skinSlug = slugSkinOperadora(u.role, escopos.operadorasVisiveis);
+            if (skinSlug) {
+              await syncOperadoraBrandState(skinSlug, setOperadoraBrand, setOperadoraHomeReady);
             }
             setPermissions(perms);
             setPermissionsAcoes(acoes);
@@ -1025,12 +1028,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
                 simulacaoLoginRef.current = null;
                 effectiveRoleRef.current = u.role;
                 setEscoposVisiveis(escopos);
-                if (u.role === "operador" && escopos.operadorasVisiveis[0]) {
-                  await syncOperadoraBrandState(
-                    escopos.operadorasVisiveis[0],
-                    setOperadoraBrand,
-                    setOperadoraHomeReady,
-                  );
+                const skinSlug = slugSkinOperadora(u.role, escopos.operadorasVisiveis);
+                if (skinSlug) {
+                  await syncOperadoraBrandState(skinSlug, setOperadoraBrand, setOperadoraHomeReady);
                 }
                 setPermissions(perms);
                 setPermissionsAcoes(acoes);

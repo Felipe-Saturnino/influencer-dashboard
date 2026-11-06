@@ -51,7 +51,9 @@ export function BoasVindasInfluencer({
             height: 56,
             borderRadius: "50%",
             flexShrink: 0,
-            background: "linear-gradient(135deg, #4a2082, #1e36f8)",
+            background: brand.useBrand
+              ? "linear-gradient(135deg, var(--brand-action, #7c3aed), var(--brand-contrast, #1e36f8))"
+              : "linear-gradient(135deg, #4a2082, #1e36f8)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -59,7 +61,9 @@ export function BoasVindasInfluencer({
             fontWeight: 800,
             fontSize: 20,
             fontFamily: FONT.body,
-            border: "2px solid rgba(124, 58, 237, 0.45)",
+            border: brand.useBrand
+              ? "2px solid color-mix(in srgb, var(--brand-action, #7c3aed) 50%, transparent)"
+              : "2px solid rgba(124, 58, 237, 0.45)",
           }}
           aria-hidden
         >
