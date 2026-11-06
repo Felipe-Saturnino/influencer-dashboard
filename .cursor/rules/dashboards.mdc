@@ -62,7 +62,7 @@ alwaysApply: false
 | Streamers → Jogadores | Idem | Ativação em mesa Spin |
 | Social Media | Gestor de Marketing | KPIs Consolidados (GGR, Registros, GGR por Jogador) |
 | Overview Spin (`mesas_spin`) | Gerente de Operações; Operador (escopo mesa) | KPIs Consolidados das Mesas |
-| Overview Influencer | Influencer; Agência; Executivo (escopo); Admin / Gestor | KPIs Executivos (GGR, Investimento, ROI) |
+| Overview Influencer | Influencer; Agência; Executivo (escopo); Admin / Gestor | KPIs Executivos (Rev Share, GGR, Investimento, ROI) |
 | Overview Prestador (`dash_overview_prestador`) | Prestador (próprios); Shift Leader / RH / Gestor (escopo time/staff) | Escala + KPIs de Mesa (GP/Shuffler) ou KPIs de OCR (SM) |
 | Headcount (`dash_headcount`) | Diretoria / RH / Executivo / Investidor (escopo Ver) | KPIs Consolidados (HC, movimento) |
 
@@ -223,6 +223,7 @@ Nenhuma exceção documentada. Comparativo de Jogo, Comparativo de mesa e Dados 
 - **Ícone do header:** `Tv` (Lucide) — nunca `GiTv` (react-icons/gi).
 - **Carga Overview / Financeiro:** fase 1 = período atual (libera paint); fase 2 = MoM em background. Falha do MoM **não** apaga o mês já pintado (`momPronto` / `isHistorico` até o comparativo chegar). No Histórico, `buscarMetricasDeAliases` entra no **mesmo** `Promise.all` da fase 1 (não serial após analytics).
 - **Clock na FilterBar:** `isLoading || (!historico && !momPronto)` — o indicador permanece na fase MoM; Conversão (sem MoM) fixa `momPronto=true`.
+- **Overview Influencer — Rev Share:** primeiro card da linha financeira, antes de GGR. Valor = 10% do GGR do mesmo recorte quando GGR > 0; **R$ 0,00** quando GGR ≤ 0. Cor semântica segue o GGR (verde se GGR ≥ 0, vermelho se GGR < 0). O MoM aplica a mesma regra ao GGR do período anterior. Não entra no Detalhamento nem no gráfico.
 - **Overview Influencer — escopo:** mesmos helpers Streamers (`streamersInfluencerIdsQuery` / `streamersOperadoraSlugsQuery` / `travarRecortePropriosStreamers`). Lista vazia = `[]` (vazio), nunca `null` global. KPI **Registros** = `fetchJogadoresRegistrosUnicos` (IDs Ext únicos TAP), alinhado ao Overview Streamers — **não** somar `registration_count` das métricas.
 - **Overview Influencer — UAP Spin:** card simples na linha operacional, após Média de Views. Fonte `jogadores_metricas_diarias`, TAP IDs mapeados com `rodadas_spin > 0`, deduplicados por `(operadora_slug, ext_customer_id)`. Respeita período, operadora e exatamente os `influencerIds` autorizados/selecionados; perfil Influencer consulta somente o próprio ID. Histórico deduplica na janela inteira de 13 competências. Não exibe Rodadas.
 - **Erro de carga:** mensagem canónica + **Tentar de novo** (`erroCarga` / `reloadTick`) — não tratar falha como vazio.
@@ -473,6 +474,7 @@ Usar **exatamente** o ícone abaixo para cada conceito em **todas** as páginas 
 | Conceito | Ícone Lucide | Import |
 |---|---|---|
 | **GGR** | `TrendingUp` | `import { TrendingUp } from "lucide-react"` |
+| **Rev Share** | `HandCoins` | `import { HandCoins }` |
 | **Turnover** | `ArrowUpDown` | `import { ArrowUpDown }` |
 | **Margem** | `Percent` | `import { Percent }` |
 | **ROI** | `BarChart2` | `import { BarChart2 }` |
@@ -510,6 +512,7 @@ Usar **exatamente** o ícone abaixo para cada conceito em **todas** as páginas 
 Usar **exatamente** estas strings no prop `label` de `KpiCard` e nos headers de tabela equivalentes:
 
 - `"GGR"` — receita bruta do jogo (nunca `"GGR Total"`)
+- `"Rev Share"` — 10% do GGR quando positivo; R$ 0,00 quando o GGR é negativo ou zero (só Overview Influencer)
 - `"Investimento"` — custo total com influencers
 - `"ROI"` — retorno sobre investimento (nunca `"ROI Geral"`)
 - `"FTDs"` — quantidade de primeiros depósitos
