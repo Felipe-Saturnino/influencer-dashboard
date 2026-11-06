@@ -1,6 +1,4 @@
-import type { Role } from "../types";
 import { validarBrandguide, cssDerivadasBrand, type BrandValidated } from "./brandguideValidation";
-import { roleParidadeInfluencer } from "./staffRoles";
 import {
   readOperadoraBrandCache,
   writeOperadoraBrandCache,
@@ -59,21 +57,33 @@ export function injectBrandCss(validated: BrandValidated) {
 }
 
 /**
- * Operadora whose brandguide should paint the shell.
- * Operators and influencer/afiliado accounts with an operadora scope get that skin.
- * Other roles stay on the Spin palette.
+ * Slug cuja skin entra no login.
+ * Operador: a operadora do escopo.
+ * Influencer: só se houver skin opt-in e ela ainda estiver entre as operadoras atribuídas.
  */
-export function slugSkinOperadora(
-  role: Role | null | undefined,
-  slugs: readonly string[] | null | undefined,
-): string | null {
-  const slug = slugs?.[0]?.trim() || null;
-  if (!slug) return null;
-  if (role === "operador" || roleParidadeInfluencer(role)) return slug;
+export function slugSkinOperadora(opts: {
+  role: string | undefined | null;
+  operadorasVisiveis: readonly string[];
+  brandOperadoraSlug?: string | null;
+}): string | null {
+  if (opts.role === "operador") {
+    const slug = opts.operadorasVisiveis[0]?.trim() ?? "";
+    return slug || null;
+  }
+  if (opts.role === "influencer") {
+    const slug = opts.brandOperadoraSlug?.trim() ?? "";
+    if (!slug) return null;
+    return opts.operadorasVisiveis.includes(slug) ? slug : null;
+  }
   return null;
 }
 
-/** Reseta para paleta Spin validada (usuário sem skin de operadora). */
+/** A skin de operadora só fecha no escuro. Operador sempre; influencer só com skin opt-in. */
+export function temaEscuroObrigatorio(role: string | undefined | null, slugSkin: string | null): boolean {
+  return role === "operador" || !!slugSkin;
+}
+
+/** Reseta para paleta Spin validada (sem skin de operadora). */
 export function aplicarBrandguideReset() {
   injectBrandCss(validarBrandguide({}));
 }

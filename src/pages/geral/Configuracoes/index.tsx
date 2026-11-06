@@ -54,8 +54,7 @@ function passwordStrength(pwd: string) {
 }
 
 export default function Configuracoes() {
-  const { theme: t, effectiveRole, isDark, setIsDark } = useApp();
-  const isOperador = effectiveRole === "operador";
+  const { theme: t, temaEscuroObrigatorio, isDark, setIsDark } = useApp();
   const perm = usePermission("configuracoes");
 
   const [curPass, setCurPass] = useState("");
@@ -203,15 +202,15 @@ export default function Configuracoes() {
           icon={<Palette size={14} color="#fff" strokeWidth={2} aria-hidden />}
           label="Aparência"
           subtitle={
-            isOperador
-              ? "Operadores usam sempre o modo escuro com a identidade da operadora."
+            temaEscuroObrigatorio
+              ? "A identidade da operadora usa sempre o modo escuro."
               : "Escolha como a interface será exibida."
           }
           titleColor={t.text}
           subtitleColor={t.textMuted}
         />
 
-        {!isOperador && (
+        {!temaEscuroObrigatorio && (
           <div
             className="config-theme-radiogroup"
             role="radiogroup"

@@ -2164,7 +2164,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não consigo mudar o tema (claro/escuro)?",
         texto:
-          "Perfis Operador usam sempre o modo escuro com a identidade da operadora — o seletor de aparência não aparece. Nos demais perfis, use os botões de tema na seção Aparência.",
+          "Perfis Operador e influencers com skin de operadora usam sempre o modo escuro — o seletor de aparência não aparece. Nos demais perfis, use os botões de tema na seção Aparência.",
       },
       {
         subtitulo: "Erro ao alterar a senha?",

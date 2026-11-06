@@ -109,6 +109,10 @@ function formatarEscopo(scopes: UserScope[], ops: Operadora[]): string | null {
       const [, slug] = s.scope_ref.split(":");
       return { texto: ops.find((o) => o.slug === slug)?.nome ?? slug, ordem: 50 };
     }
+    if (s.scope_type === "brand_operadora") {
+      const nome = ops.find((o) => o.slug === s.scope_ref)?.nome ?? s.scope_ref;
+      return { texto: `Skin ${nome}`, ordem: 40 };
+    }
     if (s.scope_type === "prestador_tipo") {
       const idx = PRESTADOR_TIPOS.findIndex((p) => p.slug === s.scope_ref);
       return {
