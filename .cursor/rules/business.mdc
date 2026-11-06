@@ -210,7 +210,7 @@ Streamers/Afiliados medem o canal de aquisição em **agregado** (`influencer_me
 | **Network** | Mesa de estúdio compartilhada entre operadoras |
 | **Sports Club** | Estúdio network Spin (não operadora parceira) |
 | **Overview Spin** | Dashboard de resultados das mesas ao vivo (`mesas_spin`) |
-| **Whitelabel** | Identidade visual da operadora na plataforma (`operadoraBrand`). Operador: a operadora do escopo. Influencer: só com skin opt-in em Gestão de Usuários (visual; menu e dados não mudam) |
+| **Whitelabel** | Identidade visual da operadora na plataforma (`operadoraBrand`). Operador: a operadora do escopo. Influencer: só com skin opt-in em Gestão de Usuários (visual; menu e dados não mudam). Skin diferente de Spin trava o modo escuro |
 
 ---
 

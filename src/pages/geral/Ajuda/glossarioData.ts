@@ -1527,7 +1527,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Configurações",
         definicao:
-          "Página de preferências da conta: aparência (tema claro/escuro, quando o perfil permitir) e alteração de senha. Acessível pelo menu do avatar — não aparece no menu lateral.",
+          "Página de preferências da conta: aparência (tema claro/escuro, quando o perfil permitir) e alteração de senha. Operador e influencer com skin de operadora ficam no modo escuro, sem seletor. Acessível pelo menu do avatar — não aparece no menu lateral.",
         referencia: "Configurações",
       },
       {

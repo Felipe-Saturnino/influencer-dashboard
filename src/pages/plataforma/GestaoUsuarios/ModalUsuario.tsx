@@ -495,7 +495,7 @@ export function ModalUsuario({ editando, operadoras, onClose, onSalvo }: ModalUs
                   searchPlaceholder="Pesquisar Operadora..."
                 />
                 <p style={{ margin: "6px 0 0", fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
-                  Cores e logo da operadora no login. O menu, a Home e os dados continuam os do influencer. Padrão: Spin.
+                  Cores e logo da operadora no login. Com uma operadora, o modo escuro fica fixo. O menu, a Home e os dados continuam os do influencer. Padrão: Spin.
                 </p>
               </div>
             ) : null}

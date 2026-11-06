@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { slugSkinOperadora } from "./operadoraBrandApply";
+import { slugSkinOperadora, temaEscuroObrigatorio } from "./operadoraBrandApply";
 
 describe("slugSkinOperadora", () => {
   it("operador usa a operadora do escopo", () => {
@@ -36,6 +36,14 @@ describe("slugSkinOperadora", () => {
         brandOperadoraSlug: "cda",
       }),
     ).toBeNull();
+  });
+
+  it("trava o modo escuro no operador e no influencer com skin", () => {
+    expect(temaEscuroObrigatorio("operador", null)).toBe(true);
+    expect(temaEscuroObrigatorio("operador", "blaze")).toBe(true);
+    expect(temaEscuroObrigatorio("influencer", "cda")).toBe(true);
+    expect(temaEscuroObrigatorio("influencer", null)).toBe(false);
+    expect(temaEscuroObrigatorio("afiliado", null)).toBe(false);
   });
 
   it("afiliado não herda skin de operadora", () => {

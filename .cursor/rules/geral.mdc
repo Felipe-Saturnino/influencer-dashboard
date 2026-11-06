@@ -203,6 +203,7 @@ Páginas fora do menu lateral (`configuracoes`, `simulador_login`, `versionament
 ## Configurações (`geral/Configuracoes/`)
 
 - Preferências de conta/tema; CTAs de marca quando aplicável.
+- **Tema:** Operador e influencer com skin de operadora (diferente de Spin) ficam no modo escuro; o seletor claro/escuro não aparece. Influencer em Spin escolhe o tema.
 - **Alterar senha:** mesmos 4 requisitos + CTA desabilitado até cumprir (paridade com Trocar senha obrigatória); `<form>` + `htmlFor`; loading «Salvando…» (U+2026); erros Auth mapeados com suporte; vermelho semântico `#e84025`.
 - Sem permissão: string Global «Você não tem permissão para visualizar esta página.»
 

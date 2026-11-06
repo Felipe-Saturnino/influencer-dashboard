@@ -45,6 +45,7 @@ import { ALL_PAGE_KEYS } from "../lib/allPageKeys";
 import {
   aplicarBrandguideReset,
   slugSkinOperadora,
+  temaEscuroObrigatorio,
   syncOperadoraBrandState,
 } from "../lib/operadoraBrandApply";
 import {
@@ -141,6 +142,8 @@ interface AppContextValue {
   // Theme
   theme:    Theme;
   isDark:   boolean;
+  /** Operador, ou influencer com skin de operadora: sem seletor claro/escuro. */
+  temaEscuroObrigatorio: boolean;
   setIsDark:(v: boolean) => void;
 }
 
@@ -673,8 +676,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("focus", onFocus);
   }, [slugSkin]);
 
-  // Operador: sempre modo Dark (brand da operadora); demais roles escolhem tema
-  const effectiveIsDark = effectiveRole === "operador" ? true : isDark;
+  // Skin de operadora só fecha no escuro. Spin (sem slug) continua com o tema escolhido.
+  const temaEscuroFixo = temaEscuroObrigatorio(effectiveRole, slugSkin);
+  const effectiveIsDark = temaEscuroFixo ? true : isDark;
   const theme = effectiveIsDark ? DARK_THEME : LIGHT_THEME;
 
   // data-theme no html para background full-viewport e scrollbar (evita linhas brancas)
@@ -682,7 +686,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     document.documentElement.setAttribute("data-theme", effectiveIsDark ? "dark" : "light");
   }, [effectiveIsDark]);
 
-  // Brandguide: operador (escopo) ou influencer com skin opt-in. Não troca Home nem tema.
+  // Brandguide: operador (escopo) ou influencer com skin opt-in. Não troca Home nem menu.
   useEffect(() => {
     if (!user || !slugSkin) {
       aplicarBrandguideReset();
@@ -1133,9 +1137,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const setTheme = useCallback((v: boolean) => {
-    if (effectiveRole === "operador") return; // Operador travado em Dark
+    if (temaEscuroObrigatorio(effectiveRole, slugSkin)) return;
     setIsDark(v);
-  }, [effectiveRole]);
+  }, [effectiveRole, slugSkin]);
 
   const contextValue = useMemo<AppContextValue>(
     () => ({
@@ -1175,6 +1179,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       operadoraHomeReady,
       theme,
       isDark: effectiveIsDark,
+      temaEscuroObrigatorio: temaEscuroFixo,
       setIsDark: setTheme,
     }),
     [
@@ -1213,6 +1218,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       operadoraHomeReady,
       theme,
       effectiveIsDark,
+      temaEscuroFixo,
       setTheme,
     ],
   );

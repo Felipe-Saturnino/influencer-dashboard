@@ -78,6 +78,11 @@ export function slugSkinOperadora(opts: {
   return null;
 }
 
+/** A skin de operadora só fecha no escuro. Operador sempre; influencer só com skin opt-in. */
+export function temaEscuroObrigatorio(role: string | undefined | null, slugSkin: string | null): boolean {
+  return role === "operador" || !!slugSkin;
+}
+
 /** Reseta para paleta Spin validada (sem skin de operadora). */
 export function aplicarBrandguideReset() {
   injectBrandCss(validarBrandguide({}));
