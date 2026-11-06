@@ -62,6 +62,7 @@ import {
   Clock,
   Coins,
   Eye,
+  HandCoins,
   Table2,
   TrendingUp,
   Trophy,
@@ -121,6 +122,11 @@ interface LiveResultado {
   duracao_min: number;
   media_views: number;
   max_views?: number | null;
+}
+
+/** 10% do GGR quando positivo; 0 quando o GGR é negativo ou zero. */
+function revShareDeGgr(ggr: number): number {
+  return ggr > 0 ? ggr * 0.1 : 0;
 }
 
 interface TotaisData {
@@ -1001,6 +1007,8 @@ export default function DashboardOverviewInfluencer() {
   const ticketDep = totais.depositos_qtd > 0 ? fmtBRL(totais.depositos_valor / totais.depositos_qtd) : "—";
   const ticketSaque = totais.saques_qtd > 0 ? fmtBRL(totais.saques_valor / totais.saques_qtd) : "—";
   const ggrPorJogador = totais.ftds > 0 ? fmtBRL(totais.ggr / totais.ftds) : "—";
+  const revShare = revShareDeGgr(totais.ggr);
+  const revShareAnt = revShareDeGgr(totaisAnt.ggr);
 
   const brand = useDashboardBrand();
   const kpiChartPillActiveBorder = brand.useBrand ? brand.primary : "var(--brand-action, #7c3aed)";
@@ -1193,8 +1201,8 @@ export default function DashboardOverviewInfluencer() {
         </SectionTitle>
         {loading ? (
           <>
-            <div className="app-grid-kpi-3" style={{ marginBottom: 12 }}>
-              {[0, 1, 2].map((i) => (
+            <div className="app-grid-kpi-4" style={{ marginBottom: 12 }}>
+              {[0, 1, 2, 3].map((i) => (
                 <SkeletonKpiCard key={`sk-r1-${i}`} />
               ))}
             </div>
@@ -1212,6 +1220,16 @@ export default function DashboardOverviewInfluencer() {
         ) : (
           <>
             <div className="app-grid-kpi-4" style={{ marginBottom: 12 }}>
+              <KpiCard
+                label="Rev Share"
+                value={fmtBRL(revShare)}
+                icon={<HandCoins size={16} aria-hidden="true" />}
+                accentColor={totais.ggr >= 0 ? BRAND.verde : BRAND.vermelho}
+                atual={revShare}
+                anterior={revShareAnt}
+                isBRL
+                isHistorico={historico || !momPronto}
+              />
               <KpiCard
                 label="GGR"
                 value={fmtBRL(totais.ggr)}

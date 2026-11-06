@@ -338,6 +338,15 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
           "Streamers → Overview · Streamers → Financeiro · Overview Influencer · Overview Spin · Mídias Sociais · Financeiro",
       },
       {
+        termo: "Rev Share",
+        definicao:
+          "Parcela de receita compartilhada a partir do GGR do canal de influencers. Quando o GGR é positivo, o card mostra 10% desse valor. Quando o GGR é negativo ou zero, o Rev Share fica em R$ 0,00.",
+        formula: "GGR > 0 → GGR × 10%; caso contrário → R$ 0,00",
+        nota:
+          "A cor do card acompanha o GGR: verde quando o GGR é positivo ou zero, vermelho quando o GGR é negativo. O comparativo com o mês anterior usa a mesma regra sobre o GGR daquele período.",
+        referencia: "Overview Influencer",
+      },
+      {
         termo: "R$ FTD (Valor Total de FTDs)",
         definicao:
           "Soma dos valores dos primeiros depósitos no período. Mede o volume financeiro de entrada dos jogadores novos captados.",
