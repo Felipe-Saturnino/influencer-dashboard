@@ -306,10 +306,13 @@ export function ModalUsuario({ editando, operadoras, onClose, onSalvo }: ModalUs
       onClose();
     } catch (e: unknown) {
       console.error("[GestaoUsuarios] salvar usuário:", e);
+      const msg = e instanceof Error ? e.message.trim() : "";
       if (isAbortError(e)) {
         setErro(
           "Tempo esgotado ou rede indisponível. Se o problema persistir, entre em contato com o suporte.",
         );
+      } else if (/scope_type_check/i.test(msg) || /salvar a skin da operadora/i.test(msg)) {
+        setErro("Não foi possível salvar a skin da operadora. Se o problema persistir, entre em contato com o suporte.");
       } else {
         setErro("Não foi possível salvar o usuário. Se o problema persistir, entre em contato com o suporte.");
       }

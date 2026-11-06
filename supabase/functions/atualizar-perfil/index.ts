@@ -404,8 +404,25 @@ serve(async (req) => {
       if (novasLinhas.length > 0) {
         const { error: insScopeErr } = await supabase.from('user_scopes').insert(novasLinhas)
         if (insScopeErr) {
+          const backup = ((antesScopes ?? []) as { scope_type: string; scope_ref: string }[])
+            .filter((r) => r.scope_type && r.scope_ref)
+          if (backup.length > 0) {
+            const { error: restoreErr } = await supabase.from('user_scopes').insert(
+              backup.map((r) => ({
+                user_id: userId,
+                scope_type: r.scope_type,
+                scope_ref: r.scope_ref,
+              })),
+            )
+            if (restoreErr) console.error('[atualizar-perfil] restaurar escopos:', restoreErr.message)
+          }
+          const skinRecusada = /scope_type_check/i.test(insScopeErr.message)
           return new Response(
-            JSON.stringify({ error: `Erro ao salvar escopos: ${insScopeErr.message}` }),
+            JSON.stringify({
+              error: skinRecusada
+                ? 'Não foi possível salvar a skin da operadora. Se o problema persistir, entre em contato com o suporte.'
+                : `Erro ao salvar escopos: ${insScopeErr.message}`,
+            }),
             { status: 500, headers: { ...cors, 'Content-Type': 'application/json' } },
           )
         }
